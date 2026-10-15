@@ -26,7 +26,7 @@ new_value() {
   case "$1" in
     hex) random_hex ;;
     password) random_password ;;
-    blank) printf '' ;;
+    vault | entered | 'entered?') printf '' ;;
     *) die "unknown kind $1" ;;
   esac
 }
@@ -37,7 +37,7 @@ for f in "${SECRET_FILES[@]}"; do
     # Keep every value that exists; add only the secrets the spec has gained since.
     have="$(decrypt "$f" | cut -d= -f1)"
     added=0
-    while read -r file key how; do
+    while read -r file key how _; do
       [[ "$file" == "$f" ]] || continue
       grep -qx "$key" <<<"$have" && continue
       printf '"%s"' "$(new_value "$how")" | sops set --value-stdin "$target" "[\"$key\"]"
@@ -51,7 +51,7 @@ for f in "${SECRET_FILES[@]}"; do
   mkdir -p .run && chmod 700 .run
   plain=".run/secrets.$f.plain"; trap 'rm -f "$plain"' EXIT
   ( umask 077; : > "$plain" )
-  while read -r file key how; do
+  while read -r file key how _; do
     [[ "$file" == "$f" ]] || continue
     printf '%s=%s\n' "$key" "$(new_value "$how")" >> "$plain"
   done < <(grep -v '^\s*#' infra/secrets/secrets.spec | grep -v '^\s*$')
@@ -59,3 +59,27 @@ for f in "${SECRET_FILES[@]}"; do
   rm -f "$plain"
   ok "created $target"
 done
+
+info "Secrets you enter"
+# A value someone else issues (an API key) cannot be generated. Each is explained here and entered
+# by a person with sops; setup does not go on while a required one is blank.
+missing=0 any=0
+while IFS= read -r line; do
+  read -r f key how _ <<<"$line"
+  [[ "$how" == entered || "$how" == 'entered?' ]] || continue
+  any=1
+  about=""; [[ "$line" == *" -- "* ]] && about="${line#* -- }"
+  value="$(decrypt "$f" | grep -E "^${key}=" | tail -1 | cut -d= -f2-)"
+  if [[ -n "$value" ]]; then
+    ok "$key is set"
+  elif [[ "$how" == 'entered?' ]]; then
+    warn "$key is blank, which is allowed. $about"
+    echo "    To enter it: ${B}make secrets-edit FILE=$f${N}, put the value after $key= and save."
+  else
+    echo "  ${R}✗${N} $key is required and blank. $about"
+    echo "    Enter it: ${B}make secrets-edit FILE=$f${N}, put the value after $key= and save."
+    missing=1
+  fi
+done < <(grep -v '^\s*#' infra/secrets/secrets.spec | grep -v '^\s*$')
+[[ $any == 1 ]] || ok "nothing to enter"
+[[ $missing == 0 ]] || die "Enter the values marked ✗ with sops, then run make setup again."
