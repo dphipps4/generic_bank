@@ -1,0 +1,4 @@
+{
+  "job": "check-balance",
+  "allowed": [{ "screen": "member.summary", "verb": "read", "control": "Page" }]
+}
