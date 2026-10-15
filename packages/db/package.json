@@ -13,5 +13,8 @@
   },
   "dependencies": {
     "@prisma/client": "6.19.3"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10"
   }
 }

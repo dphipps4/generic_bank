@@ -74,9 +74,12 @@ model ConsoleUser {
 model TaskRun {
   id              String       @id @default(cuid())
   task            String
-  tenant          String
+  bank            String
+  /// The API client that started the run.
+  clientId        String?
   inputsMasked    Json
-  idempotencyKey  String       @unique
+  /// Transfers carry one; the same key always returns the same run.
+  idempotencyKey  String?      @unique
   status          TaskStatus   @default(running)
   resultCode      String?
   retryable       Boolean?
@@ -89,7 +92,7 @@ model TaskRun {
   humanTasks      HumanTask[]
   journal         JournalEntry[]
 
-  @@index([tenant, task, startedAt])
+  @@index([bank, task, startedAt])
 }
 
 model Step {
@@ -287,4 +290,62 @@ model AuditEntry {
   target String
   reason String
   at     DateTime @default(now())
+}
+
+// ── OAuth2 for the Task API ─────────────────────────────────────────────────
+// Only keyed hashes of secrets, codes and tokens are stored: a copy of this database holds nothing
+// anyone could use.
+
+model ApiClient {
+  id         String        @id @default(cuid())
+  name       String
+  clientId   String        @unique
+  secretHash String
+  scopes     String[]
+  createdBy  String
+  createdAt  DateTime      @default(now())
+  revokedAt  DateTime?
+  codes      ApiCode[]
+  families   TokenFamily[]
+}
+
+/// The one-time starting code shown with a new client: 24 hours, single use.
+model ApiCode {
+  id        String    @id @default(cuid())
+  clientPk  String
+  client    ApiClient @relation(fields: [clientPk], references: [id])
+  codeHash  String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+}
+
+/// Every token issued from one starting code, refresh after refresh. Reusing a spent refresh token
+/// revokes the whole family.
+model TokenFamily {
+  id            String     @id @default(cuid())
+  clientPk      String
+  client        ApiClient  @relation(fields: [clientPk], references: [id])
+  createdAt     DateTime   @default(now())
+  revokedAt     DateTime?
+  revokedReason String?
+  tokens        ApiToken[]
+}
+
+enum TokenKind {
+  access
+  refresh
+}
+
+model ApiToken {
+  id        String      @id @default(cuid())
+  familyId  String
+  family    TokenFamily @relation(fields: [familyId], references: [id])
+  kind      TokenKind
+  tokenHash String      @unique
+  scopes    String[]
+  expiresAt DateTime
+  spentAt   DateTime?
+  createdAt DateTime    @default(now())
+
+  @@index([familyId])
 }
