@@ -63,7 +63,7 @@ export function signInPage(
 ${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}
 <P>${linkButton(c, `${c.base}signin?other=1`, `Not ${o.trusted.name}? Sign in as someone else`, '_top')}</P>`,
     );
-    return doc(c, d, { title: 'Sign In', body, script: hydrate(randomInt(300, 900)) });
+    return doc(c, d, { title: L.signIn, body, script: hydrate(randomInt(300, 900)) });
   }
   const d = dialect(bank.t, bank.uiVersion, 'signin');
   const rows =
@@ -79,7 +79,7 @@ ${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}
     `${banner}${heading(c, d, `${bank.t.brand}: CoreLink Branch Console`)}${o.error ? message(c, o.error) : ''}${o.note ? `<P>${font(c, esc(o.note))}</P>` : ''}
 ${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}`,
   );
-  return doc(c, d, { title: 'Sign In', body, script: hydrate(randomInt(300, 900)) });
+  return doc(c, d, { title: L.signIn, body, script: hydrate(randomInt(300, 900)) });
 }
 
 /** A session waiting for its code, or null. */
