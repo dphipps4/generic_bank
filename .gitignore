@@ -212,4 +212,6 @@ docs/knowledge-graph.html
 .run/
 .sops.yaml
 config/*.secrets.enc.env
+# A second copy's moved ports (make fork-ports)
+config/local.env
 plan/REVIEW.md

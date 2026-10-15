@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { origins } from '../src/context.js';
 import { signIn, type TestBank, testBank } from './harness.js';
 
 let example: TestBank;
@@ -79,5 +80,27 @@ describe('a bank with one origin', () => {
   it('keeps every frame on it', async () => {
     const c = await signIn(generic);
     expect((await c.get('console')).body).not.toMatch(/SRC="http/);
+  });
+});
+
+describe('a second copy of the stack', () => {
+  it('keeps links on the copy a person is looking at when its ports are moved', () => {
+    const bank = { ports: { main: 8082, second: 8092 } } as unknown as Parameters<
+      typeof origins
+    >[0];
+    const req = (host: string, localPort: number) =>
+      ({ headers: { host }, socket: { localPort } }) as unknown as Parameters<typeof origins>[1];
+    // The Runner, inside the network: the container's own ports.
+    expect(origins(bank, req('bank-example:8082', 8082))).toEqual({
+      main: 'http://bank-example:8082',
+      second: 'http://bank-example:8092',
+      onSecond: false,
+    });
+    // A person's browser on a copy whose ports are all moved by 10000.
+    expect(origins(bank, req('localhost:18092', 8092))).toEqual({
+      main: 'http://localhost:18082',
+      second: 'http://localhost:18092',
+      onSecond: true,
+    });
   });
 });

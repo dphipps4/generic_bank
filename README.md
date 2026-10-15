@@ -45,6 +45,12 @@ and entered with `make secrets-edit FILE=…`, which opens the encrypted file in
 Then open the Console at http://localhost:8080 (sign in as `admin@generic-bank.local`; the
 password is printed by `make console-password`).
 
+## A second copy, side by side
+
+Clone or fork into another folder and run `make fork-ports` there before `make setup`. The copy
+is named after its folder, so it gets its own containers, volumes and images, and its ports are
+all moved up by 10000 (its Console is on http://localhost:18080).
+
 ## Develop
 
 ```sh

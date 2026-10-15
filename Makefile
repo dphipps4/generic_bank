@@ -9,9 +9,18 @@ SHELL := /bin/bash
 MAKEFLAGS += --no-print-directory
 
 include config/app.env
+# A second copy of the stack (a fork in another folder) moves its ports in config/local.env, which
+# is never committed: make fork-ports writes one.
+-include config/local.env
 export
 
-COMPOSE   := docker compose -f infra/compose/compose.yaml --env-file config/app.env -p generic-bank
+# The compose project, and the image tags, are named after this folder, so a second copy has its
+# own containers, volumes and images. This folder, generic_bank, is the project generic-bank.
+export GB_PROJECT      := $(shell basename "$(CURDIR)" | tr 'A-Z_' 'a-z-' | tr -cd 'a-z0-9-')
+export GB_IMAGE        := generic-bank/node:$(GB_PROJECT)
+export GB_RUNNER_IMAGE := generic-bank/runner:$(GB_PROJECT)
+LOCAL_ENV := $(if $(wildcard config/local.env),--env-file config/local.env)
+COMPOSE   := docker compose -f infra/compose/compose.yaml --env-file config/app.env $(LOCAL_ENV) -p $(GB_PROJECT)
 SCRIPTS   := infra/scripts
 
 # Service groups. Each has its own up, -down, -logs and -rebuild targets.
@@ -61,6 +70,9 @@ dev-setup: requirements-dev install browser ## Once, to develop: Node dependenci
 install: ## Install Node dependencies and generate the Prisma client
 	@npm ci --no-audit --no-fund
 	@npm run --silent db:generate
+
+fork-ports: ## For a second copy in another folder: move every port by OFFSET (default 10000) in config/local.env
+	@$(SCRIPTS)/fork-ports.sh "$(or $(OFFSET),10000)"
 
 tools: ## Build the tools image (sops, age, jq, the plan renderer), if its Dockerfile changed
 	@$(SCRIPTS)/tool.sh true
@@ -220,7 +232,7 @@ reset: ## Delete all local data (volumes) and start again from nothing. Asks fir
 clean: ## Remove build output (dist, tsbuildinfo, .run)
 	@rm -rf apps/*/dist packages/*/dist **/*.tsbuildinfo .run
 
-.PHONY: help requirements requirements-dev plan plan-html setup dev-setup tools doctor install secrets-init env secrets-edit secret-set secret-rotate secrets-keys \
+.PHONY: help requirements requirements-dev plan plan-html setup dev-setup fork-ports tools doctor install secrets-init env secrets-edit secret-set secret-rotate secrets-keys \
   console-password build build-nc image up down restart ps urls data backend console crawlers bank \
   bank-more factory migrate logs vault-status db-shell check test typecheck lint format boundaries \
   demo try evals check-prompts memory-seed memory-export memory-import export import trace observe \
