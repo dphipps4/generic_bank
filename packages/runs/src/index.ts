@@ -384,3 +384,5 @@ export async function awaitAnswer(
     await new Promise((res) => setTimeout(res, pollMs));
   }
 }
+
+export { hashOf, journal, type JournalLine, type Verdict, verifyJournal } from './journal.js';
