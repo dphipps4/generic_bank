@@ -156,6 +156,8 @@ export interface FrameSession {
 export class Page {
   /** Sessions of frames from other origins, by their target id. */
   readonly frames = new Map<string, FrameSession>();
+  /** Whether each frame, in any session, has fired its load event since it last navigated. */
+  private readonly loaded = new Map<string, boolean>();
   private offs: (() => void)[] = [];
 
   constructor(
@@ -191,6 +193,20 @@ export class Page {
         if (e.method === 'Target.detachedFromTarget' && e.sessionId === this.sessionId) {
           this.frames.delete(e.params.targetId as string);
         }
+        if (
+          e.sessionId === this.sessionId ||
+          [...this.frames.values()].some((f) => f.sessionId === e.sessionId)
+        ) {
+          if (e.method === 'Page.frameNavigated')
+            this.loaded.set((e.params.frame as { id: string }).id, false);
+          if (e.method === 'Page.frameStartedLoading')
+            this.loaded.set(e.params.frameId as string, false);
+          if (e.method === 'Page.lifecycleEvent' && e.params.name === 'load')
+            this.loaded.set(e.params.frameId as string, true);
+          if (e.method === 'Page.frameStoppedLoading')
+            this.loaded.set(e.params.frameId as string, true);
+          if (e.method === 'Page.frameDetached') this.loaded.delete(e.params.frameId as string);
+        }
         if (e.method === 'Target.targetInfoChanged') {
           const info = e.params.targetInfo as { targetId: string; url: string };
           const f = this.frames.get(info.targetId);
@@ -211,6 +227,7 @@ export class Page {
   private async prepare(sessionId: string) {
     const c = (m: string, p: Record<string, unknown> = {}) => this.cdp.call(m, p, { sessionId });
     await c('Page.enable');
+    await c('Page.setLifecycleEventsEnabled', { enabled: true });
     await c('DOM.enable');
     await c('Network.enable');
     if (this.options.headers)
@@ -232,6 +249,11 @@ export class Page {
     const r = await this.call<{ errorText?: string }>('Page.navigate', { url }, timeoutMs);
     if (r.errorText) throw new Error(`navigation failed: ${r.errorText}`);
     await loaded;
+  }
+
+  /** True when the top document and every frame have fired their load event. */
+  allLoaded(): boolean {
+    return this.loaded.size > 0 && [...this.loaded.values()].every(Boolean);
   }
 
   async screenshot(): Promise<Buffer> {

@@ -70,6 +70,8 @@ export interface ScreenModel {
   screenshot: Buffer;
   /** Controls in the layout that were not visible or not on top. */
   dropped: number;
+  /** Regions the page itself animates (marquees, animated images): ignored when comparing pictures. */
+  animated: Box[];
 }
 
 interface Snapshot {
@@ -130,6 +132,7 @@ async function readSession(
     dropped: number;
     keys: string[];
     title: string;
+    animated: Box[];
   },
   oopifOwners: Map<number, { dx: number; dy: number; clip: Box }>,
 ) {
@@ -228,6 +231,13 @@ async function readSession(
       }
       if (li === undefined) continue;
       const box = toPage(doc.layout.bounds[li]!);
+      // Things that move on their own: a marquee, or an image that may be animated.
+      if (
+        tag === 'MARQUEE' ||
+        tag === 'BLINK' ||
+        (tag === 'IMG' && /\.(gif|svg)(\?|$)/i.test(attrs(ni).src ?? ''))
+      )
+        out.animated.push(box);
       const styles = doc.layout.styles[li] ?? [];
       const visible =
         S(styles[0]) !== 'hidden' && S(styles[0]) !== 'collapse' && Number(S(styles[1]) || '1') > 0;
@@ -413,6 +423,7 @@ export async function readScreen(page: Page): Promise<ScreenModel> {
     dropped: 0,
     keys: [] as string[],
     title: '',
+    animated: [] as Box[],
   };
   const metrics = await page.call<{
     cssLayoutViewport: { clientWidth: number; clientHeight: number };
@@ -509,5 +520,6 @@ export async function readScreen(page: Page): Promise<ScreenModel> {
     structureKey: structure,
     screenshot: await page.screenshot(),
     dropped: out.dropped + dropped,
+    animated: out.animated,
   };
 }
