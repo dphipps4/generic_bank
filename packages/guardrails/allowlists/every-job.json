@@ -1,0 +1,18 @@
+{
+  "job": "every job",
+  "allowed": [
+    { "screen": "sign_in", "verb": "type", "control": "Operator ID", "secret": true },
+    { "screen": "sign_in", "verb": "type", "control": "Password", "secret": true },
+    { "screen": "sign_in", "verb": "press", "control": "Sign In" },
+    { "screen": "staff_code", "verb": "choose", "control": "Delivery channel" },
+    { "screen": "staff_code", "verb": "press", "control": "Send code" },
+    { "screen": "staff_code", "verb": "type", "control": "Code" },
+    { "screen": "staff_code", "verb": "press", "control": "Verify" },
+    { "screen": "notice", "verb": "press", "control": "Not now" },
+    { "screen": "promo", "verb": "press", "control": "Not now" },
+    { "screen": "session_warning", "verb": "press", "control": "Stay signed in" },
+    { "screen": "member.search", "verb": "type", "control": "Member number" },
+    { "screen": "member.search", "verb": "press", "control": "Search" },
+    { "screen": "member.search", "verb": "open", "control": "Matching member" }
+  ]
+}

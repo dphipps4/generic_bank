@@ -26,6 +26,9 @@
       "path": "packages/runs"
     },
     {
+      "path": "packages/guardrails"
+    },
+    {
       "path": "apps/api"
     },
     {

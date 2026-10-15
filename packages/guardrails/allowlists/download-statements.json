@@ -1,0 +1,10 @@
+{
+  "job": "download-statements",
+  "allowed": [
+    { "screen": "member.summary", "verb": "read", "control": "Page" },
+    { "screen": "member.summary", "verb": "press", "control": "Statements" },
+    { "screen": "statements", "verb": "choose", "control": "Account" },
+    { "screen": "statements", "verb": "read", "control": "Page" },
+    { "screen": "statements", "verb": "press", "control": "Statement" }
+  ]
+}

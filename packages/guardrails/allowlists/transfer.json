@@ -1,0 +1,19 @@
+{
+  "job": "transfer",
+  "allowed": [
+    { "screen": "member.summary", "verb": "read", "control": "Page" },
+    { "screen": "member.summary", "verb": "open", "control": "Transfer Funds" },
+    { "screen": "member.summary", "verb": "open", "control": "Activity" },
+    { "screen": "transfer.form", "verb": "choose", "control": "From" },
+    { "screen": "transfer.form", "verb": "choose", "control": "To" },
+    { "screen": "transfer.form", "verb": "type", "control": "Amount" },
+    { "screen": "transfer.form", "verb": "type", "control": "Memo" },
+    { "screen": "transfer.form", "verb": "press", "control": "Continue" },
+    { "screen": "transfer.review", "verb": "read", "control": "Page" },
+    { "screen": "transfer.review", "verb": "press", "control": "Submit transfer", "money": true },
+    { "screen": "supervisor_approval", "verb": "type", "control": "Supervisor ID" },
+    { "screen": "supervisor_approval", "verb": "type", "control": "Approval code" },
+    { "screen": "supervisor_approval", "verb": "press", "control": "Approve", "money": true },
+    { "screen": "activity", "verb": "read", "control": "Page" }
+  ]
+}
