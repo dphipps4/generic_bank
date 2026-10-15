@@ -10,7 +10,7 @@ export {
   type ScreenModel,
   type Text,
 } from './model.js';
-export { decodePng, type Image, type Rect, sameOutside } from './png.js';
+export { decodePng, encodePng, type Image, type Rect, sameOutside } from './png.js';
 export { loadingSignals, type Rendered, waitFullyRendered } from './render.js';
 export {
   type ControlNeed,
