@@ -53,7 +53,7 @@ jobs:
       - name: The tools image runs the scripts
         run: |
           docker build -f infra/docker/tools.Dockerfile -t generic-bank/tools:ci infra/docker
-          docker run --rm -v "$PWD:/work" generic-bank/tools:ci bash -c \
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/work" generic-bank/tools:ci bash -c \
             'source infra/scripts/lib.sh && sops --version && age --version && jq --version && node infra/docs/render-plan.cjs'
       - name: Compose file is valid
         run: |
