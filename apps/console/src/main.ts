@@ -11,6 +11,7 @@ import { oauth } from '@gb/oauth';
 import { apiClientActions, onceStore } from './api-clients.js';
 import { ADMIN_BAR_JS } from './pages/layout.js';
 import { inboxPages } from './pages/inbox.js';
+import { journalPages } from './pages/journal.js';
 import { runPages, type Viewer } from './pages/runs.js';
 import { s3Store } from '@gb/evidence';
 import { resources } from './resources.js';
@@ -111,5 +112,6 @@ runPages(app, {
   whoIs,
 });
 inboxPages(app, { sql: control, answerKey: cfg.ANSWER_SEAL_KEY, whoIs });
+journalPages(app, { sql: control, whoIs });
 
 await app.listen({ host: '0.0.0.0', port: cfg.CONSOLE_PORT });

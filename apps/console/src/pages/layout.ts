@@ -21,6 +21,7 @@ export const esc = (s: unknown) =>
 const NAV = [
   ['/inbox', 'Inbox'],
   ['/runs', 'Runs'],
+  ['/journal', 'Journal'],
   ['/admin', 'Data'],
 ] as const;
 
