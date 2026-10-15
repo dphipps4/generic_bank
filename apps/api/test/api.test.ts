@@ -26,7 +26,7 @@ describe('Task API', () => {
       method: 'POST',
       url: '/tasks/check-balance',
       headers: auth,
-      payload: { tenant: 'generic', memberId: 'abc', account: '7890' },
+      payload: { bank: 'generic', memberId: 'abc', account: '7890' },
     });
     expect(r.statusCode).toBe(400);
     expect(r.json().fields[0].path).toBe('memberId');
@@ -37,7 +37,7 @@ describe('Task API', () => {
       method: 'POST',
       url: '/tasks/check-balance',
       headers: auth,
-      payload: { tenant: 'generic', memberId: '40017732', account: '7890' },
+      payload: { bank: 'generic', memberId: '40017732', account: '7890' },
     });
     expect(r.statusCode).toBe(501);
   });
