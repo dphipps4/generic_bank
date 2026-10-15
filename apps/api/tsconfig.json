@@ -17,6 +17,9 @@
     },
     {
       "path": "../../packages/oauth"
+    },
+    {
+      "path": "../../packages/runs"
     }
   ]
 }

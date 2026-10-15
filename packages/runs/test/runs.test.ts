@@ -158,3 +158,18 @@ describe('human tasks', () => {
     expect(await answerHumanTask(db, task, '1', 'x', KEY)).toBe(false);
   });
 });
+
+describe('the long poll', () => {
+  it('waits while a run waits on a person too, and returns when it settles', async () => {
+    const { runId } = await createRun(
+      db,
+      { task: 'check-balance', bank: 'generic', clientId: null, inputs: input },
+      KEY,
+    );
+    await openHumanTask(db, runId, 'staff_code', {}, new Date(Date.now() + 60_000));
+    setTimeout(() => void settleRun(db, runId, { status: 'succeeded', data: {} }), 600);
+    const t = Date.now();
+    expect((await waitForResult(db, runId, 5))!.status).toBe('succeeded');
+    expect(Date.now() - t).toBeGreaterThanOrEqual(500);
+  });
+});

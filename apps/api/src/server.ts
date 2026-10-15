@@ -5,7 +5,8 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { problem, TASKS, type TaskName } from '@gb/contracts';
+import { httpStatus, problem, TASKS, type TaskName, type TaskResult } from '@gb/contracts';
+import { createRun, resultOf, waitForResult } from '@gb/runs';
 import { allows, type Caller, type OAuth, OAuthError, type Sql, type TaskScope } from '@gb/oauth';
 import { banks, openapi, tools } from './catalog.js';
 
@@ -46,6 +47,10 @@ function clientCredentials(req: FastifyRequest): { id: string; secret: string } 
 export async function buildServer(opts: {
   oauth: OAuth;
   sql: Sql;
+  /** Seals a run's inputs; only the API and the Runner hold it. */
+  sealKey: string;
+  /** Hands a new run to the Runner (the workflow queue). */
+  enqueue: (runId: string) => Promise<void>;
   logger?: boolean;
   now?: () => number;
 }): Promise<FastifyInstance> {
@@ -221,18 +226,63 @@ export async function buildServer(opts: {
           banksThatSupportIt: serving,
         });
     }
-    // Runs are wired in a later step of this milestone. Until then the API says so plainly.
-    return problemJson(
-      reply,
-      problem(501, 'not_built_yet', 'Tasks are accepted once runs are wired in.'),
-    );
+    const { runId } = await createRun(
+      opts.sql,
+      {
+        task: name,
+        bank: parsed.data.bank,
+        clientId: req.caller!.clientId,
+        inputs: parsed.data as Record<string, unknown>,
+        idempotencyKey: (parsed.data as { idempotencyKey?: string }).idempotencyKey,
+      },
+      opts.sealKey,
+    ).then(async (r) => {
+      if (!r.existing) await opts.enqueue(r.runId);
+      return r;
+    });
+    const result = await resultOf(opts.sql, runId);
+    return answer(reply, result!);
   });
 
-  app.get<{ Params: { runId: string } }>('/tasks/:runId', async (req, reply) => {
-    if (!requireScope(req, reply, 'tasks:read')) return;
-    // Runs are wired in a later step of this milestone; until then there is no run to find.
-    return problemJson(reply, problem(404, 'no_such_run', 'There is no run with that id.'));
-  });
+  app.get<{ Params: { runId: string }; Querystring: { wait?: string } }>(
+    '/tasks/:runId',
+    async (req, reply) => {
+      if (!requireScope(req, reply, 'tasks:read')) return;
+      // A run is visible only to the client that started it.
+      const owner = await opts.sql.query<{ clientId: string | null }>(
+        'SELECT "clientId" FROM "TaskRun" WHERE id = $1',
+        [req.params.runId],
+      );
+      if (!owner.rows[0] || owner.rows[0].clientId !== req.caller!.clientId) {
+        return problemJson(reply, problem(404, 'no_such_run', 'There is no run with that id.'));
+      }
+      const result = await waitForResult(
+        opts.sql,
+        req.params.runId,
+        Number(req.query.wait ?? 0) || 0,
+      );
+      return answer(reply, result!);
+    },
+  );
+
+  /** A result as HTTP (plan, §D.7): the status code says what to do next. */
+  function answer(reply: FastifyReply, r: TaskResult) {
+    const status = httpStatus(r);
+    reply.header('location', `/tasks/${r.runId}`);
+    if (status === 202) return reply.code(202).header('retry-after', '5').send(r);
+    if (status === 200) return reply.code(200).send(r);
+    if (status === 503) reply.header('retry-after', '30');
+    return reply
+      .code(status)
+      .type('application/problem+json')
+      .send({
+        ...problem(status, r.code ?? r.status, r.message ?? '', {
+          runId: r.runId,
+          retryable: r.retryable ?? false,
+        }),
+        ...r,
+      });
+  }
 
   return app;
 }

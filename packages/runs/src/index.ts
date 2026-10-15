@@ -170,7 +170,10 @@ export async function resultOf(sql: Sql, runId: string): Promise<TaskResult | nu
   };
 }
 
-/** Waits up to `seconds` for a run to leave `running`; returns its result either way. */
+/**
+ * Waits up to `seconds` for a run to settle (to leave running, or waiting on a person); returns its
+ * result either way. A client waiting on a person is long-polled like any other.
+ */
 export async function waitForResult(
   sql: Sql,
   runId: string,
@@ -179,7 +182,8 @@ export async function waitForResult(
   const until = Date.now() + Math.min(Math.max(seconds, 0), 30) * 1000;
   for (;;) {
     const r = await resultOf(sql, runId);
-    if (!r || r.status !== 'running' || Date.now() >= until) return r;
+    if (!r || (r.status !== 'running' && r.status !== 'needs_human') || Date.now() >= until)
+      return r;
     await new Promise((res) => setTimeout(res, 300));
   }
 }

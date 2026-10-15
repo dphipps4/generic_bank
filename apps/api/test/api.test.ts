@@ -4,6 +4,7 @@ import { controlDb } from '../../../packages/oauth/test/control.js';
 import { buildServer } from '../src/server.js';
 
 const KEY = 'k'.repeat(40);
+const SEAL = 'r'.repeat(40);
 let db: Awaited<ReturnType<typeof controlDb>>;
 let app: Awaited<ReturnType<typeof buildServer>>;
 let o: ReturnType<typeof oauth>;
@@ -11,7 +12,7 @@ let o: ReturnType<typeof oauth>;
 beforeAll(async () => {
   db = await controlDb();
   o = oauth(db, KEY);
-  app = await buildServer({ oauth: o, sql: db });
+  app = await buildServer({ oauth: o, sql: db, sealKey: SEAL, enqueue: async () => undefined });
 });
 afterAll(() => db.close());
 
@@ -181,7 +182,13 @@ describe('the Task API, with OAuth2', () => {
 
   it('rate-limits token requests per client', async () => {
     let t = 0;
-    const limited = await buildServer({ oauth: o, sql: db, now: () => t });
+    const limited = await buildServer({
+      oauth: o,
+      sql: db,
+      sealKey: SEAL,
+      enqueue: async () => undefined,
+      now: () => t,
+    });
     const ask = () =>
       limited.inject({
         method: 'POST',
