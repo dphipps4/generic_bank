@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+plan
+docs
+sessions
+seeds
+*.md
+package-lock.json
+packages/db/prisma/migrations

@@ -1,0 +1,13 @@
+{
+  "name": "@gb/bank",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "fastify": "^5.6.0"
+  }
+}

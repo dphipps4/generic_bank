@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/config" },
+    { "path": "packages/contracts" },
+    { "path": "packages/db" },
+    { "path": "apps/api" },
+    { "path": "apps/console" },
+    { "path": "apps/runner" },
+    { "path": "apps/memory" },
+    { "path": "apps/bank" },
+    { "path": "apps/factory" }
+  ]
+}

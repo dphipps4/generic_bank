@@ -1,0 +1,16 @@
+{
+  "name": "@gb/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@gb/config": "*",
+    "@gb/contracts": "*",
+    "fastify": "^5.6.0",
+    "zod": "^4.1.0"
+  }
+}

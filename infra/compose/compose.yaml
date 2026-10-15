@@ -1,0 +1,232 @@
+# Generic Bank, locally. Every service has a memory limit (the whole base stack fits in
+# about 2.5 GB), and networks enforce who may reach whom:
+#   app      box A to box B          data     box B only (no route out)
+#   world    the banks, reached by the runner (and later the factory's browser)
+#   bankdb   the banks and their own database only (no route out)
+#   factory  box D, created with `make factory`
+# Ports are published on 127.0.0.1 only. Run everything through make.
+
+name: generic-bank
+
+x-node: &node
+  image: ${GB_IMAGE}
+  pull_policy: never
+  restart: unless-stopped
+  init: true
+  env_file: [../../config/app.env]
+
+x-health: &health
+  interval: 5s
+  timeout: 3s
+  retries: 30
+
+networks:
+  app: {}
+  data: { internal: true }
+  world: {}
+  bankdb: { internal: true }
+  factory: {}
+
+volumes:
+  postgres-data: {}
+  vault-data: {}
+  minio-data: {}
+  bank-db-data: {}
+
+services:
+  # ── box B: data ──────────────────────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    mem_limit: 384m
+    env_file: [../../.run/env/postgres.env]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks: [app, data]
+    healthcheck: { <<: *health, test: ['CMD', 'pg_isready', '-U', 'postgres'] }
+
+  vault:
+    image: hashicorp/vault:1.21
+    restart: unless-stopped
+    mem_limit: 128m
+    # The image's entrypoint loads every file in /vault/config for `server`. SKIP_SETCAP stops it
+    # rewriting the Vault binary's capabilities at startup, which alone exceeds a small memory
+    # limit; memory locking is disabled in vault.hcl, so the capability is not needed.
+    command: ['server']
+    environment: { VAULT_ADDR: 'http://127.0.0.1:8200', SKIP_SETCAP: 'true' }
+    volumes:
+      - vault-data:/vault/file
+      - ../vault/vault.hcl:/vault/config/vault.hcl:ro
+    networks: [app, data]
+    # Checked over HTTP, not with the vault CLI: the CLI is a second copy of the Vault binary
+    # inside the same memory limit. 200 whether sealed or not; `make up` unseals it.
+    healthcheck:
+      <<: *health
+      test:
+        [
+          'CMD',
+          'wget',
+          '-q',
+          '-O',
+          '/dev/null',
+          'http://127.0.0.1:8200/v1/sys/health?uninitcode=200&sealedcode=200&standbyok=true',
+        ]
+
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    restart: unless-stopped
+    mem_limit: 128m
+    user: '0'
+    command: ['server', '/data']
+    env_file: [../../.run/env/minio.env]
+    volumes: [minio-data:/data]
+    networks: [app, data]
+    healthcheck: { <<: *health, test: ['CMD', 'mc', 'ready', 'local'] }
+
+  memory:
+    <<: *node
+    command: ['node', 'apps/memory/dist/main.js']
+    mem_limit: 384m
+    env_file: [../../config/app.env, ../../.run/env/memory.env]
+    networks: [app, data]
+    depends_on: { postgres: { condition: service_healthy } }
+    healthcheck:
+      <<: *health
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8470/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+
+  # ── box A: app ───────────────────────────────────────────────────────────────
+  migrate:
+    <<: *node
+    restart: 'no'
+    command: ['npx', 'prisma', 'migrate', 'deploy', '--schema', 'packages/db/prisma/schema.prisma']
+    mem_limit: 256m
+    env_file: [../../config/app.env, ../../.run/env/migrate.env]
+    networks: [app]
+    depends_on: { postgres: { condition: service_healthy } }
+
+  api:
+    <<: *node
+    command: ['node', 'apps/api/dist/main.js']
+    mem_limit: 192m
+    env_file: [../../config/app.env, ../../.run/env/api.env]
+    ports: ['127.0.0.1:${API_PORT}:8000']
+    networks: [app]
+    depends_on: { postgres: { condition: service_healthy } }
+    healthcheck:
+      <<: *health
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8000/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+
+  console:
+    <<: *node
+    command: ['node', 'apps/console/dist/main.js']
+    mem_limit: 256m
+    env_file: [../../config/app.env, ../../.run/env/console.env]
+    ports: ['127.0.0.1:${CONSOLE_PORT}:8080']
+    networks: [app]
+    depends_on: { postgres: { condition: service_healthy } }
+    healthcheck:
+      <<: *health
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+
+  runner:
+    <<: *node
+    command: ['node', 'apps/runner/dist/main.js']
+    mem_limit: 768m
+    env_file: [../../config/app.env, ../../.run/env/runner.env]
+    networks: [app, world]
+    depends_on: { postgres: { condition: service_healthy } }
+    healthcheck:
+      <<: *health
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8100/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+
+  # ── the world: the banks ─────────────────────────────────────────────────────
+  bank-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    mem_limit: 128m
+    command: ['postgres', '-c', 'shared_buffers=32MB', '-c', 'max_connections=40']
+    env_file: [../../.run/env/bank-db.env]
+    volumes:
+      - bank-db-data:/var/lib/postgresql/data
+      - ../bank-db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks: [bankdb]
+    healthcheck: { <<: *health, test: ['CMD', 'pg_isready', '-U', 'postgres'] }
+
+  bank-generic: &bank
+    <<: *node
+    command: ['node', 'apps/bank/dist/main.js']
+    mem_limit: 96m
+    env_file: [../../config/app.env, ../../.run/env/bank.env]
+    environment: { TENANT: generic, PORT: '8081' }
+    ports: ['127.0.0.1:${BANK_GENERIC_PORT}:8081']
+    networks: [world, bankdb]
+    depends_on: { bank-db: { condition: service_healthy } }
+    healthcheck:
+      <<: *health
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:'+process.env.PORT+'/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+
+  bank-example:
+    <<: *bank
+    environment: { TENANT: example, PORT: '8082' }
+    ports: ['127.0.0.1:${BANK_EXAMPLE_PORT}:8082']
+
+  bank-sample:
+    <<: *bank
+    profiles: [more-banks]
+    environment: { TENANT: sample, PORT: '8083' }
+    ports: ['127.0.0.1:${BANK_SAMPLE_PORT}:8083']
+
+  bank-placeholder:
+    <<: *bank
+    profiles: [more-banks]
+    environment: { TENANT: placeholder, PORT: '8084' }
+    ports: ['127.0.0.1:${BANK_PLACEHOLDER_PORT}:8084']
+
+  # ── box D: the factory (created per session) ────────────────────────────────
+  factory:
+    <<: *node
+    profiles: [factory]
+    command: ['node', 'apps/factory/dist/main.js']
+    mem_limit: 256m
+    env_file: [../../config/app.env, ../../.run/env/factory.env]
+    networks: [factory, app, world]
+    healthcheck:
+      <<: *health
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8200/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
