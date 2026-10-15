@@ -131,7 +131,7 @@ Each entry gives the choice, the reason, and what else was considered.
 | Element | Choice | Why |
 |---|---|---|
 | Containers | **Docker** with **docker compose** profiles (`default`, `factory`) | One command locally; every service has a memory limit |
-| Entry point | **make** | `make up`, `make demo`, `make factory`, `make try`, `make doctor`, `make down` |
+| Entry point | **make** | `make up`, `make demo`, `make factory`, `make try`, `make requirements`, `make down` |
 | Images | Node 22 slim; Playwright's Chromium headless shell only in the Runner, Operator browser and sandbox images | Keeps every other image small |
 
 ---

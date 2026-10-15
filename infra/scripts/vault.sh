@@ -20,7 +20,7 @@ case "${1:-ensure}" in
       init="$(v operator init -key-shares=1 -key-threshold=1 -format=json)"
       root="$(jq -r .root_token <<<"$init")"; key="$(jq -r .unseal_keys_b64[0] <<<"$init")"
       for pair in "VAULT_ROOT_TOKEN:$root" "VAULT_UNSEAL_KEY:$key"; do
-        printf '%s' "${pair#*:}" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.stringify(s)))' \
+        printf '%s' "${pair#*:}" | json_string \
           | sops set --value-stdin "$(secret_path ops)" "[\"${pair%%:*}\"]"
       done
       unset init root key

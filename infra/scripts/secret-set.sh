@@ -28,7 +28,7 @@ else
 fi
 value="${value%$'\n'}"
 [[ -n "$value" ]] || die "the value is empty; nothing was changed"
-printf '%s' "$value" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.stringify(s)))' \
+printf '%s' "$value" | json_string \
   | sops set --value-stdin "$target" "[\"$KEY\"]"
 stored="$(decrypt "$FILE" | grep -E "^${KEY}=" | tail -1 | cut -d= -f2-)"
 [[ "$stored" == "$value" ]] || die "read-back did not match; check $target"
