@@ -1,12 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { controlDb } from '../../oauth/test/control.js';
 import {
+  actOnHumanTask,
   answerHumanTask,
   awaitAnswer,
   createRun,
   inputsOf,
   loadRun,
   maskInputs,
+  noteAsk,
   openHumanTask,
   resultOf,
   seal,
@@ -143,7 +145,10 @@ describe('human tasks', () => {
       pending: { kind: 'staff_code', deadline: new Date(deadline).toISOString() },
     });
     setTimeout(() => void answerHumanTask(db, task, '123456', 'admin@test', KEY), 300);
-    expect(await awaitAnswer(db, task, KEY, new Date(Date.now() + 10_000), 100)).toBe('123456');
+    expect(await awaitAnswer(db, task, KEY, new Date(Date.now() + 10_000), 100)).toEqual({
+      status: 'answered',
+      answer: '123456',
+    });
     const row = (
       await db.query<{ answerSealed: string | null; answeredBy: string }>(
         'SELECT "answerSealed", "answeredBy" FROM "HumanTask" WHERE id = $1',
@@ -179,8 +184,90 @@ describe('human tasks', () => {
       KEY,
     );
     const task = await openHumanTask(db, runId, 'staff_code', {}, new Date(Date.now() + 200));
-    expect(await awaitAnswer(db, task, KEY, new Date(Date.now() + 200), 50)).toBeNull();
+    expect(await awaitAnswer(db, task, KEY, new Date(Date.now() + 200), 50)).toEqual({
+      status: 'expired',
+    });
     expect(await answerHumanTask(db, task, '1', 'x', KEY)).toBe(false);
+  });
+});
+
+describe('acting on a human task', () => {
+  const open = async (kind: 'staff_code' | 'approval' = 'staff_code') => {
+    const { runId } = await createRun(
+      db,
+      { task: 'check-balance', bank: 'generic', clientId: null, inputs: input },
+      KEY,
+    );
+    const task = await openHumanTask(db, runId, kind, {}, new Date(Date.now() + 60_000));
+    return { runId, task };
+  };
+  const audit = async (task: string) =>
+    (
+      await db.query<{ actor: string; action: string; reason: string }>(
+        'SELECT actor, action, reason FROM "AuditEntry" WHERE target = $1 ORDER BY at',
+        [task],
+      )
+    ).rows;
+
+  it('seals a code, audits the answer without it, and refuses a second answer', async () => {
+    const { task } = await open();
+    expect(await actOnHumanTask(db, task, 'answer', { code: '482913' }, 'ann@bank', KEY)).toEqual({
+      ok: true,
+    });
+    const row = (
+      await db.query<Record<string, unknown>>('SELECT * FROM "HumanTask" WHERE id = $1', [task])
+    ).rows[0]!;
+    expect(row).toMatchObject({ status: 'answered', action: 'answer', answeredBy: 'ann@bank' });
+    expect(JSON.stringify(row)).not.toContain('482913');
+    expect(JSON.stringify(await audit(task))).not.toContain('482913');
+    expect(await audit(task)).toEqual([
+      { actor: 'ann@bank', action: 'human_task.answer', reason: 'entered the code the bank sent' },
+    ]);
+    expect(await actOnHumanTask(db, task, 'answer', { code: '111111' }, 'bo@bank', KEY)).toEqual({
+      ok: false,
+      status: 409,
+      reason: 'the task is answered',
+    });
+  });
+
+  it('cancels with a reason, and the waiting run hears it as cancelled', async () => {
+    const { task } = await open();
+    const waiting = awaitAnswer(db, task, KEY, new Date(Date.now() + 10_000), 50);
+    expect(await actOnHumanTask(db, task, 'cancel', { reason: 'short' }, 'ann@bank', KEY)).toEqual({
+      ok: false,
+      status: 400,
+      reason: 'a reason of at least ten characters',
+    });
+    expect(
+      await actOnHumanTask(db, task, 'cancel', { reason: 'member left the branch' }, 'ann', KEY),
+    ).toEqual({ ok: true });
+    expect(await waiting).toEqual({ status: 'cancelled' });
+    expect(await audit(task)).toEqual([
+      { actor: 'ann', action: 'human_task.cancel', reason: 'member left the branch' },
+    ]);
+  });
+
+  it('refuses an action the task does not offer, and a task that does not exist', async () => {
+    const { task } = await open();
+    expect(
+      await actOnHumanTask(db, task, 'approve', { reason: 'looks right to me' }, 'a', KEY),
+    ).toMatchObject({ ok: false, status: 409 });
+    expect(await actOnHumanTask(db, 'h_none', 'answer', { code: '123456' }, 'a', KEY)).toEqual({
+      ok: false,
+      status: 404,
+      reason: 'there is no such task',
+    });
+    expect(await audit(task)).toEqual([]);
+  });
+
+  it('counts how often the agent asks while a person has not answered', async () => {
+    const { runId, task } = await open();
+    await noteAsk(db, runId);
+    await noteAsk(db, runId);
+    const r = await db.query<{ asks: number }>('SELECT asks FROM "HumanTask" WHERE id = $1', [
+      task,
+    ]);
+    expect(r.rows[0]!.asks).toBe(2);
   });
 });
 

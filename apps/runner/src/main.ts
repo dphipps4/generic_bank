@@ -15,13 +15,14 @@ const cfg = loadConfig(
     RUNNER_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(1),
     CONTROL_DATABASE_URL: z.string().startsWith('postgresql://'),
     RUN_SEAL_KEY: secret(),
+    ANSWER_SEAL_KEY: secret(),
     MINIO_ENDPOINT: z.string().url().default('http://minio:9000'),
     MINIO_ROOT_USER: z.string().min(3),
     MINIO_ROOT_PASSWORD: secret(),
     BANK_SERVICE_PASSWORD: z.string().min(16),
   },
   process.env,
-  ['RUN_SEAL_KEY', 'MINIO_ROOT_PASSWORD'],
+  ['RUN_SEAL_KEY', 'ANSWER_SEAL_KEY', 'MINIO_ROOT_PASSWORD'],
 );
 
 const store = s3Store({
@@ -41,6 +42,7 @@ registerTaskWorkflow({
   sql: sql(cfg.CONTROL_DATABASE_URL),
   store,
   sealKey: cfg.RUN_SEAL_KEY,
+  answerKey: cfg.ANSWER_SEAL_KEY,
   // The staff service account: the same operator at every bank here; from Vault in the plan.
   credentials: async () => ({ operatorId: '0412', password: cfg.BANK_SERVICE_PASSWORD }),
 });

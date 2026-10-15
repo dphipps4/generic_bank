@@ -6,7 +6,7 @@ import swaggerUi from '@fastify/swagger-ui';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { httpStatus, problem, TASKS, type TaskName, type TaskResult } from '@gb/contracts';
-import { createRun, resultOf, waitForResult } from '@gb/runs';
+import { createRun, noteAsk, resultOf, waitForResult } from '@gb/runs';
 import { allows, type Caller, type OAuth, OAuthError, type Sql, type TaskScope } from '@gb/oauth';
 import { banks, openapi, tools } from './catalog.js';
 
@@ -237,7 +237,9 @@ export async function buildServer(opts: {
       },
       opts.sealKey,
     ).then(async (r) => {
-      if (!r.existing) await opts.enqueue(r.runId);
+      // The same request again is the agent asking again.
+      if (r.existing) await noteAsk(opts.sql, r.runId);
+      else await opts.enqueue(r.runId);
       return r;
     });
     const result = await resultOf(opts.sql, runId);
@@ -256,6 +258,7 @@ export async function buildServer(opts: {
       if (!owner.rows[0] || owner.rows[0].clientId !== req.caller!.clientId) {
         return problemJson(reply, problem(404, 'no_such_run', 'There is no run with that id.'));
       }
+      await noteAsk(opts.sql, req.params.runId);
       const result = await waitForResult(
         opts.sql,
         req.params.runId,

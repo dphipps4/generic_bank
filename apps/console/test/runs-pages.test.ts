@@ -14,7 +14,11 @@ let runId: string;
 beforeAll(async () => {
   db = await controlDb();
   app = Fastify();
-  runPages(app, { sql: db, store, whoIs: () => (signedIn ? 'admin@generic-bank.local' : null) });
+  runPages(app, {
+    sql: db,
+    store,
+    whoIs: () => (signedIn ? { email: 'admin@generic-bank.local', role: 'admin' } : null),
+  });
   ({ runId } = await createRun(
     db,
     {
