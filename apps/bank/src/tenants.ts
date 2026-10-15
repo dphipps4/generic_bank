@@ -6,6 +6,12 @@
 export type TenantId = 'generic' | 'example' | 'sample' | 'placeholder';
 export type Theme = 'y2003' | 'teal' | 'maroon' | 'flat';
 export type CodeChannel = 'text' | 'email';
+/**
+ * The console's shape: a nav frame on the left (bank 1), a tab strip across the top (bank 2), the
+ * tab strip plus a notices frame on the right (bank 3), or no frameset at all, a drop-down menu
+ * bar over an inline frame (bank 4).
+ */
+export type Layout = 'nav' | 'tabs' | 'tabs-notices' | 'menubar';
 
 export interface Labels {
   operatorId: string;
@@ -27,6 +33,7 @@ export interface Tenant {
   basePath: string;
   branch: string;
   theme: Theme;
+  layout: Layout;
   labels: Labels;
   /** How an account is named on screen, from its full number. */
   accountWording: (number: string) => string;
@@ -49,6 +56,7 @@ export const TENANTS: Record<TenantId, Tenant> = {
     basePath: '/corelink/',
     branch: 'Main Street Branch',
     theme: 'y2003',
+    layout: 'nav',
     labels: {
       operatorId: 'Operator ID',
       password: 'Password',
@@ -74,6 +82,7 @@ export const TENANTS: Record<TenantId, Tenant> = {
     basePath: '/',
     branch: 'Riverside Office',
     theme: 'teal',
+    layout: 'tabs',
     labels: {
       operatorId: 'Username',
       password: 'Passcode',
@@ -99,6 +108,7 @@ export const TENANTS: Record<TenantId, Tenant> = {
     basePath: '/online/branch/',
     branch: 'Harbor Branch',
     theme: 'maroon',
+    layout: 'tabs-notices',
     labels: {
       operatorId: 'Staff number',
       password: 'PIN',
@@ -124,6 +134,7 @@ export const TENANTS: Record<TenantId, Tenant> = {
     basePath: '/cu/ib/',
     branch: 'Capitol Office',
     theme: 'flat',
+    layout: 'menubar',
     labels: {
       operatorId: 'User',
       password: 'Password',
