@@ -1,10 +1,13 @@
 // The Task API: typed tasks in, one typed result out. The caller never sees the UI. Every call
 // but health and the OAuth2 endpoints carries a bearer access token (plan, §D.6).
 import formbody from '@fastify/formbody';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { problem, TASKS, type TaskName } from '@gb/contracts';
-import { allows, type Caller, type OAuth, OAuthError, type TaskScope } from '@gb/oauth';
+import { allows, type Caller, type OAuth, OAuthError, type Sql, type TaskScope } from '@gb/oauth';
+import { banks, openapi, tools } from './catalog.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -18,7 +21,10 @@ export const TASK_SCOPE: Record<TaskName, TaskScope> = {
   'download-statements': 'tasks:statements',
 };
 
-const PUBLIC = new Set(['/healthz', '/oauth/token', '/oauth/revoke']);
+const PUBLIC = new Set(['/healthz', '/oauth/token', '/oauth/revoke', '/openapi.json']);
+/** Swagger UI and its assets are public; the calls it makes carry the token you paste in. */
+const isPublic = (path: string) =>
+  PUBLIC.has(path) || path === '/docs' || path.startsWith('/docs/');
 
 /** Token requests per client per minute. */
 const TOKEN_RATE = 20;
@@ -39,18 +45,25 @@ function clientCredentials(req: FastifyRequest): { id: string; secret: string } 
 
 export async function buildServer(opts: {
   oauth: OAuth;
+  sql: Sql;
   logger?: boolean;
   now?: () => number;
 }): Promise<FastifyInstance> {
   const app = Fastify({ logger: opts.logger ?? false });
   await app.register(formbody);
+  // The document is ours, generated from the contracts; the plugins only serve it.
+  await app.register(swagger, { mode: 'static', specification: { document: openapi() as never } });
+  await app.register(swaggerUi, {
+    routePrefix: '/docs',
+    uiConfig: { persistAuthorization: false, tryItOutEnabled: true },
+  });
   const now = opts.now ?? Date.now;
   app.decorateRequest('caller', null);
 
   // Bearer tokens on everything that is not public.
   app.addHook('onRequest', async (req, reply) => {
     const path = req.url.split('?')[0]!;
-    if (PUBLIC.has(path)) return;
+    if (isPublic(path)) return;
     const auth = req.headers.authorization ?? '';
     const caller = auth.startsWith('Bearer ')
       ? await opts.oauth.authenticate(auth.slice(7).trim())
@@ -85,6 +98,7 @@ export async function buildServer(opts: {
   };
 
   app.get('/healthz', async () => ({ ok: true, service: 'api' }));
+  app.get('/openapi.json', async () => openapi());
 
   // ── OAuth2 ──────────────────────────────────────────────────────────────────
   const recent = new Map<string, number[]>();
@@ -145,6 +159,19 @@ export async function buildServer(opts: {
   });
 
   // ── Tasks ───────────────────────────────────────────────────────────────────
+  app.get('/banks', async (req, reply) => {
+    if (!requireScope(req, reply, 'tasks:read')) return;
+    const all = await banks(opts.sql);
+    // A client limited to some banks sees only those.
+    const only = req.caller!.scopes.filter((x) => x.startsWith('bank:')).map((x) => x.slice(5));
+    return only.length ? all.filter((b) => only.includes(b.id)) : all;
+  });
+
+  app.get('/tools', async (req, reply) => {
+    if (!requireScope(req, reply, 'tasks:read')) return;
+    return { tools: tools() };
+  });
+
   app.get('/tasks', async (req, reply) => {
     if (!requireScope(req, reply, 'tasks:read')) return;
     return {
@@ -175,11 +202,36 @@ export async function buildServer(opts: {
         });
     }
     if (!requireScope(req, reply, TASK_SCOPE[name], parsed.data.bank)) return;
+    // The registry decides: the bank must exist, and a promoted crawler must serve this task on it.
+    const all = await banks(opts.sql);
+    const bank = all.find((b) => b.id === parsed.data.bank);
+    const serving = all.filter((b) => b.tasks.some((t) => t.task === name)).map((b) => b.id);
+    if (!bank || !bank.tasks.some((t) => t.task === name)) {
+      return reply
+        .code(404)
+        .type('application/problem+json')
+        .send({
+          ...problem(
+            404,
+            bank ? 'task_not_available' : 'unknown_bank',
+            bank
+              ? `No promoted crawler serves ${name} on ${bank.id} yet.`
+              : 'There is no bank by that id; GET /banks lists them.',
+          ),
+          banksThatSupportIt: serving,
+        });
+    }
     // Runs are wired in a later step of this milestone. Until then the API says so plainly.
     return problemJson(
       reply,
       problem(501, 'not_built_yet', 'Tasks are accepted once runs are wired in.'),
     );
+  });
+
+  app.get<{ Params: { runId: string } }>('/tasks/:runId', async (req, reply) => {
+    if (!requireScope(req, reply, 'tasks:read')) return;
+    // Runs are wired in a later step of this milestone; until then there is no run to find.
+    return problemJson(reply, problem(404, 'no_such_run', 'There is no run with that id.'));
   });
 
   return app;

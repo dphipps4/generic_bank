@@ -211,6 +211,9 @@ clean: ## Remove build output (dist, tsbuildinfo, .run)
 # group name -> variable holding its services (data -> DATA, bank-more -> BANK_MORE)
 group = $(shell echo $(1) | tr 'a-z-' 'A-Z_')
 
+api-docs: ## Write the API reference (docs/api/openapi.json) from the contracts
+	@npx tsc -b && node apps/api/dist/openapi-cli.js > docs/api/openapi.json && echo "  wrote docs/api/openapi.json; open docs/api/index.html to read it"
+
 api-token: ## A fresh access token for Swagger UI or curl (15 minutes)
 	@$(COMPOSE) exec -T api node apps/api/dist/token-cli.js
 
