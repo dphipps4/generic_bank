@@ -666,13 +666,13 @@
     {
       "id": "L-0053",
       "area": "testing",
-      "lesson": "Passing your own synthetic fixtures proves only the failures they reproduce. Before claiming a capability, exercise it on captured real screens and documents, including ones that force the OCR path.",
-      "why": "The fixtures reproduced only cataloged failures, and their PDFs had a clean text layer, so the OCR path never ran.",
+      "lesson": "Passing your own synthetic fixtures proves only the failures they reproduce. Before claiming a capability, exercise it on captured real screens and documents.",
+      "why": "The fixtures reproduced only cataloged failures, so the paths the real screens take were never run.",
       "confidence": "high",
       "signals": [
         "all fixtures pass",
-        "clean text layer",
-        "OCR path not exercised"
+        "only cataloged failures",
+        "real screens not exercised"
       ]
     },
     {
@@ -2397,108 +2397,6 @@
       ]
     },
     {
-      "id": "L-0194",
-      "area": "testing",
-      "lesson": "Test any document extraction change against documents shaped like the real ones, never clean synthetic samples, and keep extraction guidance in step with what ships.",
-      "why": "Real statements can place text glyph by glyph with no ruled tables, so clean samples flatter an extractor.",
-      "confidence": "high",
-      "signals": [
-        "no transactions found",
-        "text layer",
-        "extraction"
-      ]
-    },
-    {
-      "id": "L-0195",
-      "area": "testing",
-      "lesson": "Before designing an adversarial document fixture, read the check that decides which extraction path runs, and pair the fixture with a clean control that proves the fast path is still taken.",
-      "why": "A path check that ignores word order lets a shuffled-text fixture take the text-layer shortcut, so the OCR path is never exercised.",
-      "confidence": "high",
-      "signals": [
-        "adversarial fixture",
-        "text layer",
-        "fast path",
-        "control fixture"
-      ]
-    },
-    {
-      "id": "L-0196",
-      "area": "documents",
-      "lesson": "Use a document's embedded text layer only through the geometry pipeline, scaled into the same coordinate space as OCR tokens, and fall back to raster OCR when the text layer yields nothing.",
-      "why": "A raw text layer comes out as column fragments with no line holding both a date and an amount, so rows must be rebuilt from coordinates.",
-      "confidence": "medium",
-      "signals": [
-        "text layer",
-        "column fragments",
-        "coordinate space",
-        "raster OCR"
-      ]
-    },
-    {
-      "id": "L-0197",
-      "area": "documents",
-      "lesson": "Replay saved OCR tokens against the extractor offline to find logic bugs without re-running OCR, and pass the real page geometry instead of inferring it from token extents.",
-      "why": "Page height inferred from tokens shrinks size-based filters on sparse pages until they drop every line, and amounts merge with nearby words.",
-      "confidence": "high",
-      "signals": [
-        "OCR tokens",
-        "replay",
-        "page geometry",
-        "sparse page"
-      ]
-    },
-    {
-      "id": "L-0198",
-      "area": "documents",
-      "lesson": "When rebuilding table rows from geometry, bound each row and its description by section headings and a band cap, not only by the next date anchor, and look for amount column headers only where amount columns can appear.",
-      "why": "An unbounded sweep crossed section titles and repeated headers, and a left-side title was taken for an amount column header.",
-      "confidence": "low",
-      "signals": [
-        "section heading",
-        "column header",
-        "description zone",
-        "date anchor"
-      ]
-    },
-    {
-      "id": "L-0199",
-      "area": "documents",
-      "lesson": "Make document date parsing tolerant: accept a day and year that OCR glued together without a separator, and accept rows that carry no year by seeding it from the statement period.",
-      "why": "Low-resolution OCR glues date tokens together, and some layouts print only the month and day in each row.",
-      "confidence": "medium",
-      "signals": [
-        "date token",
-        "missing separator",
-        "no year",
-        "statement period"
-      ]
-    },
-    {
-      "id": "L-0200",
-      "area": "documents",
-      "lesson": "Choose an extraction profile and classify a document from the document's own content, never from the tenant or sign-in it came through, and never generalize one account's observation to another.",
-      "why": "A profile chosen from the account's institution misread the document, and evidence from one person's account did not hold for others.",
-      "confidence": "medium",
-      "signals": [
-        "extraction profile",
-        "classify document",
-        "layout profile"
-      ]
-    },
-    {
-      "id": "L-0201",
-      "area": "outcomes",
-      "lesson": "Treat a correct empty extraction as a result, not a failure: classify documents that are not statements, such as notices or certificates, and complete a statement with no transactions as an empty, header-only result.",
-      "why": "Zero rows was reported as failure, yet the documents were dormant statements, blank notices or certificates.",
-      "confidence": "medium",
-      "signals": [
-        "zero rows",
-        "no transactions",
-        "not a statement",
-        "empty extraction"
-      ]
-    },
-    {
       "id": "L-0202",
       "area": "factory",
       "lesson": "After shipping a fix, rerun the affected items and read the fresh worker log before concluding that the fix failed.",
@@ -2527,7 +2425,7 @@
     {
       "id": "L-0204",
       "area": "testing",
-      "lesson": "Treat the browser-automation, OCR and authentication libraries as locked sets: bump each set together in a dedicated change tested against real documents, never in a routine patch, and read the major-version changelog first. A native package that installs on an unproven CPU architecture can still crash at run time.",
+      "lesson": "Treat the browser-automation and authentication libraries as locked sets: bump each set together in a dedicated change tested against the real banks, never in a routine patch, and read the major-version changelog first. A native package that installs on an unproven CPU architecture can still crash at run time.",
       "why": "Pinned packages depend on each other's versions, a security fix in one broke another, and a major release renamed its settings.",
       "confidence": "medium",
       "signals": [

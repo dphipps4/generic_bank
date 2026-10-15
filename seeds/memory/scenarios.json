@@ -506,17 +506,17 @@
       "id": "SC-027",
       "family": "download",
       "title": "Notices mixed in with statements",
-      "recognize": "Some retrieved documents yield no transactions and are marked failed, and a real but nearly empty statement is marked failed too.",
+      "recognize": "Some retrieved documents are marked failed because they hold no transactions, and a real but nearly empty statement is marked failed too.",
       "tell": "The document is a notice, a tax form or a blank page, so zero transactions is the right answer.",
       "mistaken_for": [
-        "A text extraction failure"
+        "A failed download"
       ],
       "probe": "Open the documents that yielded no rows, and read their titles and the list's document type column.",
       "recover": "Select documents by their type on the list and inside the PDF, and keep a statement with no activity as a valid statement.",
       "approaches": [
         "File by the statement date inside the PDF"
       ],
-      "prevent": "Document type is checked before extraction results are judged.",
+      "prevent": "Document type is checked before a document is judged.",
       "hazard": "proposed: privacy notices and tax forms listed in the statements table under Document Type"
     },
     {

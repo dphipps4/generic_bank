@@ -6,7 +6,7 @@ import { MEMBERS } from '../../apps/bank/src/seed.js';
 import { type LiveBank, liveBank, PASSWORDS, signedInCookies } from '../support/banks.js';
 
 // What a stored frame shows: every place the bank drew a known value or a pattern is covered. The
-// bank knows where it drew them (the screen model read them there), so no OCR is needed.
+// bank knows where it drew them, and the screen model read them there.
 
 let browser: Browser;
 let bank: LiveBank;

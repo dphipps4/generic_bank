@@ -3,7 +3,7 @@
 // emails, phone numbers, street lines) are masked in text. Screenshots are masked from the screen
 // model, which already knows where every piece of text is: every input, every text run that holds a
 // known value or a pattern, and every picture the crawler cannot read is covered with a white box
-// filled with asterisks, the way a redacted form looks. No OCR is involved.
+// filled with asterisks, the way a redacted form looks.
 import { type Box, type Control, decodePng, encodePng, type ScreenModel } from '@gb/screen';
 
 export interface MaskPolicy {
