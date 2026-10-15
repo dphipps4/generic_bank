@@ -1,7 +1,8 @@
 import cookie from '@fastify/cookie';
 import formbody from '@fastify/formbody';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { type Bank, COOKIE, rotateNonce } from './context.js';
+import { accessDenied, botReason, reference } from './botscreen.js';
+import { type Bank, COOKIE, refusalLog, rotateNonce } from './context.js';
 import { HEADER, type RequestHazards } from './hazards.js';
 import { buttonSvg, CORELINK_JS, NEW_SVG, SPACER_GIF } from './markup/html.js';
 import { pixelImage } from './markup/pixels.js';
@@ -28,6 +29,19 @@ export async function buildServer(bank: Bank, logger = false): Promise<FastifyIn
   const base = bank.t.basePath;
   app.decorateRequest('hz', null as unknown as RequestHazards);
   app.decorateRequest('nonce', '');
+
+  // The bot screen comes first, on both origins: a refused request sees no hazard and gets no
+  // cookie. Health checks pass; the bank-admin API is a server of its own and is never screened.
+  if (bank.t.botScreen)
+    app.addHook('onRequest', async (req, reply) => {
+      const path = req.url.split('?')[0] ?? req.url;
+      if (path === '/healthz') return;
+      const reason = botReason(req.headers);
+      if (!reason) return;
+      const ref = reference();
+      await refusalLog(bank, path, `${reason}, reference ${ref}`);
+      return reply.code(403).type('text/html').send(accessDenied(bank.t, ref));
+    });
 
   app.addHook('onRequest', async (req, reply) => {
     const path = req.url.split('?')[0] ?? req.url;

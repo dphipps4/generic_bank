@@ -96,3 +96,12 @@ export const hazardLog =
       now(),
     ]).catch(() => undefined);
   };
+
+/** Writes a request the bot screen turned away to the hazard log, with the reason. */
+export const refusalLog = (bank: Bank, path: string, reason: string) =>
+  bank.db
+    .query(
+      'INSERT INTO hazard_events (hazard, path, forced, detail, at) VALUES ($1, $2, $3, $4, $5)',
+      ['bot-screen', path, false, reason, bank.now()],
+    )
+    .catch(() => undefined);

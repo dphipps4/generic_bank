@@ -45,6 +45,16 @@ and entered with `make secrets-edit FILE=…`, which opens the encrypted file in
 Then open the Console at http://localhost:8080 (sign in as `admin@generic-bank.local`; the
 password is printed by `make console-password`).
 
+Try a fault:
+
+```sh
+curl -i http://localhost:8082/             # HTTP/1.1 403 Forbidden ... Access denied
+curl -i http://localhost:8081/corelink/    # HTTP/1.1 200 OK
+```
+
+Banks 2 to 4 turn away anything not shaped like a browser, as a real bank's bot screen does.
+Bank 1, the 2003 site, does not.
+
 ## A second copy, side by side
 
 Clone or fork into another folder and run `make fork-ports` there before `make setup`. The copy

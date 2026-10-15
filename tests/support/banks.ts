@@ -9,6 +9,7 @@ import { OPERATORS, seed } from '../../apps/bank/src/seed.js';
 import { buildServer } from '../../apps/bank/src/server.js';
 import { TENANTS, type TenantId } from '../../apps/bank/src/tenants.js';
 import { totp } from '../../apps/bank/src/auth.js';
+import { MAC_CHROME } from '../../apps/bank/test/browser.js';
 
 export const PASSWORDS = {
   service: 'service-password-for-tests',
@@ -81,8 +82,9 @@ export async function liveBank(
 }
 
 /**
- * Signs the service account in over plain HTTP, the way a person's browser would, and returns
- * the cookies. For tests that need a signed-in console before the crawler can type for itself.
+ * Signs the service account in over plain HTTP, the way a person's browser would and with its
+ * headers, so banks 2 to 4 let it in, and returns the cookies. For tests that need a signed-in
+ * console before the crawler can type for itself.
  */
 export async function signedInCookies(b: LiveBank): Promise<{ name: string; value: string }[]> {
   const t = TENANTS[b.id];
@@ -98,7 +100,10 @@ export async function signedInCookies(b: LiveBank): Promise<{ name: string; valu
       jar.set(kv!.slice(0, i), kv!.slice(i + 1));
     }
   };
-  const headers = () => ({ cookie: [...jar].map(([k, v]) => `${k}=${v}`).join('; ') });
+  const headers = () => ({
+    ...MAC_CHROME,
+    cookie: [...jar].map(([k, v]) => `${k}=${v}`).join('; '),
+  });
   const name = (logical: string) =>
     `f${createHmac('sha256', jar.get('CLFORM') ?? '')
       .update(logical)

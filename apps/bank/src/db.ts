@@ -152,6 +152,7 @@ CREATE TABLE IF NOT EXISTS hazard_events (
   forced boolean NOT NULL,
   at timestamptz NOT NULL
 );
+ALTER TABLE hazard_events ADD COLUMN IF NOT EXISTS detail text;
 CREATE TABLE IF NOT EXISTS state_changes (
   id bigserial PRIMARY KEY,
   kind text NOT NULL,
