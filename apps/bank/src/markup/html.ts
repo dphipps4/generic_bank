@@ -1,6 +1,7 @@
 import type { RequestHazards } from '../hazards.js';
 import type { Tenant, Theme } from '../tenants.js';
 import { type Dialect, fieldName } from './dialect.js';
+import { type PixelStyle, pixelId } from './pixels.js';
 
 // Legacy markup, on purpose: nested tables for all layout, <FONT> and <CENTER>, spacer images,
 // inline onclick, no ids, no data-* hooks, no <label for>. Labels are text in a neighboring cell.
@@ -68,6 +69,10 @@ export const palette = (t: Tenant) => PALETTES[t.theme];
 const SPACER = (base: string, w: number, h = 1) =>
   `<IMG SRC="${base}img/spacer.gif" WIDTH="${w}" HEIGHT="${h}" BORDER="0" ALT="">`;
 
+/** Words as an image, with no alt text and an address that says nothing. */
+export const pixels = (c: Ctx, text: string, style: PixelStyle) =>
+  `<IMG SRC="${c.base}img/t/${pixelId(c.t.markupSeed, text, style)}.png" BORDER="0">`;
+
 /** Wraps content in `depth` layout tables, the way the product's page templates do. */
 export function nest(c: Ctx, d: Dialect, inner: string): string {
   const p = palette(c.t);
@@ -87,6 +92,9 @@ export const font = (c: Ctx, inner: string, extra = '') =>
 /** A form row of three cells: the label (whole or split across two cells), then the control. */
 export function row(c: Ctx, d: Dialect, label: string, control: string): string {
   const text = (s: string) => (d.label === 'bold' ? `<B>${font(c, esc(s))}</B>` : font(c, esc(s)));
+  if (c.t.imageText?.labels?.includes(label)) {
+    return `<TR><TD ALIGN="right" COLSPAN="2" NOWRAP>${pixels(c, `${label}:`, 'label')}</TD><TD>${control}</TD></TR>`;
+  }
   if (d.label === 'split' && label.includes(' ')) {
     const i = label.indexOf(' ');
     return `<TR><TD ALIGN="right" NOWRAP>${text(label.slice(0, i))}</TD><TD NOWRAP>${text(label.slice(i + 1) + ':')}</TD><TD>${control}</TD></TR>`;
@@ -139,6 +147,8 @@ export function submit(
   label: string,
   style: string | undefined = undefined,
 ): string {
+  if (c.t.imageText?.buttons?.includes(label))
+    return `<INPUT TYPE="image" SRC="${pixels(c, label, 'button').match(/SRC="([^"]+)"/)![1]}" BORDER="0">`;
   const s = style ?? d.submit;
   const bevel = 'border:2px outset #E0E0E0;background:#D4D0C8;padding:2px 10px;cursor:pointer';
   switch (s) {
@@ -172,7 +182,10 @@ export function form(
 
 export function heading(c: Ctx, d: Dialect, text: string): string {
   const p = palette(c.t);
-  return `<TABLE WIDTH="100%" CELLPADDING="3" CELLSPACING="0" BORDER="0" CLASS="${d.cls('h')}"><TR><TD BGCOLOR="${p.head}">${font(c, `<B>${esc(text)}</B>`, ` COLOR="${p.headText}"`)}</TD></TR></TABLE>`;
+  const inner = c.t.imageText?.headings
+    ? pixels(c, text, 'heading')
+    : font(c, `<B>${esc(text)}</B>`, ` COLOR="${p.headText}"`);
+  return `<TABLE WIDTH="100%" CELLPADDING="3" CELLSPACING="0" BORDER="0" CLASS="${d.cls('h')}"><TR><TD BGCOLOR="${p.head}">${inner}</TD></TR></TABLE>`;
 }
 
 export const message = (c: Ctx, text: string) =>

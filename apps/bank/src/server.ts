@@ -4,6 +4,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { type Bank, COOKIE, rotateNonce } from './context.js';
 import { HEADER, type RequestHazards } from './hazards.js';
 import { buttonSvg, CORELINK_JS, NEW_SVG, SPACER_GIF } from './markup/html.js';
+import { pixelImage } from './markup/pixels.js';
 import { consoleRoutes } from './routes/console.js';
 import { layoutRoutes } from './routes/layout.js';
 import { signInRoutes } from './routes/signin.js';
@@ -56,6 +57,10 @@ export async function buildServer(bank: Bank, logger = false): Promise<FastifyIn
       .type('image/svg+xml')
       .send(buttonSvg(String(req.query.l ?? '').slice(0, 40), String(req.query.t ?? ''))),
   );
+  app.get<{ Params: { file: string } }>(`${base}img/t/:file`, async (req, reply) => {
+    const img = pixelImage(req.params.file.replace(/\.png$/, ''));
+    return img ? reply.type('image/png').send(img) : reply.code(404).send();
+  });
   if (base !== '/') app.get('/', async (_req, reply) => reply.redirect(base));
 
   signInRoutes(app, bank);
