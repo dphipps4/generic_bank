@@ -31,6 +31,9 @@ export interface MainArgs {
   member: Member | null;
 }
 
+/** A page body, or a response of its own (a redirect, a lost answer) that replaces the page. */
+export type Rendered = { body: string; script?: string } | { respond: () => unknown };
+
 export interface MainPage {
   page: string;
   title: string;
@@ -43,7 +46,7 @@ export async function mainFrame(
   req: FastifyRequest,
   reply: FastifyReply,
   o: MainPage,
-  render: (a: MainArgs) => Promise<{ body: string; script?: string }>,
+  render: (a: MainArgs) => Promise<Rendered>,
 ) {
   const cur = await current(bank, req);
   // Expired or signed out: the sign-in page appears inside the main frame.
@@ -106,6 +109,7 @@ export async function mainFrame(
     )}</TD></TR></TABLE>`;
   }
   const r = await render({ c, d, operator: cur.operator, session: cur.session, member });
+  if ('respond' in r) return r.respond();
   return page(banner + r.body, r.script);
 }
 

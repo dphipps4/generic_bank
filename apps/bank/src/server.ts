@@ -7,6 +7,7 @@ import { buttonSvg, CORELINK_JS, NEW_SVG, SPACER_GIF } from './markup/html.js';
 import { consoleRoutes } from './routes/console.js';
 import { signInRoutes } from './routes/signin.js';
 import { statementRoutes } from './routes/statements.js';
+import { transferRoutes } from './routes/transfer.js';
 
 export type { Bank } from './context.js';
 export { hazardLog } from './context.js';
@@ -59,5 +60,6 @@ export async function buildServer(bank: Bank, logger = false): Promise<FastifyIn
   signInRoutes(app, bank);
   consoleRoutes(app, bank);
   statementRoutes(app, bank);
+  transferRoutes(app, bank);
   return app;
 }
