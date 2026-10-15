@@ -1132,8 +1132,10 @@ money and account-change traps the guardrails must never press.
 - **Two sign-in pages.** A trusted workstation gets a different "Welcome back" layout from
   a fresh browser, with a different field arrangement. Drivers must handle both.
 - **Frames from another origin.** Bank 2's tab strip and bank 4's sign-in form are served
-  from separate origins (`static.example-cu.localhost`, `auth.placeholder-fcu.localhost`), so
-  they are cross-origin frames that have to be read through their own browser sessions.
+  from a second origin, the same host on another port (8092 and 8094), so they are
+  cross-origin frames that have to be read through their own browser sessions. A port, not a
+  `*.localhost` name: browsers resolve every `*.localhost` name to the machine they run on,
+  which inside the Runner's container is the Runner itself.
 - **Slightly different URLs.** Each bank lives under its own port, base path and host form
   (`localhost` with a path prefix, a bare port, `127.0.0.1`), so nothing may assume a URL
   shape. Drivers take every URL from the tenant profile or from a link on the screen.

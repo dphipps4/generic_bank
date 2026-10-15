@@ -15,7 +15,7 @@ import {
   nest,
   palette,
 } from '../markup/html.js';
-import { signInPage } from './signin.js';
+import { signInEntry } from './signin.js';
 
 // Every page in the main frame goes through here: the session, the page-level hazards, the
 // promotional interstitial, and the member banner the member-scope guard reads.
@@ -53,7 +53,7 @@ export async function mainFrame(
   if (!cur)
     return html(
       reply,
-      signInPage(bank, req, { trusted: null, note: 'Your session has ended. Sign in again.' }),
+      await signInEntry(bank, req, { other: true, note: 'Your session has ended. Sign in again.' }),
     );
   const c = ctxOf(bank, req);
   const d = dialect(bank.t, bank.uiVersion, o.page);

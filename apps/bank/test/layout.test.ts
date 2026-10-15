@@ -55,7 +55,7 @@ describe('the console’s shape, per bank', () => {
     const places = (html: string) =>
       new Set(
         [...html.matchAll(/HREF="([^"]+)"/gi)].map((m) =>
-          m[1]!.replace(/^\/[^?]*?(members|area|signout)/, '$1'),
+          m[1]!.replace(/^https?:\/\/[^/]+/, '').replace(/^\/[^?]*?(members|area|signout)/, '$1'),
         ),
       );
     const nav = places((await at.generic.c.get('frame/nav')).body.replace(/\\"/g, '"'));

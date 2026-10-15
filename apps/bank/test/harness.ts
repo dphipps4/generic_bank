@@ -14,6 +14,13 @@ export const PASSWORDS = {
   supervisor: 'supervisor-password-for-tests',
 };
 export const HMAC = 'h'.repeat(32);
+/** The ports each bank runs on in compose; a second port is a second origin. */
+export const PORTS: Record<TenantId, { main: number; second?: number }> = {
+  generic: { main: 8081 },
+  example: { main: 8082, second: 8092 },
+  sample: { main: 8083 },
+  placeholder: { main: 8084, second: 8094 },
+};
 
 export interface TestBank {
   app: FastifyInstance;
@@ -48,6 +55,7 @@ export async function testBank(
     db,
     now: () => clock.now,
     uiVersion: 1,
+    ports: PORTS[id],
     hazards: hazards({
       profile: 'none',
       seed: 1,
@@ -76,6 +84,8 @@ export interface Res {
 export class Client {
   cookies = new Map<string, string>();
   hazards: HazardName[] | null = null;
+  /** The Host header to send, which decides the origin; defaults to the bank's main port. */
+  host = '';
   constructor(
     private app: FastifyInstance,
     private base: string,
@@ -86,6 +96,7 @@ export class Client {
       cookie: [...this.cookies].map(([k, v]) => `${k}=${v}`).join('; '),
     };
     if (this.hazards) h['x-hazards'] = signHazards(this.hazards, HMAC);
+    if (this.host) h.host = this.host;
     return h;
   }
 
@@ -97,7 +108,10 @@ export class Client {
     }
   }
 
-  url = (path: string) => (path.startsWith('/') ? path : `${this.base}${path}`);
+  url = (path: string) => {
+    const u = path.replace(/^https?:\/\/[^/]+/, '');
+    return u.startsWith('/') ? u : `${this.base}${u}`;
+  };
 
   async get(path: string): Promise<Res> {
     const r = await this.app.inject({

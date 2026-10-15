@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { accountsOf } from '../src/ledger.js';
 import { MEMBERS } from '../src/seed.js';
 import { TENANTS, type TenantId } from '../src/tenants.js';
-import { type Client, signIn, type TestBank, testBank } from './harness.js';
+import { type Client, PORTS, signIn, type TestBank, testBank } from './harness.js';
 
 // Every bank's pages speak only that bank's words, in that bank's colors.
 
@@ -25,7 +25,14 @@ beforeAll(async () => {
       `members/${MEMBERS.demo}/transfer`,
       `members/${MEMBERS.demo}/statements?account=${acct}`,
     ];
-    const pages = (await Promise.all(paths.map((p) => c.get(p)))).map((r) => r.body).join('\n');
+    const bodies = (await Promise.all(paths.map((p) => c.get(p)))).map((r) => r.body);
+    // Bank 4's sign-in form lives on its second origin, inside the shell's inline frame.
+    if (TENANTS[id].secondOrigin === 'signin') {
+      c.host = `localhost:${PORTS[id].second}`;
+      bodies.push((await c.get('signin?other=1&embedded=1')).body);
+      c.host = '';
+    }
+    const pages = bodies.join('\n');
     banks[id] = { b, c, pages };
     text[id] = pages
       .replace(/<[^>]*\balt="([^"]*)"[^>]*>/gi, ' $1 ')

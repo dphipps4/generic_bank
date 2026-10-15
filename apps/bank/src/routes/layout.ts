@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { type Bank, ctxOf, current } from '../context.js';
+import { type Bank, ctxOf, current, origins } from '../context.js';
 import { dialect } from '../markup/dialect.js';
 import { type Ctx, doc, esc, font, js, linkButton, palette } from '../markup/html.js';
 import { html } from './frame.js';
@@ -39,17 +39,20 @@ const target = (i: NavItem) => (i.group === 'out' ? '_top' : 'main');
 const newGif = (base: string) =>
   ` <IMG SRC="${base}img/new.svg" WIDTH="34" HEIGHT="14" ALT="NEW!">`;
 
-function frameset(bank: Bank): string {
+function frameset(bank: Bank, o: ReturnType<typeof origins>): string {
   const base = bank.t.basePath;
   const f = (src: string, name: string, extra = '') =>
     `<FRAME SRC="${base}${src}" NAME="${name}"${extra}>`;
   const banner = f('frame/banner', 'banner', ' SCROLLING="no" NORESIZE');
+  // Bank 2's tab strip comes from its second origin: a cross-origin frame.
+  const tabsFrom = bank.t.secondOrigin === 'tabs' ? o.second : '';
+  const tabs = `<FRAME SRC="${tabsFrom}${base}frame/tabs" NAME="tabs" SCROLLING="no" NORESIZE>`;
   const body =
     bank.t.layout === 'nav'
       ? `<FRAMESET ROWS="64,*" BORDER="1">${banner}<FRAMESET COLS="170,*">${f('frame/nav', 'nav')}${f('home', 'main')}</FRAMESET></FRAMESET>`
       : bank.t.layout === 'tabs'
-        ? `<FRAMESET ROWS="56,30,*" BORDER="0">${banner}${f('frame/tabs', 'tabs', ' SCROLLING="no" NORESIZE')}${f('home', 'main')}</FRAMESET>`
-        : `<FRAMESET ROWS="56,30,*" BORDER="0">${banner}${f('frame/tabs', 'tabs', ' SCROLLING="no" NORESIZE')}<FRAMESET COLS="*,190">${f('home', 'main')}${f('frame/notices', 'notices')}</FRAMESET></FRAMESET>`;
+        ? `<FRAMESET ROWS="56,30,*" BORDER="0">${banner}${tabs}${f('home', 'main')}</FRAMESET>`
+        : `<FRAMESET ROWS="56,30,*" BORDER="0">${banner}${tabs}<FRAMESET COLS="*,190">${f('home', 'main')}${f('frame/notices', 'notices')}</FRAMESET></FRAMESET>`;
   return `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Frameset//EN">
 <HTML><HEAD><TITLE>CoreLink Branch Console - ${esc(bank.t.brand)}</TITLE></HEAD>
 ${body}</HTML>`;
@@ -103,7 +106,7 @@ export function layoutRoutes(app: FastifyInstance, bank: Bank) {
     if (!cur) return reply.redirect(`${base}signin`);
     if (bank.t.layout === 'menubar')
       return html(reply, menubarPage(bank, ctxOf(bank, req), cur.operator.displayName));
-    return html(reply, frameset(bank));
+    return html(reply, frameset(bank, origins(bank, req)));
   });
 
   // Bank 1's nav frame, an older page that writes itself with document.write.
@@ -137,10 +140,12 @@ export function layoutRoutes(app: FastifyInstance, bank: Bank) {
   app.get(`${base}frame/tabs`, async (req, reply) => {
     const c = ctxOf(bank, req);
     const d = dialect(bank.t, bank.uiVersion, 'tabs');
+    // Served from the second origin, the tabs must name the main origin to navigate it.
+    const home = bank.t.secondOrigin === 'tabs' ? origins(bank, req).main : '';
     const tabs = navItems(bank)
       .map(
         (i) =>
-          `<TD BGCOLOR="${i.group === 'out' ? p.body : p.panel}" STYLE="border:1px solid ${p.head};border-bottom:0;padding:4px 12px" NOWRAP>${linkButton(c, i.href, i.text, target(i))}</TD><TD WIDTH="3"></TD>`,
+          `<TD BGCOLOR="${i.group === 'out' ? p.body : p.panel}" STYLE="border:1px solid ${p.head};border-bottom:0;padding:4px 12px" NOWRAP>${linkButton(c, `${home}${i.href}`, i.text, target(i))}</TD><TD WIDTH="3"></TD>`,
       )
       .join('');
     return html(

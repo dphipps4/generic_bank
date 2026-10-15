@@ -32,7 +32,15 @@ import {
   row,
   submit,
 } from '../markup/html.js';
-import { type Bank, COOKIE, cookieOptions, ctxOf, current, rotateNonce } from '../context.js';
+import {
+  type Bank,
+  COOKIE,
+  cookieOptions,
+  ctxOf,
+  current,
+  origins,
+  rotateNonce,
+} from '../context.js';
 
 // The operator's way in: a loading shell, the sign-in page (two layouts), the code chooser, the
 // code, and a hand-off page that is mid-sign-in, not signed in.
@@ -80,6 +88,42 @@ ${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}
 ${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}`,
   );
   return doc(c, d, { title: L.signIn, body, script: hydrate(randomInt(300, 900)) });
+}
+
+/**
+ * The sign-in page as the operator meets it. Bank 4 shows a shell on its main origin whose sign-in
+ * form is an inline frame from its second origin; everywhere else it is the form itself.
+ */
+export async function signInEntry(
+  bank: Bank,
+  req: FastifyRequest,
+  o: { other?: boolean; note?: string },
+) {
+  const where = origins(bank, req);
+  if (bank.t.secondOrigin === 'signin' && !where.onSecond) {
+    const c = ctxOf(bank, req);
+    const d = dialect(bank.t, bank.uiVersion, 'signin-shell');
+    const q = new URLSearchParams({
+      embedded: '1',
+      ...(o.other ? { other: '1' } : {}),
+      ...(o.note ? { expired: '1' } : {}),
+    });
+    return doc(c, d, {
+      title: bank.t.labels.signIn,
+      body: nest(
+        c,
+        d,
+        `${heading(c, d, `${bank.t.brand}: CoreLink Branch Console`)}<IFRAME SRC="${where.second}${bank.t.basePath}signin?${q}" WIDTH="600" HEIGHT="320" FRAMEBORDER="0" SCROLLING="no"></IFRAME>`,
+      ),
+    });
+  }
+  const trusted = o.other
+    ? null
+    : await trustedOperator(bank.db, req.cookies[COOKIE.workstation], bank.now());
+  return signInPage(bank, req, {
+    trusted: trusted && { id: trusted.operatorId, name: trusted.displayName },
+    note: o.note,
+  });
 }
 
 /** A session waiting for its code, or null. */
@@ -132,20 +176,11 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
     );
   });
 
-  app.get<{ Querystring: { expired?: string; other?: string; signedout?: string } }>(
+  app.get<{ Querystring: { expired?: string; other?: string; embedded?: string } }>(
     `${base}signin`,
     async (req, reply) => {
-      const trusted = req.query.other
-        ? null
-        : await trustedOperator(bank.db, req.cookies[COOKIE.workstation], bank.now());
       const note = req.query.expired ? 'Your session has ended. Sign in again.' : undefined;
-      return html(
-        reply,
-        signInPage(bank, req, {
-          trusted: trusted && { id: trusted.operatorId, name: trusted.displayName },
-          note,
-        }),
-      );
+      return html(reply, await signInEntry(bank, req, { other: !!req.query.other, note }));
     },
   );
 
@@ -272,7 +307,9 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
       last_seen: now,
       expires_early_at: early,
     });
-    return reply.redirect(`${base}console`);
+    // Bank 4 signs in on its second origin; the console lives on the main one.
+    const to = bank.t.secondOrigin === 'signin' ? origins(bank, req).main : '';
+    return reply.redirect(`${to}${base}console`);
   });
 
   app.post(`${base}keepalive`, async (req, reply) =>

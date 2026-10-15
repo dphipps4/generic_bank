@@ -205,8 +205,11 @@ services:
 
   bank-example:
     <<: *bank
-    environment: { TENANT: example, PORT: '8082', ADMIN_PORT: '9000' }
-    ports: ['127.0.0.1:${BANK_EXAMPLE_PORT}:8082', '127.0.0.1:${BANK_EXAMPLE_ADMIN_PORT}:9000']
+    environment: { TENANT: example, PORT: '8082', SECOND_PORT: '8092', ADMIN_PORT: '9000' }
+    ports:
+      - '127.0.0.1:${BANK_EXAMPLE_PORT}:8082'
+      - '127.0.0.1:${BANK_EXAMPLE_SECOND_PORT}:8092'
+      - '127.0.0.1:${BANK_EXAMPLE_ADMIN_PORT}:9000'
 
   bank-sample:
     <<: *bank
@@ -217,9 +220,11 @@ services:
   bank-placeholder:
     <<: *bank
     profiles: [more-banks]
-    environment: { TENANT: placeholder, PORT: '8084', ADMIN_PORT: '9000' }
+    environment: { TENANT: placeholder, PORT: '8084', SECOND_PORT: '8094', ADMIN_PORT: '9000' }
     ports:
-      ['127.0.0.1:${BANK_PLACEHOLDER_PORT}:8084', '127.0.0.1:${BANK_PLACEHOLDER_ADMIN_PORT}:9000']
+      - '127.0.0.1:${BANK_PLACEHOLDER_PORT}:8084'
+      - '127.0.0.1:${BANK_PLACEHOLDER_SECOND_PORT}:8094'
+      - '127.0.0.1:${BANK_PLACEHOLDER_ADMIN_PORT}:9000'
 
   # The staff inbox, where codes arrive. On its own network: people reach it, the Runner and the
   # factory cannot, so a code is always a human step.
