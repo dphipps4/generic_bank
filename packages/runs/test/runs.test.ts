@@ -4,6 +4,7 @@ import {
   actOnHumanTask,
   answerHumanTask,
   awaitAnswer,
+  awaitDecision,
   createRun,
   inputsOf,
   loadRun,
@@ -25,6 +26,13 @@ beforeAll(async () => {
 afterAll(() => db.close());
 
 const input = { bank: 'generic', memberId: '40017732', account: '7890' };
+const review = {
+  from: '****7890',
+  to: '****1234',
+  amountCents: 125_000,
+  memo: 'GBX 7Q4M rent',
+  memoToken: 'GBX 7Q4M',
+};
 
 describe('sealing', () => {
   it('round-trips, and refuses anything tampered with or sealed under another key', () => {
@@ -165,7 +173,7 @@ describe('human tasks', () => {
       { task: 'check-balance', bank: 'generic', clientId: null, inputs: input },
       KEY,
     );
-    await openHumanTask(db, runId, 'approval', {}, new Date(Date.now() + 60_000));
+    await openHumanTask(db, runId, 'approval', { review }, new Date(Date.now() + 60_000));
     expect(await resultOf(db, runId)).toMatchObject({
       code: 'awaiting_approval',
       pending: { kind: 'approval' },
@@ -268,6 +276,187 @@ describe('acting on a human task', () => {
       task,
     ]);
     expect(r.rows[0]!.asks).toBe(2);
+  });
+});
+
+describe('an approval', () => {
+  const parked = async (ms = 60_000) => {
+    const { runId } = await createRun(
+      db,
+      { task: 'transfer', bank: 'generic', clientId: null, inputs: input },
+      KEY,
+    );
+    const task = await openHumanTask(
+      db,
+      runId,
+      'approval',
+      { review, frame: { runId, seq: 4 } },
+      new Date(Date.now() + ms),
+    );
+    return { runId, task };
+  };
+  const grants = async (runId: string) =>
+    (
+      await db.query<Record<string, unknown>>(
+        'SELECT "humanTaskId", "fromRef", "toRef", "amountCents", "memoToken", "expiresAt", "usedAt" FROM "ApprovalGrant" WHERE "runId" = $1',
+        [runId],
+      )
+    ).rows;
+  const why = 'checked it with the member';
+
+  it('cannot be approved without the review page as read', async () => {
+    const { runId } = await createRun(
+      db,
+      { task: 'transfer', bank: 'generic', clientId: null, inputs: input },
+      KEY,
+    );
+    const task = await openHumanTask(
+      db,
+      runId,
+      'approval',
+      { review: { ...review, memoToken: undefined } },
+      new Date(Date.now() + 60_000),
+    );
+    expect(await actOnHumanTask(db, task, 'approve', { reason: why }, 'ann', KEY)).toEqual({
+      ok: false,
+      status: 409,
+      reason: 'the task has no review to approve',
+    });
+    expect(await grants(runId)).toEqual([]);
+    expect(
+      (await db.query<{ status: string }>('SELECT status FROM "HumanTask" WHERE id = $1', [task]))
+        .rows[0]!.status,
+    ).toBe('open');
+  });
+
+  it('approved, issues exactly one grant for the review as read, for five minutes', async () => {
+    const { runId, task } = await parked();
+    const waiting = awaitDecision(db, task, new Date(Date.now() + 10_000), 50);
+    const before = Date.now();
+    expect(await actOnHumanTask(db, task, 'approve', { reason: why }, 'ann', KEY)).toEqual({
+      ok: true,
+    });
+    const g = await grants(runId);
+    expect(g).toHaveLength(1);
+    expect(g[0]).toMatchObject({
+      humanTaskId: task,
+      fromRef: '****7890',
+      toRef: '****1234',
+      amountCents: 125_000,
+      memoToken: 'GBX 7Q4M',
+      usedAt: null,
+    });
+    const life = (g[0]!.expiresAt as Date).getTime() - before;
+    expect(life).toBeGreaterThan(5 * 60_000 - 5_000);
+    expect(life).toBeLessThanOrEqual(5 * 60_000 + 1_000);
+    const decided = await waiting;
+    expect(decided).toEqual({ status: 'approved', grantId: expect.stringMatching(/^g_/) });
+    const id = (
+      await db.query<{ id: string }>('SELECT id FROM "ApprovalGrant" WHERE "runId" = $1', [runId])
+    ).rows[0]!.id;
+    expect(decided).toEqual({ status: 'approved', grantId: id });
+    expect((await resultOf(db, runId))!.status).toBe('running');
+    expect(
+      (await db.query('SELECT actor, action, reason FROM "AuditEntry" WHERE target = $1', [task]))
+        .rows,
+    ).toEqual([{ actor: 'ann', action: 'human_task.approve', reason: why }]);
+  });
+
+  it('is decided once: a second decision is refused and issues nothing', async () => {
+    const { runId, task } = await parked();
+    expect(await actOnHumanTask(db, task, 'approve', { reason: why }, 'ann', KEY)).toEqual({
+      ok: true,
+    });
+    for (const a of ['approve', 'reject', 'take_over', 'cancel'] as const)
+      expect(await actOnHumanTask(db, task, a, { reason: why }, 'bo', KEY)).toEqual({
+        ok: false,
+        status: 409,
+        reason: 'the task is answered',
+      });
+    expect(await grants(runId)).toHaveLength(1);
+  });
+
+  it('two people approving at once issue one grant between them', async () => {
+    const { runId, task } = await parked();
+    const both = await Promise.all([
+      actOnHumanTask(db, task, 'approve', { reason: why }, 'ann', KEY),
+      actOnHumanTask(db, task, 'approve', { reason: why }, 'bo', KEY),
+    ]);
+    expect(both.filter((r) => r.ok)).toHaveLength(1);
+    expect(await grants(runId)).toHaveLength(1);
+  });
+
+  it.each([
+    ['reject', 'answered', { status: 'rejected' }],
+    ['take_over', 'answered', { status: 'taken_over' }],
+    ['cancel', 'cancelled', { status: 'cancelled' }],
+  ] as const)(
+    '%s: needs a reason, is audited, issues no grant',
+    async (action, status, decision) => {
+      const { runId, task } = await parked();
+      const waiting = awaitDecision(db, task, new Date(Date.now() + 10_000), 50);
+      expect(await actOnHumanTask(db, task, action, { reason: 'no' }, 'ann', KEY)).toMatchObject({
+        ok: false,
+        status: 400,
+      });
+      expect(await actOnHumanTask(db, task, action, { reason: why }, 'ann', KEY)).toEqual({
+        ok: true,
+      });
+      expect(await waiting).toEqual(decision);
+      const row = (
+        await db.query<Record<string, unknown>>(
+          'SELECT status, action, reason, "answeredBy" FROM "HumanTask" WHERE id = $1',
+          [task],
+        )
+      ).rows[0];
+      expect(row).toEqual({ status, action, reason: why, answeredBy: 'ann' });
+      expect(await grants(runId)).toEqual([]);
+      expect(
+        (await db.query('SELECT action FROM "AuditEntry" WHERE target = $1', [task])).rows,
+      ).toEqual([{ action: `human_task.${action}` }]);
+    },
+  );
+
+  it('stays open when its grant cannot be issued', async () => {
+    const { runId, task } = await parked();
+    // A grant row already bound to the task: the new grant's insert fails.
+    await db.query(
+      `INSERT INTO "ApprovalGrant" (id, "humanTaskId", "runId", "fromRef", "toRef", "amountCents", "memoToken", nonce, "expiresAt")
+       VALUES ('g_stale', $1, 'r_other', 'a', 'b', 1, 'm', 'n_stale', now())`,
+      [task],
+    );
+    await expect(
+      actOnHumanTask(db, task, 'approve', { reason: why }, 'ann', KEY),
+    ).rejects.toThrow();
+    const row = (
+      await db.query<Record<string, unknown>>(
+        'SELECT status, action, "answeredBy" FROM "HumanTask" WHERE id = $1',
+        [task],
+      )
+    ).rows[0];
+    expect(row).toEqual({ status: 'open', action: null, answeredBy: null });
+    expect(await grants(runId)).toEqual([]);
+  });
+
+  it('expires at its deadline, and then cannot be approved', async () => {
+    const { runId, task } = await parked(200);
+    expect(await awaitDecision(db, task, new Date(Date.now() + 200), 50)).toEqual({
+      status: 'expired',
+    });
+    expect(await actOnHumanTask(db, task, 'approve', { reason: why }, 'ann', KEY)).toEqual({
+      ok: false,
+      status: 409,
+      reason: 'the task is expired',
+    });
+    expect(await grants(runId)).toEqual([]);
+  });
+
+  it('a code task offers no approval, and an approval takes no code', async () => {
+    const { task } = await parked();
+    expect(await actOnHumanTask(db, task, 'answer', { code: '123456' }, 'ann', KEY)).toMatchObject({
+      ok: false,
+      status: 409,
+    });
   });
 });
 

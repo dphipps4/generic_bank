@@ -8,6 +8,9 @@
   "references": [
     {
       "path": "../contracts"
+    },
+    {
+      "path": "../guardrails"
     }
   ]
 }
