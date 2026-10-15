@@ -4,17 +4,16 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { FrameStore } from '@gb/evidence';
 import { messageFor, type ResultCode } from '@gb/contracts';
-import { esc, page } from './layout.js';
+import { waitingTooLong } from './inbox.js';
+import { esc, page, type Sql, type Viewer } from './layout.js';
 
-export interface Sql {
-  query<R = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<{ rows: R[] }>;
-}
+export type { Sql, Viewer };
 
 export interface PagesDeps {
   sql: Sql;
   store: FrameStore;
-  /** The signed-in admin's email, or null: the same sign-in as AdminJS. */
-  whoIs(req: FastifyRequest): string | null;
+  /** The signed-in person, or null: the same sign-in as AdminJS. */
+  whoIs(req: FastifyRequest): Viewer | null;
 }
 
 const when = (d: Date | string | null) =>
@@ -28,7 +27,7 @@ export function runPages(app: FastifyInstance, deps: PagesDeps) {
       void reply.redirect('/admin/login');
       return null;
     }
-    return who;
+    return who.email;
   };
 
   app.get('/runs', async (req, reply) => {
@@ -60,7 +59,7 @@ export function runPages(app: FastifyInstance, deps: PagesDeps) {
         page(
           'Runs',
           `<h1>Runs</h1>${rows ? `<table><tr><th>Run</th><th>Task</th><th>Bank</th><th>Result</th><th>Steps</th><th>Started (UTC)</th><th>Took</th></tr>${rows}</table>` : '<p class="empty">No runs yet.</p>'}`,
-          { active: '/runs', admin: who },
+          { active: '/runs', admin: who, waiting: await waitingTooLong(deps.sql) },
         ),
       );
   });
@@ -185,7 +184,7 @@ export function runPages(app: FastifyInstance, deps: PagesDeps) {
 <h2>Steps</h2>${stepRows ? `<table><tr><th>#</th><th>Step</th><th>Screen</th><th>Action</th><th>Outcome</th><th>Took</th></tr>${stepRows}</table>` : '<p class="empty">No steps yet.</p>'}
 <h2>People asked</h2>${taskRows ? `<table><tr><th>Task</th><th>Kind</th><th>Status</th><th>Opened</th><th>Answered</th></tr>${taskRows}</table>` : '<p class="empty">Nobody was asked anything.</p>'}
 <h2>Screens (masked)</h2>${frameCards ? `<div class="frames">${frameCards}</div>` : '<p class="empty">No frames.</p>'}`,
-        { active: '/runs', admin: who },
+        { active: '/runs', admin: who, waiting: await waitingTooLong(deps.sql) },
       ),
     );
   });

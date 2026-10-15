@@ -2,6 +2,16 @@
 // components (a run, screen by screen; later the inbox and approvals). They sit behind the same
 // sign-in as AdminJS, and a bar links the two.
 
+export interface Sql {
+  query<R = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<{ rows: R[] }>;
+}
+
+/** Who is signed in to the Console, and with which role (plan, §G.1). */
+export interface Viewer {
+  email: string;
+  role: 'viewer' | 'approver' | 'admin';
+}
+
 export const esc = (s: unknown) =>
   String(s ?? '').replace(
     /[&<>"']/g,
@@ -9,6 +19,7 @@ export const esc = (s: unknown) =>
   );
 
 const NAV = [
+  ['/inbox', 'Inbox'],
   ['/runs', 'Runs'],
   ['/admin', 'Data'],
 ] as const;
@@ -16,8 +27,11 @@ const NAV = [
 export function page(
   title: string,
   body: string,
-  o: { active?: string; admin?: string } = {},
+  o: { active?: string; admin?: string; waiting?: number } = {},
 ): string {
+  const banner = o.waiting
+    ? `<div class="banner"><div class="in"><a href="/inbox">${o.waiting === 1 ? 'One task has' : `${o.waiting} tasks have`} waited more than five minutes for a person.</a></div></div>`
+    : '';
   const nav = NAV.map(
     ([href, label]) => `<a href="${href}"${o.active === href ? ' class="on"' : ''}>${label}</a>`,
   ).join('');
@@ -42,8 +56,13 @@ tr:last-child td{border-bottom:0}a{color:var(--accent)}code{font:12px ui-monospa
 .frames{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
 .frame{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}.frame img{display:block;width:100%;border-bottom:1px solid var(--line)}
 .frame .cap{padding:8px 10px;font-size:13px}.frame .cap small{color:var(--soft)}.withheld{padding:30px 12px;text-align:center;color:var(--soft);background:repeating-linear-gradient(45deg,#fafafa,#fafafa 8px,#f1f1f1 8px,#f1f1f1 16px)}
-.empty{color:var(--soft);padding:12px 0}
-</style></head><body><header><div class="in"><b>Generic Bank Console</b>${nav}<span class="who">${o.admin ? esc(o.admin) : ''}</span></div></header>
+.empty{color:var(--soft);padding:12px 0}.soft{color:var(--soft)}
+.banner{background:#fdf3e1;border-bottom:1px solid #f0d9a8}.banner .in{max-width:1180px;margin:0 auto;padding:8px 16px}.banner a{color:var(--warn);font-weight:600}
+.note{padding:8px 12px;border-radius:8px;margin:0 0 14px}.note.ok{background:#e6f4ec;color:var(--ok)}.note.bad{background:#fbe9e9;color:var(--bad)}
+form.row{display:flex;gap:6px;align-items:center;margin:0 0 6px}input{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:6px}
+button{font:inherit;padding:5px 12px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer}button.quiet{background:#fff;color:var(--bad);border-color:var(--bad)}
+details summary{color:var(--soft);cursor:pointer;font-size:13px}
+</style></head><body><header><div class="in"><b>Generic Bank Console</b>${nav}<span class="who">${o.admin ? esc(o.admin) : ''}</span></div></header>${banner}
 <main>${body}</main></body></html>`;
 }
 

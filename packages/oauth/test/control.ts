@@ -11,6 +11,8 @@ export async function controlDb(): Promise<Sql & { close(): Promise<void> }> {
   const db = new PGlite({
     parsers: { [types.TIMESTAMP]: (v: string) => new Date(`${v.replace(' ', 'T')}Z`) },
   });
+  // The control database runs in UTC, as it does in compose: now() must agree with the Dates we write.
+  await db.exec(`SET TIME ZONE 'UTC'`);
   for (const m of readdirSync(dir, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => e.name)

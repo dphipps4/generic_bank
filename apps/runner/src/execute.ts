@@ -19,6 +19,8 @@ export interface RunDeps {
   sql: Sql;
   store: FrameStore;
   sealKey: string;
+  /** Opens a person's answer (a staff code). The Console seals with it; it opens no run's inputs. */
+  answerKey: string;
   /** The staff service account for a bank (from Vault in the plan; from the Runner's secrets here). */
   credentials(bank: string): Promise<{ operatorId: string; password: string }>;
   launch?: () => Promise<Browser>;
@@ -116,9 +118,10 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
           { bank: run.bank, prompt: req.prompt },
           deadline,
         );
-        const answer = await awaitAnswer(deps.sql, task, deps.sealKey, deadline);
-        if (answer === null) throw new Expired();
-        return answer;
+        const a = await awaitAnswer(deps.sql, task, deps.answerKey, deadline);
+        if (a.status === 'expired') throw new Expired();
+        if (a.status === 'cancelled') throw new Cancelled();
+        return a.answer;
       },
       // A name the bank shows is masked from then on, and so is each of its words.
       learn: (values) => {
@@ -147,11 +150,13 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
     ending =
       e instanceof Expired
         ? { status: 'expired', code: 'expired' }
-        : e instanceof CdpTimeout
-          ? { status: 'failed', code: 'step_timeout', retryable: true }
-          : e instanceof TargetError || e instanceof ActError
-            ? { status: 'escalated', code: 'unknown_screen' }
-            : { status: 'escalated', code: 'stuck' };
+        : e instanceof Cancelled
+          ? { status: 'cancelled', code: 'cancelled' }
+          : e instanceof CdpTimeout
+            ? { status: 'failed', code: 'step_timeout', retryable: true }
+            : e instanceof TargetError || e instanceof ActError
+              ? { status: 'escalated', code: 'unknown_screen' }
+              : { status: 'escalated', code: 'stuck' };
   } finally {
     await browser.close();
   }
@@ -160,3 +165,4 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
 }
 
 class Expired extends Error {}
+class Cancelled extends Error {}

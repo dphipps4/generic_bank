@@ -6,6 +6,7 @@ local   POSTGRES_PASSWORD        hex
 local   BANK_DB_PASSWORD         hex
 local   API_TOKEN_HASH_KEY       hex
 local   RUN_SEAL_KEY             hex
+local   ANSWER_SEAL_KEY          hex
 local   CONSOLE_SESSION_SECRET   hex
 local   CONSOLE_COOKIE_SECRET    hex
 local   CONSOLE_ADMIN_PASSWORD   password

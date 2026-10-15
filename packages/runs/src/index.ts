@@ -4,8 +4,11 @@
 // staff code) is sealed and cleared once used.
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import {
+  HUMAN_BODIES,
+  type HumanAction,
   type HumanTaskKind,
   messageFor,
+  refusal,
   type ResultCode,
   RETRYABLE,
   type TaskName,
@@ -278,11 +281,80 @@ export async function answerHumanTask(
   secret: string,
 ): Promise<boolean> {
   const r = await sql.query<{ id: string }>(
-    `UPDATE "HumanTask" SET status = 'answered', "answerSealed" = $2, "answeredAt" = now(), "answeredBy" = $3 WHERE id = $1 AND status = 'open' RETURNING id`,
+    `UPDATE "HumanTask" SET status = 'answered', action = 'answer', "answerSealed" = $2, "answeredAt" = now(), "answeredBy" = $3 WHERE id = $1 AND status = 'open' RETURNING id`,
     [taskId, seal(answer, secret), by],
   );
   return r.rows.length === 1;
 }
+
+export type ActResult = { ok: true } | { ok: false; status: 400 | 404 | 409; reason: string };
+
+/**
+ * A person acts on a human task, from the Console or its API (plan, §F.3). The body is checked
+ * against the action's contract, the action against the task's kind and state, and every action
+ * leaves an audit entry with its reason. A code is sealed and never written to the audit.
+ */
+export async function actOnHumanTask(
+  sql: Sql,
+  taskId: string,
+  action: HumanAction,
+  body: unknown,
+  by: string,
+  secret: string,
+): Promise<ActResult> {
+  const parsed = HUMAN_BODIES[action].safeParse(body ?? {});
+  if (!parsed.success)
+    return { ok: false, status: 400, reason: parsed.error.issues[0]?.message ?? 'invalid' };
+  const task = (
+    await sql.query<{ kind: HumanTaskKind; status: string; resolvable: boolean; runId: string }>(
+      'SELECT kind, status, resolvable, "runId" FROM "HumanTask" WHERE id = $1',
+      [taskId],
+    )
+  ).rows[0];
+  if (!task) return { ok: false, status: 404, reason: 'there is no such task' };
+  const refused = refusal(task, action);
+  if (refused) return { ok: false, status: 409, reason: refused };
+
+  let done: boolean;
+  let reason: string;
+  switch (action) {
+    case 'answer':
+      done = await answerHumanTask(sql, taskId, (parsed.data as { code: string }).code, by, secret);
+      reason = 'entered the code the bank sent';
+      break;
+    case 'cancel':
+      reason = (parsed.data as { reason: string }).reason;
+      done =
+        (
+          await sql.query(
+            `UPDATE "HumanTask" SET status = 'cancelled', action = 'cancel', reason = $2, "answeredAt" = now(), "answeredBy" = $3 WHERE id = $1 AND status = 'open' RETURNING id`,
+            [taskId, reason, by],
+          )
+        ).rows.length === 1;
+      break;
+    default:
+      // Approvals and escalations are acted on by their own steps, each with its own effects.
+      return { ok: false, status: 409, reason: `${action.replace('_', ' ')} is not offered here` };
+  }
+  // Someone else acted first, between the read and the write.
+  if (!done) return { ok: false, status: 409, reason: 'the task was answered by someone else' };
+  await sql.query(
+    'INSERT INTO "AuditEntry" (id, actor, action, target, reason) VALUES ($1, $2, $3, $4, $5)',
+    [id('a'), by, `human_task.${action}`, taskId, reason],
+  );
+  return { ok: true };
+}
+
+/** The agent asked about a run again: the inbox shows how often, and how long it has waited. */
+export async function noteAsk(sql: Sql, runId: string) {
+  await sql.query(
+    `UPDATE "HumanTask" SET asks = asks + 1, "lastAskedAt" = now() WHERE "runId" = $1 AND status = 'open'`,
+    [runId],
+  );
+}
+
+export type Answer =
+  { status: 'answered'; answer: string } | { status: 'expired' } | { status: 'cancelled' };
 
 /** The run waits for a person's answer, until the deadline; the answer is cleared once read. */
 export async function awaitAnswer(
@@ -291,7 +363,7 @@ export async function awaitAnswer(
   secret: string,
   deadline: Date,
   pollMs = 1000,
-): Promise<string | null> {
+): Promise<Answer> {
   for (;;) {
     const r = await sql.query<{ status: string; answerSealed: string | null; runId: string }>(
       'SELECT status, "answerSealed", "runId" FROM "HumanTask" WHERE id = $1',
@@ -301,12 +373,13 @@ export async function awaitAnswer(
     if (t?.status === 'answered' && t.answerSealed) {
       await sql.query('UPDATE "HumanTask" SET "answerSealed" = NULL WHERE id = $1', [taskId]);
       await setStatus(sql, t.runId, 'running');
-      return unseal<string>(t.answerSealed, secret);
+      return { status: 'answered', answer: unseal<string>(t.answerSealed, secret) };
     }
+    if (t?.status === 'cancelled') return { status: 'cancelled' };
     if (!t || t.status !== 'open' || Date.now() >= deadline.getTime()) {
       if (t?.status === 'open')
         await sql.query(`UPDATE "HumanTask" SET status = 'expired' WHERE id = $1`, [taskId]);
-      return null;
+      return { status: 'expired' };
     }
     await new Promise((res) => setTimeout(res, pollMs));
   }
