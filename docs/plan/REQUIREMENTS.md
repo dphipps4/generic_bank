@@ -41,7 +41,7 @@ target or the demo step a reviewer can run.
 
 | The brief says | How we meet it | Where | Proof |
 |---|---|---|---|
-| **A public or shared GitHub repository** with the system, the target app and a README | One public repository: the banks, the crawler, the factory, memory, the Console and the docs | [§Q.1](GENERIC_BANK_PLAN.md#q1-layout), [§Q.2](GENERIC_BANK_PLAN.md#q2-documentation-a-short-readme-and-sixteen-documents) | the repository |
+| **A public or shared GitHub repository** with the system, the target app and a README | One public repository: the banks, the crawler, the factory, memory, the Console and the docs | [§Q.1](GENERIC_BANK_PLAN.md#q1-layout), [§Q.2](GENERIC_BANK_PLAN.md#q2-documentation-a-short-readme-and-seventeen-documents) | the repository |
 | **Clear, reproducible run instructions:** clone and run both tasks locally in a few minutes | `make requirements` (fails until the Mac is ready), `make setup`, then `make up`, then `make demo`; every step is a make target; the Mac needs only Docker and Xcode's tools; fits an 8 GB laptop | [§14](GENERIC_BANK_PLAN.md#14-running-it), [Appendix S](GENERIC_BANK_PLAN.md#appendix-s-running-it) | `docs/01-setup.md`, `docs/02-running.md` |
 | **Tests where they help,** especially the error taxonomy and the escalation path | Outcome, escalation, transfer-safety, guard, PII, browser, memory and factory suites | [Appendix P](GENERIC_BANK_PLAN.md#appendix-p-tests) | `make check`, CI |
 | **Share the repo link ahead of the session** | The `master` branch is always releasable; a `submission` tag marks what was sent | [§Q.3](GENERIC_BANK_PLAN.md#q3-branches) | the tag |
@@ -75,7 +75,7 @@ target or the demo step a reviewer can run.
 | **From 80% to 100%** | The first-draft mistakes replaced, each with a test, and every rule explained | [§T.4](GENERIC_BANK_PLAN.md#t4-from-80-to-100), [Appendix U](GENERIC_BANK_PLAN.md#appendix-u-why-each-rule-exists) |
 | **Generalization to the real environment** | A screen-model seam for other surfaces; one product, four banks; a factory that learns | [§T.5](GENERIC_BANK_PLAN.md#t5-generalization-to-the-real-environment), [§7](GENERIC_BANK_PLAN.md#7-the-software-factory) |
 | **Safety and data handling** | An explicit allowlist, money only under a grant, masking before every write; model spend metered and capped in code at $25 per run and $150 per rolling week | [§13](GENERIC_BANK_PLAN.md#13-keeping-it-safe), [Appendix J](GENERIC_BANK_PLAN.md#appendix-j-guardrails), [§T.6](GENERIC_BANK_PLAN.md#t6-safety-and-data-handling) |
-| **Communication** | A two-page README, sixteen focused documents, diagrams that can be redrawn in the session | [§T.7](GENERIC_BANK_PLAN.md#t7-communication), [§Q.2](GENERIC_BANK_PLAN.md#q2-documentation-a-short-readme-and-sixteen-documents) |
+| **Communication** | A two-page README, sixteen focused documents, diagrams that can be redrawn in the session | [§T.7](GENERIC_BANK_PLAN.md#t7-communication), [§Q.2](GENERIC_BANK_PLAN.md#q2-documentation-a-short-readme-and-seventeen-documents) |
 
 ## 8. Ground rules
 

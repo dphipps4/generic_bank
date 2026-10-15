@@ -144,6 +144,6 @@ Each entry gives the choice, the reason, and what else was considered.
 | Redis, BullMQ, Celery | The workflow library keeps state in Postgres; nothing needs a broker |
 | Kubernetes, Terraform, Atmos | Out of scope locally; Terraform and Atmos are in Part 2 of `GENERIC_BANK_PLAN.md` |
 | Intrusion detection, third-party sign-in, rotating credentials | Part 2 of `GENERIC_BANK_PLAN.md`, under "with more time" |
-| Browser-identity work in Part 1 | The banks are ours; Part 1 runs a stock headless Chromium. Part 2 presents one precise, consistent Mac identity (see Part 2 of GENERIC_BANK_PLAN.md) |
+| Real Chrome on real Macs in Part 1 | Part 1 sets the Mac identity at launch in the Linux container (plan §5.1); real Chrome on rented Macs, which makes the graphics renderer and fonts true as well, is Part 2 (plan chapter 23) |
 | A model inside production tasks | Cost, reliability and auditability; the model works at factory time |
 | A client framework in the bank | The target must stay legacy |

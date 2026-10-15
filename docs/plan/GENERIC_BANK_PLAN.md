@@ -249,6 +249,38 @@ person.
 No AI model runs inside these jobs. The crawler is plain, reviewed code; the AI works in the
 factory. Details: the API in [Appendix D](#appendix-d-task-api), the crawler in [Appendix E](#appendix-e-the-runner-driving-a-messy-ui), every failure in [§D.4](#d4-how-failures-are-handled).
 
+### 5.1 The browser's fingerprint: Chrome on a Mac
+
+Real banks judge the browser before they judge the password. A bank's bot screen reads the
+request headers, the client hints and what its own scripts can see, and turns away anything
+that does not look like a person's browser. So the crawler presents **one precise, consistent
+identity: Chrome on an Apple-silicon Mac**, the same one a member-services employee would
+have on their desk.
+
+- **Consistency, not disguise.** Every field agrees with every other field and with a
+  reference captured from a real Mac. A browser that is right in nine places and wrong in the
+  tenth stands out more than one that is plainly a crawler.
+- **Set at launch, never patched.** The Runner's Chromium is told its identity before any page
+  script runs: the user agent and its client hints (platform macOS), the request headers in
+  Chrome's order, the screen (1512 × 982 at pixel ratio 2), eight cores and 8 GB, the language
+  and the timezone. A value changed after a page's scripts have read it is worse than a wrong
+  one, so nothing changes within a session.
+- **Nothing is injected.** The identity is set through the browser's own controls, from
+  outside the page. Two things therefore stay those of the Linux container, the graphics
+  renderer and the installed fonts, because faking them would mean running our script inside
+  the bank's pages. [Part 2](#23-browser-identity-real-chrome-on-real-macs) runs real Chrome
+  on real Macs, which makes them true.
+- **A test holds it.** A reference capture from a real Mac is a test fixture; a test compares
+  the Runner's browser to it, field by field, and fails on any difference in what Part 1 sets.
+- **The banks enforce it.** Banks 2, 3 and 4 refuse anything not shaped like a browser: curl
+  (whose whole request is a `Host`, a `User-Agent: curl/…` and `Accept: */*`), a request
+  missing what every browser sends, a headless user agent, or client hints that contradict the
+  user agent. They answer with a "403 Access denied" page, as a bank's bot manager does. Bank
+  1, the 2003 site, checks nothing.
+
+The fields and values are in [Appendix W](#appendix-w-browser-identity-reference); how the
+Runner sets them is in [§E.8](#e8-browser-identity-set-at-launch).
+
 ---
 
 ## 6. Transfers need a person
@@ -508,7 +540,7 @@ the submission.
 | M1 | Bank 1: ledger, seed, staff sign-in, codes, inbox, member lookup, member summary, activity, statements, transfer, supervisor approval, framesets, nested tables, markup dialects, forced hazards | bank tests green |
 | M2 | Banks 2, 3 and 4, and ambient hazards: themes, labels, layout variants, URL bases, image text, account formats, bank 3's extra frame, bank 4's split transfer and popup results | all four banks seeded and browsable |
 | M3 | Screen package and the first driver: capture, fully-rendered wait, recognition, targeting, image fingerprints, the CoreLink driver with bank 1's profile written by hand, Task API with OAuth2 (clients, tokens, refresh) and its HTTP status codes, trail, masking, AdminJS run pages and the API clients page | `checkBalance` succeeds on bank 1 under ambient hazards; outcome tests green |
-| M4 | Human steps: inbox, codes, transfer preparation, approval grant, submit, swallowed-submit protocol, the tool definitions and the demo agent, `downloadStatements`, hazard lab | escalation and transfer-safety suites green |
+| M4 | The browser's fingerprint (Chrome on a Mac, set at launch; banks 2 to 4 refuse anything not a browser), then human steps: inbox, codes, transfer preparation, approval grant, submit, swallowed-submit protocol, the tool definitions and the demo agent, `downloadStatements`, hazard lab | escalation and transfer-safety suites green |
 | M5 | Guardrails complete, trap matrix, PII scan, customer-safe messages | guards and PII suites green |
 | M6 | Memory service | memory suite green |
 | M7 | **Factory:** workflow, model gateway, tools, caps, scout (autocrawl), evals E0 to E4, review gate, probation, driver states in the Console, mock mode | **the factory onboards bank 2 as a profile, end to end, and it is promoted after probation** |
@@ -597,6 +629,28 @@ One large dedicated-vCPU server carries boxes A and B. With 32 GB there is room 
 concurrent browsers. Box D stays a separate server that exists only during a factory
 session, because disposability is the whole point of box D. Splitting A and B onto their own
 machines later is a Terraform variable, not a redesign.
+
+### 18.1 Encrypted at rest, encrypted in flight
+
+Everything Part 2 stores is encrypted where it lies, and everything it sends is encrypted on
+the wire. Every key lives in Vault, never beside the data it protects.
+
+| | At rest | In flight |
+|---|---|---|
+| **Postgres** | data directory on an encrypted volume, unlocked at boot with a key from Vault | TLS only, clients verify the server's certificate; no plaintext listener |
+| **MinIO** (evidence, run folders, statements) | server-side encryption on every bucket, keys from Vault's transit engine | TLS only |
+| **Vault** | its own encrypted storage | TLS only |
+| **Backups**: Postgres WAL and dumps, MinIO, Vault snapshots | encrypted on the host before they leave it; the backup store never sees a key or a plaintext byte | to the Storage Box over SFTP; the monthly off-provider copy stays encrypted |
+| **Logs and traces** | encrypted volume | shipped over TLS |
+| **Between machines** | | Tailscale (WireGuard) on the private network |
+| **The edge** | | Caddy, TLS 1.3 with HSTS |
+| **Banks 2, 3 and 4** | | HTTPS under the deployment's domain, with real certificates from Let's Encrypt, so the browser trusts them with no warning and the crawler meets secure cookies, mixed content and HSTS as a real bank presents them |
+
+A restore drill ([chapter 29](#29-recovery-and-intrusion-response)) decrypts every backup
+it restores, so a key that cannot open its backup is found in the drill, not in a disaster. A
+weekly check fails if any listener accepts plaintext or any bucket stores without
+encryption. Part 1, on a laptop, serves every bank over plain HTTP and keeps its data in local
+Docker volumes.
 
 ---
 
@@ -748,33 +802,20 @@ its shape:
 
 ---
 
-## 23. Browser identity: a precise Mac, not a generic Linux crawler
+## 23. Browser identity: real Chrome on real Macs
 
-Part 1 drives the banks with a stock headless Chromium in a Linux container. That is fine for
-banks we built. Real bank sites judge the browser before they judge the password, and a
-generic Linux crawler gives itself away in dozens of small ways: a Linux graphics renderer
-reported to the page's scripts, two CPU cores, a 24-bit screen at pixel ratio 1, no menu bar,
-a hard-coded list of browser brands, and request headers with small mistakes no real browser
-makes.
-
-Part 2 presents **one precise, consistent identity: Chrome on an Apple-silicon Mac.** The rule
-is consistency, not disguise. Every field must agree with every other one and with a reference
-captured from a real Mac, because a browser that is right in nine places and wrong in the
-tenth stands out more than one that is plainly a crawler.
+Part 1 already presents Chrome on a Mac ([§5.1](#51-the-browsers-fingerprint-chrome-on-a-mac)),
+set at launch in a Linux container. Two fields stay Linux there, the graphics renderer and the
+fonts, because only script inside the page could change them. Part 2 makes every field true
+instead of set:
 
 - **Real Chrome, not the headless shell,** run headed, so the browser itself produces its
-  headers, client hints and brand list. Nothing is hand-written into them.
-- **The best runner is a real Mac** (a rented Apple-silicon host in the runner pool), which
-  makes the graphics, fonts, screen and timezone true rather than imitated.
-- **Where a real Mac is not available,** each field is set at launch, before any page script
-  runs, and never patched afterwards: a value that changes after the page's own scripts have
-  read it is worse than a wrong one.
-- **A reference capture from a real Mac is a test fixture.** A test compares our browser to
-  it field by field (headers, client hints, screen, graphics, fonts, timezone, languages) and
-  fails on any difference. The fields and values are in [Appendix W](#appendix-w-browser-identity-reference).
-- **The timezone and language match the network exit** the runner uses, and the identity
-  never changes within a session.
-
+  headers, client hints and brand list.
+- **Real Macs in the runner pool** (rented Apple-silicon hosts), so the graphics, fonts,
+  screen and timezone are genuine.
+- **The timezone and language match the network exit** the runner uses.
+- **The same reference capture** ([Appendix W](#appendix-w-browser-identity-reference)) is
+  the test, now with no exceptions.
 
 ---
 
@@ -1211,6 +1252,20 @@ modes that banks 1 and 2 never show, so crawling them later teaches the factory 
 | twelve statement rows, then "View more statements" | statement links carry a per-window token, so a request made outside the opened window is refused |
 | a per-row Options menu whose items are drawn at the end of the page, away from the row | account tiles drawn in a different order on every load |
 | a fixed notice bar over the bottom of the main frame that covers the submit control | a "Bill pay is temporarily unavailable" notice on a summary that works |
+
+**Banks 2, 3 and 4 screen out anything that is not a browser.** Before any page, they check
+the request the way a bank's bot manager does and answer "403 Access denied" to:
+
+- curl, recognized by its user agent (`curl/<version>`) or by its whole request being `Host`,
+  `User-Agent` and `Accept: */*` and nothing else ([§W.5](#w5-what-curl-sends))
+- a page request without what every browser sends: `Accept-Language`, `Sec-Fetch-Mode` and
+  `Sec-Fetch-Dest`
+- a headless user agent (`HeadlessChrome`)
+- client hints that contradict the user agent: a Mac user agent with `sec-ch-ua-platform:
+  "Linux"`, or a desktop one with `sec-ch-ua-mobile: ?1`
+
+Every refusal is written to the bank's hazard log with the reason. Health checks and the
+bank-admin API used by tests are not screened. Bank 1 screens nothing.
 
 **Ground truth.** The bank keeps a state-change counter and a transfer ledger that tests
 read through a bank-admin API on a port that only the test harness can reach. Tests never
@@ -1657,6 +1712,26 @@ Each step has a time limit (sign-in 2 minutes, a page 45 seconds, a download 60 
 statement). One clock per run is rescheduled per step. A watchdog ends a run that has
 produced no step and no navigation for 3 minutes, saves a final frame, and reports
 `escalated: stuck`. The watchdog stands down while a run is parked waiting for a person.
+
+### E.8 Browser identity, set at launch
+
+Each new browser is given its identity ([§5.1](#51-the-browsers-fingerprint-chrome-on-a-mac),
+[Appendix W](#appendix-w-browser-identity-reference)) over the DevTools Protocol before its
+first navigation, so no page script ever sees anything else:
+
+- **User agent and client hints:** the Mac user agent of [§W.1](#w1-user-agent), with its
+  client-hint metadata (platform "macOS", platform version, architecture "arm", 64-bit, not
+  mobile). The brand list is the one Chrome's own algorithm produces for the pinned major
+  version, never a list we choose.
+- **Headers:** `Accept-Language: en-US,en;q=0.9`; everything else is the browser's own, in
+  its own order.
+- **Screen and hardware:** 1512 × 982 with the menu bar's height taken from the available
+  area, pixel ratio 2, colour depth 30, eight cores, 8 GB of device memory.
+- **Locale and timezone:** `en-US` and the timezone of the machine the stack runs on.
+
+The identity is the same for every run and never changes within one. A browser test reads the
+headers a bank receives and the values a page's scripts see, and compares them with the
+reference capture in `tests/fixtures/browser/mac-chrome.json`.
 
 ---
 
@@ -3150,7 +3225,7 @@ Each entry gives the choice, the reason, and what else was considered.
 | Redis, BullMQ, Celery | The workflow library keeps state in Postgres; nothing needs a broker |
 | Kubernetes, Terraform, Atmos | Out of scope locally; Terraform and Atmos are in Part 2 |
 | Intrusion detection, third-party sign-in, rotating credentials | Part 2, under "with more time" |
-| Browser-identity work in Part 1 | The banks are ours; Part 1 runs a stock headless Chromium. Part 2 presents one precise, consistent Mac identity (chapter 23, [Appendix W](#appendix-w-browser-identity-reference)) |
+| Real Chrome on real Macs in Part 1 | Part 1 sets the Mac identity at launch in the Linux container ([§5.1](#51-the-browsers-fingerprint-chrome-on-a-mac)); real Chrome on rented Macs, which makes the graphics renderer and fonts true as well, is Part 2 ([chapter 23](#23-browser-identity-real-chrome-on-real-macs)) |
 | A model inside production tasks | Cost, reliability and auditability; the model works at factory time |
 | A client framework in the bank | The target must stay legacy |
 
@@ -3158,9 +3233,10 @@ Each entry gives the choice, the reason, and what else was considered.
 
 ## Appendix W. Browser identity reference
 
-The identity Part 2 presents: Chrome on an Apple-silicon Mac. `{v}` is the pinned Chrome major
-version. Values the browser generates (the brand list, its order and its placeholder brand)
-are produced by Chrome itself and only compared, never written by us.
+The identity the Runner presents ([§5.1](#51-the-browsers-fingerprint-chrome-on-a-mac),
+[§E.8](#e8-browser-identity-set-at-launch)): Chrome on an Apple-silicon Mac. `{v}` is the
+pinned Chrome major version. The brand list, its order and its placeholder brand come from
+Chrome's own algorithm for that version and are only compared, never chosen by us.
 
 ### W.1 User agent
 
@@ -3211,6 +3287,10 @@ Intl timezone                   the timezone of the network exit
 fonts                           the standard macOS set (Helvetica Neue, SF Pro, Menlo, ...)
 ```
 
+Part 1 sets every row above except two, which stay those of the Linux container because they
+cannot be set without running script inside the page: the WebGL renderer and the fonts. Part
+2's real Macs make those true as well.
+
 ### W.4 The usual mistakes, each a failing test
 
 ```text
@@ -3221,3 +3301,17 @@ a patch applied after page load          scripts read the old value first
 Linux-only hardware                      2 cores, colorDepth 24, devicePixelRatio 1, no menu bar
 a timezone that disagrees with the exit  UTC on a residential US address
 ```
+
+### W.5 What curl sends
+
+Captured from curl's defaults on macOS (8.7.1), Debian 12 (7.88.1) and Ubuntu 24.04 (8.5.0).
+Only the version differs:
+
+```text
+GET /path HTTP/1.1
+Host: <host>
+User-Agent: curl/<version>
+Accept: */*
+```
+
+No `Accept-Language`, no `Sec-Fetch-*`, no client hints: banks 2, 3 and 4 refuse it on sight.
