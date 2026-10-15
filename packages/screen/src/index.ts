@@ -22,3 +22,11 @@ export {
 } from './recognize.js';
 export { button, field, inRow, TargetError, withText } from './target.js';
 export { ActError, choose, click, press, type SpecialKey, type } from './act.js';
+export {
+  distance,
+  fingerprint,
+  type KnownPicture,
+  MAX_DISTANCE,
+  namePictures,
+  picturesToName,
+} from './fingerprint.js';
