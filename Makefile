@@ -254,8 +254,9 @@ group = $(shell echo $(1) | tr 'a-z-' 'A-Z_')
 browser: ## Install headless Chromium for the browser tests (.run/browser)
 	@infra/scripts/browser.sh
 
-api-docs: ## Write the API reference (docs/api/openapi.json) from the contracts
-	@npx tsc -b && node apps/api/dist/openapi-cli.js > docs/api/openapi.json && echo "  wrote docs/api/openapi.json; open docs/api/index.html to read it"
+api-docs: ## Write the API reference from the contracts, serve it and open it in Chrome
+	@npx tsc -b && node apps/api/dist/openapi-cli.js > docs/api/openapi.json && echo "  wrote docs/api/openapi.json"
+	@node infra/scripts/serve-docs.mjs docs/api $(API_DOCS_PORT)
 
 api-token: ## A fresh access token for Swagger UI or curl (15 minutes)
 	@$(COMPOSE) exec -T api node apps/api/dist/token-cli.js
