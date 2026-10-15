@@ -14,6 +14,9 @@
       "path": "packages/oauth"
     },
     {
+      "path": "packages/screen"
+    },
+    {
       "path": "apps/api"
     },
     {

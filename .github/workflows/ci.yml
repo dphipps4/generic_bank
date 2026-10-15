@@ -25,6 +25,8 @@ jobs:
           CONTROL_DATABASE_URL: postgresql://ci:ci@localhost:5432/control
       - run: npm run typecheck
       - run: npm run lint
+      - name: Headless Chromium for the browser tests
+        run: infra/scripts/browser.sh
       - run: npm run test
       - run: npm run depcruise
 
@@ -41,8 +43,12 @@ jobs:
           file: infra/docker/node.Dockerfile
           push: false
           tags: generic-bank/node:ci
+          load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      # The default builder sees images in the local daemon, so the Runner builds on the one above.
+      - name: Build the Runner's image (the same plus headless Chromium)
+        run: docker build --builder default -f infra/docker/runner.Dockerfile --build-arg BASE=generic-bank/node:ci -t generic-bank/runner:ci .
       - name: Compose file is valid
         run: |
           mkdir -p .run/env

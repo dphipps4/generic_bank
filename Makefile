@@ -37,7 +37,7 @@ help: ## List every target
 	  /^[a-zA-Z0-9_%-]+:.*## / { printf "  $(G)%-22s$(N) %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 	@echo
 
-setup: doctor secrets-init install build env ## Once, after git clone: check tools, create secrets, install, build
+setup: doctor secrets-init install browser build env ## Once, after git clone: check tools, create secrets, install, build
 	@echo
 	@printf '%b\n' \"$(B)Ready.$(N) Next: $(G)make up$(N), then open http://localhost:$(CONSOLE_PORT)\"
 	@printf '%b\n' \"Console sign-in: $(CONSOLE_ADMIN_EMAIL), password: $(G)make console-password$(N)\"
@@ -82,14 +82,16 @@ SOURCE_STAMP = $(shell find apps packages infra/docker package.json package-lock
   -type f -not -path '*/node_modules/*' -not -path '*/dist/*' -not -name '*.tsbuildinfo' 2>/dev/null \
   | LC_ALL=C sort | xargs shasum | shasum | cut -c1-16)
 
-build: ## Build the one Node image every service runs
+build: ## Build the Node image every service runs, and the Runner's (the same plus headless Chromium)
 	@docker build -f infra/docker/node.Dockerfile --label gb.source=$(SOURCE_STAMP) -t $(GB_IMAGE) .
+	@docker build -f infra/docker/runner.Dockerfile --build-arg BASE=$(GB_IMAGE) --label gb.source=$(SOURCE_STAMP) -t $(GB_RUNNER_IMAGE) .
 
-build-nc: ## Build the image from scratch (no cache)
+build-nc: ## Build the images from scratch (no cache)
 	@docker build --no-cache -f infra/docker/node.Dockerfile --label gb.source=$(SOURCE_STAMP) -t $(GB_IMAGE) .
+	@docker build --no-cache -f infra/docker/runner.Dockerfile --build-arg BASE=$(GB_IMAGE) --label gb.source=$(SOURCE_STAMP) -t $(GB_RUNNER_IMAGE) .
 
 image: ## Build the image if it is missing or older than the source
-	@have="$$(docker image inspect -f '{{ index .Config.Labels "gb.source" }}' $(GB_IMAGE) 2>/dev/null)"; \
+	@have="$$(docker image inspect -f '{{ index .Config.Labels "gb.source" }}' $(GB_RUNNER_IMAGE) 2>/dev/null)"; \
 	if [ "$$have" != "$(SOURCE_STAMP)" ]; then echo "==> The image is out of date with the source; building"; $(MAKE) --no-print-directory build; fi
 
 ##@ Run
@@ -210,6 +212,9 @@ clean: ## Remove build output (dist, tsbuildinfo, .run)
 
 # group name -> variable holding its services (data -> DATA, bank-more -> BANK_MORE)
 group = $(shell echo $(1) | tr 'a-z-' 'A-Z_')
+
+browser: ## Install headless Chromium for the browser tests (.run/browser)
+	@infra/scripts/browser.sh
 
 api-docs: ## Write the API reference (docs/api/openapi.json) from the contracts
 	@npx tsc -b && node apps/api/dist/openapi-cli.js > docs/api/openapi.json && echo "  wrote docs/api/openapi.json; open docs/api/index.html to read it"

@@ -155,6 +155,8 @@ services:
 
   runner:
     <<: *node
+    # The same Node image plus headless Chromium (infra/docker/runner.Dockerfile).
+    image: ${GB_RUNNER_IMAGE}
     command: ['node', 'apps/runner/dist/main.js']
     mem_limit: 768m
     env_file: [../../config/app.env, ../../.run/env/runner.env]
