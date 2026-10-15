@@ -163,17 +163,21 @@ export async function onTheWay(sess: Session, s: Seen, memberId: string): Promis
       });
       // A search that produced a result is progress: only searches that come back empty count.
       if (r.model.controls.some((c) => c.name === 'Open') || r.screen) counts.searches = 0;
-      if (r.model.controls.some((c) => c.name === 'Open')) {
-        // The result row names the member: learn it, so it is masked from here on.
-        const open = r.model.controls.find((c) => c.name === 'Open')!;
+      // The result row names the member: learn it, so it is masked from here on. It is the row
+      // with Open on it, or, for a member who cannot be opened (a closed one), with their number.
+      const open = r.model.controls.find((c) => c.name === 'Open');
+      const anchor = open?.box ?? r.model.texts.find((t) => t.text.includes(memberId))?.box;
+      if (anchor) {
         const row = r.model.texts.filter(
-          (t) => Math.abs(t.box.y + t.box.h / 2 - (open.box.y + open.box.h / 2)) < 8,
+          (t) => Math.abs(t.box.y + t.box.h / 2 - (anchor.y + anchor.h / 2)) < 8,
         );
         ctx.learn(
           row
             .map((t) => t.text)
             .filter((t) => !/^(Active|Closed|Open)$/i.test(t) && !/^\d+$/.test(t)),
         );
+      }
+      if (open) {
         await click(page, button(r.model, 'Open'));
         await sess.record('member search', 'member.found', r.model, 'opened the member');
       } else {
