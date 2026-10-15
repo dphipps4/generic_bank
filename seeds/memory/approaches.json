@@ -1,0 +1,658 @@
+{
+  "kind": "approaches",
+  "entries": [
+    {
+      "id": "AP-001",
+      "family": "download",
+      "title": "Take the document from where it arrives",
+      "does": "Captures a document as bytes wherever it lands, without a second request of our own.",
+      "when": "The page opens a PDF in a new window, streams it to an in-page viewer, or delivers it with no plain link.",
+      "steps": [
+        "Listen for responses whose type is a PDF across the page and any popup or new window, including bytes carried as base64 inside a JSON reply.",
+        "When a download event fires, read the download to bytes rather than relying on a saved file path.",
+        "When an in-page viewer consumes the stream so the bytes are no longer readable, re-read the same already-issued request and keep its body before handing it on.",
+        "Confirm the bytes begin with the PDF marker before treating the capture as a document."
+      ],
+      "limits": "Fails when the document is never a real file, only pixels drawn on screen, which needs render-to-PDF instead.",
+      "reversible": true
+    },
+    {
+      "id": "AP-002",
+      "family": "download",
+      "title": "Fetch the document by its own URL with the session",
+      "does": "Reads the document with a plain GET that carries the signed-in session.",
+      "when": "The document has a stable link and the session is held in cookies.",
+      "steps": [
+        "Read the link target from the rendered control.",
+        "Resolve a relative target against the current page address.",
+        "GET that address with the live session and an Accept header for PDF.",
+        "Confirm the reply begins with the PDF marker before accepting it."
+      ],
+      "limits": "Fails when the link carries a single-use token that is already spent, or the document needs a session the GET does not carry.",
+      "reversible": true
+    },
+    {
+      "id": "AP-003",
+      "family": "download",
+      "title": "Render an HTML-only document to PDF",
+      "does": "Produces a PDF from a document that the portal only ever draws as a web page.",
+      "when": "A statement or notice is shown as HTML and no PDF is offered.",
+      "steps": [
+        "Open the document view and wait until it is fully rendered.",
+        "Use the browser's own print-to-PDF to capture the rendered page.",
+        "Keep the resulting bytes as the document."
+      ],
+      "limits": "Loses fidelity when the page depends on screen-only layout, and cannot capture content behind a control the page never expands.",
+      "reversible": true
+    },
+    {
+      "id": "AP-004",
+      "family": "download",
+      "title": "Read the document list from the data behind the page",
+      "does": "Lists documents from the read-only data feed the page itself reads, then fetches each one.",
+      "when": "The page is drawn by its own script from a data feed and the on-screen list is awkward to read.",
+      "steps": [
+        "Find the read endpoint the page uses to list documents and GET it with the live session.",
+        "Take each document's own date and identity from that data, not from on-screen order.",
+        "GET each document by the address the data gives."
+      ],
+      "limits": "Fails when the feed needs a token the session cannot replay, or reports a document exists when its content is not yet ready.",
+      "reversible": true
+    },
+    {
+      "id": "AP-005",
+      "family": "download",
+      "title": "Expand an archive of documents",
+      "does": "Turns a single archive download into one document per file inside it.",
+      "when": "The portal hands back several statements bundled in one archive.",
+      "steps": [
+        "Capture the archive as bytes.",
+        "Expand it in memory.",
+        "Treat each inner PDF as its own document."
+      ],
+      "limits": "Fails when the archive is encrypted or holds formats other than the documents expected.",
+      "reversible": true
+    },
+    {
+      "id": "AP-006",
+      "family": "download",
+      "title": "Resume a large download by byte range",
+      "does": "Retries only the missing part of a large download instead of starting over.",
+      "when": "A large document download fails partway on a slow or unreliable link.",
+      "steps": [
+        "Track how many bytes have arrived.",
+        "On a break, GET the same document again asking only for the bytes still missing.",
+        "Join the parts and confirm the whole is a valid document."
+      ],
+      "limits": "Fails when the source does not honor ranged requests or the content changes between attempts.",
+      "reversible": true
+    },
+    {
+      "id": "AP-007",
+      "family": "download",
+      "title": "Name the file by the date inside the document",
+      "does": "Labels a document by the statement date printed inside it, not the row it came from.",
+      "when": "The list date may be a posting or availability date that differs from the period the document covers.",
+      "steps": [
+        "Read the statement date from the first page of the captured document, or from an authoritative date the data gives.",
+        "Prefer that date over the on-screen row date when they disagree.",
+        "Name and file the document by that date."
+      ],
+      "limits": "Fails when the document carries no readable date and the data gives none.",
+      "reversible": true
+    },
+    {
+      "id": "AP-008",
+      "family": "enumeration",
+      "title": "Enumerate every sub-account by a stable identity key",
+      "does": "Finds every account under one sign-in and keys each by a durable identity, not a session token.",
+      "when": "One sign-in sees several accounts and later steps must refer back to a specific one.",
+      "steps": [
+        "List every account the sign-in can reach.",
+        "Key each account by a stable identity, such as the last four digits plus the account kind.",
+        "Carry that key, never a per-session token, into later steps."
+      ],
+      "limits": "Fails when two accounts share the same visible identity and nothing else tells them apart.",
+      "reversible": true
+    },
+    {
+      "id": "AP-009",
+      "family": "enumeration",
+      "title": "Choose the account by identity, else fail loudly",
+      "does": "Picks the intended account from several by a supplied identity, and stops rather than guess.",
+      "when": "Several account tiles are shown and only one is the target.",
+      "steps": [
+        "Match the account named in the request first.",
+        "If none is named, match a distinguishing pattern for the intended account.",
+        "If exactly one account is present, use it.",
+        "Otherwise raise a clear error; never take whichever tile is first."
+      ],
+      "limits": "Fails when the request gives no identity and more than one account could match.",
+      "reversible": true
+    },
+    {
+      "id": "AP-010",
+      "family": "enumeration",
+      "title": "Switch organization or account when one sign-in sees many",
+      "does": "Moves to the right organization or account owner before reading its documents.",
+      "when": "One sign-in spans several organizations or billing owners.",
+      "steps": [
+        "Open the switcher.",
+        "Choose the target by its name, not its position.",
+        "Confirm the chosen context is active before continuing."
+      ],
+      "limits": "Fails when the switch needs a separate grant the sign-in does not hold.",
+      "reversible": true
+    },
+    {
+      "id": "AP-011",
+      "family": "enumeration",
+      "title": "Scout the real document dates before requesting",
+      "does": "Learns which periods actually have documents, then requests only those.",
+      "when": "The portal may not have a document for every recent period.",
+      "steps": [
+        "Read the list of periods the portal offers.",
+        "Keep only the periods that actually hold a document.",
+        "Request those periods rather than a fixed recent-months window."
+      ],
+      "limits": "Fails when the portal hides periods until a control is driven to reveal them.",
+      "reversible": true
+    },
+    {
+      "id": "AP-012",
+      "family": "sign-in",
+      "title": "Enter text key by key, not in one shot",
+      "does": "Types each character into a field so fields that cap or drop pasted input still receive it.",
+      "when": "A field caps length, trims input, or ignores a single bulk set.",
+      "steps": [
+        "Focus the field.",
+        "Type the value one character at a time with a small human-like gap.",
+        "Read the field back and confirm it holds the whole value before moving on."
+      ],
+      "limits": "Fails when a floating label or overlay intercepts focus so the field never receives the keys.",
+      "reversible": true
+    },
+    {
+      "id": "AP-013",
+      "family": "sign-in",
+      "title": "Wait until the field is editable before typing",
+      "does": "Waits for inputs and buttons that ship disabled until the page's own script wakes them.",
+      "when": "A server-drawn form arrives with its fields or submit disabled until it hydrates.",
+      "steps": [
+        "Wait for the field and its submit control to become enabled.",
+        "Only then enter text and submit.",
+        "Treat a control that stays disabled past the budget as a terminal failure."
+      ],
+      "limits": "Fails when the control never enables because an earlier step the page expects was skipped.",
+      "reversible": true
+    },
+    {
+      "id": "AP-014",
+      "family": "sign-in",
+      "title": "Click the named control by its accessible name",
+      "does": "Clicks a control by its role and exact accessible name, skipping decoys.",
+      "when": "The page has look-alike controls such as locale pickers or third-party sign-in buttons.",
+      "steps": [
+        "Find the control by its role and exact accessible name.",
+        "Confirm it is the visible, intended control before clicking.",
+        "Click it, letting the match reach controls inside open shadow roots."
+      ],
+      "limits": "Fails when the real control carries no accessible name or shares its name with a decoy.",
+      "reversible": true
+    },
+    {
+      "id": "AP-015",
+      "family": "sign-in",
+      "title": "Handle one-step and two-step sign-in",
+      "does": "Fills the identifier, then adapts to whatever the portal shows next.",
+      "when": "The portal may ask for the password on the same screen or on a second one.",
+      "steps": [
+        "Enter the identifier.",
+        "If a password field is already present, use it.",
+        "Otherwise advance and wait for whichever comes first: a password field, a one-time code prompt, or an already-signed-in area.",
+        "Continue down the branch that actually appeared."
+      ],
+      "limits": "Fails when the next screen is a challenge the session cannot satisfy.",
+      "reversible": true
+    },
+    {
+      "id": "AP-016",
+      "family": "sign-in",
+      "title": "Handle the returning-user layout",
+      "does": "Signs in on the visible password field when the identifier is already remembered.",
+      "when": "A remembered profile hides or prefills the identifier and shows only a password prompt.",
+      "steps": [
+        "Treat the identifier as optional when it is already filled.",
+        "Enter the password on the visible password field.",
+        "Submit once and prove the outcome."
+      ],
+      "limits": "Fails when the remembered profile belongs to the wrong account.",
+      "reversible": true
+    },
+    {
+      "id": "AP-017",
+      "family": "sign-in",
+      "title": "Start from the flow that leads to the documents",
+      "does": "Begins at the sign-in that actually reaches the work, not a marketing page.",
+      "when": "The portal has several entry points and only one leads to the needed area.",
+      "steps": [
+        "Point the start address at the flow that leads to the target area.",
+        "Avoid bare marketing or generic landing pages.",
+        "Confirm the signed-in area is the one that holds the documents."
+      ],
+      "limits": "Fails when the direct flow is itself gated by a step only the generic entry sets up.",
+      "reversible": true
+    },
+    {
+      "id": "AP-018",
+      "family": "sign-in",
+      "title": "Prove sign-in positively, not by leaving the login screen",
+      "does": "Trusts sign-in only on a positive, stable signal of the signed-in area.",
+      "when": "Deciding whether sign-in actually succeeded.",
+      "steps": [
+        "Require a known signed-in signal, such as the expected area's address or an element only present once inside.",
+        "Require that signal to hold stable across repeated checks.",
+        "Never treat merely leaving the login screen as success."
+      ],
+      "limits": "Fails when the signed-in signal is also shown briefly during an interstitial.",
+      "reversible": true
+    },
+    {
+      "id": "AP-019",
+      "family": "sign-in",
+      "title": "A block disguised as an outage is terminal",
+      "does": "Recognizes a portal-unavailable message held across checks and stops.",
+      "when": "The portal shows an outage-worded page that may be a standing refusal.",
+      "steps": [
+        "Match known portal-unavailable wording.",
+        "Require it to persist across several consecutive checks.",
+        "Raise a terminal unavailable error rather than retrying for minutes."
+      ],
+      "limits": "A genuine brief outage is reported the same way and will be given up on.",
+      "reversible": true
+    },
+    {
+      "id": "AP-020",
+      "family": "sign-in",
+      "title": "Bound retries on an ambiguous rejection",
+      "does": "Retries a vaguely worded rejection a few times on fresh sessions, then reports it honestly.",
+      "when": "The portal says something generic like your details did not match, which may be a soft block.",
+      "steps": [
+        "Treat an ambiguous rejection as possibly a soft block, not certainly wrong credentials.",
+        "Retry on a fresh session, at most a small fixed number of times.",
+        "Then report an ambiguous rejection, not a flat claim that the password is wrong."
+      ],
+      "limits": "Retrying real wrong credentials still burns attempts and can harden a block.",
+      "reversible": false
+    },
+    {
+      "id": "AP-021",
+      "family": "code",
+      "title": "Request a one-time code and wait for it within a budget",
+      "does": "Raises a code challenge and waits for a person to supply the code, bounded in rounds and time.",
+      "when": "Sign-in, or a step-up inside the work area, demands a one-time code only a person can read.",
+      "steps": [
+        "Record that a code is needed and wait for it to be supplied through the agreed hand-off.",
+        "Poll for the supplied code within a fixed time budget.",
+        "Cap the number of challenge rounds.",
+        "Keep the person's wait outside any per-item time limit so a single item's budget cannot cancel it."
+      ],
+      "limits": "Fails when no person answers inside the budget.",
+      "reversible": false
+    },
+    {
+      "id": "AP-022",
+      "family": "code",
+      "title": "Confirm the code was actually sent, and pick the channel deliberately",
+      "does": "Chooses the delivery channel by name and requires proof the code was sent before waiting.",
+      "when": "The portal offers a choice of where to send the code and may silently not send.",
+      "steps": [
+        "Choose the delivery channel by its accessible name, in a deliberate order, polling for buttons that appear late.",
+        "Trigger the send.",
+        "Require the portal's own acknowledgement, or the rendered code field, before raising the challenge.",
+        "If no acknowledgement comes, retry the send a few times or try another offered channel, then fail clearly."
+      ],
+      "limits": "Fails when the portal acknowledges a send it did not actually deliver.",
+      "reversible": false
+    },
+    {
+      "id": "AP-023",
+      "family": "code",
+      "title": "Confirm the submit took, and never ask for a second code",
+      "does": "Verifies the code form actually advanced, reading a silent rejection from the form staying put, without ever requesting another code.",
+      "when": "Submitting a one-time code, where a click may do nothing and a rejection may be silent.",
+      "steps": [
+        "Do not trigger another send when the code form is already showing.",
+        "Submit the code once and wait for the code form to detach before deciding anything.",
+        "Treat the form still being present as a silent rejection, not a prompt to resend.",
+        "Never request a second code; hand back when the first is not accepted."
+      ],
+      "limits": "Fails when the portal keeps the form visible briefly even after accepting the code.",
+      "reversible": false
+    },
+    {
+      "id": "AP-024",
+      "family": "code",
+      "title": "Keep device trust so later sessions skip the code",
+      "does": "Accepts a remember-this-device offer so the trust is kept in the session's own profile.",
+      "when": "The portal offers to trust the device and a persistent profile is in use.",
+      "steps": [
+        "Tick the remember or trust option when offered.",
+        "Let the trust land in the persistent profile.",
+        "Reuse that profile on later runs so one code can cover many sessions."
+      ],
+      "limits": "Fails on portals that grant no durable trust or whose sessions are always fresh.",
+      "reversible": true
+    },
+    {
+      "id": "AP-025",
+      "family": "code",
+      "title": "Switch to an offered alternate code method",
+      "does": "Moves to an offered code method the session can satisfy when the default one it cannot.",
+      "when": "The default factor is something the session cannot answer but another offered method it can.",
+      "steps": [
+        "Open the method picker when the default factor cannot be answered.",
+        "Choose an offered method that the session can satisfy.",
+        "Continue the code flow on that method."
+      ],
+      "limits": "Fails when no satisfiable method is offered.",
+      "reversible": true
+    },
+    {
+      "id": "AP-026",
+      "family": "navigation",
+      "title": "Never wait for network idle",
+      "does": "Judges readiness by settling signals rather than by the network going quiet.",
+      "when": "Any page whose own script keeps sending background traffic.",
+      "steps": [
+        "Use a settle check or an address-stable check instead of waiting for network idle.",
+        "Treat a page that streams telemetry as normal, not as never-ready."
+      ],
+      "limits": "A settle check can still fire early on a page that pauses mid-render.",
+      "reversible": true
+    },
+    {
+      "id": "AP-027",
+      "family": "navigation",
+      "title": "Poll for the real content, not the URL or load event",
+      "does": "Waits for the actual rows, tiles or links to appear, within a budget.",
+      "when": "Content is drawn by the page's own script after the load event.",
+      "steps": [
+        "Decide which real element proves the content arrived.",
+        "Poll for that element within a time budget.",
+        "Do not judge content absent at the load event or from the address alone."
+      ],
+      "limits": "Fails when the proof element never appears because an earlier step did not take.",
+      "reversible": true
+    },
+    {
+      "id": "AP-028",
+      "family": "navigation",
+      "title": "Read the link target and navigate, instead of clicking",
+      "does": "Follows a control's own link with a GET when a click cannot land.",
+      "when": "Overlays intercept clicks, a submenu is collapsed, or a custom control ignores clicks.",
+      "steps": [
+        "Read the link target from the control.",
+        "Navigate to that target directly.",
+        "Confirm the expected content arrived."
+      ],
+      "limits": "Fails when the control has no readable target and acts only through its own handler.",
+      "reversible": true
+    },
+    {
+      "id": "AP-029",
+      "family": "navigation",
+      "title": "See content inside shadow roots via the accessibility tree",
+      "does": "Reaches rows drawn inside shadow roots through the role and accessibility view.",
+      "when": "Rows are rendered inside shadow roots and are invisible to a plain element search.",
+      "steps": [
+        "Use the role and accessibility view, which crosses open shadow roots, to find the content.",
+        "Target each item by its role and name.",
+        "Confirm the item is visible before acting on it."
+      ],
+      "limits": "Fails when the content sits in a closed shadow root the accessibility view cannot reach.",
+      "reversible": true
+    },
+    {
+      "id": "AP-030",
+      "family": "navigation",
+      "title": "Drive accordions, pickers, pagination and generators",
+      "does": "Operates the controls that load more rows, checking each action took effect.",
+      "when": "Rows appear only after driving a dropdown, accordion, date picker, generate button or pager.",
+      "steps": [
+        "Identify the control that loads the rows.",
+        "Drive it and confirm the picked value or page actually changed.",
+        "Read the rows that appear, then repeat for the next page or period."
+      ],
+      "limits": "Fails when a control silently refuses and shows no change to detect.",
+      "reversible": true
+    },
+    {
+      "id": "AP-031",
+      "family": "navigation",
+      "title": "Adopt new tabs, popups and cross-origin hand-offs",
+      "does": "Follows the work when it opens in a new tab, popup or a hand-off to another origin.",
+      "when": "A click opens content in a new window or routes through a separate sign-in origin.",
+      "steps": [
+        "Expect a new page when a control may open one.",
+        "Adopt the new page and continue the work there.",
+        "Follow a cross-origin hand-off back to where the content lands."
+      ],
+      "limits": "Fails when the new page is blocked before it opens, or the hand-off never returns.",
+      "reversible": true
+    },
+    {
+      "id": "AP-032",
+      "family": "navigation",
+      "title": "Bound every per-item loop with a time limit",
+      "does": "Wraps each account, loan or period in its own time limit and isolates its failure.",
+      "when": "Looping over many items where one stuck item could hang the whole run.",
+      "steps": [
+        "Give each item its own time limit.",
+        "Fail that item alone when the limit is reached.",
+        "Carry on with the remaining items."
+      ],
+      "limits": "A dropped browser connection can keep built-in timeouts from firing, so the per-item limit must be enforced by us.",
+      "reversible": true
+    },
+    {
+      "id": "AP-033",
+      "family": "cross-cutting",
+      "title": "Target the visible control, never the first match",
+      "does": "Binds a control to the visible one among several matches, not the first in document order.",
+      "when": "A page holds hidden mirrors or decoys that share a control's description.",
+      "steps": [
+        "Gather the candidates by role and accessible name.",
+        "Keep only the ones that are actually visible.",
+        "Act on the intended visible control, never on whichever is first."
+      ],
+      "limits": "Fails when more than one visible control matches and nothing else distinguishes them.",
+      "reversible": true
+    },
+    {
+      "id": "AP-034",
+      "family": "cross-cutting",
+      "title": "Resolve the right frame by its URL",
+      "does": "Finds the login or content frame by matching its own address, not a racy frame lookup.",
+      "when": "The real work sits in a frame that is lazy, often unnamed, and wrapped by chrome-only frames.",
+      "steps": [
+        "Poll the page's frames for the one whose address matches the target.",
+        "Make sure the pattern does not also match the outer wrapper.",
+        "Work inside that frame once it is present."
+      ],
+      "limits": "Fails when the frame's address is generic enough to match the wrapper too.",
+      "reversible": true
+    },
+    {
+      "id": "AP-035",
+      "family": "cross-cutting",
+      "title": "Clear splashes, cookie walls and promos; never consent or enroll for the user",
+      "does": "Dismisses blocking splashes, cookie walls and promo takeovers while declining to opt in on the user's behalf.",
+      "when": "A splash, disclaimer, cookie wall or promo covers the page before or during the work.",
+      "steps": [
+        "Dismiss known splashes, disclaimers, cookie walls and promo takeovers, keeping a registry of the ones seen.",
+        "Tick only consent that is strictly required to proceed.",
+        "Never enroll in anything or grant optional consent without an explicit go-ahead."
+      ],
+      "limits": "Fails when a new interstitial not yet in the registry blocks the page.",
+      "reversible": true
+    },
+    {
+      "id": "AP-036",
+      "family": "cross-cutting",
+      "title": "Navigate by the live href; capture tokens before they vanish",
+      "does": "Moves through the portal using its live links and grabs per-account tokens before the page drops them.",
+      "when": "Links and lists carry single-use session tokens that do not survive a cold reload.",
+      "steps": [
+        "Read the live link target, which carries the session token, instead of building or guessing an address.",
+        "Capture per-account tokens before they disappear from view.",
+        "Reopen the list and re-scan it after each document, keyed on the list's links being present rather than on the address.",
+        "Move within the app rather than reloading cold."
+      ],
+      "limits": "Fails when the token is bound so tightly to one view that reopening the list reissues it.",
+      "reversible": true
+    },
+    {
+      "id": "AP-037",
+      "family": "cross-cutting",
+      "title": "Use the account's persistent profile as the session",
+      "does": "Treats the account's stored browser profile as the primary session, with cookies only as a fallback.",
+      "when": "A session should carry across runs and keep device trust.",
+      "steps": [
+        "Run with the account's own persistent profile.",
+        "Use stored cookies only as a fallback.",
+        "Never let a cookie fallback overwrite a good profile."
+      ],
+      "limits": "Fails when the portal issues only short-lived, non-reusable sessions.",
+      "reversible": true
+    },
+    {
+      "id": "AP-038",
+      "family": "cross-cutting",
+      "title": "Move the profile aside to force a fresh flow",
+      "does": "Sets the stored profile aside so the next run goes through the full sign-in again.",
+      "when": "A trusted profile skips pickers or steps that need to be seen or re-exercised.",
+      "steps": [
+        "Rename the account's profile aside, keeping it so the change can be undone.",
+        "Run once so a fresh sign-in and its full set of pickers appear.",
+        "Restore the profile afterward if the old session is still wanted."
+      ],
+      "limits": "Forces a new code prompt, so it costs a round-trip with a person.",
+      "reversible": true
+    },
+    {
+      "id": "AP-039",
+      "family": "cross-cutting",
+      "title": "Guard against money actions with a request and control block",
+      "does": "Blocks state-changing requests and refuses payment-like controls so a read-only session cannot move money.",
+      "when": "Always, on a session that is meant to read and never transact.",
+      "steps": [
+        "Before sign-in, arm a guard that aborts any state-changing request matching payment patterns.",
+        "Refuse to click controls whose names match payment or transfer actions, raising a blocked-action error.",
+        "Let the guard trip propagate rather than being swallowed."
+      ],
+      "limits": "Pattern-based guards can miss an unusually named money action, so they are a backstop, not the only control.",
+      "reversible": true
+    },
+    {
+      "id": "AP-040",
+      "family": "cross-cutting",
+      "title": "Build targets from the live screen, not from guesses",
+      "does": "Derives targets by scouting the live screen across every frame, visible and hidden, rather than guessing.",
+      "when": "Before writing or repairing a driver for an unfamiliar screen.",
+      "steps": [
+        "Scout the live screen and list its inputs and controls across every frame.",
+        "Build targets from what is actually present, by role and name.",
+        "Do not rely on guessed descriptions."
+      ],
+      "limits": "A scout captures one moment, so a screen that changes shape per visit still needs re-scouting.",
+      "reversible": true
+    },
+    {
+      "id": "AP-041",
+      "family": "cross-cutting",
+      "title": "Capture masked evidence on every failure",
+      "does": "Saves a screenshot, address and page text for each failure, masked and protected off development.",
+      "when": "A job fails and the cause must be diagnosable later.",
+      "steps": [
+        "On failure, capture a screenshot, the address and the page text.",
+        "Mask and protect the capture outside development.",
+        "Keep plain captures only in development."
+      ],
+      "limits": "A capture taken after the page has moved on can miss the moment of failure.",
+      "reversible": true
+    },
+    {
+      "id": "AP-042",
+      "family": "cross-cutting",
+      "title": "Prove the pipeline end to end on a controllable fake portal",
+      "does": "Runs the whole pipeline against a controllable fake portal and asserts on real delivered bytes.",
+      "when": "Proving the pipeline works without touching a real institution.",
+      "steps": [
+        "Serve a fake portal with sign-in, a one-time code, a document list and a document.",
+        "Run the real pipeline against it end to end, resolving the fake portal only in a demo mode that fails closed.",
+        "Clear state first and assert on the bytes that actually came through, not on a completed flag."
+      ],
+      "limits": "A fake portal only exercises the hazards it was built to model.",
+      "reversible": true
+    },
+    {
+      "id": "AP-043",
+      "family": "cross-cutting",
+      "title": "Classify a failure before repairing it",
+      "does": "Sorts a failure into reseed, wall or drift, and only drift calls for a driver repair.",
+      "when": "A job has failed and the next action must be chosen.",
+      "steps": [
+        "Call it reseed when credentials are rejected in a real browser.",
+        "Call it a wall when a block or unavailable signature appears.",
+        "Call it drift when it failed only after reaching navigation, the list or the download.",
+        "Trigger a repair for drift alone."
+      ],
+      "limits": "A failure that looks like drift but is really an intermittent wall will send work to repair needlessly.",
+      "reversible": true
+    },
+    {
+      "id": "AP-044",
+      "family": "pacing",
+      "title": "Pace attempts and cap them hard",
+      "does": "Enforces a gap between sign-in attempts, hard caps, cooldowns and a ledger that fails closed.",
+      "when": "Any portal where repeated attempts risk a lockout or a block.",
+      "steps": [
+        "Require a minimum gap between sign-in attempts.",
+        "Cap session attempts and ambiguous attempts to a small fixed number.",
+        "Keep a per-portal, per-account attempt ledger that fails closed when its state is unknown.",
+        "Apply per-portal cooldowns after trouble."
+      ],
+      "limits": "A ledger that cannot read its own state must refuse, which can stall a healthy account.",
+      "reversible": true
+    },
+    {
+      "id": "AP-045",
+      "family": "pacing",
+      "title": "After the password is submitted, treat failures as terminal",
+      "does": "Once the password is sent, stops rather than blindly resubmitting.",
+      "when": "A failure happens after the password has already been submitted.",
+      "steps": [
+        "Mark the moment the password is submitted.",
+        "After that, treat every failure as terminal, except an ambiguous rejection still shown on the form.",
+        "Never blindly resubmit, which could fire another code or lock the account."
+      ],
+      "limits": "A genuine transient failure after submit is given up on rather than retried.",
+      "reversible": true
+    },
+    {
+      "id": "AP-046",
+      "family": "pacing",
+      "title": "Scout a live portal with a single-attempt driver",
+      "does": "Explores a live portal once per run instead of bursting many attempts.",
+      "when": "Scouting a live portal that throttles or blocks on repeated attempts.",
+      "steps": [
+        "Scout with a driver that makes a single attempt.",
+        "Avoid harnesses that burst several session attempts in a row.",
+        "Space any further look behind the attempt caps."
+      ],
+      "limits": "A single attempt gives less coverage per run than a burst would.",
+      "reversible": true
+    }
+  ]
+}

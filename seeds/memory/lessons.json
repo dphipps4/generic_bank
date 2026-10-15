@@ -1,0 +1,3446 @@
+{
+  "kind": "lessons",
+  "entries": [
+    {
+      "id": "L-0001",
+      "area": "sign-in",
+      "lesson": "After submitting the identifier, wait for any of the possible next screens instead of hard-waiting for a password field. An adaptive sign-in can skip the password step and go straight to a one-time code.",
+      "why": "A driver that waits only for a password field hangs on a flow that never shows one.",
+      "confidence": "medium",
+      "signals": [
+        "waiting for password field",
+        "no password step",
+        "identifier accepted",
+        "code sent instead"
+      ]
+    },
+    {
+      "id": "L-0002",
+      "area": "outcomes",
+      "lesson": "Classify a failure as portal or infrastructure before retrying, and retry only infrastructure errors. Log every step of the task so a failure names the step it died on.",
+      "why": "Retrying portal errors as if they were infrastructure repeats the same failure and hides where it happened.",
+      "confidence": "medium",
+      "signals": [
+        "retrying after portal error",
+        "unknown failing step",
+        "classified as infrastructure"
+      ]
+    },
+    {
+      "id": "L-0003",
+      "area": "sign-in",
+      "lesson": "Route every sign-in, from any caller, through one fail-closed attempt ledger that counts sign-ins and one-time codes per account. Never claim a limit exists until something actually counts it.",
+      "why": "Without one shared count, separate callers can each retry until an account is locked.",
+      "confidence": "high",
+      "signals": [
+        "repeated sign-in attempts",
+        "attempt limit reached",
+        "account locked",
+        "second code requested"
+      ]
+    },
+    {
+      "id": "L-0004",
+      "area": "factory",
+      "lesson": "Never start an automatic driver repair on a rejection before sign-in. Only a failure after a confirmed sign-in, or a missing driver, justifies a rebuild.",
+      "why": "A generic rejection can mean a wrong password, so a repair loop would keep submitting it until the account locks.",
+      "confidence": "high",
+      "signals": [
+        "credentials incorrect",
+        "rejected before sign-in",
+        "repair triggered",
+        "account locked"
+      ]
+    },
+    {
+      "id": "L-0005",
+      "area": "rendering",
+      "lesson": "Never wait for network idle. Wait for a specific signal on the screen, or an address, that proves the next state is fully rendered.",
+      "why": "Portals keep polling and analytics traffic open, so network idle may never arrive.",
+      "confidence": "high",
+      "signals": [
+        "waiting for network idle",
+        "timed out waiting for load",
+        "page never settled"
+      ]
+    },
+    {
+      "id": "L-0006",
+      "area": "pacing",
+      "lesson": "Wrap every per-item step (account, period, document) in a wall-clock budget and save each result as it arrives.",
+      "why": "A frozen browser call can ignore its own timeouts, and results saved only at the end are lost with the run.",
+      "confidence": "high",
+      "signals": [
+        "step exceeded budget",
+        "browser call froze",
+        "results lost",
+        "run killed"
+      ]
+    },
+    {
+      "id": "L-0007",
+      "area": "pacing",
+      "lesson": "Give each driver explicit budgets for machine waits and for human waits such as one-time codes, and make every expiry message state the budget that actually applied. Never tell a person a code was sent unless the screen confirmed it.",
+      "why": "Inherited waits tuned for another portal stall runs, and a wrong message misleads the person waiting.",
+      "confidence": "medium",
+      "signals": [
+        "wait budget expired",
+        "code never sent",
+        "waiting for human",
+        "timed out after"
+      ]
+    },
+    {
+      "id": "L-0008",
+      "area": "pacing",
+      "lesson": "When racing several candidate targets, bound the race with one outer deadline, give the inner waits no deadlines of their own, cancel the losers, and keep a clear result for a miss.",
+      "why": "Two deadlines that disagree, or a hidden library default, silently cut long waits short.",
+      "confidence": "medium",
+      "signals": [
+        "race timed out early",
+        "conflicting timeouts",
+        "default timeout reached"
+      ]
+    },
+    {
+      "id": "L-0009",
+      "area": "session",
+      "lesson": "Close the browser at every cancellation point, and check for leftover browser processes and reap them before the next run.",
+      "why": "A killed or cancelled run can skip teardown, and orphaned browsers exhaust memory for later runs.",
+      "confidence": "medium",
+      "signals": [
+        "run cancelled",
+        "orphaned browser process",
+        "out of memory",
+        "teardown skipped"
+      ]
+    },
+    {
+      "id": "L-0010",
+      "area": "session",
+      "lesson": "Build browser launch options from one shared spec that every launch site uses, and never pass the same option twice.",
+      "why": "A repeated option can silently override the earlier one, and two launch sites drift apart.",
+      "confidence": "high",
+      "signals": [
+        "duplicate launch option",
+        "launch sites differ",
+        "option ignored",
+        "focus stolen by bubble"
+      ]
+    },
+    {
+      "id": "L-0011",
+      "area": "testing",
+      "lesson": "Load, lint and run a hermetic smoke test for every registered driver in continuous integration. An instant, identical crash on every run is our bug, not the portal.",
+      "why": "A driver with an undefined name or missing import cannot run at all, and only a check before release catches it.",
+      "confidence": "medium",
+      "signals": [
+        "crashed immediately",
+        "undefined name",
+        "same error every run",
+        "missing import"
+      ]
+    },
+    {
+      "id": "L-0012",
+      "area": "factory",
+      "lesson": "Before diagnosing a driver that fails, confirm its steps past sign-in are implemented and proven. Mark drafts as research, never as working.",
+      "why": "A stub or a draft full of guessed targets looks like a portal failure when the code was never finished.",
+      "confidence": "medium",
+      "signals": [
+        "not implemented",
+        "draft driver",
+        "guessed target",
+        "stub after sign-in"
+      ]
+    },
+    {
+      "id": "L-0013",
+      "area": "factory",
+      "lesson": "Count a driver as proven only when the production path completes the task and stores a document that validates as a PDF. Exercise the save step with the longest real values before calling it proven.",
+      "why": "Probe and development runs skip steps that production runs, so a fetch can succeed and the save still fail.",
+      "confidence": "high",
+      "signals": [
+        "passed in probe",
+        "save failed",
+        "value too long",
+        "not a PDF"
+      ]
+    },
+    {
+      "id": "L-0014",
+      "area": "factory",
+      "lesson": "Confirm which driver version is deployed before diagnosing a production failure.",
+      "why": "Production may still run an older build whose bug is already fixed.",
+      "confidence": "medium",
+      "signals": [
+        "already fixed",
+        "deployed version",
+        "older build"
+      ]
+    },
+    {
+      "id": "L-0015",
+      "area": "sign-in",
+      "lesson": "Prove sign-in positively: require a move away from the start screen plus a match on the signed-in area. Do not rule out an address just because it is the sign-in target, since some portals use one address for both.",
+      "why": "A loose check fires on the start screen, and a strict address veto misses portals whose sign-in and home address match.",
+      "confidence": "high",
+      "signals": [
+        "signed in too early",
+        "still on start screen",
+        "sign-in never detected",
+        "same address after sign-in"
+      ]
+    },
+    {
+      "id": "L-0016",
+      "area": "sign-in",
+      "lesson": "When a sign-in that used to work breaks completely, check whether the vendor product moved to a new platform or provider before fixing targets one by one.",
+      "why": "A platform move changes every screen at once, so piecemeal fixes never converge.",
+      "confidence": "high",
+      "signals": [
+        "sign-in screen changed",
+        "new provider",
+        "redirected elsewhere",
+        "every target missing"
+      ]
+    },
+    {
+      "id": "L-0017",
+      "area": "enumeration",
+      "lesson": "Model the sign-in and the account separately, and enumerate every account and entity behind one sign-in. Give each a stable identity that is not a session token, and key every document by account and document identity, not just by period.",
+      "why": "One sign-in routinely covers many accounts, and keying by period alone makes documents collide.",
+      "confidence": "high",
+      "signals": [
+        "only first account",
+        "several accounts",
+        "documents collided",
+        "more than one per period"
+      ]
+    },
+    {
+      "id": "L-0018",
+      "area": "enumeration",
+      "lesson": "Before concluding there are no documents, confirm the signed-in role and the selected entity can see them; switch to the entity that holds them, and visit any screen that must load first.",
+      "why": "A role or entity without access often shows an empty list instead of an error.",
+      "confidence": "medium",
+      "signals": [
+        "empty list",
+        "no documents found",
+        "wrong entity selected",
+        "insufficient role"
+      ]
+    },
+    {
+      "id": "L-0019",
+      "area": "documents",
+      "lesson": "Read the real document dates and cadence (monthly, annual, per item, several per period) before choosing which periods to request.",
+      "why": "A fixed monthly window misses documents issued on another cadence.",
+      "confidence": "medium",
+      "signals": [
+        "no documents in window",
+        "annual document",
+        "several per month",
+        "period missing"
+      ]
+    },
+    {
+      "id": "L-0020",
+      "area": "outcomes",
+      "lesson": "Tell \"nothing in range\" apart from \"could not list\". A clean pass that finds zero documents is \"no documents available\"; zero retrieved with any period in error is a failure carrying the first real error.",
+      "why": "Calling every empty result a success hides real breakage, and calling it a failure blames a healthy run.",
+      "confidence": "high",
+      "signals": [
+        "no statements available",
+        "zero retrieved",
+        "period errored",
+        "clean pass"
+      ]
+    },
+    {
+      "id": "L-0021",
+      "area": "session",
+      "lesson": "Judge a job stale from its recent activity or an open one-time code wait, never from its age. Check for in-flight runs before restarting workers, and let something outside the worker settle a job whose worker died.",
+      "why": "A job reaped mid-wait, or answered after its worker died, leaves a person sending a code to nothing.",
+      "confidence": "high",
+      "signals": [
+        "job reaped",
+        "worker restarted",
+        "waiting for code",
+        "job never settled"
+      ]
+    },
+    {
+      "id": "L-0022",
+      "area": "safety",
+      "lesson": "Check that the job is still live immediately before opening a browser or submitting credentials, at every layer.",
+      "why": "A cancelled job that carries on can still submit credentials and send codes after a person pressed stop.",
+      "confidence": "high",
+      "signals": [
+        "job cancelled",
+        "claim refused",
+        "stop pressed",
+        "credentials submitted after cancel"
+      ]
+    },
+    {
+      "id": "L-0023",
+      "area": "pacing",
+      "lesson": "Size run concurrency from the measured memory each browser uses plus document processing peaks, pin it in configuration, and keep it the same everywhere runs are scheduled.",
+      "why": "Raising concurrency past measured memory makes runs fail together.",
+      "confidence": "high",
+      "signals": [
+        "out of memory",
+        "concurrency raised",
+        "browser killed"
+      ]
+    },
+    {
+      "id": "L-0024",
+      "area": "testing",
+      "lesson": "Build test browser contexts exactly as production does, and resolve every scraped link against the current page address. Any hand-injected session or base address in a test hides a production failure.",
+      "why": "A test that patches around routing or relative links passes while production fails on the same link.",
+      "confidence": "high",
+      "signals": [
+        "invalid URL",
+        "relative link",
+        "passes in test only",
+        "injected session"
+      ]
+    },
+    {
+      "id": "L-0025",
+      "area": "outcomes",
+      "lesson": "Log every exception that a fail-closed handler swallows, so a safe default never hides the bug that tripped it.",
+      "why": "A silent fail-closed branch returns a plausible answer and the real error is lost.",
+      "confidence": "high",
+      "signals": [
+        "exception swallowed",
+        "fell back to default",
+        "unexpected result"
+      ]
+    },
+    {
+      "id": "L-0026",
+      "area": "outcomes",
+      "lesson": "Never store raw exception text in a field a customer can see. Pass every customer-facing string through one central customer-message filter.",
+      "why": "Raw errors leak internals and confuse the person reading them.",
+      "confidence": "medium",
+      "signals": [
+        "raw error shown",
+        "exception text",
+        "customer message"
+      ]
+    },
+    {
+      "id": "L-0027",
+      "area": "safety",
+      "lesson": "Keep free-form answer values provably disjoint from permission names, so an answer can never be read as a grant.",
+      "why": "Overlapping vocabularies let data be mistaken for a permission.",
+      "confidence": "medium",
+      "signals": [
+        "answer matches permission",
+        "unexpected grant",
+        "overlapping values"
+      ]
+    },
+    {
+      "id": "L-0028",
+      "area": "testing",
+      "lesson": "Gate every real external side effect, such as a notification, on an explicit allow rule, and never let eval or test runs trigger it.",
+      "why": "Test rows that reach real notification paths send real messages to real people.",
+      "confidence": "medium",
+      "signals": [
+        "notification sent",
+        "eval run",
+        "test account",
+        "real side effect"
+      ]
+    },
+    {
+      "id": "L-0029",
+      "area": "documents",
+      "lesson": "Arm a context-wide listener for PDF bytes before clicking any document control, so blob links, background fetches, new windows and PDFs wrapped as text inside other responses are all caught. Fall back to the download event only when a real file exists.",
+      "why": "Portals often build the PDF in the page and revoke its link at once, so only bytes caught in flight survive.",
+      "confidence": "high",
+      "signals": [
+        "blob link",
+        "opened in new window",
+        "no download event",
+        "PDF inside response"
+      ]
+    },
+    {
+      "id": "L-0030",
+      "area": "documents",
+      "lesson": "When intercepting document responses, fulfill every intercepted request and never bound the interception with a separate wait. Never change a working capture without proving it again on the live screen.",
+      "why": "An unfulfilled request hangs the page, and a well-meant change to a working capture can stall a whole run.",
+      "confidence": "high",
+      "signals": [
+        "request not fulfilled",
+        "run hung",
+        "viewer consumed the file",
+        "capture changed"
+      ]
+    },
+    {
+      "id": "L-0031",
+      "area": "documents",
+      "lesson": "When a document exists only as HTML, print it to PDF from inside the signed-in page. Set page size and margins explicitly, and compare extracted text against the page; page count and file size prove nothing.",
+      "why": "Default print margins silently clip text, and a fetch outside the session may be refused.",
+      "confidence": "medium",
+      "signals": [
+        "HTML only document",
+        "text clipped",
+        "print to PDF",
+        "several invoices per period"
+      ]
+    },
+    {
+      "id": "L-0032",
+      "area": "documents",
+      "lesson": "Check the PDF signature on every document. If a fetch returns other bytes while the browser shows the PDF, retry asking for an unencoded response; otherwise mark that document unavailable and never capture an HTML shell as the statement.",
+      "why": "Encoded responses, HTML viewers and refusal pages all arrive in place of the PDF and look like success.",
+      "confidence": "medium",
+      "signals": [
+        "not a PDF",
+        "HTML viewer",
+        "content encoding",
+        "document unavailable"
+      ]
+    },
+    {
+      "id": "L-0033",
+      "area": "navigation",
+      "lesson": "After each download, confirm the screen is back on the statement list before matching the next period. If a download navigates away, reopen the list and find each period again by identity, never by a cached row position.",
+      "why": "Opening a document can leave the list, so later periods search an empty screen or pick the wrong row.",
+      "confidence": "high",
+      "signals": [
+        "left the list",
+        "wrong period downloaded",
+        "list not found",
+        "row position"
+      ]
+    },
+    {
+      "id": "L-0034",
+      "area": "evidence",
+      "lesson": "Compare document hashes across periods; identical bytes for different periods mean the read is wrong, not the data. When every period looks the same, suspect the element being read and drive each period's own controls.",
+      "why": "A stale document or a static summary can be read again and again while looking like progress.",
+      "confidence": "high",
+      "signals": [
+        "identical document",
+        "same hash",
+        "every period the same",
+        "stale document"
+      ]
+    },
+    {
+      "id": "L-0035",
+      "area": "enumeration",
+      "lesson": "Assume statement lists paginate or load rows late. Identify which row kind carries the document, and keep paging or scrolling until the list passes the oldest requested date.",
+      "why": "Lists that show only a few periods per page make older periods look unavailable.",
+      "confidence": "medium",
+      "signals": [
+        "older periods unavailable",
+        "next page",
+        "rows loaded late",
+        "row without link"
+      ]
+    },
+    {
+      "id": "L-0036",
+      "area": "documents",
+      "lesson": "File a statement by the date printed inside it, not by the date the list shows it was posted.",
+      "why": "A document can post well after its statement date, so filing by posting date puts it in the wrong period.",
+      "confidence": "medium",
+      "signals": [
+        "two in one period",
+        "period looks missing",
+        "posting date"
+      ]
+    },
+    {
+      "id": "L-0037",
+      "area": "enumeration",
+      "lesson": "When a statements screen has no row links, look for a single choice control that lists statement dates, and choose each option by its label. Parse short year forms and skip annual summaries.",
+      "why": "Some lists keep every statement inside one choice control, and a parser that expects full years finds nothing.",
+      "confidence": "high",
+      "signals": [
+        "no row links",
+        "choose statement date",
+        "short year",
+        "annual summary"
+      ]
+    },
+    {
+      "id": "L-0038",
+      "area": "rendering",
+      "lesson": "Decide a screen is fully rendered from the content you need, never from the absence of an error banner. Collect every document target before downloading, and look for row menus across the whole screen because popovers often render outside their row.",
+      "why": "Transient error banners can sit beside real data, and a search scoped to one row misses menus drawn elsewhere.",
+      "confidence": "medium",
+      "signals": [
+        "error banner with data",
+        "menu not found in row",
+        "unable to provide information",
+        "popover"
+      ]
+    },
+    {
+      "id": "L-0039",
+      "area": "targeting",
+      "lesson": "When a visible control ignores a click, check the side effect, re-target the control and try another input the Runner allows, such as keyboard activation, before assuming a block or repeating the same click.",
+      "why": "Custom controls and animating elements often ignore a plain click, and repeating it changes nothing.",
+      "confidence": "high",
+      "signals": [
+        "click had no effect",
+        "nothing happened",
+        "control animating",
+        "submit swallowed"
+      ]
+    },
+    {
+      "id": "L-0040",
+      "area": "targeting",
+      "lesson": "Match controls by accessible name and visibility, never by raw text that can live in hidden titles or duplicate menus.",
+      "why": "Hidden duplicates carry the same text, so a text match can land on something no person can see.",
+      "confidence": "medium",
+      "signals": [
+        "matched hidden element",
+        "duplicate menu",
+        "custom dropdown"
+      ]
+    },
+    {
+      "id": "L-0041",
+      "area": "testing",
+      "lesson": "Serve test portals with publicly trusted certificates rather than patching one trust store. The browser and Playwright's request API use different trust stores.",
+      "why": "A fix applied to one trust store lets sign-in work while every document fetch fails.",
+      "confidence": "high",
+      "signals": [
+        "certificate error",
+        "download failed",
+        "sign-in worked",
+        "untrusted certificate"
+      ]
+    },
+    {
+      "id": "L-0042",
+      "area": "factory",
+      "lesson": "Never write a target you have not seen in a live capture of the real screen. Gate authoring on a captured trail, and fail loudly naming the missing screen states instead of guessing.",
+      "why": "Targets invented from memory or public pages look plausible and match nothing on the first run.",
+      "confidence": "high",
+      "signals": [
+        "no capture",
+        "missing screen state",
+        "guessed target",
+        "matched nothing"
+      ]
+    },
+    {
+      "id": "L-0043",
+      "area": "targeting",
+      "lesson": "Describe each target with several independent signals, such as accessible name, role and a labeled neighbor, and keep a candidate only if it resolves to exactly one visible control.",
+      "why": "A control with none of the expected attributes defeats a single-signal description.",
+      "confidence": "medium",
+      "signals": [
+        "target not found",
+        "matched several controls",
+        "no label",
+        "ambiguous target"
+      ]
+    },
+    {
+      "id": "L-0044",
+      "area": "factory",
+      "lesson": "Wait for the sign-in form to be fully rendered before capturing an entry screen, and finish admitting hosts only after the capture so a late sign-in hand-off is included.",
+      "why": "A slow sign-in hand-off finishes after an early capture, so both the capture and the host list come out incomplete.",
+      "confidence": "medium",
+      "signals": [
+        "form not ready",
+        "captured too early",
+        "late hand-off",
+        "host not admitted"
+      ]
+    },
+    {
+      "id": "L-0045",
+      "area": "code",
+      "lesson": "Deliver one-time code prompts to the person unbuffered from end to end.",
+      "why": "A prompt that arrives late uses up the code's short lifetime.",
+      "confidence": "medium",
+      "signals": [
+        "prompt arrived late",
+        "code expired",
+        "waiting for code"
+      ]
+    },
+    {
+      "id": "L-0046",
+      "area": "session",
+      "lesson": "Replace any live session for the same account before starting a browser on its saved profile, so two browsers never share one profile.",
+      "why": "Rapid repeated starts open several browsers on one profile and they collide.",
+      "confidence": "medium",
+      "signals": [
+        "profile locked",
+        "session already running",
+        "several browsers"
+      ]
+    },
+    {
+      "id": "L-0047",
+      "area": "factory",
+      "lesson": "Run model-written driver code as an unprivileged user in a sandbox with no credentials, no network and read-only inputs. Never share a container between the model's key and the model's own tests, and keep credential sessions unreadable to it.",
+      "why": "Writable inputs let candidate code rewrite itself after passing or read secrets it should never see.",
+      "confidence": "high",
+      "signals": [
+        "writable workspace",
+        "sandbox",
+        "model key exposed",
+        "candidate code"
+      ]
+    },
+    {
+      "id": "L-0048",
+      "area": "safety",
+      "lesson": "Place every rate or budget check before the side effect it limits, and scope each grant by purpose so a grant issued for one task can never satisfy another task's gate.",
+      "why": "A code budget check ran after the code was already sent, and a grant issued for authoring satisfied a different consent gate.",
+      "confidence": "medium",
+      "signals": [
+        "budget exceeded",
+        "code already sent",
+        "grant scope",
+        "consent gate"
+      ]
+    },
+    {
+      "id": "L-0049",
+      "area": "factory",
+      "lesson": "A long-lived worker keeps the code and configuration it loaded at start. After changing a driver, its configuration or its environment, restart every dependent worker and verify the new behavior is live.",
+      "why": "Workers kept serving old modules and old environment values because nothing restarted them, while a fresh probe process showed the new code.",
+      "confidence": "high",
+      "signals": [
+        "stale module",
+        "old configuration",
+        "worker not restarted",
+        "fresh process passes"
+      ]
+    },
+    {
+      "id": "L-0050",
+      "area": "factory",
+      "lesson": "Alarm on worker restarts, so a worker that restarted mid-task is never mistaken for a hung job.",
+      "why": "Nothing alarmed on restarts, and a worker that restarted mid-authoring looked exactly like a hung run.",
+      "confidence": "medium",
+      "signals": [
+        "worker restarted",
+        "job appears hung",
+        "no progress"
+      ]
+    },
+    {
+      "id": "L-0051",
+      "area": "safety",
+      "lesson": "Never make blocking or context-restricted calls from inside a browser route or event handler; hand that work to the async path. Test every guard on a real event loop with a real browser before trusting it.",
+      "why": "A read-only guard's journal, freeze and alert ran synchronously inside the browser's event handler, where they were refused, so every guard would have failed live.",
+      "confidence": "high",
+      "signals": [
+        "route handler error",
+        "guard failed to record",
+        "synchronous call in event loop"
+      ]
+    },
+    {
+      "id": "L-0052",
+      "area": "safety",
+      "lesson": "Gate state-changing requests on every path the browser context can send them, including its direct request API as well as page routing. Classify a page from its content, never its URL, and keep watching for a short window after any submit.",
+      "why": "Money-trap fixtures exposed pages classified by URL alone, a single outcome check, and direct requests that bypassed routing.",
+      "confidence": "high",
+      "signals": [
+        "state-changing request",
+        "money trap",
+        "request bypassed route",
+        "outcome after submit"
+      ]
+    },
+    {
+      "id": "L-0053",
+      "area": "testing",
+      "lesson": "Passing your own synthetic fixtures proves only the failures they reproduce. Before claiming a capability, exercise it on captured real screens and documents, including ones that force the OCR path.",
+      "why": "The fixtures reproduced only cataloged failures, and their PDFs had a clean text layer, so the OCR path never ran.",
+      "confidence": "high",
+      "signals": [
+        "all fixtures pass",
+        "clean text layer",
+        "OCR path not exercised"
+      ]
+    },
+    {
+      "id": "L-0054",
+      "area": "factory",
+      "lesson": "When rebuilding a driver blind, hide both its module and its tests, and refuse the run if the target name maps to nothing, so a copy can never pass as a rebuild.",
+      "why": "The hidden-files list named only the demo module, and module names are not mechanical, so for a real target it hid nothing.",
+      "confidence": "high",
+      "signals": [
+        "blind rebuild",
+        "hidden files",
+        "target maps to nothing"
+      ]
+    },
+    {
+      "id": "L-0055",
+      "area": "factory",
+      "lesson": "Gate a candidate driver only on eval rungs its target can actually run, and keep rungs built around the demo tenant's defenses for the demo tenant.",
+      "why": "A rung that runs the candidate against the demo tenant with its defenses on means something only for a rebuild of that tenant.",
+      "confidence": "medium",
+      "signals": [
+        "eval rung",
+        "demo tenant",
+        "rung not applicable"
+      ]
+    },
+    {
+      "id": "L-0056",
+      "area": "factory",
+      "lesson": "When a correct diagnosis keeps recurring across turns, suspect the lint or harness input before blaming the agent's output.",
+      "why": "The harness turned a trail record into its key names, so the comparison set held one word and every target failed.",
+      "confidence": "high",
+      "signals": [
+        "same diagnosis again",
+        "every check fails",
+        "provenance mismatch"
+      ]
+    },
+    {
+      "id": "L-0057",
+      "area": "factory",
+      "lesson": "Give an agent the authoritative run record, not a bare string that shadows it, and state real constraints positively; a word like 'unavailable' makes a model stop rather than proceed.",
+      "why": "The workflow passed the tenant as a bare name that hid the record holding its address, and a state read 'unavailable' instead of stating the one-submit rule.",
+      "confidence": "medium",
+      "signals": [
+        "unavailable",
+        "missing record",
+        "agent stopped"
+      ]
+    },
+    {
+      "id": "L-0058",
+      "area": "factory",
+      "lesson": "State the authorization basis plainly at the top of an authoring prompt, measure each prompt change with a real run, and never add commentary about how the prompt might be misread.",
+      "why": "The invariants described sign-ins without saying whose they were, and commentary about a past refusal planted the frame it meant to remove.",
+      "confidence": "high",
+      "signals": [
+        "model refused",
+        "authorization basis",
+        "prompt change"
+      ]
+    },
+    {
+      "id": "L-0059",
+      "area": "factory",
+      "lesson": "Treat a model refusal as a sample, not a verdict: retry a bounded number of times, change one variable at a time, and measure many draws before concluding.",
+      "why": "Refusals were non-deterministic, and each theory drawn from a single sample proved wrong.",
+      "confidence": "high",
+      "signals": [
+        "refusal",
+        "retry",
+        "non-deterministic"
+      ]
+    },
+    {
+      "id": "L-0060",
+      "area": "factory",
+      "lesson": "Route every model call through one metered path that refuses when the budget is spent or unreadable, meter refusals and fallbacks at the price of the model that served them, and lint for any other path.",
+      "why": "One endpoint bypassed the metered path, and the refusal and fallback branches returned before reporting usage.",
+      "confidence": "medium",
+      "signals": [
+        "budget spent",
+        "unmetered call",
+        "fallback model",
+        "usage not recorded"
+      ]
+    },
+    {
+      "id": "L-0061",
+      "area": "factory",
+      "lesson": "Make a service refuse to start without its real credentials rather than degrade to a mock mode, and verify that every cost or routing branch fires in a real run.",
+      "why": "A service fell back to mock mode silently in production, and a routing branch ran only when no key existed, so real runs never took it.",
+      "confidence": "medium",
+      "signals": [
+        "mock mode",
+        "missing credentials",
+        "branch never taken"
+      ]
+    },
+    {
+      "id": "L-0062",
+      "area": "factory",
+      "lesson": "Reconcile a new cost recorder against the existing ledger before trusting it, and check whether a vendor nests cached tokens inside the prompt total before summing.",
+      "why": "The recorder read field names the records did not use, so cached tokens read as zero, and one vendor counts cached tokens inside the prompt total.",
+      "confidence": "medium",
+      "signals": [
+        "cache tokens zero",
+        "ledger mismatch",
+        "double-counted tokens"
+      ]
+    },
+    {
+      "id": "L-0063",
+      "area": "factory",
+      "lesson": "Window large tool results with a visible continuation note, and measure cost by token category before optimizing.",
+      "why": "Whole-file reads were written to the cache once and re-read on every later step of a long turn.",
+      "confidence": "medium",
+      "signals": [
+        "whole-file read",
+        "cache read cost",
+        "continuation note"
+      ]
+    },
+    {
+      "id": "L-0064",
+      "area": "factory",
+      "lesson": "Use each model only for the interface it was built for, and keep counting, date arithmetic and thresholds in code rather than in a model.",
+      "why": "Arithmetic done by a model is not reproducible, and a model id that cannot be pinned makes authorship irreproducible.",
+      "confidence": "low",
+      "signals": [
+        "date arithmetic",
+        "threshold",
+        "model id not pinned"
+      ]
+    },
+    {
+      "id": "L-0065",
+      "area": "factory",
+      "lesson": "Return only the failing unit, with verdict, reason, evidence and scope, and escalate to planning after repeated failures; never send correct work back for rewriting.",
+      "why": "Returning a whole batch rewrote correct units, which then failed for unrelated reasons.",
+      "confidence": "medium",
+      "signals": [
+        "returned for rework",
+        "whole batch",
+        "repeated failure"
+      ]
+    },
+    {
+      "id": "L-0066",
+      "area": "factory",
+      "lesson": "Score an agent run on its artifacts and evals, not on the workflow status, and include failed runs in cost figures.",
+      "why": "The orchestrator cancels the workflow when it reaches review, so a good run ends as cancelled.",
+      "confidence": "medium",
+      "signals": [
+        "cancelled",
+        "workflow status",
+        "run cost"
+      ]
+    },
+    {
+      "id": "L-0067",
+      "area": "factory",
+      "lesson": "Allocate run ids against every store that keys on them, never just one.",
+      "why": "The allocator checked only the runs folder, so a deleted run's id was reissued while the spend ledger still held it.",
+      "confidence": "medium",
+      "signals": [
+        "duplicate run id",
+        "id reused",
+        "ledger collision"
+      ]
+    },
+    {
+      "id": "L-0068",
+      "area": "safety",
+      "lesson": "Never put an assertion inside a catch-all handler; it turns a tripped guard into a recorded outcome. Guard trips must always propagate.",
+      "why": "An assertion error was caught like any other error, so a runaway one-time-code loop was recorded as portal behavior in a baseline.",
+      "confidence": "high",
+      "signals": [
+        "assertion caught",
+        "guard tripped",
+        "runaway loop",
+        "baseline"
+      ]
+    },
+    {
+      "id": "L-0069",
+      "area": "testing",
+      "lesson": "Make test-fixture defaults fail, and prove each assertion can fail before trusting it.",
+      "why": "A test helper never applied its override, so every case received the default passing report.",
+      "confidence": "medium",
+      "signals": [
+        "all tests pass",
+        "default report",
+        "override ignored"
+      ]
+    },
+    {
+      "id": "L-0070",
+      "area": "testing",
+      "lesson": "Rebuild or clear compiled output before running tests that execute it.",
+      "why": "The tests ran stale compiled files, which lied in the false-pass direction.",
+      "confidence": "medium",
+      "signals": [
+        "stale build",
+        "compiled output",
+        "false pass"
+      ]
+    },
+    {
+      "id": "L-0071",
+      "area": "factory",
+      "lesson": "Resolve merge conflicts hunk by hand, check which names each side defines and reads, and diff any moved code against the main branch's latest version of the original; never blind-union.",
+      "why": "A blind union dropped variables that later code reads, and a moved copy silently reverted a newer rule.",
+      "confidence": "high",
+      "signals": [
+        "merge conflict",
+        "undefined variable",
+        "reverted rule"
+      ]
+    },
+    {
+      "id": "L-0072",
+      "area": "factory",
+      "lesson": "In a reachability probe, treat a connection error as the failure and any HTTP status as reachable, and never use localhost to reach another service.",
+      "why": "Inside a worker, localhost is the worker itself, and the probe demanded 200 while the target correctly answered an anonymous request with 403.",
+      "confidence": "medium",
+      "signals": [
+        "connection refused",
+        "403 on anonymous request",
+        "localhost"
+      ]
+    },
+    {
+      "id": "L-0073",
+      "area": "factory",
+      "lesson": "Read identifiers from the system of record, never from another script's printed output.",
+      "why": "A parsed log line is a contract nobody declared.",
+      "confidence": "low",
+      "signals": [
+        "parsed from log",
+        "id not found"
+      ]
+    },
+    {
+      "id": "L-0074",
+      "area": "factory",
+      "lesson": "Reuse a healthy stack instead of rebuilding it, and wait on health checks rather than a start command's exit code.",
+      "why": "Rebuilding every run re-rolled startup races, and a start command's dependency wait gave up on a merely slow service.",
+      "confidence": "medium",
+      "signals": [
+        "startup race",
+        "slow service",
+        "health check"
+      ]
+    },
+    {
+      "id": "L-0075",
+      "area": "factory",
+      "lesson": "Treat a 404 on a web address as one retrieval path failing, not as the content being unavailable; try the source's API or an authenticated client.",
+      "why": "A page link returned 404 while the API returned the full body.",
+      "confidence": "low",
+      "signals": [
+        "404",
+        "not found",
+        "content unavailable"
+      ]
+    },
+    {
+      "id": "L-0076",
+      "area": "factory",
+      "lesson": "Check that the edition of a dependency you run supports the access control your design assumes before relying on it.",
+      "why": "The free edition of a database had no role-based access control.",
+      "confidence": "low",
+      "signals": [
+        "access control",
+        "role-based",
+        "edition"
+      ]
+    },
+    {
+      "id": "L-0077",
+      "area": "factory",
+      "lesson": "Derive every list and rule from one source. When a rule must be mirrored in two places, change both copies in the same change, and fail CI when a derived copy drifts.",
+      "why": "Lists were maintained by hand in several places, and a fix changed only one mirror of a rule.",
+      "confidence": "medium",
+      "signals": [
+        "drift",
+        "mirrored rule",
+        "hand-maintained list"
+      ]
+    },
+    {
+      "id": "L-0078",
+      "area": "factory",
+      "lesson": "Check every claim about a feature or safeguard against the code and its flags before publishing it; derive counts from the registry and never promise what is not built.",
+      "why": "Copy promised a permission prompt while the flag that enforced it was off, so an action ran unprompted.",
+      "confidence": "medium",
+      "signals": [
+        "flag off",
+        "promised safeguard",
+        "count mismatch"
+      ]
+    },
+    {
+      "id": "L-0079",
+      "area": "factory",
+      "lesson": "Give every parallel agent its own worktree, and check for live agent sessions before assuming a tree is idle.",
+      "why": "Closing a terminal left agent sessions running, and a second live session shared the same working tree.",
+      "confidence": "medium",
+      "signals": [
+        "shared working tree",
+        "agent still running",
+        "worktree"
+      ]
+    },
+    {
+      "id": "L-0080",
+      "area": "memory",
+      "lesson": "When you replace a design, delete or correct every description of the old one in the same change, or the next agent will rebuild it.",
+      "why": "Docs and comments outlived the designs they described, and a reference study was quoted as if it described production.",
+      "confidence": "medium",
+      "signals": [
+        "outdated doc",
+        "old design",
+        "stale comment"
+      ]
+    },
+    {
+      "id": "L-0081",
+      "area": "factory",
+      "lesson": "Verify a driver's real state with a run before trusting a status label.",
+      "why": "A stale label hid a complete driver that proved itself on its first real run.",
+      "confidence": "low",
+      "signals": [
+        "status label",
+        "stale readme",
+        "untested driver"
+      ]
+    },
+    {
+      "id": "L-0082",
+      "area": "factory",
+      "lesson": "Make exploration tools label the jobs they create, so their exits are never mistaken for product failures.",
+      "why": "A scratch exploration script marked its job failed on exit without writing an error or a log entry.",
+      "confidence": "low",
+      "signals": [
+        "job failed",
+        "no error recorded",
+        "scratch script"
+      ]
+    },
+    {
+      "id": "L-0083",
+      "area": "factory",
+      "lesson": "Build drivers only for tasks the tenant has asked for, and hold scaffolding agents to that list.",
+      "why": "Scaffolding agents expanded scope beyond what the customer actually needed.",
+      "confidence": "low",
+      "signals": [
+        "scope creep",
+        "unrequested driver"
+      ]
+    },
+    {
+      "id": "L-0084",
+      "area": "safety",
+      "lesson": "Fetch each credential once per session without prompting, never echo it, and expect the secret store to need a person to unlock it.",
+      "why": "A reveal option triggered a stricter approval that hung unattended sessions, and rapid calls hit authorization timeouts.",
+      "confidence": "low",
+      "signals": [
+        "credential prompt",
+        "authorization timeout",
+        "secret store locked"
+      ]
+    },
+    {
+      "id": "L-0085",
+      "area": "code",
+      "lesson": "Put a stop control inside any blocking prompt tied to a background job, such as a wait for a one-time code.",
+      "why": "A code dialog that could not be dismissed covered the cancel control and appeared on only one page.",
+      "confidence": "medium",
+      "signals": [
+        "waiting for code",
+        "cannot cancel",
+        "dialog blocks"
+      ]
+    },
+    {
+      "id": "L-0086",
+      "area": "testing",
+      "lesson": "Load a changed page in a real browser and check for console errors; a typecheck proves nothing about rendering.",
+      "why": "A constant read a variable above its declaration and threw on every render of a page verified only by typecheck.",
+      "confidence": "high",
+      "signals": [
+        "console error",
+        "typecheck passed",
+        "blank page"
+      ]
+    },
+    {
+      "id": "L-0087",
+      "area": "rendering",
+      "lesson": "Wait for the content a step depends on before interacting with it; a pass that depends on machine speed is incidental.",
+      "why": "A test set a select's value before its options arrived.",
+      "confidence": "low",
+      "signals": [
+        "options not loaded",
+        "flaky test",
+        "select empty"
+      ]
+    },
+    {
+      "id": "L-0088",
+      "area": "testing",
+      "lesson": "Drive the real journey end to end against the deployed system rather than reasoning from code; seams between individually correct parts are where it breaks.",
+      "why": "Each part was correct alone, but the demo target was never registered and a heuristic hid it from view.",
+      "confidence": "medium",
+      "signals": [
+        "works in isolation",
+        "end to end",
+        "not registered"
+      ]
+    },
+    {
+      "id": "L-0089",
+      "area": "testing",
+      "lesson": "Build from a clean checkout before merging, so untracked files that the code imports surface.",
+      "why": "Components imported assets that were still untracked in version control.",
+      "confidence": "low",
+      "signals": [
+        "untracked file",
+        "module not found",
+        "clean checkout"
+      ]
+    },
+    {
+      "id": "L-0090",
+      "area": "outcomes",
+      "lesson": "A success status on an entry page does not prove a service works. Fetch a real asset and read the error log, because a proxy can log success while truncating responses.",
+      "why": "A proxy logged 200 while truncating responses, and an entry page returned 200 while every asset returned 404.",
+      "confidence": "high",
+      "signals": [
+        "200 with errors logged",
+        "truncated response",
+        "asset 404"
+      ]
+    },
+    {
+      "id": "L-0091",
+      "area": "factory",
+      "lesson": "Verify a deploy by what is actually running and serving, never by a green workflow or a merged change. Check every step marked non-fatal, and confirm every expected service and scheduled job exists afterwards.",
+      "why": "Deploys shipped older images, skipped non-fatal steps and never created some services or scheduled jobs, all while reporting success.",
+      "confidence": "high",
+      "signals": [
+        "deploy succeeded",
+        "old image",
+        "service missing",
+        "non-fatal"
+      ]
+    },
+    {
+      "id": "L-0092",
+      "area": "testing",
+      "lesson": "Test the exact configuration you ship, rendered as it will run, and start it once locally before calling a change proven.",
+      "why": "Local runs never rendered the production overlay, whose failures surfaced in layers the errors misnamed.",
+      "confidence": "high",
+      "signals": [
+        "works locally",
+        "production overlay",
+        "config render"
+      ]
+    },
+    {
+      "id": "L-0093",
+      "area": "factory",
+      "lesson": "Keep exploration scratch outside the source tree and leave the tree clean after an exploratory run; verify copied file contents rather than the copy command's exit.",
+      "why": "Scratch written into the source tree leaked into version control and blocked the next deploy's merge.",
+      "confidence": "medium",
+      "signals": [
+        "dirty tree",
+        "scratch files",
+        "merge refused"
+      ]
+    },
+    {
+      "id": "L-0094",
+      "area": "factory",
+      "lesson": "Change production only through reviewed commits on the main branch, deployed from a clean tree, and make the deploy mirror that branch exactly.",
+      "why": "A one-off edit on a host is invisible to version control, blocks the next update and is undone by the next deploy.",
+      "confidence": "medium",
+      "signals": [
+        "hot-patch",
+        "dirty tree",
+        "deploy refused"
+      ]
+    },
+    {
+      "id": "L-0095",
+      "area": "evidence",
+      "lesson": "Keep a local record of logs and evidence, and be able to switch off a failing remote sink without a code change.",
+      "why": "A remote sink rejected every request, and its default retry dropped records rather than buffering them.",
+      "confidence": "medium",
+      "signals": [
+        "unauthorized",
+        "logs dropped",
+        "remote sink"
+      ]
+    },
+    {
+      "id": "L-0096",
+      "area": "factory",
+      "lesson": "Measure on the real machine before reporting a timing or defect finding; an emulated environment manufactures both.",
+      "why": "Findings that one architecture was slower and that tests were unsafe in parallel were both emulation artifacts.",
+      "confidence": "high",
+      "signals": [
+        "slower than expected",
+        "emulation",
+        "parallel-unsafe"
+      ]
+    },
+    {
+      "id": "L-0097",
+      "area": "factory",
+      "lesson": "When fixing something that keeps coming back, close every path that can invoke it and add an assertion that fails if it returns, not only the one command that triggered it.",
+      "why": "A removed service kept returning through other invocation paths, because each fix covered only the command that first triggered it.",
+      "confidence": "high",
+      "signals": [
+        "came back",
+        "resurrected",
+        "other invocation path"
+      ]
+    },
+    {
+      "id": "L-0098",
+      "area": "factory",
+      "lesson": "Keep environment configuration in version control, encrypted where secret, so branch operations and clean commands cannot lose it.",
+      "why": "Untracked configuration files are removed or left behind by branch operations and clean commands.",
+      "confidence": "low",
+      "signals": [
+        "config missing",
+        "untracked file",
+        "after clean"
+      ]
+    },
+    {
+      "id": "L-0099",
+      "area": "code",
+      "lesson": "Keep any queue's redelivery timeout longer than the longest wait a task can make for a person, such as a one-time code, or a second worker will pick up the task.",
+      "why": "Tasks waiting for a code would have been redelivered to a second worker, which risks a second code request.",
+      "confidence": "low",
+      "signals": [
+        "redelivered",
+        "second worker",
+        "waiting for code"
+      ]
+    },
+    {
+      "id": "L-0100",
+      "area": "pacing",
+      "lesson": "Size reaper and timeout windows to worst-case queue depth, and make the reap message state the real cause.",
+      "why": "With jobs serialized, queued jobs legitimately waited past the reap window and were reported as failures.",
+      "confidence": "medium",
+      "signals": [
+        "reaped",
+        "queued too long",
+        "timed out in queue"
+      ]
+    },
+    {
+      "id": "L-0101",
+      "area": "factory",
+      "lesson": "Whenever you route work to a queue, prove from the deployed configuration that a worker consumes it.",
+      "why": "Work routed to a queue nobody consumes raises no error and waits there forever.",
+      "confidence": "medium",
+      "signals": [
+        "task never ran",
+        "queue not consumed",
+        "no worker"
+      ]
+    },
+    {
+      "id": "L-0102",
+      "area": "testing",
+      "lesson": "Prove a precondition or a recovery path by exercising it end to end, for example by restoring a backup and reading the data back. An exit status, a row count or a cached flag is not proof, and a check that cannot be run is reported as unchecked, never ticked.",
+      "why": "Checks that trusted exit codes and counts passed while the thing they guarded was broken or unreadable.",
+      "confidence": "high",
+      "signals": [
+        "exited cleanly",
+        "row counts match",
+        "cannot be checked",
+        "restore drill"
+      ]
+    },
+    {
+      "id": "L-0103",
+      "area": "factory",
+      "lesson": "Fix generated output at its source and never hand-edit a generated file. Read any unexpected diff in a generated file before committing it.",
+      "why": "Hand-edits to generated files are silently dropped on the next regeneration.",
+      "confidence": "high",
+      "signals": [
+        "generated file",
+        "do not edit",
+        "regenerated",
+        "unexpected diff"
+      ]
+    },
+    {
+      "id": "L-0104",
+      "area": "factory",
+      "lesson": "Verify that a change landed by finding its content on the target branch, not by a reported merged status. Never force-push a branch without first confirming its remote tip.",
+      "why": "A scripted rebase swallowed its own failures, reported clean and overwrote branches with the wrong commit.",
+      "confidence": "high",
+      "signals": [
+        "merged",
+        "force-push",
+        "rebase",
+        "cherry-pick failed"
+      ]
+    },
+    {
+      "id": "L-0105",
+      "area": "testing",
+      "lesson": "Confirm that new tests are actually collected and run in the CI environment. A collection error or zero collected tests is not a pass.",
+      "why": "Test files missing from the CI image were never run, and nothing reported the gap.",
+      "confidence": "high",
+      "signals": [
+        "no tests ran",
+        "collection error",
+        "file not found",
+        "skipped"
+      ]
+    },
+    {
+      "id": "L-0106",
+      "area": "testing",
+      "lesson": "Do not run concurrent test suites against one shared database or fixture. Re-run a surprising failure from a clean state before debugging the code.",
+      "why": "Parallel suites sharing one database produced failures that came from the test setup, not the code.",
+      "confidence": "medium",
+      "signals": [
+        "deadlock detected",
+        "duplicate key",
+        "already exists",
+        "flaky"
+      ]
+    },
+    {
+      "id": "L-0107",
+      "area": "testing",
+      "lesson": "Make every scripted check read the exit status of the command under test, not of a later pipe stage, and treat an HTTP error response as a failure even when the client exits zero.",
+      "why": "A pipe reports its last stage's status, an early-exiting filter can turn a match into a failure, and some HTTP clients exit zero on an error status.",
+      "confidence": "medium",
+      "signals": [
+        "pipefail",
+        "SIGPIPE",
+        "broken pipe",
+        "service unavailable"
+      ]
+    },
+    {
+      "id": "L-0108",
+      "area": "outcomes",
+      "lesson": "Never turn an unreadable or failed result into a verdict: a check that cannot see is not a check that says no. Surface the underlying error, and never let a swallowed exception or an error response render as success.",
+      "why": "Hidden errors fell through to defaults, so failed calls read as a confident answer or as success.",
+      "confidence": "high",
+      "signals": [
+        "permission denied",
+        "unauthorized",
+        "empty catch",
+        "defaulted to"
+      ]
+    },
+    {
+      "id": "L-0109",
+      "area": "testing",
+      "lesson": "Derive a guard's conditions from the code it protects, and prove the guard both passes in normal operation and trips when it should. Remove any guard or setting you have never seen take effect, and design a gate to wait for a pending answer rather than refuse.",
+      "why": "Guards that checked the wrong layout, settings that were silently ignored, and gates that refused while checks ran all gave false confidence.",
+      "confidence": "medium",
+      "signals": [
+        "guard passed",
+        "check pending",
+        "setting ignored",
+        "never tripped"
+      ]
+    },
+    {
+      "id": "L-0110",
+      "area": "factory",
+      "lesson": "Check every external dependency a long build or test phase needs before it starts. When one is unavailable, state that verification is still owed and hand it back; never imply a run happened.",
+      "why": "Long phases failed late on a missing dependency, and an agent cannot always start one itself.",
+      "confidence": "low",
+      "signals": [
+        "daemon not running",
+        "cannot connect",
+        "connection refused",
+        "verification owed"
+      ]
+    },
+    {
+      "id": "L-0111",
+      "area": "factory",
+      "lesson": "Expect quality gates to judge any line a diff touches or sits beside as new code, and fix the underlying finding rather than explaining it away or tuning the rule.",
+      "why": "An unrelated edit pulled an old line into the diff, where the gate judged it as new.",
+      "confidence": "low",
+      "signals": [
+        "new code",
+        "quality gate failed",
+        "new issues",
+        "code smell"
+      ]
+    },
+    {
+      "id": "L-0112",
+      "area": "sign-in",
+      "lesson": "After submitting credentials, wait for a definite outcome (rejection text, a one-time code prompt, or a positive signed-in screen) before navigating anywhere, and follow any popup or new window the sign-in opens.",
+      "why": "Sign-in often completes by a background request behind a spinner, so an early settle returns at once and navigating away aborts it.",
+      "confidence": "high",
+      "signals": [
+        "signing you in",
+        "please wait",
+        "spinner",
+        "new window"
+      ]
+    },
+    {
+      "id": "L-0113",
+      "area": "sign-in",
+      "lesson": "Confirm sign-in only on a positive match of the signed-in screen, never because the URL left the sign-in page, and re-confirm it after a short delay and again on the task's first screen. Never report an empty result unless sign-in was proven.",
+      "why": "Redirects, error pages and late client-side bounces back to sign-in all looked like success when leaving the sign-in URL counted as proof.",
+      "confidence": "high",
+      "signals": [
+        "please sign in",
+        "session expired",
+        "page not found",
+        "redirecting"
+      ]
+    },
+    {
+      "id": "L-0114",
+      "area": "sign-in",
+      "lesson": "Build signed-in URL patterns from landing URLs captured on both fresh and remembered sessions, anchor them to signed-in-only host and path segments, and exclude sign-in and code paths. Test each pattern against the error, one-time code and signed-out URLs of the same site.",
+      "why": "Loose prefixes and substring host matches accepted code and error pages, while strict patterns missed real landing pages.",
+      "confidence": "high",
+      "signals": [
+        "signed-in pattern",
+        "landing URL",
+        "verify your identity",
+        "page not found"
+      ]
+    },
+    {
+      "id": "L-0115",
+      "area": "outcomes",
+      "lesson": "Re-prove an empty result against the current build before believing it. An empty run can come from a fixed bug that is still live on a stale deploy.",
+      "why": "A fix that existed in code had not yet reached the deployed build that produced the empty result.",
+      "confidence": "medium",
+      "signals": [
+        "no documents found",
+        "nothing to show",
+        "no results",
+        "stale build"
+      ]
+    },
+    {
+      "id": "L-0116",
+      "area": "outcomes",
+      "lesson": "Treat ambiguous rejection text such as 'does not match our records' as unconfirmed, prove each field holds the exact stored value, and stop after two or three rejections. Never tell the user their credentials are wrong until a person confirms the same credentials fail in a normal browser.",
+      "why": "Sites use the same wording for a temporary block as for a wrong password, and several apparent walls were stale stored credentials.",
+      "confidence": "high",
+      "signals": [
+        "incorrect",
+        "does not match our records",
+        "unable to sign in",
+        "try again later"
+      ]
+    },
+    {
+      "id": "L-0117",
+      "area": "sign-in",
+      "lesson": "Confirm which tenant and sign-in realm a credential belongs to, and use the tenant's stored sign-in URL rather than a default or a home page. When a shared sign-in page renders an empty shell, look for a tenant parameter in the page source before calling it blocked.",
+      "why": "One vendor product can serve several sign-in realms, and a shared sign-in page may render nothing without its tenant parameter.",
+      "confidence": "high",
+      "signals": [
+        "select your institution",
+        "blank page",
+        "learn more",
+        "sign in to another account"
+      ]
+    },
+    {
+      "id": "L-0118",
+      "area": "sign-in",
+      "lesson": "When a proven sign-in suddenly fails or its fields time out repeatedly, check whether the screen or the vendor product changed before theorizing about input handling. Re-capture the live screen and repair the driver rather than retrying.",
+      "why": "Markup and platform changes are the most common reason a driver stops finding its sign-in fields.",
+      "confidence": "high",
+      "signals": [
+        "timeout waiting for",
+        "field not found",
+        "new sign-in experience",
+        "we have moved"
+      ]
+    },
+    {
+      "id": "L-0119",
+      "area": "sign-in",
+      "lesson": "On server-rendered sign-in screens, wait until each field is editable, enter text so the page sees real input events, and verify every field holds the exact value before submitting.",
+      "why": "Fields can ship disabled until the page's script runs, and a value set without input events may not enable the next field.",
+      "confidence": "medium",
+      "signals": [
+        "field disabled",
+        "not editable",
+        "value mismatch",
+        "submit disabled"
+      ]
+    },
+    {
+      "id": "L-0120",
+      "area": "targeting",
+      "lesson": "Never bind to the first match of a broad description; resolve each field and control to the visible, interactable element the screen actually uses, and wait for a two-step form to change before typing the password. Treat a sign-in that hangs as a targeting bug until the clicked control is proven visible.",
+      "why": "Pages carry hidden mirrors and decoys earlier in document order, and clicking a hidden control waits forever instead of failing.",
+      "confidence": "high",
+      "signals": [
+        "element is not visible",
+        "waiting for element",
+        "hidden",
+        "multiple matches"
+      ]
+    },
+    {
+      "id": "L-0121",
+      "area": "memory",
+      "lesson": "When a failure is reclassified, for example from a site block to our own bug, update every status note and lesson that recorded the old cause in the same change.",
+      "why": "A fix landed while the notes still listed the affected sites as blocked.",
+      "confidence": "medium",
+      "signals": [
+        "reclassified",
+        "was our bug",
+        "still listed as blocked",
+        "status note"
+      ]
+    },
+    {
+      "id": "L-0122",
+      "area": "targeting",
+      "lesson": "Include custom elements, shadow content and data attributes when capturing a sign-in screen, and expect a native-looking control to be a deliberately disabled decoy.",
+      "why": "The real submit control can live inside a web component that a capture of plain inputs and buttons cannot see.",
+      "confidence": "medium",
+      "signals": [
+        "shadow root",
+        "custom element",
+        "disabled",
+        "web component"
+      ]
+    },
+    {
+      "id": "L-0123",
+      "area": "sign-in",
+      "lesson": "Check for a one-time code prompt before checking for failure when classifying a sign-in outcome.",
+      "why": "A verification step can render on the same host that also signals a failed sign-in.",
+      "confidence": "medium",
+      "signals": [
+        "verify your identity",
+        "enter the code",
+        "we sent a code",
+        "verification"
+      ]
+    },
+    {
+      "id": "L-0124",
+      "area": "session",
+      "lesson": "Before typing credentials, detect remembered-user, already-signed-in and half-finished one-time code states and handle each explicitly instead of wiping the profile. Key detection on the visible password field and treat the username as optional.",
+      "why": "A persistent profile can hide and prefill the username, land straight on the signed-in screen, or reopen on a code prompt.",
+      "confidence": "high",
+      "signals": [
+        "welcome back",
+        "not you?",
+        "use another account",
+        "enter the code"
+      ]
+    },
+    {
+      "id": "L-0125",
+      "area": "targeting",
+      "lesson": "If a field's own label intercepts clicks, target the field by its accessible role and name instead of falling back to raw coordinate clicks or blind keystrokes.",
+      "why": "A floating label drawn over an input catches pointer clicks aimed at the field.",
+      "confidence": "medium",
+      "signals": [
+        "intercepts pointer events",
+        "label",
+        "click intercepted",
+        "element obscured"
+      ]
+    },
+    {
+      "id": "L-0126",
+      "area": "navigation",
+      "lesson": "Clear consent and promo overlays before interacting with a sign-in screen. If a filled form will not submit, look for a required disclaimer or consent checkbox, and accept it only where the owner has authorized it.",
+      "why": "Overlays and their scrims intercept clicks, and some forms do nothing until a consent box is ticked.",
+      "confidence": "medium",
+      "signals": [
+        "accept all cookies",
+        "I agree",
+        "terms of use",
+        "intercepts pointer events"
+      ]
+    },
+    {
+      "id": "L-0127",
+      "area": "factory",
+      "lesson": "Mark a driver that needs a person to complete sign-in before it is promoted, and verify that a person can actually start that sign-in from the product.",
+      "why": "Without the mark the product offered no way to begin the hand-off, so a promoted driver had no way in.",
+      "confidence": "medium",
+      "signals": [
+        "interactive sign-in",
+        "hand-off",
+        "passwordless",
+        "no connect option"
+      ]
+    },
+    {
+      "id": "L-0128",
+      "area": "session",
+      "lesson": "Measure a captured session's real lifetime and renew it from the longest-lived credential available instead of assuming it lasts until the next run.",
+      "why": "A session cookie can expire minutes after issue while a longer-lived credential in the same profile goes unused.",
+      "confidence": "high",
+      "signals": [
+        "session expired",
+        "signed out",
+        "please sign in again",
+        "token expired"
+      ]
+    },
+    {
+      "id": "L-0129",
+      "area": "outcomes",
+      "lesson": "Require several consecutive matches before declaring an outage, and check for one only after the success paths. A single banner is not an outage.",
+      "why": "Healthy pages often carry a banner about one unavailable sub-service while sign-in proceeds.",
+      "confidence": "medium",
+      "signals": [
+        "temporarily unavailable",
+        "scheduled maintenance",
+        "service unavailable",
+        "we apologize"
+      ]
+    },
+    {
+      "id": "L-0130",
+      "area": "pacing",
+      "lesson": "Make one paced, supervised sign-in attempt per change and stop after three; never let a probe loop retry a sign-in in bursts. An apology page that clears when attempts are spaced out is a rate limit, not a lockout.",
+      "why": "Burst retries trip per-account rate limits, and some sites lock accounts after repeated failures.",
+      "confidence": "high",
+      "signals": [
+        "we apologize",
+        "too many attempts",
+        "try again later",
+        "account locked"
+      ]
+    },
+    {
+      "id": "L-0131",
+      "area": "legacy-surface",
+      "lesson": "When a sign-in screen shows no fields, list its frames and resolve the sign-in frame by URL or title with polling. If it mounts lazily, go to the screen that hosts it and use its launcher, and ignore cosmetic browser-upgrade banners.",
+      "why": "Sign-in frames can lack a name and mount only after a launcher click, which races a one-shot frame lookup.",
+      "confidence": "medium",
+      "signals": [
+        "iframe",
+        "no fields found",
+        "update your browser",
+        "sign in"
+      ]
+    },
+    {
+      "id": "L-0132",
+      "area": "sign-in",
+      "lesson": "After the identifier step, race the password field, a one-time code field and a signed-in element instead of waiting only for a password. Expect promo splashes, region selectors and passwordless flows.",
+      "why": "Many sites are identifier-first, two-step or passwordless, and some go straight to a one-time code.",
+      "confidence": "high",
+      "signals": [
+        "next",
+        "enter your password",
+        "we sent a code",
+        "choose your region"
+      ]
+    },
+    {
+      "id": "L-0133",
+      "area": "targeting",
+      "lesson": "Submit a sign-in form by the exact accessible name of its own action control and exclude third-party sign-in options. Never match a generic 'Continue' or take the first submit control.",
+      "why": "A loose match bound to a 'Continue with' single sign-on button on identifier-first forms.",
+      "confidence": "medium",
+      "signals": [
+        "continue with",
+        "single sign-on",
+        "sign in with",
+        "continue"
+      ]
+    },
+    {
+      "id": "L-0134",
+      "area": "navigation",
+      "lesson": "When an area demands its own sign-in, start the sign-in from that area's URL instead of a generic sign-in page.",
+      "why": "Some areas force re-authentication and accept only a session minted through their own flow.",
+      "confidence": "medium",
+      "signals": [
+        "please sign in again",
+        "verify it's you",
+        "re-authenticate",
+        "session required"
+      ]
+    },
+    {
+      "id": "L-0135",
+      "area": "session",
+      "lesson": "Drive a site over HTTPS on its canonical host. Secure session cookies are never sent back over plain HTTP, so sign-in silently fails to stick.",
+      "why": "Reaching a site on a non-canonical plain HTTP name dropped its secure cookies and broke the session.",
+      "confidence": "high",
+      "signals": [
+        "CSRF verification failed",
+        "redirect loop",
+        "bad request",
+        "signed out"
+      ]
+    },
+    {
+      "id": "L-0136",
+      "area": "outcomes",
+      "lesson": "Map each error status to a meaning per endpoint or step, not globally. The same status can mean an expired session in one place and a consumed grant in another.",
+      "why": "A global mapping read every not-found response as unauthorized, though on submit it meant the challenge was gone.",
+      "confidence": "medium",
+      "signals": [
+        "not found",
+        "unauthorized",
+        "challenge expired",
+        "grant used"
+      ]
+    },
+    {
+      "id": "L-0137",
+      "area": "code",
+      "lesson": "Raise a one-time-code prompt only after proof the code was sent: the code-entry screen or the portal's own 'code sent' text. A code field next to a 'Send code' control is not proof. Never swallow errors during detection, and where generic detection cannot confirm a send, write a tenant-specific handler rather than faking a prompt.",
+      "why": "Delivery choosers send nothing until a method is chosen and confirmed, so a person can wait on a code that was never sent.",
+      "confidence": "high",
+      "signals": [
+        "Send code",
+        "code sent",
+        "choose a delivery method",
+        "enter your passcode"
+      ]
+    },
+    {
+      "id": "L-0138",
+      "area": "code",
+      "lesson": "Tell delivery-choice controls apart from the code-entry field, and make the send step idempotent so repeated detection never presses send or Continue twice.",
+      "why": "Delivery options can match a generic code-field locator, and detection that runs on every poll can press the send control again.",
+      "confidence": "high",
+      "signals": [
+        "text me",
+        "call me",
+        "Continue",
+        "where should we send your code"
+      ]
+    },
+    {
+      "id": "L-0139",
+      "area": "targeting",
+      "lesson": "Inspect a chooser's accessible names on the live screen before matching on them. Icons inside buttons and labels that carry masked contact details change the name that matching sees.",
+      "why": "An exact text match missed buttons containing icons, and labels with masked contact details overrode the visible names.",
+      "confidence": "high",
+      "signals": [
+        "ending in",
+        "Text to",
+        "Email to",
+        "masked number"
+      ]
+    },
+    {
+      "id": "L-0140",
+      "area": "rendering",
+      "lesson": "After navigation settles, keep polling for code controls for a few seconds before deciding there is no code step.",
+      "why": "Delivery-method controls can render a beat after the address settles, so a single check finds nothing and no code is ever sent.",
+      "confidence": "medium",
+      "signals": [
+        "verify your identity",
+        "how would you like to receive",
+        "one-time code"
+      ]
+    },
+    {
+      "id": "L-0141",
+      "area": "code",
+      "lesson": "Judge a code rejection by the code field still being present after submit, not by error text, and treat it as a rejected or expired code rather than a new code step.",
+      "why": "Some portals reject an expired code silently and show the code field again, which detection mistook for a fresh challenge on every loop.",
+      "confidence": "medium",
+      "signals": [
+        "enter the code",
+        "code expired",
+        "invalid code",
+        "try again"
+      ]
+    },
+    {
+      "id": "L-0142",
+      "area": "code",
+      "lesson": "Record each tenant's typical code delivery delay and code lifetime. Do not treat a slow code as lost, and tell the person when a relayed code was probably stale.",
+      "why": "Codes can take minutes to arrive and expire within minutes, so late codes fail without explanation.",
+      "confidence": "low",
+      "signals": [
+        "code expired",
+        "didn't get a code",
+        "resend code"
+      ]
+    },
+    {
+      "id": "L-0143",
+      "area": "code",
+      "lesson": "Give each driver an explicit code-submit control instead of relying on Enter or a generic verify or submit pattern.",
+      "why": "Submit controls can be custom buttons with no submit type or with unusual labels, and Enter does not submit every form.",
+      "confidence": "medium",
+      "signals": [
+        "Verify",
+        "Continue",
+        "Submit code"
+      ]
+    },
+    {
+      "id": "L-0144",
+      "area": "outcomes",
+      "lesson": "Never treat a click that returned as proof a code was submitted. Confirm the screen moved on, and raise a typed error if the form is still present.",
+      "why": "A click can report success and do nothing in one browser while working in the test browser, so tests pass and real runs fail.",
+      "confidence": "high",
+      "signals": [
+        "form still present",
+        "Verify",
+        "nothing happened"
+      ]
+    },
+    {
+      "id": "L-0145",
+      "area": "code",
+      "lesson": "Cap the number of code rounds per task at a small fixed number that covers one code plus a genuine second factor, and say plainly that hitting the cap does not mean the code was wrong.",
+      "why": "An unbounded code loop on a portal that never progresses prompts the person again and again.",
+      "confidence": "high",
+      "signals": [
+        "enter the code",
+        "verification required",
+        "too many attempts"
+      ]
+    },
+    {
+      "id": "L-0146",
+      "area": "sign-in",
+      "lesson": "Never report sign-in success while the screen is a code step. A success pattern that matches an address prefix can also match the code step beneath it.",
+      "why": "A success rule matched a broad address prefix that also covered the code-entry address.",
+      "confidence": "high",
+      "signals": [
+        "otp",
+        "verify",
+        "one-time code"
+      ]
+    },
+    {
+      "id": "L-0147",
+      "area": "code",
+      "lesson": "After submitting a code, wait for the code field to detach or for the flow to leave the sign-in host before running code detection again.",
+      "why": "A code form still on screen and the redirect after it briefly look like a new code step, which raised a duplicate prompt for a code that worked.",
+      "confidence": "high",
+      "signals": [
+        "redirecting",
+        "verifying",
+        "signing you in"
+      ]
+    },
+    {
+      "id": "L-0148",
+      "area": "targeting",
+      "lesson": "Scope the code field to the single one-time-code input and confirm exactly one match before typing.",
+      "why": "A generic code locator matched both the code input and a visible phone input, scattering the digits.",
+      "confidence": "medium",
+      "signals": [
+        "phone number",
+        "enter code",
+        "one-time code"
+      ]
+    },
+    {
+      "id": "L-0149",
+      "area": "code",
+      "lesson": "Never infer a code step from a one-time-code autocomplete hint while the sign-in form is still on screen; require code-step context.",
+      "why": "Some sign-in pages mark the username box as a one-time-code field, which raised a false code prompt on every sign-in.",
+      "confidence": "high",
+      "signals": [
+        "autocomplete",
+        "username",
+        "sign in"
+      ]
+    },
+    {
+      "id": "L-0150",
+      "area": "code",
+      "lesson": "Inspect the second-factor methods a tenant offers and choose a relayable one explicitly, using 'try another method' when needed. Mark tenants that accept only a hardware key or passkey as blocked.",
+      "why": "Portals often default to a passkey, a security key or an authenticator app that a run cannot relay.",
+      "confidence": "medium",
+      "signals": [
+        "try another method",
+        "use a security key",
+        "passkey",
+        "authenticator app"
+      ]
+    },
+    {
+      "id": "L-0151",
+      "area": "code",
+      "lesson": "Treat every failure after the password submit as terminal. Never resubmit an accepted password and never auto-retry once a code has been sent; make one paced attempt, then stop and hand back.",
+      "why": "Each fresh sign-in sends another code, so retries pile up codes, trip rate limits and resubmit passwords at machine speed.",
+      "confidence": "high",
+      "signals": [
+        "we sent a code",
+        "too many attempts",
+        "passcode sent"
+      ]
+    },
+    {
+      "id": "L-0152",
+      "area": "session",
+      "lesson": "Opt into remembering the device wherever the tenant allows, keep it in the persisted browser state, and record per tenant whether it actually holds before promising runs without codes.",
+      "why": "Device trust persists only in stored state and only when the portal is told to remember it, and some portals ignore the checkbox.",
+      "confidence": "medium",
+      "signals": [
+        "remember this device",
+        "trust this device",
+        "don't ask again"
+      ]
+    },
+    {
+      "id": "L-0153",
+      "area": "pacing",
+      "lesson": "Let only one code-gated run per person wait on that person at a time, or start each code deadline when its prompt is shown rather than when it is created, and cap resends.",
+      "why": "When code deadlines start at creation, queued runs expire while the person answers the first prompt.",
+      "confidence": "medium",
+      "signals": [
+        "waiting for code",
+        "code expired"
+      ]
+    },
+    {
+      "id": "L-0154",
+      "area": "code",
+      "lesson": "Bind every code answer to the challenge id it was issued for and write it with compare-and-set; never answer 'the newest open challenge'. Serialize the moment of asking for a code per person.",
+      "why": "With concurrent challenges, taking the newest can put one tenant's code on another tenant's challenge.",
+      "confidence": "high",
+      "signals": [
+        "challenge id",
+        "waiting for code",
+        "newest challenge"
+      ]
+    },
+    {
+      "id": "L-0155",
+      "area": "code",
+      "lesson": "When extracting a code from a message, reject any message older than the challenge and require a code keyword near the digits. Never take reference numbers, addresses or phone numbers as codes.",
+      "why": "Messages mix reference numbers and addresses with codes, and an old code burns a real attempt.",
+      "confidence": "high",
+      "signals": [
+        "your code is",
+        "verification code",
+        "reference number"
+      ]
+    },
+    {
+      "id": "L-0156",
+      "area": "session",
+      "lesson": "Record that the password was submitted in the shared sign-in wait, and never let a recovery path reload the page after that point. Hold a received code until the session is reattached.",
+      "why": "A recovery path that reloads whenever the submit flag is unset destroys a code step in progress.",
+      "confidence": "high",
+      "signals": [
+        "reconnecting",
+        "reload",
+        "enter the code"
+      ]
+    },
+    {
+      "id": "L-0157",
+      "area": "code",
+      "lesson": "If a resend is ever allowed, count it against the tenant's resend cap and stop below it. A spent cap means stop and start the task over later, not press resend again, and each refusal needs its own message.",
+      "why": "A spent resend cap risks a lockout, and one generic error hid several different refusals.",
+      "confidence": "medium",
+      "signals": [
+        "resend code",
+        "too many requests",
+        "limit reached"
+      ]
+    },
+    {
+      "id": "L-0158",
+      "area": "safety",
+      "lesson": "Check the pause or opt-out flag in every path that starts a run, scheduled and manual, before anything can trigger a code. Schedule by local wall time and guard against clock changes firing a run twice.",
+      "why": "A scheduled batch reaches every account, a manual path ignored the opt-out, and a clock change could fire a run twice.",
+      "confidence": "high",
+      "signals": [
+        "paused",
+        "excluded",
+        "scheduled run"
+      ]
+    },
+    {
+      "id": "L-0159",
+      "area": "evidence",
+      "lesson": "Redact a stored code as soon as the portal accepts it, and keep it only while a retry is still possible.",
+      "why": "Codes left in stored records sit in plain text in every dump and backup.",
+      "confidence": "high",
+      "signals": [
+        "code accepted",
+        "response stored",
+        "redact"
+      ]
+    },
+    {
+      "id": "L-0160",
+      "area": "testing",
+      "lesson": "In tests that drive asynchronous code handling, commit test data so a reader on another connection can see it, and inject the code at the last hook before the wait loop.",
+      "why": "The handler read through a separate connection, so test writes inside an uncommitted transaction were invisible.",
+      "confidence": "medium",
+      "signals": [
+        "waiting for code",
+        "test timeout",
+        "no code found"
+      ]
+    },
+    {
+      "id": "L-0161",
+      "area": "outcomes",
+      "lesson": "Check whether a request reached the server before debugging credentials, and report network failures and sign-in failures as different typed errors.",
+      "why": "Requests that never left the client all showed as credential errors, which sent debugging the wrong way.",
+      "confidence": "medium",
+      "signals": [
+        "invalid credentials",
+        "network error",
+        "connection refused"
+      ]
+    },
+    {
+      "id": "L-0162",
+      "area": "testing",
+      "lesson": "Derive every status label from current state through one pure function, and test invariants across the whole state space rather than individual screenshots.",
+      "why": "Labels computed in different places disagreed, and a transient note was never cleared.",
+      "confidence": "medium",
+      "signals": [
+        "status",
+        "last run",
+        "stale label"
+      ]
+    },
+    {
+      "id": "L-0163",
+      "area": "outcomes",
+      "lesson": "Never report a finished request as still loading, and never report 'could not tell' as 'there is nothing'. An error swallowed into the empty state is a false result.",
+      "why": "A loaded flag set only on success and a bare catch made a failed request look like an empty list.",
+      "confidence": "medium",
+      "signals": [
+        "loading",
+        "nothing here",
+        "no results"
+      ]
+    },
+    {
+      "id": "L-0164",
+      "area": "factory",
+      "lesson": "Run a runbook's commands exactly as written before publishing it, give every step a visible check, and fail fast on missing inputs before a long job starts.",
+      "why": "Runbooks written from reading a script, not running it, fail on their first real use.",
+      "confidence": "medium",
+      "signals": [
+        "runbook",
+        "missing input",
+        "not set"
+      ]
+    },
+    {
+      "id": "L-0165",
+      "area": "factory",
+      "lesson": "Key dependency-install guards on the lockfile, not on whether the install folder exists, and run each language's own checks for every language a change touches.",
+      "why": "A guard that installs only when the folder is absent never delivered new dependencies, and touched code went unchecked.",
+      "confidence": "medium",
+      "signals": [
+        "lockfile",
+        "typecheck",
+        "module not found"
+      ]
+    },
+    {
+      "id": "L-0166",
+      "area": "factory",
+      "lesson": "Gate scripts on machine-readable fields that answer the actual question, never on a tool's display output.",
+      "why": "Display output changes between tool versions and may report a state that does not answer the question.",
+      "confidence": "medium",
+      "signals": [
+        "--json",
+        "parse output",
+        "status column"
+      ]
+    },
+    {
+      "id": "L-0167",
+      "area": "factory",
+      "lesson": "Detect environment facts such as network addresses and device ids at runtime instead of writing them down as constants.",
+      "why": "Written-down environment facts go stale as soon as the environment moves.",
+      "confidence": "medium",
+      "signals": [
+        "hard-coded",
+        "address changed",
+        "device not found"
+      ]
+    },
+    {
+      "id": "L-0168",
+      "area": "pacing",
+      "lesson": "Verify each screen after every step instead of relying on timings, and confirm typed text arrived in full. Some typing tools truncate long strings silently.",
+      "why": "Fixed timings drift between runs, and silent truncation leaves a field half filled.",
+      "confidence": "medium",
+      "signals": [
+        "truncated",
+        "field value",
+        "timed out"
+      ]
+    },
+    {
+      "id": "L-0169",
+      "area": "factory",
+      "lesson": "Run a new gate from a clean checkout before trusting it, and make continuous integration build everything you ship.",
+      "why": "Breakages passed because the gate never built one shipped target and hid errors in suppressed output.",
+      "confidence": "medium",
+      "signals": [
+        "clean checkout",
+        "CI",
+        "passed locally"
+      ]
+    },
+    {
+      "id": "L-0170",
+      "area": "factory",
+      "lesson": "Anchor directory ignore rules to the repository root so a generic folder name cannot silently hide hand-written source.",
+      "why": "An unanchored directory rule matched every folder with that name, including hand-written code.",
+      "confidence": "high",
+      "signals": [
+        ".gitignore",
+        "untracked",
+        "file missing from commit"
+      ]
+    },
+    {
+      "id": "L-0171",
+      "area": "factory",
+      "lesson": "Distinguish a third-party timeout from a rejection. Persist and print any resumable job id, and resume the job rather than resubmitting it.",
+      "why": "A wait timeout treated a slow external queue as a failure, and the job id lived only in a log.",
+      "confidence": "medium",
+      "signals": [
+        "timed out",
+        "submission id",
+        "in progress"
+      ]
+    },
+    {
+      "id": "L-0172",
+      "area": "factory",
+      "lesson": "Never maintain a near-copy of a screen or component; render the single source. When renaming anything, search every script for the old name.",
+      "why": "A near-copy silently dropped a control, and a script kept the old name after a rename.",
+      "confidence": "medium",
+      "signals": [
+        "duplicate component",
+        "renamed",
+        "not found"
+      ]
+    },
+    {
+      "id": "L-0173",
+      "area": "rendering",
+      "lesson": "Before deciding anything is missing, wait with a capped timeout for a concrete row or tile of the expected shape, never a load event or network idle. Wait again after every filter change, and word a timeout as 'not loaded', not 'layout changed'.",
+      "why": "Load events fire at once on script-drawn pages and some pages never go network idle, so searches ran before content rendered.",
+      "confidence": "high",
+      "signals": [
+        "loading",
+        "please wait",
+        "no accounts found"
+      ]
+    },
+    {
+      "id": "L-0174",
+      "area": "enumeration",
+      "lesson": "Before concluding a list is empty, check whether it sits behind a step-up code prompt; a gated list and an empty list both show zero rows. Keep the wait for a person's code outside the task's time limit.",
+      "why": "A step-up prompt drawn where the reader could not see it made a gated list look empty.",
+      "confidence": "high",
+      "signals": [
+        "verify your identity",
+        "no statements",
+        "step-up"
+      ]
+    },
+    {
+      "id": "L-0175",
+      "area": "enumeration",
+      "lesson": "Report 'no items' only on real rows or the portal's explicit empty-state text. Otherwise look for an interstitial, such as a promo, a paperless prompt or an upsell, and dismiss it.",
+      "why": "Full-screen promos and prompts take over the screen the driver reads, especially in fresh browser state.",
+      "confidence": "high",
+      "signals": [
+        "no statements available",
+        "go paperless",
+        "not now",
+        "special offer"
+      ]
+    },
+    {
+      "id": "L-0176",
+      "area": "safety",
+      "lesson": "Tell a hard enrollment gate that changes the account apart from a skippable prompt. Never enroll an account in anything without authorization; hand back instead.",
+      "why": "Some portals require enrollment before a list appears, while others only interpose a skippable prompt.",
+      "confidence": "medium",
+      "signals": [
+        "enroll now",
+        "required to continue",
+        "skip for now"
+      ]
+    },
+    {
+      "id": "L-0177",
+      "area": "navigation",
+      "lesson": "Detect a 'set up two-factor later' interstitial and dismiss it with a whole-name postpone control (Maybe later, Not now, Skip) under the money guard, rather than retrying past it.",
+      "why": "A set-up prompt read as signed out, and each retry reloaded away from the only dismiss control and spent sign-in attempts.",
+      "confidence": "high",
+      "signals": [
+        "Maybe later",
+        "Not now",
+        "Skip",
+        "set up two-step verification"
+      ]
+    },
+    {
+      "id": "L-0178",
+      "area": "navigation",
+      "lesson": "Follow the click-path a person uses from the landing screen, and treat a deep link as an optimization to verify. Derive signed-in addresses from where sign-in actually lands, move only through links read from the page, and never go to a guessed route on a live session.",
+      "why": "Deep links go stale, need state only the click-path sets, or carry session tokens, so a guessed route can end the session.",
+      "confidence": "medium",
+      "signals": [
+        "session expired",
+        "please sign in",
+        "page not found"
+      ]
+    },
+    {
+      "id": "L-0179",
+      "area": "navigation",
+      "lesson": "Read a not-found or error page on a deep link while the signed-in frame is still visible as 'wrong entry route', not 'signed out'. Find the real path once through the portal's own menu and record it.",
+      "why": "Views often live behind each portal's own routes, so guessed addresses fail on a valid session.",
+      "confidence": "medium",
+      "signals": [
+        "page not found",
+        "something went wrong",
+        "my account"
+      ]
+    },
+    {
+      "id": "L-0180",
+      "area": "targeting",
+      "lesson": "Never use a portal's element ids or hidden content flags as identity. Match a document on its displayed period within its own container, and trust rendered rows over hidden flags.",
+      "why": "Download ids can reset per container and collide, and hidden flags can be wrong for documents that download fine.",
+      "confidence": "low",
+      "signals": [
+        "statement period",
+        "download",
+        "year"
+      ]
+    },
+    {
+      "id": "L-0181",
+      "area": "sign-in",
+      "lesson": "Let redirects after a code step finish on the application host before navigating, and never navigate while the page is still on a sign-in host.",
+      "why": "Navigating during a second sign-in hand-off restarted authentication and bounced back to the sign-in screen.",
+      "confidence": "medium",
+      "signals": [
+        "redirecting",
+        "signing you in",
+        "please wait"
+      ]
+    },
+    {
+      "id": "L-0182",
+      "area": "navigation",
+      "lesson": "Capture navigation context such as account tokens and ids once, when first seen, and keep it in driver state; never re-derive it from the current address.",
+      "why": "After the first hop the address no longer carried the token, so a fallback clicked a hidden control and wasted a code.",
+      "confidence": "medium",
+      "signals": [
+        "account token",
+        "address changed"
+      ]
+    },
+    {
+      "id": "L-0183",
+      "area": "pacing",
+      "lesson": "Enumerate every account under a sign-in and give each account, and every list open, its own wall-clock budget so one hang cannot strand the rest.",
+      "why": "A heavy view froze for many minutes, and one frozen account hung the whole run past its hard limit.",
+      "confidence": "high",
+      "signals": [
+        "not responding",
+        "timed out",
+        "loading accounts"
+      ]
+    },
+    {
+      "id": "L-0184",
+      "area": "navigation",
+      "lesson": "Capture the full screen and address trail after sign-in before naming a wall; an unknown bounce is often an account picker. Drive the picker with real pointer input and enumerate its accounts. If remembered state lands on an identity that owns nothing, retry once with fresh state.",
+      "why": "An unrecognized picker was taken for a wall, a scripted click on it was ignored, and remembered state can skip it.",
+      "confidence": "high",
+      "signals": [
+        "select the account",
+        "no services associated",
+        "choose an account"
+      ]
+    },
+    {
+      "id": "L-0185",
+      "area": "targeting",
+      "lesson": "Never take the first account tile when one sign-in fronts several accounts. Choose by an explicit identity hint, matched on the identifier the tile actually displays, and fail loudly listing the tiles when none matches.",
+      "why": "One identity can list many accounts, and a tile's displayed number can differ from the number on file.",
+      "confidence": "high",
+      "signals": [
+        "ending in",
+        "select an account",
+        "account summary"
+      ]
+    },
+    {
+      "id": "L-0186",
+      "area": "documents",
+      "lesson": "Take a document's period from the document itself, not the list's posting date, and allow a late-posting window when matching. List the dates actually offered before concluding a document is unavailable.",
+      "why": "Posting dates differ from the period covered, and annual or irregular cycles fail a fixed recent window.",
+      "confidence": "medium",
+      "signals": [
+        "posted",
+        "statement date",
+        "billing period"
+      ]
+    },
+    {
+      "id": "L-0187",
+      "area": "targeting",
+      "lesson": "After choosing from a custom dropdown, read back the displayed selection and retry until it matches before acting. Allow for abbreviated labels when matching.",
+      "why": "A custom dropdown's first pick after load can miss, and labels may use shortened month names.",
+      "confidence": "medium",
+      "signals": [
+        "select month",
+        "Sept",
+        "dropdown"
+      ]
+    },
+    {
+      "id": "L-0188",
+      "area": "enumeration",
+      "lesson": "Check whether rows appear only after selecting an account or expanding a panel, and do those steps before declaring a list empty. Key state off content, not an address that never changes.",
+      "why": "Rows can live in a lazy panel that stays empty until it is really opened, while the address never moves.",
+      "confidence": "medium",
+      "signals": [
+        "expand",
+        "show details",
+        "no transactions"
+      ]
+    },
+    {
+      "id": "L-0189",
+      "area": "legacy-surface",
+      "lesson": "On every list screen, enumerate the frames and read the one that hosts the data before deciding the list is empty.",
+      "why": "Many portals draw their tables inside an inner frame while the outer document holds only navigation.",
+      "confidence": "medium",
+      "signals": [
+        "frame",
+        "iframe",
+        "no rows"
+      ]
+    },
+    {
+      "id": "L-0190",
+      "area": "targeting",
+      "lesson": "Assume web components and shadow roots. Build the screen from layout and the accessibility tree, which see inside them, and check saved markup for custom element tags before 'fixing' a missing control.",
+      "why": "Controls inside shadow roots are invisible to plain document queries and to dumpers that list only inputs, buttons and links.",
+      "confidence": "medium",
+      "signals": [
+        "shadow root",
+        "custom element",
+        "control not found"
+      ]
+    },
+    {
+      "id": "L-0191",
+      "area": "navigation",
+      "lesson": "Drive the user interface rather than reverse-engineering a portal's private binary API.",
+      "why": "Private binary APIs are costly to decode and change without notice, while the screen keeps its meaning.",
+      "confidence": "medium",
+      "signals": [
+        "binary response",
+        "export",
+        "download"
+      ]
+    },
+    {
+      "id": "L-0192",
+      "area": "targeting",
+      "lesson": "When a click times out on a visible control, find which element actually receives the pointer and deal with it: fill inputs directly, follow a link's address, or close the overlay. When a target is hidden or covered but has a link address read from the page, go to it rather than forcing a click.",
+      "why": "Floating labels, overlays, backdrops and collapsed menus intercept the pointer or hide targets from the accessibility tree.",
+      "confidence": "medium",
+      "signals": [
+        "intercepts pointer events",
+        "timeout",
+        "overlay"
+      ]
+    },
+    {
+      "id": "L-0193",
+      "area": "safety",
+      "lesson": "Pin a scout's entry to the tenant's sign-in address, never a host root, and admit only the cross-host hops the portal itself makes, over https only. Never admit hosts a model names.",
+      "why": "A host root can be a blank shell, and a single-host allow-list blocked the portal's own sign-in hand-off.",
+      "confidence": "medium",
+      "signals": [
+        "sign-in hand-off",
+        "blocked host",
+        "allow-list"
+      ]
+    },
+    {
+      "id": "L-0194",
+      "area": "testing",
+      "lesson": "Test any document extraction change against documents shaped like the real ones, never clean synthetic samples, and keep extraction guidance in step with what ships.",
+      "why": "Real statements can place text glyph by glyph with no ruled tables, so clean samples flatter an extractor.",
+      "confidence": "high",
+      "signals": [
+        "no transactions found",
+        "text layer",
+        "extraction"
+      ]
+    },
+    {
+      "id": "L-0195",
+      "area": "testing",
+      "lesson": "Before designing an adversarial document fixture, read the check that decides which extraction path runs, and pair the fixture with a clean control that proves the fast path is still taken.",
+      "why": "A path check that ignores word order lets a shuffled-text fixture take the text-layer shortcut, so the OCR path is never exercised.",
+      "confidence": "high",
+      "signals": [
+        "adversarial fixture",
+        "text layer",
+        "fast path",
+        "control fixture"
+      ]
+    },
+    {
+      "id": "L-0196",
+      "area": "documents",
+      "lesson": "Use a document's embedded text layer only through the geometry pipeline, scaled into the same coordinate space as OCR tokens, and fall back to raster OCR when the text layer yields nothing.",
+      "why": "A raw text layer comes out as column fragments with no line holding both a date and an amount, so rows must be rebuilt from coordinates.",
+      "confidence": "medium",
+      "signals": [
+        "text layer",
+        "column fragments",
+        "coordinate space",
+        "raster OCR"
+      ]
+    },
+    {
+      "id": "L-0197",
+      "area": "documents",
+      "lesson": "Replay saved OCR tokens against the extractor offline to find logic bugs without re-running OCR, and pass the real page geometry instead of inferring it from token extents.",
+      "why": "Page height inferred from tokens shrinks size-based filters on sparse pages until they drop every line, and amounts merge with nearby words.",
+      "confidence": "high",
+      "signals": [
+        "OCR tokens",
+        "replay",
+        "page geometry",
+        "sparse page"
+      ]
+    },
+    {
+      "id": "L-0198",
+      "area": "documents",
+      "lesson": "When rebuilding table rows from geometry, bound each row and its description by section headings and a band cap, not only by the next date anchor, and look for amount column headers only where amount columns can appear.",
+      "why": "An unbounded sweep crossed section titles and repeated headers, and a left-side title was taken for an amount column header.",
+      "confidence": "low",
+      "signals": [
+        "section heading",
+        "column header",
+        "description zone",
+        "date anchor"
+      ]
+    },
+    {
+      "id": "L-0199",
+      "area": "documents",
+      "lesson": "Make document date parsing tolerant: accept a day and year that OCR glued together without a separator, and accept rows that carry no year by seeding it from the statement period.",
+      "why": "Low-resolution OCR glues date tokens together, and some layouts print only the month and day in each row.",
+      "confidence": "medium",
+      "signals": [
+        "date token",
+        "missing separator",
+        "no year",
+        "statement period"
+      ]
+    },
+    {
+      "id": "L-0200",
+      "area": "documents",
+      "lesson": "Choose an extraction profile and classify a document from the document's own content, never from the tenant or sign-in it came through, and never generalize one account's observation to another.",
+      "why": "A profile chosen from the account's institution misread the document, and evidence from one person's account did not hold for others.",
+      "confidence": "medium",
+      "signals": [
+        "extraction profile",
+        "classify document",
+        "layout profile"
+      ]
+    },
+    {
+      "id": "L-0201",
+      "area": "outcomes",
+      "lesson": "Treat a correct empty extraction as a result, not a failure: classify documents that are not statements, such as notices or certificates, and complete a statement with no transactions as an empty, header-only result.",
+      "why": "Zero rows was reported as failure, yet the documents were dormant statements, blank notices or certificates.",
+      "confidence": "medium",
+      "signals": [
+        "zero rows",
+        "no transactions",
+        "not a statement",
+        "empty extraction"
+      ]
+    },
+    {
+      "id": "L-0202",
+      "area": "factory",
+      "lesson": "After shipping a fix, rerun the affected items and read the fresh worker log before concluding that the fix failed.",
+      "why": "The failing statuses were stale records written by the old code, and the rerun after the deploy had never happened.",
+      "confidence": "medium",
+      "signals": [
+        "stale status",
+        "rerun",
+        "after deploy",
+        "fix failed"
+      ]
+    },
+    {
+      "id": "L-0203",
+      "area": "testing",
+      "lesson": "Prove that heavy native dependencies load inside the exact image production runs, and judge a task by its recorded domain outcome, not by the job framework's success state, whenever tasks can swallow exceptions.",
+      "why": "A slim base image lacked a package a native library imports at load time, and swallowed exceptions let the job framework report success.",
+      "confidence": "high",
+      "signals": [
+        "import error",
+        "production image",
+        "reported success",
+        "swallowed exception"
+      ]
+    },
+    {
+      "id": "L-0204",
+      "area": "testing",
+      "lesson": "Treat the browser-automation, OCR and authentication libraries as locked sets: bump each set together in a dedicated change tested against real documents, never in a routine patch, and read the major-version changelog first. A native package that installs on an unproven CPU architecture can still crash at run time.",
+      "why": "Pinned packages depend on each other's versions, a security fix in one broke another, and a major release renamed its settings.",
+      "confidence": "medium",
+      "signals": [
+        "dependency bump",
+        "version conflict",
+        "locked set",
+        "changelog"
+      ]
+    },
+    {
+      "id": "L-0205",
+      "area": "factory",
+      "lesson": "Record why a worker concurrency mode was chosen, and re-verify it whenever the underlying library changes.",
+      "why": "A pool pinned to one worker to avoid a library hang silently capped throughput and made the concurrency setting inert.",
+      "confidence": "medium",
+      "signals": [
+        "single worker",
+        "concurrency setting",
+        "pool mode"
+      ]
+    },
+    {
+      "id": "L-0206",
+      "area": "testing",
+      "lesson": "Make every verification fail closed when an input is empty or unreachable: assert non-empty inputs and positive counts before comparing, and never discard the check's error output.",
+      "why": "Two empty outputs compare equal, an empty pattern matches everything, and an unreachable service can yield a pass-shaped result.",
+      "confidence": "high",
+      "signals": [
+        "empty output",
+        "zero count",
+        "unreachable",
+        "pass-shaped"
+      ]
+    },
+    {
+      "id": "L-0207",
+      "area": "testing",
+      "lesson": "Never read an HTTP error status as evidence until a control probe shows that the status tells the cases apart, and probe with the method the endpoint accepts.",
+      "why": "Servers often return the same status for a wrong password and a missing user, or for a wrong method whether a feature is on or off.",
+      "confidence": "medium",
+      "signals": [
+        "unauthorized",
+        "not found",
+        "method not allowed",
+        "control probe"
+      ]
+    },
+    {
+      "id": "L-0208",
+      "area": "testing",
+      "lesson": "Give every test suite a CI gate that asserts how many tests it collected, check that every package with tests is in the collection, and collect only from source directories so scratch code never runs. A suite with no gate is worse than none.",
+      "why": "A package missing from the collection config fails silently because the count just drops, and ungated suites first ran just before a deploy.",
+      "confidence": "high",
+      "signals": [
+        "tests collected",
+        "collection count",
+        "no gate",
+        "scratch code"
+      ]
+    },
+    {
+      "id": "L-0209",
+      "area": "testing",
+      "lesson": "Gate browser tests on a capability check, not on a hand-maintained list of paths.",
+      "why": "A hand-kept exclusion list goes stale and incomplete at the same time.",
+      "confidence": "medium",
+      "signals": [
+        "browser tests",
+        "capability check",
+        "exclusion list"
+      ]
+    },
+    {
+      "id": "L-0210",
+      "area": "testing",
+      "lesson": "Make fixtures deterministic: pin every environment-driven feature flag, and build time-based fixtures from the same frozen instant the assertions use, never a literal date beside the real clock.",
+      "why": "Flags read from the environment made outcomes depend on the developer's machine, and fixtures built from the real clock fell outside a frozen search window.",
+      "confidence": "medium",
+      "signals": [
+        "frozen clock",
+        "feature flag",
+        "flaky fixture",
+        "time window"
+      ]
+    },
+    {
+      "id": "L-0211",
+      "area": "testing",
+      "lesson": "Give parallel end-to-end suites under load a retry and a generous first-paint timeout, and anchor on an early element, so one slow page compile cannot fail the build.",
+      "why": "A dev server that compiles pages on demand can spend the whole assertion timeout on a first paint under build load.",
+      "confidence": "medium",
+      "signals": [
+        "first paint",
+        "assertion timeout",
+        "parallel suite",
+        "compile"
+      ]
+    },
+    {
+      "id": "L-0212",
+      "area": "testing",
+      "lesson": "When a global sign-in requirement changes, let unrelated fixtures create authenticated sessions directly, and keep the full challenge flow for the tests that cover it.",
+      "why": "Turning on a second factor everywhere sent fixtures that posted credentials into the challenge flow.",
+      "confidence": "low",
+      "signals": [
+        "challenge flow",
+        "fixture sign-in",
+        "second factor"
+      ]
+    },
+    {
+      "id": "L-0213",
+      "area": "testing",
+      "lesson": "Before blaming your own code for a round-number limit, re-test against a different origin; the test endpoint may be the limit.",
+      "why": "A suspected size cap in our relay was the test endpoint's own response limit.",
+      "confidence": "low",
+      "signals": [
+        "size cap",
+        "truncated response",
+        "test endpoint"
+      ]
+    },
+    {
+      "id": "L-0214",
+      "area": "testing",
+      "lesson": "Exercise every external integration against its real sandbox in a dry run, not only against hand-built mocks, and fail loudly on partial data whenever deduplication depends on it.",
+      "why": "Mocks drifted from the real object shapes, and list and search endpoints returned less than the code assumed.",
+      "confidence": "high",
+      "signals": [
+        "mock",
+        "sandbox",
+        "partial data",
+        "dry run"
+      ]
+    },
+    {
+      "id": "L-0215",
+      "area": "safety",
+      "lesson": "Make every side effect that can be redelivered idempotent through a uniquely keyed record, and never let a notification failure fail the operation it reports on.",
+      "why": "Event senders redeliver on their own schedule and on any error response, so the event stream cannot say whether the work already happened.",
+      "confidence": "medium",
+      "signals": [
+        "redelivered",
+        "duplicate event",
+        "idempotent",
+        "notification failed"
+      ]
+    },
+    {
+      "id": "L-0216",
+      "area": "factory",
+      "lesson": "Give every behavior its own switch rather than piggybacking on a rollout flag that is turned off during incidents.",
+      "why": "A notification gated on an unrelated rollout flag would go silent whenever that flag was turned off.",
+      "confidence": "low",
+      "signals": [
+        "rollout flag",
+        "kill switch",
+        "feature switch"
+      ]
+    },
+    {
+      "id": "L-0217",
+      "area": "safety",
+      "lesson": "Gate batch runs with a kill switch and a per-account pause flag applied on every path, manual runs included, resolve schedules in the named time zone, and claim each run with a compare-and-set.",
+      "why": "A global tick swept paused accounts, the manual path skipped the pause filter, and naive time handling repeats the fall-back hour.",
+      "confidence": "medium",
+      "signals": [
+        "kill switch",
+        "paused account",
+        "schedule",
+        "duplicate run"
+      ]
+    },
+    {
+      "id": "L-0218",
+      "area": "factory",
+      "lesson": "Derive every readiness list from one registry and test that the copies mirror it, and promote a driver only on proof from a real run, such as a stored document that opens as a PDF.",
+      "why": "Hand-mirrored readiness lists drifted apart, so proven drivers stayed gated while unproven ones were advertised.",
+      "confidence": "medium",
+      "signals": [
+        "registry",
+        "readiness list",
+        "promote driver",
+        "probation"
+      ]
+    },
+    {
+      "id": "L-0219",
+      "area": "memory",
+      "lesson": "Verify a document's status claims against code or a live probe before acting on them; for an agent, a stale document is a false instruction.",
+      "why": "Hand-edited status documents drifted, and a fix applied to one table was not applied to the others.",
+      "confidence": "medium",
+      "signals": [
+        "status doc",
+        "stale",
+        "README",
+        "live probe"
+      ]
+    },
+    {
+      "id": "L-0220",
+      "area": "factory",
+      "lesson": "Never run broad clean, stash or checkout operations on a shared working tree. Give each agent its own worktree, stage explicit paths only, and verify the merged tree contains every agent's files.",
+      "why": "Parallel agents and broad version-control operations on one shared tree discarded untracked work.",
+      "confidence": "medium",
+      "signals": [
+        "shared worktree",
+        "untracked files",
+        "stash",
+        "lost work"
+      ]
+    },
+    {
+      "id": "L-0221",
+      "area": "factory",
+      "lesson": "Check the current branch before committing, never let case alone distinguish two file names, verify links against what version control tracks rather than the local filesystem, and search for references before moving any file.",
+      "why": "A case-insensitive filesystem hides a file tracked under a different case, and a branch created but not checked out sent a commit elsewhere.",
+      "confidence": "low",
+      "signals": [
+        "wrong branch",
+        "case-insensitive",
+        "broken link",
+        "moved file"
+      ]
+    },
+    {
+      "id": "L-0222",
+      "area": "factory",
+      "lesson": "Confirm with the ignore check whether a new directory will be tracked before relying on it, keep the ignore rule that protects page captures, and keep local-only notes outside the repository.",
+      "why": "Bare ignore patterns match at any depth, and a checkout silently overwrites an ignored file that another branch tracks.",
+      "confidence": "medium",
+      "signals": [
+        "gitignore",
+        "ignored file",
+        "overwritten",
+        "local notes"
+      ]
+    },
+    {
+      "id": "L-0223",
+      "area": "factory",
+      "lesson": "Before blaming a tool, check whether the branch or worktree predates the main-branch change that introduced what is missing.",
+      "why": "Each failing branch predated a main-branch change it depended on.",
+      "confidence": "medium",
+      "signals": [
+        "missing on branch",
+        "predates",
+        "rebase"
+      ]
+    },
+    {
+      "id": "L-0224",
+      "area": "factory",
+      "lesson": "Delete each base branch when it merges so stacked changes retarget themselves, and confirm that code landed by checking its content on the main branch, never by a merged badge.",
+      "why": "The code host retargets a dependent change only when its base branch is deleted, so stacked changes merged into dead base branches.",
+      "confidence": "high",
+      "signals": [
+        "stacked change",
+        "base branch",
+        "merged",
+        "not on main"
+      ]
+    },
+    {
+      "id": "L-0225",
+      "area": "factory",
+      "lesson": "Diff a long-lived branch's files against the main branch's proven versions before merging; salvage its new tests, but never let an old draft overwrite proven work.",
+      "why": "A stale branch carried an old driver draft without the proven code that had since landed.",
+      "confidence": "medium",
+      "signals": [
+        "stale branch",
+        "old draft",
+        "overwrite",
+        "proven version"
+      ]
+    },
+    {
+      "id": "L-0226",
+      "area": "factory",
+      "lesson": "Read the quality gate's actual conditions and issues from the analyzer before changing code to satisfy it, and clear findings in the code you add now.",
+      "why": "The analyzer re-attributes a function's old findings to whoever next edits it, and the check summary shows only pass or fail.",
+      "confidence": "medium",
+      "signals": [
+        "quality gate",
+        "code smell",
+        "new findings",
+        "check failed"
+      ]
+    },
+    {
+      "id": "L-0227",
+      "area": "testing",
+      "lesson": "Build every generated artifact from one command that fails loudly, parse-check and load it headless after any edit, and prove each guard by reintroducing the defect it catches.",
+      "why": "A missing comma threw an uncaught syntax error, a generator crashed unnoticed at its first call, and a graph silently dropped edges to missing nodes.",
+      "confidence": "medium",
+      "signals": [
+        "syntax error",
+        "generated file",
+        "headless load",
+        "dropped edges"
+      ]
+    },
+    {
+      "id": "L-0228",
+      "area": "factory",
+      "lesson": "When counting processes, exclude the search command itself, stop child processes by a shared marker, and never leave an unbounded watcher loop running.",
+      "why": "A process search counts its own command line, and children outlive a parent that dies first.",
+      "confidence": "low",
+      "signals": [
+        "process count",
+        "orphaned child",
+        "watcher loop"
+      ]
+    },
+    {
+      "id": "L-0229",
+      "area": "factory",
+      "lesson": "Keep a handle to every fire-and-forget background task and observe how it ends.",
+      "why": "Some runtimes hold only a weak reference to an unowned task, so it can be collected before it runs, and its errors go unseen.",
+      "confidence": "medium",
+      "signals": [
+        "background task",
+        "never ran",
+        "unhandled rejection"
+      ]
+    },
+    {
+      "id": "L-0230",
+      "area": "evidence",
+      "lesson": "Set the log level explicitly before relying on application logs to diagnose a run.",
+      "why": "Framework logging defaults can drop everything below warning outside the framework's own loggers.",
+      "confidence": "low",
+      "signals": [
+        "missing logs",
+        "log level",
+        "no output"
+      ]
+    },
+    {
+      "id": "L-0231",
+      "area": "sign-in",
+      "lesson": "Prove a sign-in by checking that the client holds every credential it needs at the end of the round trip, not by the final redirect, and confirm it with an action that needs the full session, not just a read. A hand-off between two auth mechanisms can finish without issuing them.",
+      "why": "A hand-off signed in one mechanism but never issued the tokens the client used, and reads passed while writes failed.",
+      "confidence": "high",
+      "signals": [
+        "sign-in hand-off",
+        "redirect",
+        "missing token",
+        "write rejected"
+      ]
+    },
+    {
+      "id": "L-0232",
+      "area": "factory",
+      "lesson": "Before declaring a credentials tool blocked, check whether its session is cold, which account it uses and whether it authorizes each calling process separately.",
+      "why": "The session was cold, the credentials lived in another account, and the tool authorizes each calling process on its own.",
+      "confidence": "low",
+      "signals": [
+        "not signed in",
+        "vault locked",
+        "authorization prompt"
+      ]
+    },
+    {
+      "id": "L-0233",
+      "area": "factory",
+      "lesson": "Never deploy to production or merge to the main branch without a person's explicit go-ahead.",
+      "why": "Production deploys and merges are a human decision, and no rule had said so.",
+      "confidence": "low",
+      "signals": [
+        "deploy",
+        "merge to main",
+        "production"
+      ]
+    },
+    {
+      "id": "L-0234",
+      "area": "rendering",
+      "lesson": "When a submit control never enables, check whether a script it depends on, often from another origin, failed to load before changing targets or input methods.",
+      "why": "The buttons enabled only after a third-party script loaded, the network path refused that origin, and two input-method theories were wrong.",
+      "confidence": "high",
+      "signals": [
+        "button disabled",
+        "script failed to load",
+        "submit never enables",
+        "blocked request"
+      ]
+    },
+    {
+      "id": "L-0235",
+      "area": "safety",
+      "lesson": "Never wrap a lookup the run depends on in a catch-all handler that returns a silent default; log and assert the value actually used on every job.",
+      "why": "A lookup raised an error, and a bare catch-all swallowed it and returned nothing, so runs went out on the wrong path.",
+      "confidence": "high",
+      "signals": [
+        "catch-all handler",
+        "silent default",
+        "fallback used"
+      ]
+    },
+    {
+      "id": "L-0236",
+      "area": "navigation",
+      "lesson": "When a page action times out, confirm that the browser could reach the host at all before treating it as a portal problem.",
+      "why": "A run was routed through a network path that could not resolve the host, so the portal never saw the request.",
+      "confidence": "medium",
+      "signals": [
+        "timeout",
+        "could not resolve",
+        "host unreachable",
+        "never reached"
+      ]
+    },
+    {
+      "id": "L-0237",
+      "area": "pacing",
+      "lesson": "Balance concurrent runs on a signal that changes at dispatch, such as open leases, never on a lagging usage count.",
+      "why": "Placement used a usage count that updated long after dispatch, so simultaneous runs all picked the same worker.",
+      "confidence": "medium",
+      "signals": [
+        "same worker",
+        "open leases",
+        "load balance"
+      ]
+    },
+    {
+      "id": "L-0238",
+      "area": "safety",
+      "lesson": "Arm a network-level read-only guard on every read-only run so no driver click or request can move money, and keep step logs that can prove it.",
+      "why": "An operator suspected a run had paid a balance; it had not, but nothing technically prevented a driver from doing so.",
+      "confidence": "high",
+      "signals": [
+        "read-only guard",
+        "payment",
+        "money movement",
+        "blocked request"
+      ]
+    },
+    {
+      "id": "L-0239",
+      "area": "evidence",
+      "lesson": "Treat screenshots, page dumps and uploads as sensitive: redact and encrypt captures, route them only through the evidence path, never write portal content or secrets to plaintext temporary files, and skip a capture when redaction cannot apply.",
+      "why": "A debug capture wrote unredacted signed-in pages to disk, and a framework spilled large uploads to a temporary file in plaintext.",
+      "confidence": "high",
+      "signals": [
+        "screenshot",
+        "page dump",
+        "temp file",
+        "unredacted"
+      ]
+    },
+    {
+      "id": "L-0240",
+      "area": "safety",
+      "lesson": "Keep decrypted documents in an ignored scratch directory, stage files by explicit path after reading the status, and keep secret ignore rules at the repository root.",
+      "why": "A stage-all command swept in a folder nobody listed, and the ignore rule lived in a subfolder file that existed only on another branch.",
+      "confidence": "high",
+      "signals": [
+        "staged",
+        "scratch directory",
+        "ignore rule",
+        "untracked"
+      ]
+    },
+    {
+      "id": "L-0241",
+      "area": "safety",
+      "lesson": "Sanitize any label used to build a file path, even in scouting tools.",
+      "why": "Scouting tools built file paths from unsanitized account and vendor labels.",
+      "confidence": "low",
+      "signals": [
+        "file path",
+        "label",
+        "path traversal"
+      ]
+    },
+    {
+      "id": "L-0242",
+      "area": "safety",
+      "lesson": "Never expose a remote-controllable browser or an internal data service on a public interface, even briefly: bind internal services to loopback, firewall at the edge with a host backstop, and verify exposure from outside after every deployment change.",
+      "why": "A remote-view browser was published without a password, container port publishing bypassed the host firewall, and one data port was missed.",
+      "confidence": "high",
+      "signals": [
+        "exposed port",
+        "remote debugging",
+        "public interface",
+        "loopback"
+      ]
+    },
+    {
+      "id": "L-0243",
+      "area": "sign-in",
+      "lesson": "Never approve a sign-in prompt you cannot attribute to the current run, and assume a delayed prompt may come from your own earlier attempt.",
+      "why": "An approval prompt most likely came from an earlier browser relaunch on the same profile.",
+      "confidence": "low",
+      "signals": [
+        "approve sign-in",
+        "unexpected prompt",
+        "was this you"
+      ]
+    },
+    {
+      "id": "L-0244",
+      "area": "safety",
+      "lesson": "Treat any secret that ever reached version history or a transcript as burned and rotate it; untracking or force-pushing does not remove it. Ignore tool-generated plan and variable files before first use, and verify ignore rules with the ignore check, not notes.",
+      "why": "A tracked backup predated its ignore rule, a token sat in prose, and a tool wrote variable files into a directory nobody ignored.",
+      "confidence": "high",
+      "signals": [
+        "secret in history",
+        "rotate",
+        "token pasted",
+        "force-push"
+      ]
+    },
+    {
+      "id": "L-0245",
+      "area": "safety",
+      "lesson": "Build images from an explicit allowlist, never by copying the whole working directory; use ignore patterns that match at any depth, keep agent worktrees out of the build context, scan each image for secrets, and create registry repositories as private before the first push.",
+      "why": "A whole-directory copy baked secrets and keys into images, and a push to a missing repository can create it public.",
+      "confidence": "high",
+      "signals": [
+        "build context",
+        "image secrets",
+        "public repository",
+        "allowlist"
+      ]
+    },
+    {
+      "id": "L-0246",
+      "area": "safety",
+      "lesson": "Make every safety or authentication gate fail closed when the record it depends on is missing, and route every entry path through it.",
+      "why": "A gate defaulted to open when its lookup failed, and a second entry path skipped it.",
+      "confidence": "medium",
+      "signals": [
+        "gate skipped",
+        "missing profile",
+        "fail closed"
+      ]
+    },
+    {
+      "id": "L-0247",
+      "area": "safety",
+      "lesson": "Pass secrets to scripts on standard input, through the environment or an owner-only file, never as command-line arguments, copy secret files with permissions preserved, cap backup copies, and fix the runbook in the same change as the tool.",
+      "why": "Command arguments land in the process table and shell history, and plain copies of a secrets file were world-readable.",
+      "confidence": "high",
+      "signals": [
+        "password argument",
+        "shell history",
+        "world-readable",
+        "backup copy"
+      ]
+    },
+    {
+      "id": "L-0248",
+      "area": "safety",
+      "lesson": "Redact secrets by value, never by guessing variable names, never print secret material in a session, and give each host only the secrets it uses. Rotate with proof: a baseline run, rotation in dependency order, then the same run again.",
+      "why": "Name-based filters missed secrets, a host held secrets it never read, and rotation is order-sensitive.",
+      "confidence": "high",
+      "signals": [
+        "redaction",
+        "secret printed",
+        "rotation",
+        "env file"
+      ]
+    },
+    {
+      "id": "L-0249",
+      "area": "factory",
+      "lesson": "Build TLS connections from the platform's default verified context, never a bare one that trusts nothing, and prove an alert path only by a real send.",
+      "why": "A lint-driven change swapped in a bare context with no trusted certificates, and the script swallowed its own errors.",
+      "confidence": "high",
+      "signals": [
+        "certificate verify failed",
+        "alert not sent",
+        "TLS"
+      ]
+    },
+    {
+      "id": "L-0250",
+      "area": "factory",
+      "lesson": "Commit lock files, run agent containers as non-root with package install scripts disabled, and pin and checksum every binary a CI job downloads and runs.",
+      "why": "An agent ran as root with install scripts and an ignored lock file, and a CI job ran an unverified download.",
+      "confidence": "medium",
+      "signals": [
+        "lock file",
+        "root user",
+        "checksum",
+        "install script"
+      ]
+    },
+    {
+      "id": "L-0251",
+      "area": "factory",
+      "lesson": "Compare versions numerically, patch within the long-term-support line promptly, starting with the HTTP client that carries your auth, keep a new security check blocking so its debt gets fixed, and document any unfixable advisory beside its pin.",
+      "why": "Pins were never bumped, a text sort hid an available patch, and a flaw in the HTTP client touches every request.",
+      "confidence": "medium",
+      "signals": [
+        "security advisory",
+        "version sort",
+        "outdated pin",
+        "CVE"
+      ]
+    },
+    {
+      "id": "L-0252",
+      "area": "factory",
+      "lesson": "When a taint finding will not clear, remove the path from input to sink, for example by reading secrets from standard input, instead of trying to prove the input safe.",
+      "why": "The taint engine does not accept pattern guards as sanitizers and flags any argument that reaches a file or process sink.",
+      "confidence": "medium",
+      "signals": [
+        "taint finding",
+        "sink",
+        "sanitizer"
+      ]
+    },
+    {
+      "id": "L-0253",
+      "area": "outcomes",
+      "lesson": "Never show raw exception text to customers; sanitize it at one choke point where terminal outcomes are written, and keep the original in logs.",
+      "why": "Exception text was written straight into the error message customers read.",
+      "confidence": "medium",
+      "signals": [
+        "error message",
+        "stack trace",
+        "exception text"
+      ]
+    },
+    {
+      "id": "L-0254",
+      "area": "outcomes",
+      "lesson": "Never read the absence of a response, or a check's failure, as a verdict until you have proven the stimulus reached the target, the check could observe it, and your own tooling did not produce the signal. Report could-not-run as its own outcome that neither passes nor fails.",
+      "why": "A check that never reached its target measures only itself, so its silence or failure is not evidence about the target.",
+      "confidence": "high",
+      "signals": [
+        "could not run",
+        "no response from the target",
+        "the check saw nothing",
+        "stimulus never reached"
+      ]
+    },
+    {
+      "id": "L-0255",
+      "area": "outcomes",
+      "lesson": "A surface signal is not proof. An HTTP 200 (including from a catch-all or single-page host that answers any path), a rendered page, a printed log line, or a zero exit code does not mean the thing worked. Confirm by reading the real content or state, click through to the data a page should show, and treat an operation that prints an error while reporting success as a failure.",
+      "why": "Hosts and commands often report success at the surface while the real content or state tells a different story.",
+      "confidence": "medium",
+      "signals": [
+        "HTTP 200",
+        "page rendered but no data",
+        "exit code 0 with an error",
+        "returned the homepage",
+        "log line but no state"
+      ]
+    },
+    {
+      "id": "L-0256",
+      "area": "code",
+      "lesson": "Never auto-retry a driver run past the sign-in or one-time code: a redelivered or restarted job must not request a second one-time code. Key the job by its id, checkpoint progress per period, make a pending one-time code wait survive a process restart, and mark sign-in failures non-retryable.",
+      "why": "A blind retry after sign-in spends a second one-time code and can drop a code the customer already answered.",
+      "confidence": "high",
+      "signals": [
+        "retrying the job",
+        "redelivered job",
+        "one-time code already used",
+        "resuming after restart",
+        "checkpoint per period"
+      ]
+    },
+    {
+      "id": "L-0257",
+      "area": "safety",
+      "lesson": "Begin a run's guarded region at the moment it is marked running, so every exit path, including an error raised before the main work, settles the run and releases its state.",
+      "why": "Any work between marking a job running and the guard can fail and leave the job stuck running with its state held.",
+      "confidence": "high",
+      "signals": [
+        "marked running",
+        "never settled",
+        "left in running state",
+        "exited before settling"
+      ]
+    },
+    {
+      "id": "L-0258",
+      "area": "factory",
+      "lesson": "When you move work to a new execution path, carry over every guard the old path had; and register handlers from one canonical list, tested against every defined handler, so none is silently missing.",
+      "why": "A new path that drops a guard or forgets a handler fails only in the case the lost code covered.",
+      "confidence": "high",
+      "signals": [
+        "handler not registered",
+        "activity missing",
+        "moved to a new path",
+        "guard was dropped"
+      ]
+    },
+    {
+      "id": "L-0259",
+      "area": "safety",
+      "lesson": "When None and an empty collection mean different scopes, test for None explicitly, never truthiness. If None means every account and an empty list means none, a falsy check sweeps every account for a run that should touch nothing.",
+      "why": "None and empty read the same to a truthiness test but can mean the widest and the narrowest scope.",
+      "confidence": "low",
+      "signals": [
+        "empty list",
+        "None means all",
+        "every account selected",
+        "no accounts to touch"
+      ]
+    },
+    {
+      "id": "L-0260",
+      "area": "safety",
+      "lesson": "Scope a model-driven agent's access to the one account it is working, through a templated policy rather than a wildcard, so a single run cannot even express another account's path.",
+      "why": "A wildcard grant lets one run reach every account's credentials, which is indefensible for a model-driven agent.",
+      "confidence": "high",
+      "signals": [
+        "another account's path",
+        "wildcard policy",
+        "per-account scope",
+        "credential for the wrong account"
+      ]
+    },
+    {
+      "id": "L-0261",
+      "area": "enumeration",
+      "lesson": "Never silently skip records that fail to parse; count them and report the count, so a bad row is visible rather than a quietly short result.",
+      "why": "A silently dropped row returns a short result that reads as complete.",
+      "confidence": "medium",
+      "signals": [
+        "failed to parse",
+        "skipped a row",
+        "short count",
+        "rows dropped silently"
+      ]
+    },
+    {
+      "id": "L-0262",
+      "area": "rendering",
+      "lesson": "Know whether a view is live or a snapshot before you read an absence in it as a failure; a snapshot loaded once will not show what arrived after it.",
+      "why": "An absence in a one-time snapshot says nothing about the live state behind it.",
+      "confidence": "medium",
+      "signals": [
+        "snapshot loaded at start",
+        "stale view",
+        "nothing new appeared",
+        "view not live"
+      ]
+    },
+    {
+      "id": "L-0263",
+      "area": "rendering",
+      "lesson": "Judge a page ready by its own content and controls, not by all network activity going quiet: non-essential third-party origins (analytics, consent, chat) can block the load event long after the page's own assets arrived. Navigate on commit and settle on a bounded wait for the control you need. But some scripts a portal loads are load-bearing for its pages or sign-in, so never block those blind.",
+      "why": "Network idle is driven by third-party origins the page does not need, while some third-party scripts the page does need are load-bearing.",
+      "confidence": "high",
+      "signals": [
+        "network idle",
+        "load event never fired",
+        "blank page",
+        "third-party script blocked",
+        "analytics still loading"
+      ]
+    },
+    {
+      "id": "L-0264",
+      "area": "testing",
+      "lesson": "When checking a fallback, test what it would do if it succeeded, not only why it failed; and never let a tool or fallback point at bundled demo or sample configuration, which can overwrite real data with demo values.",
+      "why": "A fallback judged only by its failure path can quietly do damage on the day it succeeds.",
+      "confidence": "medium",
+      "signals": [
+        "fell back to defaults",
+        "demo configuration",
+        "sample credentials",
+        "fallback overwrote"
+      ]
+    },
+    {
+      "id": "L-0265",
+      "area": "testing",
+      "lesson": "Do not let a test's outcome hinge on configuration it never names, and assert the behavior you want, not a retired implementation path; otherwise the test passes against code that no longer runs.",
+      "why": "A test tied to an unnamed setting or a dead path can pass while the real code is untested.",
+      "confidence": "medium",
+      "signals": [
+        "patched the wrong path",
+        "config not set in the test run",
+        "asserting a retired path",
+        "passed against dead code"
+      ]
+    },
+    {
+      "id": "L-0266",
+      "area": "safety",
+      "lesson": "Never let a routine start-up path reach a destructive one-shot that can wipe customer data; gate such an operation behind an explicit opt-in and a backed-up target.",
+      "why": "A destructive one-shot wired into ordinary start-up can erase customer data the first time start-up is run.",
+      "confidence": "high",
+      "signals": [
+        "one-shot ran on start-up",
+        "wiped customer data",
+        "destructive step",
+        "no opt-in gate"
+      ]
+    },
+    {
+      "id": "L-0267",
+      "area": "enumeration",
+      "lesson": "Test date-window boundaries at their edges: comparing only the date, not the full timestamp, widens a window by up to a day and pulls in items from outside the period asked for.",
+      "why": "A date-only comparison treats a whole extra day as inside the window.",
+      "confidence": "low",
+      "signals": [
+        "off by a day",
+        "date-only comparison",
+        "window too wide",
+        "item outside the period"
+      ]
+    },
+    {
+      "id": "L-0268",
+      "area": "enumeration",
+      "lesson": "One sign-in can hold several accounts; choose each by its own identity (last four, product name, a hint credential), never by position. Each account has its own statement list, cycle and start date, and months before an account's start date were never issued, so they are not errors.",
+      "why": "Accounts under one sign-in differ in identity, cycle and start date, so position and a shared window mislead.",
+      "confidence": "high",
+      "signals": [
+        "two or more account tiles after sign-in",
+        "an account switcher or picker",
+        "accounts named by their last four or product name"
+      ]
+    },
+    {
+      "id": "L-0269",
+      "area": "documents",
+      "lesson": "A statement may open in a new window or tab, or arrive as a file rather than changing the page. After a statement click, read what the action brought (a new window, a PDF, a download) before deciding the click did nothing, and capture the document from where it arrived.",
+      "why": "A click can deliver a document somewhere other than the current page, so an unchanged page is not proof it did nothing.",
+      "confidence": "high",
+      "signals": [
+        "a statement link that opens a new tab",
+        "a click that leaves the current page unchanged",
+        "a PDF viewer in a second tab"
+      ]
+    },
+    {
+      "id": "L-0270",
+      "area": "navigation",
+      "lesson": "After sign-in, reach inner pages by clicking visible links; opening an inner address directly can drop the session. Read a sign-in page that appears after a direct open as a dropped session, not a wrong password.",
+      "why": "Some portals end a session when the address changes without a click, which looks like a sign-in failure.",
+      "confidence": "high",
+      "signals": [
+        "a sign-in page after opening an inner address directly",
+        "a session that ends when the address changes without a click"
+      ]
+    },
+    {
+      "id": "L-0271",
+      "area": "sign-in",
+      "lesson": "After a one-time code, wait for proof of the signed-in area: a redirect or callback hand-off page is not signed in. Wait, bounded, for a control only the signed-in area shows (an account list, a sign-out link) before calling the sign-in done.",
+      "why": "A hand-off page after a code renders before the signed-in area exists, so it is not positive proof of sign-in.",
+      "confidence": "high",
+      "signals": [
+        "a redirect or callback address right after a code",
+        "a blank or spinner page after a code is accepted"
+      ]
+    },
+    {
+      "id": "L-0272",
+      "area": "safety",
+      "lesson": "Judge a control that moves money only when it is actually visible on the page, not when it merely exists in the markup. A page that never appears though you are signed in may be waiting on a third-party host it needs (a feature flag, a device-reputation check), not failing.",
+      "why": "A control can sit in the markup without being usable, and a page can stall on a host it needs rather than fail.",
+      "confidence": "high",
+      "signals": [
+        "a list that never appears though signed in",
+        "requests to feature-flag or device-reputation hosts",
+        "a payment control in the markup but not visible"
+      ]
+    },
+    {
+      "id": "L-0273",
+      "area": "pacing",
+      "lesson": "Sign in one account at a time at human pace: portals enforce a minimum gap between sign-ins and a daily cap. Before a sign-in, check the account's last sign-in time and today's count, and record a wait as pacing, never as a failed run.",
+      "why": "A paced or capped leg is the portal's expected behavior, not a crawler failure.",
+      "confidence": "high",
+      "signals": [
+        "a sign-in due soon after the last one",
+        "the account's daily sign-in cap reached"
+      ]
+    },
+    {
+      "id": "L-0274",
+      "area": "documents",
+      "lesson": "A document that carries no transactions is verified by its own fields, not by matching transaction rows. Check its date, the account it names and its kind against what was asked for, and never fail it for having no transactions.",
+      "why": "Some documents legitimately hold no transactions, so their own fields decide whether they are right.",
+      "confidence": "high",
+      "signals": [
+        "a policy or notice document with no transaction table",
+        "a document whose text holds no transaction rows"
+      ]
+    },
+    {
+      "id": "L-0275",
+      "area": "code",
+      "lesson": "A send counts only with the portal's own proof the click registered: after pressing send, wait for its word that a code went out before asking for one. When the portal rejects a code, take the rejected-code path, never retry blind.",
+      "why": "An unconfirmed send and a blind retry both misread the portal's state and waste or misuse a code.",
+      "confidence": "high",
+      "signals": [
+        "a send-code button with no confirmation after the click",
+        "the portal saying a code was wrong or expired"
+      ]
+    },
+    {
+      "id": "L-0276",
+      "area": "safety",
+      "lesson": "Never swallow a guard stop. A stop the guard raises ends the step and is reported with what it refused; no handler may catch it and carry on, and no run may report success after a guard refusal.",
+      "why": "A caught guard stop hides a refusal behind a false success.",
+      "confidence": "high",
+      "signals": [
+        "a guard stop in the log followed by more actions",
+        "a run that reports success after a guard refusal"
+      ]
+    }
+  ]
+}
