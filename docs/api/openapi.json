@@ -151,9 +151,11 @@
             ]
           },
           "escalationId": {
+            "description": "While escalated: the task in the Console inbox where a person resolves it.",
             "type": "string"
           },
           "resolvable": {
+            "description": "While escalated: whether a person can let the run resume. After a guard trip it cannot.",
             "type": "boolean"
           },
           "pending": {
@@ -221,6 +223,14 @@
             "type": "string"
           },
           "retryable": {
+            "type": "boolean"
+          },
+          "escalationId": {
+            "description": "A 409: the inbox task where a person resumes, finishes by hand or cancels.",
+            "type": "string"
+          },
+          "resolvable": {
+            "description": "A 409: whether the run can resume; false after a guard trip.",
             "type": "boolean"
           }
         },
@@ -825,7 +835,7 @@
             "description": "running or needs_human (awaiting_staff_code, awaiting_approval)."
           },
           "409": {
-            "description": "escalated: unknown_screen, stuck, ambiguous_outcome, guard_tripped.",
+            "description": "escalated: unknown_screen, stuck, ambiguous_outcome, guard_tripped. escalationId names the task a person resolves in the Console; resolvable says whether the run can resume (not after a guard trip). Ask again: 202 after Resume, 200 handed_off after Finish by hand, 410 after Cancel.",
             "content": {
               "application/problem+json": {
                 "schema": {

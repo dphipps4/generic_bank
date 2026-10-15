@@ -1,5 +1,6 @@
 // The Console: AdminJS over the control database, behind a local sign-in.
 import AdminJSFastify from '@adminjs/fastify';
+import { DBOSClient } from '@dbos-inc/dbos-sdk';
 import { Database, Resource } from '@adminjs/prisma';
 import AdminJS from 'adminjs';
 import argon2 from 'argon2';
@@ -8,8 +9,10 @@ import { z } from 'zod';
 import { loadConfig, port, secret } from '@gb/config';
 import { db, sql } from '@gb/db';
 import { oauth } from '@gb/oauth';
+import { WORKFLOW } from '@gb/runs';
 import { apiClientActions, onceStore } from './api-clients.js';
 import { ADMIN_BAR_JS, showLabInNav } from './pages/layout.js';
+import { freezePages } from './pages/freezes.js';
 import { inboxPages } from './pages/inbox.js';
 import { journalPages } from './pages/journal.js';
 import { labPages, throughTheApi } from './pages/lab.js';
@@ -112,7 +115,22 @@ runPages(app, {
   }),
   whoIs,
 });
-inboxPages(app, { sql: control, answerKey: cfg.ANSWER_SEAL_KEY, whoIs });
+// A resumed run goes back to the Runner through the workflow queue, as a new workflow: one per
+// escalation, so a resume is enqueued at most once.
+const workflows = await DBOSClient.create({
+  systemDatabaseUrl: cfg.CONTROL_DATABASE_URL,
+  systemDatabaseSchemaName: 'dbos',
+});
+inboxPages(app, {
+  sql: control,
+  answerKey: cfg.ANSWER_SEAL_KEY,
+  whoIs,
+  restart: async (runId, taskId) =>
+    void (await workflows.enqueue(
+      { workflowName: WORKFLOW.name, queueName: WORKFLOW.queue, workflowID: `${runId}.${taskId}` },
+      runId,
+    )),
+});
 journalPages(app, { sql: control, whoIs });
 if (cfg.HAZARDS_FORCEABLE === 'true') {
   showLabInNav();
@@ -122,5 +140,6 @@ if (cfg.HAZARDS_FORCEABLE === 'true') {
     start: throughTheApi({ sql: control, tokens, apiUrl: cfg.API_URL }),
   });
 }
+freezePages(app, { sql: control, whoIs });
 
 await app.listen({ host: '0.0.0.0', port: cfg.CONSOLE_PORT });

@@ -99,13 +99,41 @@ describe('runs over HTTP', () => {
     ]);
     await answerHumanTask(db, task, '123456', 'staff', SEAL);
     await settleRun(db, runId, { status: 'escalated', code: 'unknown_screen' });
+    const escalation = await db.query<{ id: string }>(
+      `SELECT id FROM "HumanTask" WHERE "runId" = $1 AND kind = 'escalation'`,
+      [runId],
+    );
     const r = await get(t, runId);
+    expect(r.headers['content-type']).toContain('application/problem+json');
     expect([r.statusCode, r.json().code, r.json().escalationId, r.json().resolvable]).toEqual([
       409,
       'unknown_screen',
-      task,
+      escalation.rows[0]!.id,
       true,
     ]);
+    expect(r.json().escalationId).not.toBe(task);
+  });
+
+  it('serves nothing on a frozen bank until a person clears the freeze', async () => {
+    const t = await client();
+    const runId = (await start(t)).json().runId;
+    await settleRun(db, runId, {
+      status: 'escalated',
+      code: 'guard_tripped',
+      guard: { layer: 'element', rule: 'a money control on a read-only job' },
+    });
+    const r = await get(t, runId);
+    expect([r.statusCode, r.json().code, r.json().resolvable]).toEqual([
+      409,
+      'guard_tripped',
+      false,
+    ]);
+    const refused = await start(t);
+    expect([refused.statusCode, refused.json().code]).toEqual([404, 'task_not_available']);
+    const banks = await app.inject({ url: '/banks', headers: { authorization: `Bearer ${t}` } });
+    expect(banks.json().find((b: { id: string }) => b.id === 'generic').tasks).toEqual([]);
+    await db.query(`UPDATE "Freeze" SET "clearedAt" = now() WHERE "runId" = $1`, [runId]);
+    expect((await start(t)).statusCode).toBe(202);
   });
 
   it('long-polls with wait=, and returns as soon as the run settles', async () => {

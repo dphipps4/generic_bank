@@ -22,6 +22,7 @@ const NAV: [href: string, label: string][] = [
   ['/inbox', 'Inbox'],
   ['/runs', 'Runs'],
   ['/journal', 'Journal'],
+  ['/freezes', 'Freezes'],
   ['/admin', 'Data'],
 ];
 

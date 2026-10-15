@@ -40,7 +40,8 @@ const MODELS: { name: string; sortBy: string; nav: string; evidence?: boolean }[
   { name: 'ModelCall', sortBy: 'at', nav: 'Factory', evidence: true },
   { name: 'EvalResult', sortBy: 'at', nav: 'Factory', evidence: true },
   { name: 'RepairCase', sortBy: 'openedAt', nav: 'Drivers' },
-  { name: 'Freeze', sortBy: 'frozenAt', nav: 'Drivers' },
+  // Cleared on the Freezes page, with a reason; never edited here.
+  { name: 'Freeze', sortBy: 'frozenAt', nav: 'Drivers', evidence: true },
   { name: 'SignInAttempt', sortBy: 'at', nav: 'Safety', evidence: true },
   { name: 'AuditEntry', sortBy: 'at', nav: 'Safety', evidence: true },
   { name: 'ConsoleUser', sortBy: 'createdAt', nav: 'Safety' },

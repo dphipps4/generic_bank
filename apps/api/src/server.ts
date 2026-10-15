@@ -252,7 +252,7 @@ export async function buildServer(opts: {
             404,
             bank ? 'task_not_available' : 'unknown_bank',
             bank
-              ? `No promoted crawler serves ${name} on ${bank.id} yet.`
+              ? `No promoted crawler serves ${name} on ${bank.id} right now.`
               : 'There is no bank by that id; GET /banks lists them.',
           ),
           banksThatSupportIt: serving,
@@ -357,15 +357,17 @@ export async function buildServer(opts: {
     if (status === 202) return reply.code(202).header('retry-after', '5').send(r);
     if (status === 200) return reply.code(200).send(r);
     if (status === 503) reply.header('retry-after', '30');
+    // The result's own members (escalationId, resolvable, …) ride along; the problem's status is
+    // the HTTP status, as RFC 9457 has it, never the run's.
     return reply
       .code(status)
       .type('application/problem+json')
       .send({
+        ...r,
         ...problem(status, r.code ?? r.status, r.message ?? '', {
           runId: r.runId,
           retryable: r.retryable ?? false,
         }),
-        ...r,
       });
   }
 
