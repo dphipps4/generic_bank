@@ -949,6 +949,11 @@ provider. A backup that has not succeeded in 26 hours pages someone.
   services one at a time, with health checks.
 - `gitleaks`, `npm audit` and Trivy run on every pull request; a weekly job re-scans the
   deployed digests.
+- **SonarQube** analyzes every pull request: SonarQube Cloud, free for a public repository, or
+  the same scanner against a self-hosted SonarQube server. A quality gate on new code
+  (coverage from vitest's lcov report, duplication, maintainability, security hotspots and
+  vulnerabilities) must pass before the pull request merges, and the result is posted on the
+  pull request.
 
 ---
 
@@ -3210,6 +3215,7 @@ Each entry gives the choice, the reason, and what else was considered.
 | Spelling and prose | **cspell** with a project dictionary, **markdownlint** | Keeps typos out of prompts and docs |
 | Secret scanning | **gitleaks**, from its pinned image | In `make check` (the history and every uncommitted change), in CI over the whole history, and over every built image's filesystem |
 | Dependencies | `npm audit` | |
+| Code quality (Part 2) | **SonarQube** (SonarQube Cloud, free for a public repository; the same scanner works against a self-hosted server) | Every pull request analyzed; a quality gate on new code (coverage from vitest's lcov report, duplication, maintainability, security hotspots, vulnerabilities) must pass before merge, and the result is posted on the pull request |
 | CI | **GitHub Actions** | Typecheck, lint, unit, `check-prompts`, then a compose job for the browser, outcome, escalation, transfer, guard and PII suites |
 
 ---
