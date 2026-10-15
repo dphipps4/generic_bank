@@ -670,8 +670,8 @@ allowlist stay in our code.
   │   ─▶ HAND-BACK: what is known, what is not, what would settle it           │
   └────────────────────────────────────────────────────────────────────────────┘
 
-  each Operator browser step:
-     Operator ──tool call──▶ veto (role, caps, host, secret) ──▶ operator browser
+  each Scout browser step:
+     Scout ──tool call──▶ veto (role, caps, host, secret) ──▶ scout browser
          ▲                                                              │
          │                                                     masked screenshot
          │                                                              ▼
@@ -683,8 +683,8 @@ allowlist stay in our code.
 
 | Role | Model | Writes | Sees |
 |---|---|---|---|
-| Operator | `claude-opus-5-5` | the driver bundle and its tests | masked screens, tool results, the knowledge pack |
-| Supervisor | `claude-sonnet-5-5` | step verdicts; lessons at the end | the screenshot and step, never the Operator's reasoning |
+| Scout | `claude-sonnet-5-5` | browser steps, as the Supervisor directs | masked screens, tool results, the knowledge pack |
+| Supervisor | `claude-opus-5-5` | the next step; the profile, each claim citing frames, seen or guess; lessons | every frame (screenshot and visible-page JSON), never the Scout's reasoning |
 
 The tools are a closed set: browser actions by control reference, a credential by field name, a
 person's code, the bundle, lint, tests, evals, live verification, Memory and catalog reads,
@@ -693,7 +693,7 @@ request or leaves the host allowlist; transfer work stops at the review page.
 
 ### Config and State
 
-Caps live in one import-free file: $25 a run, $150 a rolling week, 6 Operator turns, 6 live
+Caps live in one import-free file: $25 a run, $150 a rolling week, 6 Scout turns, 6 live
 sign-ins, 4 active hours, 3 failed-check turns, 2 live verifications, $1 kept for lessons. A run
 can lower a cap, never raise it; the spend meter fails closed. Mock mode replays recorded model
 responses, so no API key is needed.
