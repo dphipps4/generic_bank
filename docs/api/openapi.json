@@ -1,0 +1,831 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Generic Bank Task API",
+    "version": "1",
+    "description": "Typed tasks at banks that have no API, done by operating each bank’s website the way a person would. No money moves without a person’s approval. Get a token with `make api-token`, press Authorize, and paste it."
+  },
+  "tags": [
+    {
+      "name": "tasks"
+    },
+    {
+      "name": "catalog"
+    },
+    {
+      "name": "oauth"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "An OAuth2 access token from POST /oauth/token (or `make api-token`)."
+      }
+    },
+    "schemas": {
+      "TaskResult": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string"
+          },
+          "task": {
+            "type": "string",
+            "enum": [
+              "check-balance",
+              "transfer",
+              "download-statements"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "succeeded",
+              "business_outcome",
+              "needs_human",
+              "handed_off",
+              "escalated",
+              "failed",
+              "expired",
+              "cancelled"
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "message": {
+            "description": "A fixed, customer-safe sentence.",
+            "type": "string"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "accountLabel": {
+                    "type": "string",
+                    "description": "The account as the bank names it, masked."
+                  },
+                  "availableCents": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "currentCents": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "asOf": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  }
+                },
+                "required": [
+                  "accountLabel",
+                  "availableCents",
+                  "currentCents",
+                  "asOf"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "confirmation": {
+                    "type": "string"
+                  },
+                  "seenInHistory": {
+                    "type": "boolean",
+                    "description": "The transfer was read back from the account history."
+                  }
+                },
+                "required": [
+                  "confirmation",
+                  "seenInHistory"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "months": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "month": {
+                          "type": "string"
+                        },
+                        "statement": {
+                          "description": "A stored statement reference, or null.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "note": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "month",
+                        "statement"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "months"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "escalationId": {
+            "type": "string"
+          },
+          "resolvable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "runId",
+          "task",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "detail": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code",
+          "retryable"
+        ],
+        "additionalProperties": false
+      },
+      "BankInfo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{1,30}$",
+            "description": "The bank, by its id from GET /banks."
+          },
+          "brand": {
+            "type": "string"
+          },
+          "productVersion": {
+            "type": "string"
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "task": {
+                  "type": "string",
+                  "enum": [
+                    "check-balance",
+                    "transfer",
+                    "download-statements"
+                  ]
+                },
+                "crawlerVersion": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "task",
+                "crawlerVersion"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "brand",
+          "productVersion",
+          "tasks"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "paths": {
+    "/banks": {
+      "get": {
+        "operationId": "list_banks",
+        "tags": [
+          "catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Every bank the system knows, and the tasks each supports now.",
+        "responses": {
+          "200": {
+            "description": "The banks.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BankInfo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks": {
+      "get": {
+        "operationId": "list_tasks",
+        "tags": [
+          "catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The tasks and their input schemas.",
+        "responses": {
+          "200": {
+            "description": "The catalog."
+          }
+        }
+      }
+    },
+    "/tools": {
+      "get": {
+        "operationId": "list_tools",
+        "tags": [
+          "catalog"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The API as tool definitions an agent loads directly.",
+        "responses": {
+          "200": {
+            "description": "The tools."
+          }
+        }
+      }
+    },
+    "/tasks/check-balance": {
+      "post": {
+        "operationId": "check_balance",
+        "summary": "Reads a member's available and current balance for one account, the way a member-services employee would. Changes nothing.",
+        "tags": [
+          "tasks"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bank": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]{1,30}$",
+                    "description": "The bank, by its id from GET /banks."
+                  },
+                  "memberId": {
+                    "type": "string",
+                    "pattern": "^\\d{6,10}$",
+                    "description": "The bank's member number, exactly as a member-services employee would type it."
+                  },
+                  "account": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 40,
+                    "description": "The account's last four digits, or its nickname as the bank shows it."
+                  }
+                },
+                "required": [
+                  "bank",
+                  "memberId",
+                  "account"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted: running, or waiting on a person. Location names the run."
+          },
+          "400": {
+            "description": "The input did not match the schema; the field that failed is named.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer access token is required.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client may not use this task, or this bank.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such bank, or no promoted crawler serves this task on it.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests; see Retry-After.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/transfer": {
+      "post": {
+        "operationId": "transfer",
+        "summary": "Requests a transfer between a member's own accounts. No money moves until a person approves it in the Console; until then the result is needs_human.",
+        "tags": [
+          "tasks"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bank": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]{1,30}$",
+                    "description": "The bank, by its id from GET /banks."
+                  },
+                  "memberId": {
+                    "type": "string",
+                    "pattern": "^\\d{6,10}$",
+                    "description": "The bank's member number, exactly as a member-services employee would type it."
+                  },
+                  "from": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 40,
+                    "description": "The account's last four digits, or its nickname as the bank shows it."
+                  },
+                  "to": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 40,
+                    "description": "The account's last four digits, or its nickname as the bank shows it."
+                  },
+                  "amountCents": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 2500000,
+                    "description": "The amount in cents."
+                  },
+                  "memo": {
+                    "type": "string",
+                    "maxLength": 32
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 80,
+                    "description": "The same key always returns the same run, so a retry never moves money twice."
+                  }
+                },
+                "required": [
+                  "bank",
+                  "memberId",
+                  "from",
+                  "to",
+                  "amountCents",
+                  "idempotencyKey"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted: running, or waiting on a person. Location names the run."
+          },
+          "400": {
+            "description": "The input did not match the schema; the field that failed is named.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer access token is required.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client may not use this task, or this bank.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such bank, or no promoted crawler serves this task on it.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests; see Retry-After.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/download-statements": {
+      "post": {
+        "operationId": "download_statements",
+        "summary": "Fetches monthly statements for one account. Changes nothing.",
+        "tags": [
+          "tasks"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "bank": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]{1,30}$",
+                    "description": "The bank, by its id from GET /banks."
+                  },
+                  "memberId": {
+                    "type": "string",
+                    "pattern": "^\\d{6,10}$",
+                    "description": "The bank's member number, exactly as a member-services employee would type it."
+                  },
+                  "account": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 40,
+                    "description": "The account's last four digits, or its nickname as the bank shows it."
+                  },
+                  "months": {
+                    "minItems": 1,
+                    "maxItems": 24,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}$"
+                    },
+                    "description": "Months as YYYY-MM."
+                  }
+                },
+                "required": [
+                  "bank",
+                  "memberId",
+                  "account",
+                  "months"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted: running, or waiting on a person. Location names the run."
+          },
+          "400": {
+            "description": "The input did not match the schema; the field that failed is named.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer access token is required.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client may not use this task, or this bank.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such bank, or no promoted crawler serves this task on it.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests; see Retry-After.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{runId}": {
+      "get": {
+        "operationId": "get_task",
+        "tags": [
+          "tasks"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A run’s current result; `wait` long-polls up to 30 seconds.",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "wait",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "succeeded or handed_off.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResult"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "running or needs_human (awaiting_staff_code, awaiting_approval)."
+          },
+          "409": {
+            "description": "escalated: unknown_screen, stuck, ambiguous_outcome, guard_tripped.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "expired or cancelled.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "business_outcome: no_such_member, member_closed, no_such_account, insufficient_funds, permission_denied, account_restricted, limit_exceeded, invalid_amount, approval_rejected.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "failed, and a retry will not help.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "failed, and a retry may help; see Retry-After.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth/token": {
+      "post": {
+        "operationId": "token",
+        "tags": [
+          "oauth"
+        ],
+        "summary": "Exchange a one-time code, or a refresh token, for tokens. Refresh tokens rotate; a spent one revokes its family.",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "grant_type": {
+                    "enum": [
+                      "authorization_code",
+                      "refresh_token"
+                    ]
+                  },
+                  "client_id": {
+                    "type": "string"
+                  },
+                  "client_secret": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "string"
+                  },
+                  "refresh_token": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "grant_type"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "An access token (15 minutes) and a refresh token (30 days)."
+          },
+          "400": {
+            "description": "invalid_grant"
+          },
+          "401": {
+            "description": "invalid_client"
+          }
+        }
+      }
+    },
+    "/oauth/revoke": {
+      "post": {
+        "operationId": "revoke",
+        "tags": [
+          "oauth"
+        ],
+        "summary": "Revoke a token and its whole family.",
+        "responses": {
+          "200": {
+            "description": "Revoked, or never valid."
+          }
+        }
+      }
+    }
+  }
+}

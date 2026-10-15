@@ -349,3 +349,18 @@ model ApiToken {
 
   @@index([familyId])
 }
+
+// ── The banks the system knows ──────────────────────────────────────────────
+// Which banks exist is the registry's answer: a bank is listed here, and a task is available on it
+// when a promoted driver serves that task (Driver, by bank id).
+
+model Bank {
+  id             String   @id
+  brand          String
+  productVersion String
+  /// Where the Runner reaches the bank's console.
+  url            String
+  /// The order banks are listed in.
+  position       Int      @default(0)
+  createdAt      DateTime @default(now())
+}

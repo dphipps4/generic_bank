@@ -1,0 +1,278 @@
+// What the API says about itself: the banks and what each supports, the tool definitions an agent
+// loads, and the OpenAPI document. All three are generated from the same zod contracts as the
+// endpoints, so they cannot drift apart (a test holds them to it).
+import { z } from 'zod';
+import { BankInfo, CODES, ProblemDetails, TASKS, type TaskName, TaskResult } from '@gb/contracts';
+import type { Sql } from '@gb/oauth';
+
+export type Task = TaskName;
+
+/** Each bank in the registry, with the tasks a promoted driver serves on it today. */
+export async function banks(sql: Sql): Promise<BankInfo[]> {
+  const r = await sql.query<{
+    id: string;
+    brand: string;
+    productVersion: string;
+    task: string | null;
+    version: number | null;
+  }>(
+    `SELECT b.id, b.brand, b."productVersion", d.task, v.version
+       FROM "Bank" b
+       LEFT JOIN "Driver" d ON d.tenant = b.id AND d.state = 'promoted'
+       LEFT JOIN "DriverVersion" v ON v.id = d."activeVersionId"
+      ORDER BY b.position, b.id, d.task`,
+  );
+  const out = new Map<string, BankInfo>();
+  for (const row of r.rows) {
+    const b = out.get(row.id) ?? {
+      id: row.id,
+      brand: row.brand,
+      productVersion: row.productVersion,
+      tasks: [],
+    };
+    if (row.task && row.task in TASKS && row.version !== null)
+      b.tasks.push({ task: row.task as Task, crawlerVersion: `v${row.version}` });
+    out.set(row.id, b);
+  }
+  return [...out.values()];
+}
+
+// ── Tools ────────────────────────────────────────────────────────────────────
+
+export interface ToolDef {
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
+  /** The endpoint the agent calls itself, with its own access token. */
+  endpoint: { method: 'GET' | 'POST'; path: string };
+}
+
+const schema = (s: z.ZodType) => {
+  const { $schema, ...rest } = z.toJSONSchema(s) as Record<string, unknown>;
+  return rest;
+};
+
+export const TASK_TOOLS: Record<Task, { tool: string; description: string }> = {
+  'check-balance': {
+    tool: 'check_balance',
+    description:
+      "Reads a member's available and current balance for one account, the way a member-services employee would. Changes nothing.",
+  },
+  transfer: {
+    tool: 'transfer',
+    description:
+      "Requests a transfer between a member's own accounts. No money moves until a person approves it in the Console; until then the result is needs_human.",
+  },
+  'download-statements': {
+    tool: 'download_statements',
+    description: 'Fetches monthly statements for one account. Changes nothing.',
+  },
+};
+
+export function tools(): ToolDef[] {
+  return [
+    {
+      name: 'list_banks',
+      description: 'Lists every bank the system knows and the tasks each supports right now.',
+      input_schema: { type: 'object', properties: {}, additionalProperties: false },
+      endpoint: { method: 'GET', path: '/banks' },
+    },
+    ...(Object.keys(TASKS) as Task[]).map((t) => ({
+      name: TASK_TOOLS[t].tool,
+      description: TASK_TOOLS[t].description,
+      input_schema: schema(TASKS[t]),
+      endpoint: { method: 'POST' as const, path: `/tasks/${t}` },
+    })),
+    {
+      name: 'get_task',
+      description:
+        "Reads a task's current result by its run id, waiting up to `wait` seconds for it to settle. Never starts anything.",
+      input_schema: {
+        type: 'object',
+        properties: {
+          runId: { type: 'string' },
+          wait: { type: 'integer', minimum: 0, maximum: 30 },
+        },
+        required: ['runId'],
+        additionalProperties: false,
+      },
+      endpoint: { method: 'GET', path: '/tasks/{runId}' },
+    },
+  ];
+}
+
+// ── OpenAPI ──────────────────────────────────────────────────────────────────
+
+const problemResponse = (description: string) => ({
+  description,
+  content: {
+    'application/problem+json': { schema: { $ref: '#/components/schemas/ProblemDetails' } },
+  },
+});
+
+/** The result codes under each status, as the examples in the document. */
+const example = (status: keyof typeof CODES) => Object.keys(CODES[status]).join(', ');
+
+export function openapi(): Record<string, unknown> {
+  const taskPaths = Object.fromEntries(
+    (Object.keys(TASKS) as Task[]).map((t) => [
+      `/tasks/${t}`,
+      {
+        post: {
+          operationId: TASK_TOOLS[t].tool,
+          summary: TASK_TOOLS[t].description,
+          tags: ['tasks'],
+          security: [{ bearer: [] }],
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: schema(TASKS[t]) } },
+          },
+          responses: {
+            '202': {
+              description: 'Accepted: running, or waiting on a person. Location names the run.',
+            },
+            '400': problemResponse(
+              'The input did not match the schema; the field that failed is named.',
+            ),
+            '401': problemResponse('A valid bearer access token is required.'),
+            '403': problemResponse('The client may not use this task, or this bank.'),
+            '404': problemResponse('No such bank, or no promoted crawler serves this task on it.'),
+            '429': problemResponse('Too many requests; see Retry-After.'),
+          },
+        },
+      },
+    ]),
+  );
+  return {
+    openapi: '3.1.0',
+    info: {
+      title: 'Generic Bank Task API',
+      version: '1',
+      description:
+        'Typed tasks at banks that have no API, done by operating each bank’s website the way a person would. No money moves without a person’s approval. Get a token with `make api-token`, press Authorize, and paste it.',
+    },
+    tags: [{ name: 'tasks' }, { name: 'catalog' }, { name: 'oauth' }],
+    components: {
+      securitySchemes: {
+        bearer: {
+          type: 'http',
+          scheme: 'bearer',
+          description: 'An OAuth2 access token from POST /oauth/token (or `make api-token`).',
+        },
+      },
+      schemas: {
+        TaskResult: schema(TaskResult),
+        ProblemDetails: schema(ProblemDetails),
+        BankInfo: schema(BankInfo),
+      },
+    },
+    paths: {
+      '/banks': {
+        get: {
+          operationId: 'list_banks',
+          tags: ['catalog'],
+          security: [{ bearer: [] }],
+          summary: 'Every bank the system knows, and the tasks each supports now.',
+          responses: {
+            '200': {
+              description: 'The banks.',
+              content: {
+                'application/json': {
+                  schema: { type: 'array', items: { $ref: '#/components/schemas/BankInfo' } },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/tasks': {
+        get: {
+          operationId: 'list_tasks',
+          tags: ['catalog'],
+          security: [{ bearer: [] }],
+          summary: 'The tasks and their input schemas.',
+          responses: { '200': { description: 'The catalog.' } },
+        },
+      },
+      '/tools': {
+        get: {
+          operationId: 'list_tools',
+          tags: ['catalog'],
+          security: [{ bearer: [] }],
+          summary: 'The API as tool definitions an agent loads directly.',
+          responses: { '200': { description: 'The tools.' } },
+        },
+      },
+      ...taskPaths,
+      '/tasks/{runId}': {
+        get: {
+          operationId: 'get_task',
+          tags: ['tasks'],
+          security: [{ bearer: [] }],
+          summary: 'A run’s current result; `wait` long-polls up to 30 seconds.',
+          parameters: [
+            { name: 'runId', in: 'path', required: true, schema: { type: 'string' } },
+            {
+              name: 'wait',
+              in: 'query',
+              required: false,
+              schema: { type: 'integer', minimum: 0, maximum: 30 },
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'succeeded or handed_off.',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/TaskResult' } },
+              },
+            },
+            '202': { description: 'running or needs_human (' + example('needs_human') + ').' },
+            '409': problemResponse('escalated: ' + example('escalated') + '.'),
+            '410': problemResponse('expired or cancelled.'),
+            '422': problemResponse('business_outcome: ' + example('business_outcome') + '.'),
+            '502': problemResponse('failed, and a retry will not help.'),
+            '503': problemResponse('failed, and a retry may help; see Retry-After.'),
+          },
+        },
+      },
+      '/oauth/token': {
+        post: {
+          operationId: 'token',
+          tags: ['oauth'],
+          summary:
+            'Exchange a one-time code, or a refresh token, for tokens. Refresh tokens rotate; a spent one revokes its family.',
+          requestBody: {
+            content: {
+              'application/x-www-form-urlencoded': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    grant_type: { enum: ['authorization_code', 'refresh_token'] },
+                    client_id: { type: 'string' },
+                    client_secret: { type: 'string' },
+                    code: { type: 'string' },
+                    refresh_token: { type: 'string' },
+                  },
+                  required: ['grant_type'],
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { description: 'An access token (15 minutes) and a refresh token (30 days).' },
+            '400': { description: 'invalid_grant' },
+            '401': { description: 'invalid_client' },
+          },
+        },
+      },
+      '/oauth/revoke': {
+        post: {
+          operationId: 'revoke',
+          tags: ['oauth'],
+          summary: 'Revoke a token and its whole family.',
+          responses: { '200': { description: 'Revoked, or never valid.' } },
+        },
+      },
+    },
+  };
+}

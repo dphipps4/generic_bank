@@ -9,8 +9,10 @@ const cfg = loadConfig({
   CONTROL_DATABASE_URL: z.string().startsWith('postgresql://'),
   API_PORT: port(8000),
 });
+const control = sql(cfg.CONTROL_DATABASE_URL);
 const app = await buildServer({
-  oauth: oauth(sql(cfg.CONTROL_DATABASE_URL), cfg.API_TOKEN_HASH_KEY),
+  oauth: oauth(control, cfg.API_TOKEN_HASH_KEY),
+  sql: control,
   logger: true,
 });
 await app.listen({ host: '0.0.0.0', port: cfg.API_PORT });

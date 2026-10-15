@@ -11,7 +11,7 @@ let o: ReturnType<typeof oauth>;
 beforeAll(async () => {
   db = await controlDb();
   o = oauth(db, KEY);
-  app = await buildServer({ oauth: o });
+  app = await buildServer({ oauth: o, sql: db });
 });
 afterAll(() => db.close());
 
@@ -163,7 +163,8 @@ describe('the Task API, with OAuth2', () => {
     expect(wrongBank.json().code).toBe('insufficient_scope');
     expect(wrongBank.headers['www-authenticate']).toContain('insufficient_scope');
     expect((await call('example', 'download-statements')).statusCode).toBe(400);
-    expect((await call('example')).statusCode).toBe(501);
+    // The scope allows it; the registry then says no crawler serves it there yet.
+    expect((await call('example')).json().code).toBe('task_not_available');
   });
 
   it('refuses invalid input with the field that failed', async () => {
@@ -180,7 +181,7 @@ describe('the Task API, with OAuth2', () => {
 
   it('rate-limits token requests per client', async () => {
     let t = 0;
-    const limited = await buildServer({ oauth: o, now: () => t });
+    const limited = await buildServer({ oauth: o, sql: db, now: () => t });
     const ask = () =>
       limited.inject({
         method: 'POST',
