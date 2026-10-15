@@ -296,6 +296,7 @@
     "/banks": {
       "get": {
         "operationId": "list_banks",
+        "summary": "Lists every bank the system knows and the tasks each supports right now. Never contacts a bank.",
         "tags": [
           "catalog"
         ],
@@ -304,7 +305,6 @@
             "bearer": []
           }
         ],
-        "summary": "Every bank the system knows, and the tasks each supports now.",
         "responses": {
           "200": {
             "description": "The banks.",
@@ -352,7 +352,7 @@
             "bearer": []
           }
         ],
-        "summary": "The API as tool definitions an agent loads directly.",
+        "summary": "The API as tool definitions an agent loads directly. A tool call returns the endpoint’s answer, flagged as an error unless it is 200 (succeeded, handed_off) or 202 (waiting).",
         "responses": {
           "200": {
             "description": "The tools."
@@ -363,7 +363,7 @@
     "/tasks/check-balance": {
       "post": {
         "operationId": "check_balance",
-        "summary": "Reads a member's available and current balance for one account, the way a member-services employee would. Changes nothing.",
+        "summary": "Reads a member's available and current balance for one account, the way a member-services employee would. Never changes anything at the bank, and never shows a full account number.",
         "tags": [
           "tasks"
         ],
@@ -473,7 +473,7 @@
     "/tasks/transfer": {
       "post": {
         "operationId": "transfer",
-        "summary": "Requests a transfer between a member's own accounts. No money moves until a person approves it in the Console; until then the result is needs_human. To ask again, send the same idempotencyKey: it returns the same run, never a second transfer.",
+        "summary": "Requests a transfer between a member's own accounts. Never moves money until a person approves it in the Console; until then the result is needs_human. To ask again, send the same idempotencyKey: it returns the same run, never a second transfer.",
         "tags": [
           "tasks"
         ],
@@ -670,7 +670,7 @@
     "/tasks/download-statements": {
       "post": {
         "operationId": "download_statements",
-        "summary": "Fetches an account's monthly statements: one entry per month, either a reference to the stored PDF (GET /statements/{ref}) or the bank's own words for why it has none. Changes nothing.",
+        "summary": "Fetches an account's monthly statements: one entry per month, either a reference for get_statement or the bank's own words for why it has none. Never changes anything at the bank.",
         "tags": [
           "tasks"
         ],
@@ -791,6 +791,7 @@
     "/tasks/{runId}": {
       "get": {
         "operationId": "get_task",
+        "summary": "Reads a task's current result by its runId, waiting up to `wait` seconds for it to settle. Never starts a task, and never repeats one.",
         "tags": [
           "tasks"
         ],
@@ -799,14 +800,14 @@
             "bearer": []
           }
         ],
-        "summary": "A run’s current result; `wait` long-polls up to 30 seconds.",
         "parameters": [
           {
             "name": "runId",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "The runId a task call returned."
             }
           },
           {
@@ -814,6 +815,7 @@
             "in": "query",
             "required": false,
             "schema": {
+              "description": "Seconds to wait for the run to settle, up to 30.",
               "type": "integer",
               "minimum": 0,
               "maximum": 30
@@ -890,6 +892,7 @@
     "/statements/{ref}": {
       "get": {
         "operationId": "get_statement",
+        "summary": "Fetches a statement a download_statements run kept, by the reference in its result: the PDF exactly as the bank sent it. Needs tasks:statements. Never contacts the bank, and never returns a statement another client's run kept.",
         "tags": [
           "tasks"
         ],
@@ -898,7 +901,6 @@
             "bearer": []
           }
         ],
-        "summary": "A statement a download_statements run kept, by the reference in its result: the PDF exactly as the bank sent it. Needs tasks:statements.",
         "parameters": [
           {
             "name": "ref",
@@ -906,7 +908,8 @@
             "required": true,
             "schema": {
               "type": "string",
-              "pattern": "^st_[0-9a-f]{16}_\\d{4}-\\d{2}$"
+              "pattern": "^st_([0-9a-f]{16})_(\\d{4}-(?:0[1-9]|1[0-2]))$",
+              "description": "A statement reference from a download_statements result."
             }
           }
         ],

@@ -335,6 +335,40 @@ export function problem(
   };
 }
 
+// ── Tools ────────────────────────────────────────────────────────────────────
+
+/** A stored statement's reference, as a download_statements result gives it: the run and the month. */
+export const STATEMENT_REF = /^st_([0-9a-f]{16})_(\d{4}-(?:0[1-9]|1[0-2]))$/;
+
+/** Reading a run's result: what the get_task tool takes. */
+export const GetTaskInput = z.object({
+  runId: z.string().describe('The runId a task call returned.'),
+  wait: z
+    .number()
+    .int()
+    .min(0)
+    .max(30)
+    .optional()
+    .describe('Seconds to wait for the run to settle, up to 30.'),
+});
+
+/** Fetching a stored statement: what the get_statement tool takes. */
+export const GetStatementInput = z.object({
+  ref: z
+    .string()
+    .regex(STATEMENT_REF, 'a statement reference from a download_statements result')
+    .describe('A statement reference from a download_statements result.'),
+});
+
+/**
+ * A tool call's result (plan, §D.7): the endpoint's answer as it is, flagged as an error for every
+ * answer but succeeded and handed_off (200) and the waiting states (202). A refusal (400, 401, 403,
+ * 404, 409, 429) is an error too.
+ */
+export function toolResult<T>(httpStatus: number, body: T): { isError: boolean; content: T } {
+  return { isError: httpStatus !== 200 && httpStatus !== 202, content: body };
+}
+
 // ── The caller gets our words ────────────────────────────────────────────────
 
 const LEAKS = [
