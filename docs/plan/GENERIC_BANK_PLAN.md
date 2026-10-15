@@ -1038,7 +1038,7 @@ vendor product, each configured, branded and versioned differently.
 | Account wording | "Account ending in 7890" | "Share ****3456-S01" | "Acct 1234-5678-90" | "··· 7890 (Checking)" |
 | Transfer wording | "Transfer Funds", "Submit transfer" | "Move Money", "Confirm" (an image) | "Internal Transfer", "Post" | split over two pages: "Amount", then "Accounts", then "Authorize" |
 | Staff code | text or email, chooser page | email only | text only, and a "Terms updated: Acknowledge" page after sign-in | authenticator-style 6-digit code, no chooser |
-| Supervisor approval over | $2,500 | $1,000 | $500 | $2,000, and always for transfers between members |
+| Supervisor approval over | $2,500 | $1,000 | $500 | $2,000 |
 | Text drawn as images | none | several labels and the "Confirm" button | the section headings on the summary | none |
 
 All four are the same code (`apps/bank`) started with a different tenant config. All

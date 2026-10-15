@@ -1,6 +1,7 @@
 import { randomInt } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import {
+  checkAuthenticator,
   checkCode,
   checkPassword,
   createSession,
@@ -148,6 +149,7 @@ async function handOff(bank: Bank, reply: FastifyReply, sessionToken: string) {
 
 function codePage(c: Ctx, bank: Bank, o: { error?: string }) {
   const d = dialect(bank.t, bank.uiVersion, 'code-enter');
+  const app = bank.t.codeStyle === 'authenticator';
   const rows =
     row(c, d, 'Code', input(c, 'code', { size: 8 })) +
     `<TR><TD COLSPAN="2"></TD><TD>${input(c, 'trust', { type: 'checkbox', value: '1' })} ${font(c, `Trust this workstation for ${WORKSTATION_DAYS} days`)}</TD></TR>`;
@@ -156,14 +158,19 @@ function codePage(c: Ctx, bank: Bank, o: { error?: string }) {
     body: nest(
       c,
       d,
-      `${heading(c, d, 'Enter the 6-digit code we sent.')}${o.error ? message(c, o.error) : ''}
+      `${heading(c, d, app ? 'Enter the 6-digit code from your authenticator app.' : 'Enter the 6-digit code we sent.')}${o.error ? message(c, o.error) : ''}
 ${form(c, d, `${c.base}code/enter`, rows, submit(c, d, 'Verify'), '_top')}
-<P>${linkButton(c, `${c.base}code`, 'Send a new code', '_top')}</P>`,
+${app ? '' : `<P>${linkButton(c, `${c.base}code`, 'Send a new code', '_top')}</P>`}`,
     ),
   });
 }
 
+/** Operators whose hand-off has bounced today, per bank (bank 4). */
+const bouncedBy = new WeakMap<Bank, Set<string>>();
+
 export function signInRoutes(app: FastifyInstance, bank: Bank) {
+  const bounced = bouncedBy.get(bank) ?? new Set<string>();
+  bouncedBy.set(bank, bounced);
   const base = bank.t.basePath;
   const L = bank.t.labels;
 
@@ -217,6 +224,8 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
   app.get(`${base}code`, async (req, reply) => {
     const cs = await codeSession(bank, req);
     if (!cs) return reply.redirect(`${base}signin`);
+    // Bank 4: the code is already on the operator's authenticator app; nothing to send.
+    if (bank.t.codeStyle === 'authenticator') return reply.redirect(`${base}code/enter`);
     if (bank.t.codeChannels.length === 1) {
       await sendCode(
         bank.db,
@@ -270,9 +279,18 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
     if (!cs) return reply.redirect(`${base}signin`);
     const now = bank.now();
     const f = readFields(req.body ?? {}, req.nonce, ['code', 'trust'] as const);
-    const r = await checkCode(bank.db, cs.operator.pk, 'sign-in', f.code, now);
+    const r =
+      bank.t.codeStyle === 'authenticator'
+        ? await checkAuthenticator(bank.db, cs.operator.pk, f.code, now)
+        : await checkCode(bank.db, cs.operator.pk, 'sign-in', f.code, now);
     if (r !== 'ok') {
-      const error = r === 'wrong' ? 'That code is not correct.' : 'That code has expired.';
+      // Bank 4: an expired code just clears the field, with no message.
+      const silent = r === 'expired' && has(bank.t, 'silent-code-clear');
+      const error = silent
+        ? undefined
+        : r === 'wrong'
+          ? 'That code is not correct.'
+          : 'That code has expired.';
       return html(reply, codePage(ctxOf(bank, req), bank, { error }));
     }
     if (f.trust === '1') {
@@ -315,6 +333,24 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
     });
     // Bank 4 signs in on its second origin; the console lives on the main one.
     const to = bank.t.secondOrigin === 'signin' ? origins(bank, req).main : '';
+    // Bank 4: the first hand-off of the day draws the console for a moment, then drops the
+    // operator back on the sign-in page. Signing in again works.
+    const day = `${s.operatorPk}:${now.toISOString().slice(0, 10)}`;
+    if (has(bank.t, 'handoff-bounce') && !bounced.has(day)) {
+      bounced.add(day);
+      await endSession(bank.db, s.token);
+      const c = ctxOf(bank, req);
+      const d = dialect(bank.t, bank.uiVersion, 'bounce');
+      return html(
+        reply,
+        doc(c, d, {
+          title: 'CoreLink',
+          footer: false,
+          body: `${heading(c, d, bank.t.brand)}<P>${font(c, 'Loading your workspace&hellip;')}</P>`,
+          script: `setTimeout(function () { top.location.replace(${js(`${to}${base}signin`)}); }, 900);`,
+        }),
+      );
+    }
     return reply.redirect(`${to}${base}${bank.t.termsAfterSignIn ? 'terms' : 'console'}`);
   });
 

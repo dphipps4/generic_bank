@@ -62,38 +62,38 @@ export function transferRoutes(app: FastifyInstance, bank: Bank) {
   const L = bank.t.labels;
   const at = (n: string, rest = '') => `${base}members/${n}/transfer${rest}`;
 
+  /**
+   * The transfer form. Most banks ask for everything on one page; bank 4 splits it: the amount and
+   * memo first, then the accounts on a page of their own.
+   */
   async function formPage(
     a: MainArgs,
-    o: { error?: string; values?: Partial<Pending> & { amount?: string } },
+    o: {
+      error?: string;
+      values?: Partial<Pending> & { amount?: string };
+      step?: 'all' | 'amount' | 'accounts';
+    },
   ) {
     const { c, d } = a;
     const n = a.member!.number;
     const v = o.values ?? {};
-    const rows =
-      row(
-        c,
-        d,
-        'From',
-        `<SELECT NAME="${fieldName(c.nonce, 'from')}"><OPTION VALUE="">Loading accounts&hellip;</OPTION></SELECT>`,
-      ) +
-      row(
-        c,
-        d,
-        'To',
-        `<SELECT NAME="${fieldName(c.nonce, 'to')}"><OPTION VALUE="">Loading accounts&hellip;</OPTION></SELECT>`,
-      ) +
-      row(
-        c,
-        d,
-        'Amount',
-        amountControl(c, v.amount ?? (v.amountCents ? (v.amountCents / 100).toFixed(2) : '')),
-      ) +
+    const step = o.step ?? (bank.t.splitTransfer ? 'amount' : 'all');
+    const select = (k: 'from' | 'to') =>
+      `<SELECT NAME="${fieldName(c.nonce, k)}"><OPTION VALUE="">Loading accounts&hellip;</OPTION></SELECT>`;
+    const accountRows = row(c, d, 'From', select('from')) + row(c, d, 'To', select('to'));
+    const amount = v.amount ?? (v.amountCents ? (v.amountCents / 100).toFixed(2) : '');
+    const amountRows =
+      row(c, d, 'Amount', amountControl(c, amount)) +
       row(c, d, 'Memo', input(c, 'memo', { size: 24, value: v.memo ?? '' }));
+    const rows =
+      step === 'all' ? accountRows + amountRows : step === 'amount' ? amountRows : accountRows;
+    const action = step === 'accounts' ? at(n, '/accounts') : at(n);
+    const button = step === 'accounts' ? 'Review' : L.continue;
     // The account options exist only after this script has run.
-    const script = `CL.get(${js(`${base}api/members/${n}/accounts`)}, function (err, r) {
+    const options = `CL.get(${js(`${base}api/members/${n}/accounts`)}, function (err, r) {
   if (err) { (${onSignedOut(base)})(err); return; }
-  var sel = document.forms[0].getElementsByTagName('select'), want = [${v.fromId ?? 0}, ${v.toId ?? 0}];
-  for (var s = 0; s < 2; s++) {
+  var sel = document.forms[document.forms.length - 1].getElementsByTagName('select'), want = [${v.fromId ?? 0}, ${v.toId ?? 0}];
+  for (var s = 0; s < sel.length; s++) {
     sel[s].options.length = 0;
     sel[s].options[0] = new Option('Choose an account', '');
     for (var i = 0; i < r.accounts.length; i++) {
@@ -102,12 +102,13 @@ export function transferRoutes(app: FastifyInstance, bank: Bank) {
     }
   }
 });`;
+    const title = step === 'accounts' ? `${L.transferFunds}: accounts` : L.transferFunds;
     return {
-      script: script + keypressScript(c) + coveringBar(),
+      script: (step === 'amount' ? '' : options) + keypressScript(c) + coveringBar(),
       body: nest(
         c,
         d,
-        `${heading(c, d, L.transferFunds)}${o.error ? message(c, o.error) : ''}${form(c, d, at(n), rows, submit(c, d, L.continue))}
+        `${heading(c, d, title)}${o.error ? message(c, o.error) : ''}${form(c, d, action, rows, submit(c, d, button))}
 <P>${linkButton(c, `${base}members/${n}`, 'Back to member summary')}</P>`,
       ),
     };
@@ -262,6 +263,29 @@ ${form(c, dd, at(p.member, '/approve'), rows, submit(c, dd, 'Approve'))}<P>${lin
       { page: 'transfer', title: L.transferFunds, member: req.params.n },
       async (a) => {
         const f = readFields(req.body ?? {}, req.nonce, ['from', 'to', 'amount', 'memo'] as const);
+        if (bank.t.splitTransfer) {
+          // Bank 4, page one: the amount and memo. The accounts come on the next page.
+          const cents = parseDollars(f.amount);
+          const kept = { amount: f.amount, memo: f.memo };
+          if (a.c.hz.on('validation-error') || cents === null || cents < 1 || cents > 2_500_000)
+            return formPage(a, { error: REFUSAL_TEXT.validation, values: kept, step: 'amount' });
+          if (!MEMO.test(f.memo))
+            return formPage(a, {
+              error: 'The memo may have up to 32 letters, digits, spaces and dashes.',
+              values: kept,
+              step: 'amount',
+            });
+          const partial: Pending = {
+            member: a.member!.number,
+            fromId: 0,
+            toId: 0,
+            amountCents: cents,
+            memo: f.memo.trim(),
+            ref: randomBytes(4).toString('hex').toUpperCase(),
+          };
+          await setSession(bank.db, a.session.token, { pending: partial });
+          return { respond: () => reply.redirect(at(a.member!.number, '/accounts')) };
+        }
         const values = {
           fromId: Number(f.from) || 0,
           toId: Number(f.to) || 0,
@@ -304,6 +328,65 @@ ${form(c, dd, at(p.member, '/approve'), rows, submit(c, dd, 'Approve'))}<P>${lin
       },
     ),
   );
+
+  // Bank 4, page two: the accounts, for the amount chosen on page one.
+  if (bank.t.splitTransfer) {
+    app.get<{ Params: { n: string } }>(at(':n', '/accounts'), async (req, reply) =>
+      mainFrame(
+        bank,
+        req,
+        reply,
+        { page: 'transfer', title: L.transferFunds, member: req.params.n },
+        async (a) => {
+          const p = pendingFor(a);
+          if (!p) return { respond: () => reply.redirect(at(a.member!.number)) };
+          return formPage(a, { values: p, step: 'accounts' });
+        },
+      ),
+    );
+    app.post<{ Params: { n: string }; Body: Record<string, string> }>(
+      at(':n', '/accounts'),
+      async (req, reply) =>
+        mainFrame(
+          bank,
+          req,
+          reply,
+          { page: 'transfer', title: L.transferFunds, member: req.params.n },
+          async (a) => {
+            const p = pendingFor(a);
+            if (!p) return { respond: () => reply.redirect(at(a.member!.number)) };
+            const f = readFields(req.body ?? {}, req.nonce, ['from', 'to'] as const);
+            const chosen = { ...p, fromId: Number(f.from) || 0, toId: Number(f.to) || 0 };
+            if (!chosen.fromId || !chosen.toId)
+              return formPage(a, {
+                error: 'Choose both accounts.',
+                values: chosen,
+                step: 'accounts',
+              });
+            const refusal = await checkTransfer(
+              bank.db,
+              {
+                memberNumber: p.member,
+                fromId: chosen.fromId,
+                toId: chosen.toId,
+                amountCents: p.amountCents,
+                memo: p.memo,
+                operatorPk: a.operator.pk,
+              },
+              bank.now(),
+            );
+            if (refusal)
+              return formPage(a, {
+                error: REFUSAL_TEXT[refusal],
+                values: chosen,
+                step: 'accounts',
+              });
+            await setSession(bank.db, a.session.token, { pending: chosen });
+            return { respond: () => reply.redirect(at(p.member, '/review')) };
+          },
+        ),
+    );
+  }
 
   app.get<{ Params: { n: string } }>(at(':n', '/review'), async (req, reply) =>
     mainFrame(

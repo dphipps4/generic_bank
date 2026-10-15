@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { connectInProcess, type Db, migrate } from '../src/db.js';
+import { totp } from '../src/auth.js';
 import { type HazardName, hazards, signHazards } from '../src/hazards.js';
 import { fieldName } from '../src/markup/dialect.js';
 import { OPERATORS, seed } from '../src/seed.js';
@@ -23,6 +24,7 @@ export const PORTS: Record<TenantId, { main: number; second?: number }> = {
 };
 
 export interface TestBank {
+  tenant: TenantId;
   app: FastifyInstance;
   db: Db;
   base: string;
@@ -65,6 +67,7 @@ export async function testBank(
     }),
   });
   return {
+    tenant: id,
     app,
     db,
     base: t.basePath,
@@ -196,13 +199,30 @@ export async function signIn(
   c = b.client(),
   o: { trust?: boolean } = {},
 ): Promise<Client> {
-  await c.get('signin');
-  await c.post('signin', { operator: OPERATORS.service.id, password: PASSWORDS.service });
-  await c.get('code'); // a bank with one channel sends the code from here
-  await c.post('code', { channel: 'text' });
-  const code = await lastCodeFor(b.db, OPERATORS.service.id);
-  const r = await c.post('code/enter', { code, ...(o.trust ? { trust: '1' } : {}) });
-  const handoff = new URL(r.location, 'http://x').searchParams.get('code') ?? '';
-  await c.get(`auth/complete?code=${encodeURIComponent(handoff)}`);
-  return c;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await c.get('signin');
+    await c.post('signin', { operator: OPERATORS.service.id, password: PASSWORDS.service });
+    await c.get('code'); // a bank with one channel sends the code from here
+    await c.post('code', { channel: 'text' });
+    const r = await c.post('code/enter', {
+      code: await codeFor(b, OPERATORS.service.id),
+      ...(o.trust ? { trust: '1' } : {}),
+    });
+    const handoff = new URL(r.location, 'http://x').searchParams.get('code') ?? '';
+    const done = await c.get(`auth/complete?code=${encodeURIComponent(handoff)}`);
+    // Bank 4 bounces the first hand-off of the day back to sign-in; a person just signs in again.
+    if (done.location) return c;
+  }
+  throw new Error('sign-in did not complete');
+}
+
+/** The code an operator would read: from their phone or email, or their authenticator app. */
+export async function codeFor(b: TestBank, operatorId: string): Promise<string> {
+  const r = await b.db.query<{ totp_secret: string | null }>(
+    'SELECT totp_secret FROM operators WHERE operator_id = $1',
+    [operatorId],
+  );
+  const t = TENANTS[b.tenant];
+  if (t.codeStyle === 'authenticator') return totp(r.rows[0]!.totp_secret!, b.clock.now);
+  return lastCodeFor(b.db, operatorId);
 }

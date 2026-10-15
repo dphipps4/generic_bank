@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS operators (
   email text NOT NULL,
   daily_limit_cents bigint NOT NULL
 );
+ALTER TABLE operators ADD COLUMN IF NOT EXISTS totp_secret text;
 CREATE TABLE IF NOT EXISTS credentials (
   operator_pk int PRIMARY KEY REFERENCES operators(pk),
   hash text NOT NULL
