@@ -44,7 +44,7 @@ const html = (reply: FastifyReply, body: string) =>
 const hydrate = (ms: number) =>
   `setTimeout(function () { var f = document.forms[0]; if (!f) { return; } for (var i = 0; i < f.elements.length; i++) { f.elements[i].disabled = false; } }, ${ms});`;
 
-function signInPage(
+export function signInPage(
   bank: Bank,
   req: FastifyRequest,
   o: { trusted: { id: string; name: string } | null; error?: string; note?: string },
