@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Replace one generated secret with a fresh random value, without showing either.
-#   make secret-rotate FILE=local KEY=API_KEY
+#   make secret-rotate FILE=local KEY=API_TOKEN_HASH_KEY
 source "$(dirname "$0")/lib.sh"
 FILE="${1:-}" KEY="${2:-}"
 [[ -n "$FILE" && -n "$KEY" ]] || die "usage: make secret-rotate FILE=local|ops|factory KEY=NAME"

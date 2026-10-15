@@ -63,7 +63,7 @@ secrets-edit: ## Edit secrets in your editor: make secrets-edit FILE=local|ops|f
 secret-set: ## Set one secret unseen: make secret-set FILE=factory KEY=ANTHROPIC_API_KEY [FROM=path]
 	@$(SCRIPTS)/secret-set.sh "$(FILE)" "$(KEY)" "$(FROM)"
 
-secret-rotate: ## Rotate one generated secret: make secret-rotate FILE=local KEY=API_KEY
+secret-rotate: ## Rotate one generated secret: make secret-rotate FILE=local KEY=API_TOKEN_HASH_KEY
 	@$(SCRIPTS)/secret-rotate.sh "$(FILE)" "$(KEY)"
 
 secrets-keys: ## List the secret names in each file (never the values)
