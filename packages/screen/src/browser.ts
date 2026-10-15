@@ -5,27 +5,35 @@ import { type ChildProcess, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Readable, Writable } from 'node:stream';
 import { Cdp, type Transport } from './cdp.js';
+import { type Identity, identityCommands, MAC, macChrome } from './identity.js';
 
-/** Where the headless shell is: CHROME_PATH, `make browser`'s install, or the Runner image's. */
+/** Where Chrome is: CHROME_PATH, `make browser`'s install, or the Runner image's Debian chromium. */
 export function findChrome(root = process.cwd()): string {
   if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
-  const local = resolve(root, '.run/browser/chrome-headless-shell');
+  const local = resolve(root, '.run/browser/chrome');
+  const inside =
+    process.platform === 'darwin'
+      ? 'Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'
+      : 'chrome';
   if (existsSync(local)) {
     for (const v of readdirSync(local).sort().reverse()) {
       for (const sub of readdirSync(join(local, v))) {
-        const bin = join(local, v, sub, 'chrome-headless-shell');
+        const bin = join(local, v, sub, inside);
         if (existsSync(bin)) return bin;
       }
     }
   }
-  // Debian's /usr/bin/chromium-headless-shell is a shell script that does not exec: killing it
-  // would orphan the browser. Start the real binary.
-  for (const p of ['/usr/lib/chromium/chromium-headless-shell', '/usr/bin/chromium-headless-shell'])
-    if (existsSync(p)) return p;
-  throw new Error('No headless Chromium found: run `make browser`, or set CHROME_PATH.');
+  // Debian's /usr/bin/chromium is a shell script that does not exec: killing it would orphan the
+  // browser. Start the real binary.
+  for (const p of ['/usr/lib/chromium/chromium', '/usr/bin/chromium']) if (existsSync(p)) return p;
+  throw new Error('No Chrome found: run `make browser`, or set CHROME_PATH.');
 }
+
+/** The identity extension (extension/mac.js), beside this package's source and its build. */
+const EXTENSION = fileURLToPath(new URL('../extension', import.meta.url));
 
 /** Ends the browser and every process in its group. */
 function killGroup(child: ChildProcess) {
@@ -82,6 +90,13 @@ export interface LaunchOptions {
   height?: number;
   /** Extra headers on every request, such as a signed X-Hazards in tests. */
   headers?: Record<string, string>;
+  /**
+   * Origins to treat as secure, as HTTPS would make them: the banks, which Part 1 serves over plain
+   * HTTP. Chrome sends its Sec-Fetch headers and client hints only to secure origins.
+   */
+  secureOrigins?: string[];
+  /** The timezone the browser reports: the machine's own (plan, §E.8). */
+  timezone?: string;
 }
 
 export class Browser {
@@ -90,29 +105,59 @@ export class Browser {
     private readonly child: ChildProcess,
     private readonly profile: string,
     readonly options: LaunchOptions,
+    readonly identity: Identity,
   ) {}
 
   static async launch(o: LaunchOptions = {}): Promise<Browser> {
     const profile = mkdtempSync(join(tmpdir(), 'gb-chrome-'));
     const width = o.width ?? 1280;
     const height = o.height ?? 900;
+    const bin = findChrome();
     const child = spawn(
-      findChrome(),
+      bin,
       [
+        // Full Chrome runs in its modern headless mode; the headless shell is headless already.
+        ...(/headless[-_]shell/.test(bin) ? [] : ['--headless=new']),
+
         '--remote-debugging-pipe',
         `--user-data-dir=${profile}`,
         `--window-size=${width},${height}`,
         '--no-first-run',
+        // Never the machine's keychain or password store: on a Mac, full Chrome otherwise asks the
+        // keychain for its "Chromium Safe Storage" key at every launch, a password prompt each time.
+        '--use-mock-keychain',
+        '--password-store=basic',
         '--no-default-browser-check',
         '--disable-background-networking',
         '--disable-component-update',
         '--disable-sync',
-        '--disable-extensions',
         '--mute-audio',
         '--hide-scrollbars',
         // Frames from another origin run in their own process and are attached as their own sessions.
         '--site-per-process',
-        ...(process.platform === 'linux' ? ['--no-sandbox', '--disable-dev-shm-usage'] : []),
+        // No automation marker for the page to read (navigator.webdriver stays false).
+        '--disable-blink-features=AutomationControlled',
+        `--lang=${MAC.locale}`,
+        // The identity extension is loaded over this pipe (Chrome ignores --load-extension).
+        '--enable-unsafe-extension-debugging',
+        // A Mac's display: wide colour gamut and high dynamic range in CSS media queries, as the
+        // engine itself answers them; screenshots keep their colours.
+        '--force-color-profile=scrgb-linear',
+        // Chrome on a Mac has Web Bluetooth; on Linux it sits behind this switch.
+        '--enable-blink-features=WebBluetooth',
+        ...(o.secureOrigins?.length
+          ? [`--unsafely-treat-insecure-origin-as-secure=${o.secureOrigins.join(',')}`]
+          : []),
+        ...(process.platform === 'linux'
+          ? [
+              '--no-sandbox',
+              '--disable-dev-shm-usage',
+              // No GPU in the container: software WebGL, so a page still gets a WebGL context.
+              '--use-gl=angle',
+              '--use-angle=swiftshader',
+              '--enable-unsafe-swiftshader',
+            ]
+          : []),
         'about:blank',
       ],
       // Its own process group, so closing it can end every process it started, renderers included.
@@ -120,8 +165,24 @@ export class Browser {
     );
     child.stderr?.resume();
     const cdp = new Cdp(pipeTransport(child));
-    await cdp.call('Browser.getVersion', {}, { timeoutMs: 20_000 });
-    return new Browser(cdp, child, profile, { ...o, width, height });
+    const { product } = await cdp.call<{ product: string }>(
+      'Browser.getVersion',
+      {},
+      { timeoutMs: 20_000 },
+    );
+    // The identity extension, before the first page exists, so its script runs in every page from
+    // the first one (plan, §E.8). The headless shell has no extensions; full Chrome does.
+    if (!/headless[-_]shell/.test(bin))
+      await cdp.call(
+        'Extensions.loadUnpacked',
+        // Each page has a browser context of its own, which Chrome treats as incognito.
+        { path: EXTENSION, enableInIncognito: true },
+        { timeoutMs: 20_000 },
+      );
+    // The fingerprint, for this engine's own version (plan, §5.1).
+    const timezone =
+      o.timezone ?? process.env.TZ ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return new Browser(cdp, child, profile, { ...o, width, height }, macChrome(product, timezone));
   }
 
   /**
@@ -141,7 +202,7 @@ export class Browser {
       targetId,
       flatten: true,
     });
-    const page = new Page(this.cdp, targetId, sessionId, this.options);
+    const page = new Page(this.cdp, targetId, sessionId, this.options, this.identity);
     await page.init();
     return page;
   }
@@ -185,6 +246,7 @@ export class Page {
     readonly targetId: string,
     readonly sessionId: string,
     private readonly options: LaunchOptions,
+    private readonly identity: Identity,
   ) {}
 
   call<R = Record<string, unknown>>(
@@ -208,7 +270,14 @@ export class Page {
             targetId: info.targetId,
             url: info.url,
           });
-          void this.prepare(child).catch(() => undefined);
+          // The frame waits, paused, until it has its identity, so its first request carries it.
+          void this.prepare(child, 'frame')
+            .catch(() => undefined)
+            .finally(() =>
+              this.cdp
+                .call('Runtime.runIfWaitingForDebugger', {}, { sessionId: child })
+                .catch(() => undefined),
+            );
         }
         if (e.method === 'Target.detachedFromTarget' && e.sessionId === this.sessionId) {
           this.frames.delete(e.params.targetId as string);
@@ -250,18 +319,21 @@ export class Page {
         }
       }),
     );
-    await this.prepare(this.sessionId);
-    await this.call('Emulation.setDeviceMetricsOverride', {
-      width: this.options.width,
-      height: this.options.height,
-      deviceScaleFactor: 1,
-      mobile: false,
-    });
+    await this.prepare(this.sessionId, 'page');
   }
 
   /** What every session needs: page events, the layout domains, auto-attach, extra headers. */
-  private async prepare(sessionId: string) {
+  private async prepare(sessionId: string, kind: 'page' | 'frame') {
     const c = (m: string, p: Record<string, unknown> = {}) => this.cdp.call(m, p, { sessionId });
+    // The identity first, before anything this session loads (plan, §E.8). Screen metrics belong to
+    // the page; a frame takes the rest.
+    for (const [method, params] of identityCommands(this.identity, {
+      width: this.options.width ?? 1280,
+      height: this.options.height ?? 900,
+    })) {
+      if (kind === 'frame' && method === 'Emulation.setDeviceMetricsOverride') continue;
+      await c(method, params as Record<string, unknown>);
+    }
     await c('Page.enable');
     await c('Page.setLifecycleEventsEnabled', { enabled: true });
     await c('DOM.enable');
@@ -270,7 +342,7 @@ export class Page {
       await c('Network.setExtraHTTPHeaders', { headers: this.options.headers });
     await c('Target.setAutoAttach', {
       autoAttach: true,
-      waitForDebuggerOnStart: false,
+      waitForDebuggerOnStart: true,
       flatten: true,
     });
   }
@@ -314,8 +386,22 @@ export class Page {
     return this.loaded.size > 0 && [...this.loaded.values()].every(Boolean);
   }
 
+  /**
+   * The viewport as a picture, one image pixel per CSS pixel: the page is drawn at the Mac's pixel
+   * ratio, and the picture is taken at that ratio's inverse, so fingerprints and masks keep the
+   * screen model's coordinates.
+   */
   async screenshot(): Promise<Buffer> {
-    const r = await this.call<{ data: string }>('Page.captureScreenshot', { format: 'png' });
+    const r = await this.call<{ data: string }>('Page.captureScreenshot', {
+      format: 'png',
+      clip: {
+        x: 0,
+        y: 0,
+        width: this.options.width ?? 1280,
+        height: this.options.height ?? 900,
+        scale: 1 / MAC.devicePixelRatio,
+      },
+    });
     return Buffer.from(r.data, 'base64');
   }
 

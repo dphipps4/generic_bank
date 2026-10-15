@@ -2,6 +2,14 @@
 export { Cdp, CdpClosed, CdpError, CdpTimeout, DEFAULT_TIMEOUT_MS, type Transport } from './cdp.js';
 export { Browser, findChrome, type FrameSession, type LaunchOptions, Page } from './browser.js';
 export {
+  brandsFor,
+  HEADER_TELLS,
+  type Identity,
+  identityCommands,
+  MAC,
+  macChrome,
+} from './identity.js';
+export {
   type Box,
   type Control,
   type FrameInfo,

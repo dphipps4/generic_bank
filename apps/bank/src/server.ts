@@ -36,7 +36,10 @@ export async function buildServer(bank: Bank, logger = false): Promise<FastifyIn
       req.hz = calm;
       return;
     }
-    if (!req.nonce) rotateNonce(bank, req, reply);
+    // A form nonce belongs to the pages its cookie reaches. A request outside them (a browser asks
+    // for /favicon.ico on every site) never carries the cookie; answering it with a fresh nonce
+    // would replace the one the form on screen was drawn with.
+    if (!req.nonce && path.startsWith(base)) rotateNonce(bank, req, reply);
     const h = bank.hazards.forRequest(req.headers[HEADER] as string | undefined, path);
     if (h === 'bad-signature')
       return reply.code(400).type('text/plain').send('Bad X-Hazards header.');

@@ -988,7 +988,7 @@ eval cases, run on demand under their own cap.
 | Prisma | schema, migrations, client for `control` and `memory` |
 | DBOS Transact | durable workflows |
 | PostgreSQL 16, pgvector | all durable data and embeddings |
-| Playwright (Chromium headless shell) | the Runner, the Operator browser, the eval runner |
+| Our DevTools Protocol client, full Chromium (Debian's package) | the Runner, the Operator browser, the eval runner |
 | sharp | masking, image fingerprints, frame comparison |
 | zod, ajv | task contracts, config, prompt answer schemas |
 | pdf-lib, argon2 | the bank's statements and passwords |
