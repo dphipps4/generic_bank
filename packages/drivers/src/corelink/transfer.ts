@@ -4,9 +4,10 @@
 // never presses the bank's submit: that click needs a person's approval and a grant, and is a step
 // of its own. A refusal in the bank's own words ends the run as the business outcome it is, with
 // nothing submitted.
-import { button, choose, click, field, type ScreenModel, type } from '@gb/screen';
-import { type DriverContext, type Outcome, stop, Stop } from '../sdk.js';
-import { next, onTheWay, startSession, unknown } from './session.js';
+import { button, choose, click, field, type ScreenModel, type, withText } from '@gb/screen';
+import { type DriverContext, type Outcome, see, stop, Stop } from '../sdk.js';
+import { readTile } from './check-balance.js';
+import { next, onTheWay, type Session, startSession, unknown } from './session.js';
 
 export interface TransferInput {
   memberId: string;
@@ -138,4 +139,177 @@ export async function prepareTransfer(
     if (e instanceof Stop) return e.outcome;
     throw e;
   }
+}
+
+/** What the run gives the submit: the grant check, the journal, and a person's supervisor code. */
+export interface SubmitHooks {
+  /**
+   * Uses the run's approval grant if, and only if, it matches the review page as read now. The
+   * click happens only after this says yes; it can say yes once (plan, §F.1 step 4).
+   */
+  consume(review: Review): Promise<{ ok: true } | { ok: false; reason: string }>;
+  journal(line: { intent: string; action?: string; result?: string }): Promise<void>;
+  /** Over the bank's threshold: the code the bank sent the supervisor, from a person. */
+  supervisorCode(): Promise<string>;
+  supervisorId: string;
+}
+
+export interface Posted {
+  confirmation: string;
+  seenInHistory: boolean;
+}
+
+/**
+ * Submits a prepared transfer once, under the run's grant, and confirms it in the account's own
+ * history by its memo token. Starts from the review page if the browser is on it; otherwise (a
+ * lost session, a fresh browser) prepares it again first, and checks the screen against the grant
+ * before the click. The bank's submit is pressed at most once, whatever happens after.
+ */
+export async function submitTransfer(
+  ctx: DriverContext,
+  input: TransferInput,
+  hooks: SubmitHooks,
+): Promise<Outcome<Posted>> {
+  const sess = startSession(ctx);
+  const w = ctx.profile.words;
+  const page = ctx.page;
+  let pressed = false;
+  try {
+    let s = await next(sess);
+    if (s?.screen !== 'transfer.review') {
+      const again = await prepareTransfer(ctx, input);
+      if (again.status !== 'succeeded') return again;
+      s = await next(sess);
+    }
+    while (sess.counts.steps++ < 40) {
+      if (!s) {
+        s = await next(sess);
+        continue;
+      }
+      switch (s.screen) {
+        case 'transfer.review': {
+          if (pressed)
+            return stop('escalated', 'ambiguous_outcome', 'the review page came back after submit');
+          const review: Review = {
+            from: beside(s.model, 'From:') ?? '',
+            to: beside(s.model, 'To:') ?? '',
+            amountCents: cents(beside(s.model, 'Amount:') ?? 'NaN'),
+            memo: beside(s.model, 'Memo:') ?? '',
+          };
+          const grant = await hooks.consume(review);
+          if (!grant.ok) {
+            await sess.record('submit', s.screen, s.model, undefined, `refused: ${grant.reason}`);
+            await hooks.journal({ intent: 'press submit', result: `refused: ${grant.reason}` });
+            return stop('escalated', 'guard_tripped', grant.reason);
+          }
+          // The intent is written before the click, so a crash between the two is known.
+          await hooks.journal({ intent: `press ${w.submitTransfer[0]} for ${input.memoToken}` });
+          pressed = true;
+          await click(page, button(s.model, w.submitTransfer));
+          await hooks.journal({
+            intent: `press ${w.submitTransfer[0]} for ${input.memoToken}`,
+            action: 'pressed',
+          });
+          await sess.record('submit', s.screen, s.model, 'pressed submit, under the grant');
+          break;
+        }
+        case 'transfer.supervisor': {
+          const code = await hooks.supervisorCode();
+          await type(page, field(s.model, 'Supervisor ID'), hooks.supervisorId);
+          await type(page, field(s.model, 'Approval code'), code);
+          await click(page, button(s.model, 'Approve'));
+          await sess.record(
+            'supervisor',
+            s.screen,
+            s.model,
+            'typed the supervisor code a person gave',
+          );
+          break;
+        }
+        case 'transfer.posted': {
+          const confirmation =
+            /Confirmation number ([A-Z0-9-]+)/.exec(
+              s.model.texts.map((t) => t.text).join(' '),
+            )?.[1] ?? '';
+          await hooks.journal({ intent: 'read the confirmation', result: confirmation || 'none' });
+          await sess.record('submit', s.screen, s.model, 'read the confirmation', 'posted');
+          const found = await inHistory(sess, input);
+          await hooks.journal({
+            intent: 'find the memo token in the history',
+            result: `${found} found`,
+          });
+          if (found !== 1)
+            return stop('escalated', 'ambiguous_outcome', `${found} entries carry the memo token`);
+          return { status: 'succeeded', data: { confirmation, seenInHistory: true } };
+        }
+        default: {
+          if (!pressed) {
+            if (await onTheWay(sess, s, input.memberId)) break;
+            return await unknown(sess, s);
+          }
+          // After the click, anything but the confirmation is unclear: never press again; read the
+          // account's history for the memo token instead (plan, §F.2).
+          await sess.record('submit', s.screen, s.model, undefined, 'no confirmation');
+          const found = await inHistory(sess, input);
+          await hooks.journal({
+            intent: 'find the memo token in the history',
+            result: `${found} found`,
+          });
+          if (found === 1)
+            return {
+              status: 'succeeded',
+              data: { confirmation: input.memoToken, seenInHistory: true },
+            };
+          return stop('escalated', 'ambiguous_outcome', `${found} entries carry the memo token`);
+        }
+      }
+      s = null;
+    }
+    return stop('escalated', 'stuck', 'too many steps without finishing');
+  } catch (e) {
+    if (e instanceof Stop) return e.outcome;
+    // A failure after the click is an unclear result, never a reason to press again.
+    if (pressed) {
+      const found = await inHistory(startSession(ctx), input).catch(() => -1);
+      if (found === 1)
+        return {
+          status: 'succeeded',
+          data: { confirmation: input.memoToken, seenInHistory: true },
+        };
+      return {
+        status: 'escalated',
+        code: 'ambiguous_outcome',
+        note: `${found} entries carry the memo token`,
+      };
+    }
+    throw e;
+  }
+}
+
+/**
+ * How many entries in the from-account's activity carry the memo token: 1 is the transfer, 0 or 2
+ * is for a person to look at. Reads only; signs in again first if the session was lost.
+ */
+export async function inHistory(sess: Session, input: TransferInput): Promise<number> {
+  const { ctx } = sess;
+  const page = ctx.page;
+  await page.goto(ctx.profile.url);
+  for (let i = 0; i < 30; i++) {
+    const s = await next(sess);
+    if (!s || (await onTheWay(sess, s, input.memberId))) continue;
+    if (s.screen === 'member.summary') {
+      const tile = readTile(s.model, ctx.profile.accountWording, input.from);
+      if (typeof tile === 'string') return -1;
+      await click(page, withText(s.model, tile.accountLabel, 'Activity'));
+      // The rows arrive by a late request after the page draws.
+      const rows = await see(ctx, sess.sigs, {
+        until: (m) => m.texts.some((t) => t.text === 'Description') && m.texts.length > 12,
+        limitMs: 30_000,
+      });
+      await sess.record('history', 'member.activity', rows.model, 'read the activity');
+      return rows.model.texts.filter((t) => t.text.includes(input.memoToken)).length;
+    }
+    return -1;
+  }
+  return -1;
 }

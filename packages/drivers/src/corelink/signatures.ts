@@ -67,6 +67,12 @@ export function signatures(p: Profile): Signature[] {
       requires: ['Review transfer', 'Amount'],
       controls: [{ name: w.submitTransfer }],
     },
+    {
+      id: 'transfer.supervisor',
+      requires: ['Supervisor approval required', 'Approval code'],
+      controls: [{ name: 'Approve' }],
+    },
+    { id: 'transfer.posted', requires: ['Transfer posted', 'Confirmation number'] },
     { id: 'error.unavailable', requires: ['Service Unavailable'] },
     { id: 'error.fatal', requires: ['An unexpected error has occurred'] },
   ];
