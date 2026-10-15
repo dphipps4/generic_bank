@@ -32,20 +32,26 @@ const center = (c: Control) => ({
   y: Math.round(c.box.y + c.box.h / 2),
 });
 
-/** The same control on a fresh reading: same role and name, nearest to where it was. */
+/**
+ * The same control on a fresh reading: the very same element if it is still drawn and on top
+ * (its name may come from a fingerprint the fresh reading has not applied), otherwise the nearest
+ * one with the same role and name.
+ */
 function findAgain(m: ScreenModel, c: Control): Control | null {
-  const same = m.controls.filter(
+  const same = m.controls.find(
+    (x) => x.backendNodeId === c.backendNodeId && x.session === c.session && x.role === c.role,
+  );
+  if (same) return { ...same, name: c.name };
+  const alike = m.controls.filter(
     (x) => x.role === c.role && normalize(x.name) === normalize(c.name) && x.frame === c.frame,
   );
-  if (!same.length) return null;
-  const byNode = same.find((x) => x.backendNodeId === c.backendNodeId);
-  if (byNode) return byNode;
-  same.sort(
+  if (!alike.length) return null;
+  alike.sort(
     (a, b) =>
       Math.hypot(a.box.x - c.box.x, a.box.y - c.box.y) -
       Math.hypot(b.box.x - c.box.x, b.box.y - c.box.y),
   );
-  return same[0]!;
+  return alike[0]!;
 }
 
 async function mouse(

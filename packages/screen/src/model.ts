@@ -36,6 +36,8 @@ export interface Control {
   box: Box;
   enabled: boolean;
   checked?: boolean;
+  /** Where the name came from, when not from text: a picture matched by its fingerprint. */
+  namedBy?: 'fingerprint';
   /** Whether a value is present; the value itself is never read. */
   hasValue?: boolean;
   /** For selects: the options' text, which is what an operator reads, and the one selected. */
