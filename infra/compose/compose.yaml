@@ -273,6 +273,7 @@ services:
     mem_limit: 256m
     env_file: [../../config/app.env, ../../.run/env/factory.env]
     networks: [factory, app, world]
+    depends_on: { postgres: { condition: service_healthy } }
     healthcheck:
       <<: *health
       test:
