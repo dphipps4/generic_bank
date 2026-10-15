@@ -9,3 +9,4 @@ export {
   maskText,
   sensitive,
 } from './mask.js';
+export { type FrameStore, memoryStore, s3Store } from './store.js';
