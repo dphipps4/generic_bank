@@ -58,6 +58,11 @@ export interface DriverContext {
   credentials(): Promise<Credentials>;
   /** Asks a person for something the automation cannot know (a staff code); waits for the answer. */
   askHuman(request: { kind: 'staff_code'; prompt: string }): Promise<string>;
+  /**
+   * Personal values the bank showed that were not known before the run (the member's name). From
+   * now on they are masked wherever they appear, starting with the next step's frame.
+   */
+  learn(values: string[]): void;
   /** Records a step; the runner adds the frame and the journal. */
   step(record: StepRecord, model: ScreenModel | null): Promise<void> | void;
   now(): Date;

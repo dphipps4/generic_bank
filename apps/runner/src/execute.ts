@@ -120,6 +120,12 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
         if (answer === null) throw new Expired();
         return answer;
       },
+      // A name the bank shows is masked from then on, and so is each of its words.
+      learn: (values) => {
+        for (const v of values)
+          for (const part of [v, ...v.split(/[\s.,]+/)])
+            if (part.trim().length >= 2 && !known.includes(part)) known.push(part);
+      },
       step: record,
       now,
     };

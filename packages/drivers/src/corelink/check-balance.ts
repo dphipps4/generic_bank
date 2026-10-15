@@ -86,31 +86,24 @@ export async function checkBalance(
     searches: 0,
   };
   let lastUrl = ctx.profile.url;
+  let stepStart = Date.now();
   const record = async (
     name: string,
     screen: string | null,
     model: ScreenModel | null,
     action?: string,
     outcome?: string,
-    t0 = Date.now(),
-  ) => ctx.step({ name, screen, action, outcome, ms: Date.now() - t0 }, model);
+  ) => ctx.step({ name, screen, action, outcome, ms: Date.now() - stepStart }, model);
 
   try {
     await page.goto(ctx.profile.url);
     while (counts.steps++ < 60) {
-      const t0 = Date.now();
+      stepStart = Date.now();
       const s = await see(ctx, sigs, { limitMs: 45_000 });
       // A dialog freezes the page: answer it with the non-committal choice, and carry on.
       if (s.dialog) {
         await page.answerDialog(false);
-        await record(
-          'dialog',
-          null,
-          null,
-          `answered "${s.dialog.type}" with Cancel`,
-          'recovered',
-          t0,
-        );
+        await record('dialog', null, null, `answered "${s.dialog.type}" with Cancel`, 'recovered');
         continue;
       }
       lastUrl = s.model.url || lastUrl;
@@ -136,15 +129,14 @@ export async function checkBalance(
             s.model,
             'typed the operator ID and password; pressed sign in',
             undefined,
-            t0,
           );
           break;
         }
         case 'login.bad_credentials':
-          await record('sign in', s.screen, s.model, undefined, 'refused', t0);
+          await record('sign in', s.screen, s.model, undefined, 'refused');
           return stop('failed', 'bad_credentials');
         case 'login.locked':
-          await record('sign in', s.screen, s.model, undefined, 'locked', t0);
+          await record('sign in', s.screen, s.model, undefined, 'locked');
           return stop('failed', 'operator_locked');
         case 'login.code_choose':
           await click(page, button(s.model, 'Send code'));
@@ -201,6 +193,16 @@ export async function checkBalance(
               ),
           });
           if (r.model.controls.some((c) => c.name === 'Open')) {
+            // The result row names the member: learn it, so it is masked from here on.
+            const open = r.model.controls.find((c) => c.name === 'Open')!;
+            const row = r.model.texts.filter(
+              (t) => Math.abs(t.box.y + t.box.h / 2 - (open.box.y + open.box.h / 2)) < 8,
+            );
+            ctx.learn(
+              row
+                .map((t) => t.text)
+                .filter((t) => !/^(Active|Closed|Open)$/i.test(t) && !/^\d+$/.test(t)),
+            );
             await click(page, button(r.model, 'Open'));
             await record('member search', 'member.found', r.model, 'opened the member');
           } else {
@@ -227,6 +229,9 @@ export async function checkBalance(
           break;
         }
         case 'member.summary': {
+          // The summary's banner names the member too.
+          const banner = s.model.texts.find((t) => /^Member \d+ · /.test(t.text));
+          if (banner) ctx.learn([banner.text.replace(/^Member \d+ · /, '')]);
           const tile = readTile(s.model, ctx.profile.accountWording, input.account);
           if (tile === 'no-such-account') {
             await record('balance', s.screen, s.model, undefined, 'no such account');
