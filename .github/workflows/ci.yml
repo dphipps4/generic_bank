@@ -49,6 +49,12 @@ jobs:
       # The default builder sees images in the local daemon, so the Runner builds on the one above.
       - name: Build the Runner's image (the same plus headless Chromium)
         run: docker build --builder default -f infra/docker/runner.Dockerfile --build-arg BASE=generic-bank/node:ci -t generic-bank/runner:ci .
+      # The secret scripts and the plan renderer run inside the tools image: prove they still do.
+      - name: The tools image runs the scripts
+        run: |
+          docker build -f infra/docker/tools.Dockerfile -t generic-bank/tools:ci infra/docker
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/work" generic-bank/tools:ci bash -c \
+            'source infra/scripts/lib.sh && sops --version && age --version && jq --version && node infra/docs/render-plan.cjs'
       - name: Compose file is valid
         run: |
           mkdir -p .run/env
