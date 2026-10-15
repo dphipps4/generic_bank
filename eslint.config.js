@@ -11,6 +11,7 @@ export default tseslint.config(
       'docs/**',
       'sessions/**',
       'coverage/**',
+      '.run/**',
     ],
   },
   js.configs.recommended,

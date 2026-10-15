@@ -8,3 +8,4 @@ seeds
 *.md
 package-lock.json
 packages/db/prisma/migrations
+.run/
