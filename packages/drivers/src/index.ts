@@ -8,9 +8,13 @@ export {
 export { GENERIC_BANK, PROFILES } from './corelink/profiles.js';
 export {
   beside,
+  inHistory,
   memoFor,
+  type Posted,
   prepareTransfer,
   type Review,
+  type SubmitHooks,
+  submitTransfer,
   type TransferInput,
 } from './corelink/transfer.js';
 export { signatures } from './corelink/signatures.js';
