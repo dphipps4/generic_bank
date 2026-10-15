@@ -107,6 +107,9 @@ export async function checkBalance(
         continue;
       }
       lastUrl = s.model.url || lastUrl;
+      // Retries are per read: a good screen ends the streak, so three errors spread over a long run
+      // are three recoveries, not a failure.
+      if (s.screen && !s.screen.startsWith('error.')) counts.retries = 0;
       switch (s.screen) {
         case 'login.signin':
         case 'login.welcome_back':
@@ -192,6 +195,8 @@ export async function checkBalance(
                 ),
               ),
           });
+          // A search that produced a result is progress: only searches that come back empty count.
+          if (r.model.controls.some((c) => c.name === 'Open') || r.screen) counts.searches = 0;
           if (r.model.controls.some((c) => c.name === 'Open')) {
             // The result row names the member: learn it, so it is masked from here on.
             const open = r.model.controls.find((c) => c.name === 'Open')!;
