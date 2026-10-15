@@ -154,7 +154,7 @@ export function oauth(sql: Sql, hashKey: string, now: () => Date = () => new Dat
       );
       await audit(o.createdBy, 'client.created', clientId, o.scopes.join(' '));
       const code = await this.newCode(clientId, o.createdBy);
-      return { clientId, clientSecret, code };
+      return { id: pk, clientId, clientSecret, code };
     },
 
     /** Another one-time starting code for a client, for an admin (24 hours, single use). */
@@ -262,6 +262,25 @@ export function oauth(sql: Sql, hashKey: string, now: () => Date = () => new Dat
       const t = r.rows[0];
       if (!t || t.famRevoked || t.clientRevoked || new Date(t.expiresAt) <= now()) return null;
       return { clientId: t.clientId, scopes: t.scopes, familyId: t.familyId };
+    },
+
+    /**
+     * Tokens for a client without a starting code, for an admin on the server itself
+     * (`make api-token`). Audited as issued by that admin.
+     */
+    async issueDirect(clientId: string, by: string): Promise<Tokens> {
+      const r = await sql.query<{ id: string; scopes: string[] }>(
+        'SELECT id, scopes FROM "ApiClient" WHERE "clientId" = $1 AND "revokedAt" IS NULL',
+        [clientId],
+      );
+      const c = r.rows[0];
+      if (!c) throw new OAuthError('invalid_client', 'No such client.');
+      const familyId = id();
+      await sql.query('INSERT INTO "TokenFamily" (id, "clientPk") VALUES ($1, $2)', [
+        familyId,
+        c.id,
+      ]);
+      return issue(familyId, c.scopes, by, 'token.issued.admin');
     },
 
     /** An admin revokes a client: every token it holds stops working at once. */

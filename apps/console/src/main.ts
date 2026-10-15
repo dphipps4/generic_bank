@@ -6,7 +6,9 @@ import argon2 from 'argon2';
 import Fastify from 'fastify';
 import { z } from 'zod';
 import { loadConfig, port, secret } from '@gb/config';
-import { db } from '@gb/db';
+import { db, sql } from '@gb/db';
+import { oauth } from '@gb/oauth';
+import { apiClientActions, onceStore } from './api-clients.js';
 import { resources } from './resources.js';
 
 const cfg = loadConfig(
@@ -16,9 +18,11 @@ const cfg = loadConfig(
     CONSOLE_COOKIE_SECRET: secret(),
     CONSOLE_ADMIN_EMAIL: z.email(),
     CONSOLE_ADMIN_PASSWORD: z.string().min(12),
+    API_TOKEN_HASH_KEY: secret(),
+    CONTROL_DATABASE_URL: z.string().startsWith('postgresql://'),
   },
   process.env,
-  ['CONSOLE_SESSION_SECRET', 'CONSOLE_COOKIE_SECRET'],
+  ['CONSOLE_SESSION_SECRET', 'CONSOLE_COOKIE_SECRET', 'API_TOKEN_HASH_KEY'],
 );
 
 const client = db();
@@ -36,13 +40,17 @@ if (!existing) {
 }
 
 AdminJS.registerAdapter({ Database, Resource });
+const once = onceStore();
 // Mounted at /admin: at the root, AdminJS builds API paths that begin with '//', which a browser
 // reads as another host. The root redirects here.
 const admin = new AdminJS({
   rootPath: '/admin',
   loginPath: '/admin/login',
   logoutPath: '/admin/logout',
-  resources: resources(client),
+  resources: resources(
+    client,
+    apiClientActions(oauth(sql(cfg.CONTROL_DATABASE_URL), cfg.API_TOKEN_HASH_KEY), once),
+  ),
   branding: { companyName: 'Generic Bank Console', withMadeWithLove: false },
 });
 

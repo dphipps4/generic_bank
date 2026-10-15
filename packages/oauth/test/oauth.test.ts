@@ -144,3 +144,15 @@ describe('scopes', () => {
     expect(allows(oneBank, 'tasks:balance', 'generic')).toBe(false);
   });
 });
+
+describe('admin-issued tokens', () => {
+  it('give a working token without a code, audited as issued by the admin', async () => {
+    const c = await o().createClient({ name: 'local', scopes: ['tasks:read'], createdBy: 'a' });
+    const t = await o().issueDirect(c.clientId, 'make api-token');
+    expect(await o().authenticate(t.access_token)).toMatchObject({ clientId: c.clientId });
+    const a = await db.query<{ actor: string }>(
+      `SELECT actor FROM "AuditEntry" WHERE action = 'token.issued.admin'`,
+    );
+    expect(a.rows.map((r) => r.actor)).toContain('make api-token');
+  });
+});
