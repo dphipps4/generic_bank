@@ -108,7 +108,8 @@ describe('the Runner carries out a run', () => {
       JSON.stringify((await db.query('SELECT * FROM "Step" WHERE "runId" = $1', [runId])).rows),
       JSON.stringify(frames),
     ].join('\n');
-    for (const v of [MEMBERS.demo, acct.number, acct.number.slice(-4), PASSWORDS.service])
+    // The member's name was not known before the run; the driver learned it when the bank showed it.
+    for (const v of [MEMBERS.demo, acct.number, acct.number.slice(-4), PASSWORDS.service, 'Sample'])
       expect(stored).not.toContain(v);
   }, 180_000);
 

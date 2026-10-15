@@ -47,6 +47,7 @@ async function run(
       );
       return /(\d{6})/.exec(r.rows[0]!.body)![1]!;
     },
+    learn: () => undefined,
     step: (s) => void steps.push(s),
     now: () => new Date(),
   };
