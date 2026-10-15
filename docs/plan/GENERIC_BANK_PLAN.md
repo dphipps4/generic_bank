@@ -388,6 +388,8 @@ ground under it does:
 - **Secrets:** Vault with dynamic, short-lived, rotated credentials.
 - **Encryption** at rest and in flight everywhere, keys in Vault; banks 2 to 4 on real HTTPS.
 - **Workflows** move from DBOS to Temporal behind the same interface.
+- **Ids:** every object in the model hierarchy has a UUID as its id (runs, steps, frames, human
+  tasks, grants, drivers and their versions, clients), never a sequence or a short random string.
 - **Memory** moves onto a graph ([chapter 20](#20-memory-on-a-graph-neo4j-and-graphiti)).
 - **OCR** as a second masking check on every stored frame.
 - **Real Chrome on real Macs,** so every fingerprint field is genuine.
