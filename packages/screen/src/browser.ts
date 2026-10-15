@@ -123,6 +123,10 @@ export class Browser {
         `--user-data-dir=${profile}`,
         `--window-size=${width},${height}`,
         '--no-first-run',
+        // Never the machine's keychain or password store: on a Mac, full Chrome otherwise asks the
+        // keychain for its "Chromium Safe Storage" key at every launch, a password prompt each time.
+        '--use-mock-keychain',
+        '--password-store=basic',
         '--no-default-browser-check',
         '--disable-background-networking',
         '--disable-component-update',
