@@ -16,6 +16,8 @@ local   MEMORY_TOKEN_SYSTEM      hex
 local   MEMORY_SIGNING_KEY       hex
 local   HAZARD_HMAC_KEY          hex
 local   BANK_ADMIN_TOKEN         hex
+local   BANK_SERVICE_PASSWORD    password
+local   BANK_SUPERVISOR_PASSWORD password
 factory ANTHROPIC_API_KEY        blank
 local   MEMORY_TOKEN_FACTORY     hex
 factory FACTORY_GATEWAY_TOKEN    hex
