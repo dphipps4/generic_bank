@@ -15,7 +15,7 @@ const alias = Object.fromEntries(
 export default defineConfig({
   resolve: { alias },
   test: {
-    include: ['apps/*/test/**/*.test.ts', 'packages/*/test/**/*.test.ts'],
+    include: ['apps/*/test/**/*.test.ts', 'packages/*/test/**/*.test.ts', 'tests/**/*.test.ts'],
     environment: 'node',
     // The bank's tests start an in-process Postgres per file; on a small laptop running every
     // file at once, starting one can take longer than the 5-second default.
