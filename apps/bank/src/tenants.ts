@@ -28,6 +28,13 @@ export interface Labels {
   statements: string;
 }
 
+/** Words this bank shows only as pixels: some labels, some buttons, or every section heading. */
+export interface ImageText {
+  labels?: string[];
+  buttons?: string[];
+  headings?: boolean;
+}
+
 export interface Tenant {
   id: TenantId;
   brand: string;
@@ -43,6 +50,7 @@ export interface Tenant {
   /** Transfers above this many cents need a supervisor's approval code. */
   supervisorThresholdCents: number;
   codeChannels: CodeChannel[];
+  imageText?: ImageText;
   /** Fixes every page's markup dialect, so a tenant's UI is the same from run to run. */
   markupSeed: number;
   /** The database the bank keeps its ledger in. */
@@ -102,6 +110,10 @@ export const TENANTS: Record<TenantId, Tenant> = {
     accountWording: (n) => `Share ****${last4(n)}-S01`,
     supervisorThresholdCents: 100_000,
     codeChannels: ['email'],
+    imageText: {
+      labels: ['Username', 'Passcode', 'Member number', 'Amount'],
+      buttons: ['Confirm'],
+    },
     markupSeed: 4301,
     database: 'bank_example',
   },
@@ -128,6 +140,7 @@ export const TENANTS: Record<TenantId, Tenant> = {
     accountWording: (n) => `Acct ${n.slice(0, 4)}-${n.slice(4, 8)}-${n.slice(8)}`,
     supervisorThresholdCents: 50_000,
     codeChannels: ['text'],
+    imageText: { headings: true },
     markupSeed: 4302,
     database: 'bank_sample',
   },

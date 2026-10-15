@@ -58,7 +58,10 @@ describe('each bank', () => {
         t.labels.continue,
         t.labels.statements,
       ]) {
-        expect(text[id], `${id} should say "${w}"`).toContain(w);
+        // Words this bank draws as images are read from the screen, not the markup.
+        const drawn = [...(t.imageText?.labels ?? []), ...(t.imageText?.buttons ?? [])].includes(w);
+        if (drawn) expect(text[id], `${id} draws "${w}" as pixels only`).not.toContain(w);
+        else expect(text[id], `${id} should say "${w}"`).toContain(w);
       }
     });
 
