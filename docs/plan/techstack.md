@@ -59,7 +59,7 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Perception | **Chrome DevTools Protocol** through our client's sessions: `DOMSnapshot`, the `Accessibility` tree, screenshots, across every frame | Read from outside, so the page can't see or fake it; nothing is injected |
 | Pictures of text | **Image fingerprints** (perceptual hashes), named once by the factory's vision model, kept in the bank's profile | Image-only buttons get names without reading pixels |
 | Image work | **sharp** | Masking boxes, fingerprints, the "fully rendered" frame check |
-| Vision model | Claude via the model gateway, **factory time only** (and the optional bounded assisted fallback) | Judges each Operator step from the screenshot |
+| Vision model | Claude via the model gateway, **factory time only** (and the optional bounded assisted fallback) | Judges each Scout step from the frame |
 
 ---
 
@@ -69,8 +69,8 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 |---|---|---|
 | Agent harness | **pi** ([pi.dev](https://pi.dev)), one session per role | A prompt loop, a tool-call hook that can veto, a session file as checkpoint |
 | Model gateway | **@anthropic-ai/sdk** behind our Anthropic-compatible metering endpoint | The spend meter and caps sit where the model can't touch them |
-| Operator model | `claude-opus-5-5` | Writes and repairs drivers |
-| Supervisor model | `claude-sonnet-5-5` | Cheap enough to check every browser step |
+| Scout model | `claude-opus-5-5`, low effort | Navigates as the Supervisor directs; the cheapest Opus |
+| Supervisor model | `claude-opus-5-5`, high effort | Reasons over every frame and drafts the profile |
 | Small judgments | `claude-haiku-4-5-20251001` | Honesty checks on summaries, short classifications |
 | Mock mode | Recorded responses replayed by the gateway | A whole factory run without an API key |
 | Embeddings | **@huggingface/transformers** with **bge-small-en-v1.5** (384 dimensions, CPU) | In the Memory process, about 130 MB, no API cost |

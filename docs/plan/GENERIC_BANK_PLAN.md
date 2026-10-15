@@ -183,13 +183,19 @@ account's history, then confirms or hands it to a person. Details: [Appendix F](
 
 ## 7. The software factory
 
-Two agents on pi. The **Operator** drives a live browser on the bank, explores and writes the
-crawler. The **Supervisor** checks the screenshot after every Operator step: continue, wait or
-stop. Neither grades its own work.
+It teaches the crawler a new bank for the product's three goals: check a balance, prepare a
+transfer up to the review page, and download statements where the bank offers them.
 
-A run reads what memory knows, explores read-only, writes the crawler (usually a profile), tests
-it offline against a copy of the bank with each hazard on in turn, verifies it live, records
-lessons, and asks a person to review it. Two clean real runs on probation earn promotion.
+Two agents on pi. The **Scout** navigates: simple steps in a live browser toward the goal, each
+page reported as a frame. The **Supervisor** looks at every frame (the masked screenshot and the
+visible page as JSON), reasons about where the Scout is, and tells it the next step. Only the
+Supervisor recommends: it drafts the bank's profile, and every claim in it cites the frames that
+show it and says whether it was **seen** there or is a **guess**. A person approves it with those
+frames in front of them; a guess is never approved by default.
+
+The approved profile is then run against the bank with each hazard forced, and must give the
+outcome table's result for each. Two clean real runs on probation earn promotion. Build sheet:
+[M7](../build/M7-factory.md).
 
 No agent tool moves money, runs script in a page or reaches an unknown site; agent code runs only
 in the sandbox until approved. Without an API key the factory replays a recorded run (mock mode).
@@ -552,9 +558,9 @@ Locally, each box is a set of containers on its own docker network.
 |---|---|---|---|
 | **A, app** | Task API, Console, workflow engine, Runner (one headless browser per active task) | Nothing durable. Browser sessions live only in memory for the life of a task. | Box B; the bank sites. Published: the Console/API port only. |
 | **B, data** | Postgres (with pgvector), Vault, MinIO, the Memory service | Everything durable: runs, trails, journal, registry, memory, staff credentials (Vault), evidence (MinIO). Only masked data outside Vault. | Nothing outbound. No published ports. |
-| **D, disposable factory** | Factory agent, Operator browser, sealed evaluation sandbox with its own throwaway bank | Nothing. Each factory run's folder is uploaded to box B before the box may be torn down. | Box A's API (to submit candidates), box B's Memory and evidence store, the bank sites. The sandbox has no route out at all. |
+| **D, disposable factory** | Factory agent, Scout browser, sealed evaluation sandbox with its own throwaway bank | Nothing. Each factory run's folder is uploaded to box B before the box may be torn down. | Box A's API (to submit candidates), box B's Memory and evidence store, the bank sites. The sandbox has no route out at all. |
 
-The **bank sites** are "the world": a separate network only the Runner and the Operator browser
+The **bank sites** are "the world": a separate network only the Runner and the Scout browser
 can reach, sharing no code, database or network with our system.
 
 ### B.2 Data models (control database, one Prisma schema)
@@ -1099,8 +1105,8 @@ A **catalog** maps `(tenant, task)` to the promoted driver version (none means
 1. **Every run:** layout text, accessible names and learned image fingerprints. No model.
 2. **Assisted fallback (Part 2):** one bounded vision-model call proposing a control, never on a
    money-moving control.
-3. **Factory time:** the Supervisor judges every Operator step from the screenshot, and the
-   Operator's vision names the pictures of text.
+3. **Factory time:** the Supervisor judges every Scout step from the frame, and names the
+   pictures of text.
 
 ### E.7 Time limits and the stall watchdog
 
@@ -1434,8 +1440,8 @@ logged, never a guard trip; tripping guards judge only controls a person can see
 ### K.1 The factory, and why it needs memory
 
 The factory takes a work order (a new bank to learn, or a broken crawler to repair), and two
-AI roles carry it out. The **Operator** writes the crawler. The **Supervisor** watches every
-step, judges the evidence, and stops the job when something is wrong. The crawler is
+AI roles carry it out. The **Scout** navigates. The **Supervisor** watches every step, judges
+the evidence, drafts the crawler's profile, and stops the job when something is wrong. The crawler is
 verified against the real bank, goes to a person for review, runs on **probation** for two
 clean real runs, and only then is **promoted**. One action rolls it back.
 
@@ -1520,7 +1526,7 @@ unserved, until a person approves it in the Console.
 
 ### K.5 Guardrails
 
-Every writer holds a token for one role, and memory refuses any write outside it. The Operator
+Every writer holds a token for one role, and memory refuses any write outside it. The Scout
 and Supervisor may record episodes and hypotheses, and the Supervisor may propose lessons and
 challenge a fact or lesson. Box A, the only box that faces callers, can add episodes and
 forward lessons, nothing more. Confirmations and verified facts are written by the Memory
@@ -1677,10 +1683,12 @@ from a repair case and the failing runs' trails.
 
 ### M.2 Roles
 
-- **Operator:** drives one live browser through tools, explores, writes the profile or code, runs
-  the checks.
-- **Supervisor:** after every Operator browser step, judges the screenshot: `continue`, `wait` or
-  `stop`, with a reason. An unreadable answer counts as `wait`. It writes the lessons at the end.
+- **Scout:** drives one live browser through tools, one simple step at a time, as the Supervisor
+  directs; every page it reaches is a frame.
+- **Supervisor:** after every Scout step, looks at the frame and decides the next step toward the
+  goal, or `wait`, or `stop`, citing the frame. An unreadable answer counts as `wait`. It drafts
+  the profile as a recommendation (each claim citing frames, marked seen or guess) and writes the
+  lessons at the end.
 
 ### M.3 Phases
 
@@ -1703,13 +1711,13 @@ A closed set:
 
 | Tool | Roles | Notes |
 |---|---|---|
-| `browser_open` | Operator | allowed hosts only; never a host the model proposes |
+| `browser_open` | Scout | allowed hosts only; never a host the model proposes |
 | `browser_look` | both | masked screenshot plus screen model |
-| `browser_click`, `browser_type`, `browser_press`, `browser_scroll`, `browser_wait` | Operator | by control reference; keys from a fixed set; typing refuses secrets |
-| `browser_type_credential` | Operator | field name only (`user_id` or `password`); the server types the value |
-| `browser_enter_code` | Operator | only after the bank proved it sent a code; the person's code never reaches the model |
-| `workspace_read`, `workspace_write` | Operator | the driver bundle and its tests only |
-| `lint`, `run_tests`, `run_evals`, `verify_live` | Operator | results compacted for the model |
+| `browser_click`, `browser_type`, `browser_press`, `browser_scroll`, `browser_wait` | Scout | by control reference; keys from a fixed set; typing refuses secrets |
+| `browser_type_credential` | Scout | field name only (`user_id` or `password`); the server types the value |
+| `browser_enter_code` | Scout | only after the bank proved it sent a code; the person's code never reaches the model |
+| `recommend` | Supervisor | the profile; each claim cites frames of this run and is marked seen or guess; refused without a frame |
+| `run_evals` | Supervisor | the profile against each forced hazard; results compacted for the model |
 | `memory_query`, `catalog_lookup` | both | read-only |
 | `record_lesson` | Supervisor | one to three sentences, a confidence, citing frames this run showed |
 | `evidence_read`, `frames` | both | masked frames and step records of this run |
@@ -1723,7 +1731,7 @@ the allowlist. Factory work on transfers stops at the review page.
 |---|---|
 | Spend per run | $25 |
 | Spend per rolling week | $150 |
-| Operator turns | 6 |
+| Scout turns | 6 |
 | Live sign-ins per run | 6 |
 | Active hours per run | 4 |
 | Failed-check turns | 3 |
@@ -1743,7 +1751,7 @@ turn. Our code, not pi, owns:
   the role's list is vetoed, recorded, and the agent told why.
 - **The prompts:** reviewed files rendered by our loader ([Appendix O](#appendix-o-the-prompt-library)).
 
-Default models, set per role: Operator `claude-opus-5-5`, Supervisor `claude-sonnet-5-5`, small
+Default models, set per role: Supervisor `claude-opus-5-5` at high effort (it reasons), Scout `claude-opus-5-5` at low effort (it navigates), small
 judgments `claude-haiku-4-5-20251001`. **Mock mode** replays recorded model responses through the
 same gateway.
 
@@ -1992,7 +2000,7 @@ nothing is hosted elsewhere.
 | `make crawlers` | the Runner, which drives the banks for tasks (needs `backend`) |
 | `make bank` | banks 1 and 2, the message inbox and `bank-db` |
 | `make bank-more` | banks 3 and 4, for crawling later (not part of `make up`, to save memory) |
-| `make factory` | box D: the factory agent, Operator browser and sandbox; live with a key, mock without |
+| `make factory` | box D: the factory agent, Scout browser and sandbox; live with a key, mock without |
 | `make <group>-down`, `make <group>-logs`, `make <group>-rebuild` | the same for any one group |
 | `make demo` | check balance and transfer on banks 1 and 2, printing each typed result |
 | `make agent` | the demo member-assistant agent, calling the REST API through its tool definitions (mock without a key) |
@@ -2054,7 +2062,7 @@ virtual display.
 `make requirements` checks Docker's memory allowance first.
 
 Networks: `edge` (published ports), `app` (A to B), `data` (B internal), `world` (banks;
-reachable from the Runner and the Operator browser), `factory` (D to A and B), `sandbox`
+reachable from the Runner and the Scout browser), `factory` (D to A and B), `sandbox`
 (`internal: true`, no route out).
 
 Images are pinned by digest, and a preflight in `make up` and `make factory` refuses to start on
@@ -2174,7 +2182,7 @@ elsewhere are not repeated; these are the rest:
 | Secrets | SOPS with age; zod-parsed environment that fails closed; HashiCorp Vault (KV) |
 | Observability | Postgres records; pino logs; OpenTelemetry with GenAI conventions; file exporters; on demand, Collector, Tempo, Loki, Grafana |
 | Quality | vitest, ESLint, Prettier, E0 rules on the TypeScript compiler API, dependency-cruiser, cspell, markdownlint, gitleaks, `npm audit`, GitHub Actions; SonarQube in Part 2 |
-| Packaging | Docker compose profiles (`default`, `factory`), make, Node 22 slim images (Chromium only in Runner, Operator browser and sandbox) |
+| Packaging | Docker compose profiles (`default`, `factory`), make, Node 22 slim images (Chromium only in Runner, Scout browser and sandbox) |
 
 Not used: a graph database in Part 1, Redis or any broker, Kubernetes, a model inside production
 tasks, a client framework in the bank.
