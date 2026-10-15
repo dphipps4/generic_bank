@@ -15,16 +15,22 @@ x-node: &node
   init: true
   env_file: [../../config/app.env]
 
+# Checked every two seconds while a service starts, then every thirty. A Node healthcheck starts
+# a whole Node process; every five seconds across a dozen services, that alone kept a small
+# Docker VM busy and starved image builds.
 x-health: &health
-  interval: 5s
-  timeout: 3s
-  retries: 30
+  start_period: 90s
+  start_interval: 2s
+  interval: 30s
+  timeout: 5s
+  retries: 3
 
 networks:
   app: {}
   data: { internal: true }
   world: {}
   bankdb: { internal: true }
+  edge: {}
   factory: {}
 
 volumes:
@@ -183,8 +189,8 @@ services:
     # Measured: about 70 MB idle and 88 MB after two password checks (argon2 takes 19 MB each).
     mem_limit: 128m
     env_file: [../../config/app.env, ../../.run/env/bank.env]
-    environment: { TENANT: generic, PORT: '8081' }
-    ports: ['127.0.0.1:${BANK_GENERIC_PORT}:8081']
+    environment: { TENANT: generic, PORT: '8081', ADMIN_PORT: '9000' }
+    ports: ['127.0.0.1:${BANK_GENERIC_PORT}:8081', '127.0.0.1:${BANK_GENERIC_ADMIN_PORT}:9000']
     networks: [world, bankdb]
     depends_on: { bank-db: { condition: service_healthy } }
     healthcheck:
@@ -199,20 +205,42 @@ services:
 
   bank-example:
     <<: *bank
-    environment: { TENANT: example, PORT: '8082' }
-    ports: ['127.0.0.1:${BANK_EXAMPLE_PORT}:8082']
+    environment: { TENANT: example, PORT: '8082', ADMIN_PORT: '9000' }
+    ports: ['127.0.0.1:${BANK_EXAMPLE_PORT}:8082', '127.0.0.1:${BANK_EXAMPLE_ADMIN_PORT}:9000']
 
   bank-sample:
     <<: *bank
     profiles: [more-banks]
-    environment: { TENANT: sample, PORT: '8083' }
-    ports: ['127.0.0.1:${BANK_SAMPLE_PORT}:8083']
+    environment: { TENANT: sample, PORT: '8083', ADMIN_PORT: '9000' }
+    ports: ['127.0.0.1:${BANK_SAMPLE_PORT}:8083', '127.0.0.1:${BANK_SAMPLE_ADMIN_PORT}:9000']
 
   bank-placeholder:
     <<: *bank
     profiles: [more-banks]
-    environment: { TENANT: placeholder, PORT: '8084' }
-    ports: ['127.0.0.1:${BANK_PLACEHOLDER_PORT}:8084']
+    environment: { TENANT: placeholder, PORT: '8084', ADMIN_PORT: '9000' }
+    ports:
+      ['127.0.0.1:${BANK_PLACEHOLDER_PORT}:8084', '127.0.0.1:${BANK_PLACEHOLDER_ADMIN_PORT}:9000']
+
+  # The staff inbox, where codes arrive. On its own network: people reach it, the Runner and the
+  # factory cannot, so a code is always a human step.
+  bank-inbox:
+    <<: *node
+    command: ['node', 'apps/bank/dist/inbox-main.js']
+    mem_limit: 96m
+    env_file: [../../config/app.env, ../../.run/env/bank-inbox.env]
+    environment: { PORT: '8089', BANKS: 'generic,example,sample,placeholder' }
+    ports: ['127.0.0.1:${BANK_INBOX_PORT}:8089']
+    networks: [edge, bankdb]
+    depends_on: { bank-db: { condition: service_healthy } }
+    healthcheck:
+      <<: *health
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8089/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
 
   # ── box D: the factory (created per session) ────────────────────────────────
   factory:
