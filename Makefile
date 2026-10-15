@@ -210,3 +210,7 @@ clean: ## Remove build output (dist, tsbuildinfo, .run)
 
 # group name -> variable holding its services (data -> DATA, bank-more -> BANK_MORE)
 group = $(shell echo $(1) | tr 'a-z-' 'A-Z_')
+
+api-token: ## A fresh access token for Swagger UI or curl (15 minutes)
+	@$(COMPOSE) exec -T api node apps/api/dist/token-cli.js
+
