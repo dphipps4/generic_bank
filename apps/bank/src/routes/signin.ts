@@ -86,7 +86,9 @@ ${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}
   // Bank 3: a hidden copy of the password field and the button, earlier in the page. Whatever is
   // typed there is never sent.
   const shadow = has(bank.t, 'hidden-duplicate')
-    ? `<DIV STYLE="display:none"><FORM METHOD="post" ACTION="${c.base}signin">${row(c, d, L.password, input(c, 'password-shadow', { type: 'password' }))}${submit(c, d, L.signIn, 'button')}</FORM></DIV>`
+    ? // Its rows sit in a table of their own: a stray <TR> makes the HTML parser move them out of
+      // the hidden block, which would draw the "hidden" copy on screen.
+      `<DIV STYLE="display:none"><FORM METHOD="post" ACTION="${c.base}signin"><TABLE>${row(c, d, L.password, input(c, 'password-shadow', { type: 'password' }))}</TABLE>${submit(c, d, L.signIn, 'button')}</FORM></DIV>`
     : '';
   const body = nest(
     c,
