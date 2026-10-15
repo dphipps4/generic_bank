@@ -1,10 +1,9 @@
 // Check Balance on CoreLink Branch Console: sign in as the staff service account, find the member,
-// read one account's balances off its tile. A state machine over recognized screens: every screen
-// it can meet has an answer, recoverable conditions are handled inside the run, bounded and
-// recorded, and a screen it does not know stops the run.
-import { button, click, field, type ScreenModel, type, withText } from '@gb/screen';
-import { type DriverContext, type Outcome, see, stop, Stop } from '../sdk.js';
-import { signatures } from './signatures.js';
+// read one account's balances off its tile. The way to the member is the session's (session.ts);
+// this job handles only the summary, and a screen nobody knows stops the run.
+import { type ScreenModel, withText } from '@gb/screen';
+import { type DriverContext, type Outcome, stop, Stop } from '../sdk.js';
+import { next, onTheWay, startSession, unknown } from './session.js';
 
 export interface BalanceInput {
   memberId: string;
@@ -72,212 +71,38 @@ export async function checkBalance(
   ctx: DriverContext,
   input: BalanceInput,
 ): Promise<Outcome<Balance>> {
-  const sigs = signatures(ctx.profile);
-  const w = ctx.profile.words;
-  const page = ctx.page;
-  const counts = {
-    signIns: 0,
-    codeRounds: 0,
-    retries: 0,
-    inUse: 0,
-    reloads: 0,
-    sessionRestarts: 0,
-    steps: 0,
-    searches: 0,
-  };
-  let lastUrl = ctx.profile.url;
-  let stepStart = Date.now();
-  const record = async (
-    name: string,
-    screen: string | null,
-    model: ScreenModel | null,
-    action?: string,
-    outcome?: string,
-  ) => ctx.step({ name, screen, action, outcome, ms: Date.now() - stepStart }, model);
-
+  const sess = startSession(ctx);
   try {
-    await page.goto(ctx.profile.url);
-    while (counts.steps++ < 60) {
-      stepStart = Date.now();
-      const s = await see(ctx, sigs, { limitMs: 45_000 });
-      // A dialog freezes the page: answer it with the non-committal choice, and carry on.
-      if (s.dialog) {
-        await page.answerDialog(false);
-        await record('dialog', null, null, `answered "${s.dialog.type}" with Cancel`, 'recovered');
+    await ctx.page.goto(ctx.profile.url);
+    while (sess.counts.steps++ < 60) {
+      const s = await next(sess);
+      if (!s || (await onTheWay(sess, s, input.memberId))) continue;
+      if (s.screen !== 'member.summary') return await unknown(sess, s);
+      // The summary's banner names the member too.
+      const banner = s.model.texts.find((t) => /^Member \d+ · /.test(t.text));
+      if (banner) ctx.learn([banner.text.replace(/^Member \d+ · /, '')]);
+      const tile = readTile(s.model, ctx.profile.accountWording, input.account);
+      if (tile === 'no-such-account') {
+        await sess.record('balance', s.screen, s.model, undefined, 'no such account');
+        return stop('business_outcome', 'no_such_account');
+      }
+      if (tile === 'widget-broken') {
+        if (sess.counts.reloads++ >= 1)
+          return stop('escalated', 'unknown_screen', 'the balance did not draw after a reload');
+        await ctx.page.goto(sess.lastUrl);
+        await sess.record(
+          'balance',
+          s.screen,
+          s.model,
+          'a balance did not draw; reloaded',
+          'recovered',
+        );
         continue;
       }
-      lastUrl = s.model.url || lastUrl;
-      // Retries are per read: a good screen ends the streak, so three errors spread over a long run
-      // are three recoveries, not a failure.
-      if (s.screen && !s.screen.startsWith('error.')) counts.retries = 0;
-      switch (s.screen) {
-        case 'login.signin':
-        case 'login.welcome_back':
-        case 'login.session_ended': {
-          if (s.screen === 'login.session_ended' || counts.signIns > 0) {
-            // Signed out under us: sign in once more, then go back to the member.
-            if (counts.sessionRestarts++ >= 1)
-              stop('failed', 'unavailable', 'the session ended twice', true);
-          }
-          if (counts.signIns++ >= 3)
-            stop('failed', 'bad_credentials', 'signed in three times without getting in');
-          const creds = await ctx.credentials();
-          if (s.screen !== 'login.welcome_back')
-            await type(page, field(s.model, w.operatorId), creds.operatorId);
-          await type(page, field(s.model, w.password), creds.password);
-          await click(page, button(s.model, w.signIn));
-          await record(
-            'sign in',
-            s.screen,
-            s.model,
-            'typed the operator ID and password; pressed sign in',
-            undefined,
-          );
-          break;
-        }
-        case 'login.bad_credentials':
-          await record('sign in', s.screen, s.model, undefined, 'refused');
-          return stop('failed', 'bad_credentials');
-        case 'login.locked':
-          await record('sign in', s.screen, s.model, undefined, 'locked');
-          return stop('failed', 'operator_locked');
-        case 'login.code_choose':
-          await click(page, button(s.model, 'Send code'));
-          await record('staff code', s.screen, s.model, 'asked for the code by text');
-          break;
-        case 'login.code_enter':
-        case 'login.code_wrong':
-        case 'login.code_expired': {
-          if (s.screen !== 'login.code_enter' && counts.codeRounds >= 3)
-            return stop('failed', 'bad_credentials', 'three codes were refused');
-          if (s.screen === 'login.code_expired' && ctx.profile.codeStyle === 'sent') {
-            await click(page, button(s.model, 'Send a new code'));
-            await record('staff code', s.screen, s.model, 'the code expired; asked for a new one');
-            break;
-          }
-          counts.codeRounds++;
-          const code = await ctx.askHuman({
-            kind: 'staff_code',
-            prompt: 'The bank sent a sign-in code to the staff phone. Enter it here.',
-          });
-          await type(page, field(s.model, 'Code'), code);
-          await click(page, button(s.model, 'Verify'));
-          await record('staff code', s.screen, s.model, 'typed the code a person gave');
-          break;
-        }
-        case 'login.terms':
-          await click(page, button(s.model, 'Acknowledge'));
-          await record('terms', s.screen, s.model, 'acknowledged the updated terms');
-          break;
-        case 'dialog.promo':
-          await click(page, button(s.model, 'Not now'));
-          await record('interstitial', s.screen, s.model, 'pressed Not now', 'recovered');
-          break;
-        case 'console.home':
-          await click(page, button(s.model, w.memberSearch));
-          await record('console', s.screen, s.model, 'opened member search');
-          break;
-        case 'member.search': {
-          // A retry or a reload goes back through the search; three searches without a result is not
-          // progress.
-          if (counts.searches++ >= 3)
-            return stop('escalated', 'stuck', 'searched three times without a result');
-          await type(page, field(s.model, w.memberNumber), input.memberId);
-          await click(page, button(s.model, w.search));
-          await record('member search', s.screen, s.model, 'searched by member number');
-          // The result is drawn by script into the same page.
-          const r = await see(ctx, sigs, {
-            until: (m) =>
-              m.controls.some((c) => c.name === 'Open') ||
-              m.texts.some((t) =>
-                /No member found|Member status: Closed|in use by another operator|Enter an 8-digit/.test(
-                  t.text,
-                ),
-              ),
-          });
-          // A search that produced a result is progress: only searches that come back empty count.
-          if (r.model.controls.some((c) => c.name === 'Open') || r.screen) counts.searches = 0;
-          if (r.model.controls.some((c) => c.name === 'Open')) {
-            // The result row names the member: learn it, so it is masked from here on.
-            const open = r.model.controls.find((c) => c.name === 'Open')!;
-            const row = r.model.texts.filter(
-              (t) => Math.abs(t.box.y + t.box.h / 2 - (open.box.y + open.box.h / 2)) < 8,
-            );
-            ctx.learn(
-              row
-                .map((t) => t.text)
-                .filter((t) => !/^(Active|Closed|Open)$/i.test(t) && !/^\d+$/.test(t)),
-            );
-            await click(page, button(r.model, 'Open'));
-            await record('member search', 'member.found', r.model, 'opened the member');
-          } else {
-            // The outcome screens are handled on the next turn of the loop.
-            await record('member search', r.screen, r.model, undefined, r.screen ?? 'no result');
-          }
-          break;
-        }
-        case 'member.no_such_member':
-          await record('member search', s.screen, s.model, undefined, 'no such member');
-          return stop('business_outcome', 'no_such_member');
-        case 'member.closed':
-          await record('member search', s.screen, s.model, undefined, 'member closed');
-          return stop('business_outcome', 'member_closed');
-        case 'member.permission':
-          await record('member', s.screen, s.model, undefined, 'permission denied');
-          return stop('business_outcome', 'permission_denied');
-        case 'member.in_use': {
-          await record('member search', s.screen, s.model, undefined, 'record in use');
-          if (counts.inUse++ >= 2) return stop('failed', 'record_in_use', undefined, true);
-          await new Promise((r) => setTimeout(r, 1000 * counts.inUse));
-          await type(page, field(s.model, w.memberNumber), input.memberId);
-          await click(page, button(s.model, w.search));
-          break;
-        }
-        case 'member.summary': {
-          // The summary's banner names the member too.
-          const banner = s.model.texts.find((t) => /^Member \d+ · /.test(t.text));
-          if (banner) ctx.learn([banner.text.replace(/^Member \d+ · /, '')]);
-          const tile = readTile(s.model, ctx.profile.accountWording, input.account);
-          if (tile === 'no-such-account') {
-            await record('balance', s.screen, s.model, undefined, 'no such account');
-            return stop('business_outcome', 'no_such_account');
-          }
-          if (tile === 'widget-broken') {
-            if (counts.reloads++ >= 1)
-              return stop('escalated', 'unknown_screen', 'the balance did not draw after a reload');
-            await page.goto(lastUrl);
-            await record(
-              'balance',
-              s.screen,
-              s.model,
-              'a balance did not draw; reloaded',
-              'recovered',
-            );
-            break;
-          }
-          // The Activity link of that tile must exist: it proves the tile is the account's own.
-          withText(s.model, tile.accountLabel, 'Activity');
-          await record('balance', s.screen, s.model, 'read the balances', 'succeeded');
-          return { status: 'succeeded', data: { ...tile, asOf: ctx.now().toISOString() } };
-        }
-        case 'error.unavailable':
-        case 'error.fatal': {
-          const code = s.screen === 'error.fatal' ? 'app_error' : 'unavailable';
-          await record('error', s.screen, s.model, undefined, code);
-          // Reads only, and never more than twice, with backoff.
-          if (counts.retries++ >= 2) return stop('failed', code, undefined, true);
-          await new Promise((r) => setTimeout(r, 750 * counts.retries));
-          await page.goto(lastUrl);
-          break;
-        }
-        default:
-          await record('unknown', null, s.model, undefined, 'unknown screen');
-          return stop(
-            'escalated',
-            'unknown_screen',
-            s.recognition.closest.map((c) => `${c.id}: missing ${c.missing.join(', ')}`).join('; '),
-          );
-      }
+      // The Activity link of that tile must exist: it proves the tile is the account's own.
+      withText(s.model, tile.accountLabel, 'Activity');
+      await sess.record('balance', s.screen, s.model, 'read the balances', 'succeeded');
+      return { status: 'succeeded', data: { ...tile, asOf: ctx.now().toISOString() } };
     }
     return stop('escalated', 'stuck', 'too many steps without finishing');
   } catch (e) {

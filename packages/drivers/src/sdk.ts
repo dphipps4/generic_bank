@@ -26,7 +26,13 @@ export interface Profile {
     memberSearch: string[];
     memberNumber: string[];
     search: string[];
+    /** The way to the transfer form, its button to the review page, and the review's submit. */
+    transfer: string[];
+    continue: string[];
+    submitTransfer: string[];
   };
+  /** The bank's own words when it refuses a transfer, and the business outcome each one is. */
+  refusals: { text: string; code: ResultCode }[];
   /** An account's wording on screen, with its last four digits as the first group. */
   accountWording: RegExp;
   /** How codes arrive: sent (with or without a chooser), or from an authenticator app. */
