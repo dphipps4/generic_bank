@@ -199,8 +199,14 @@ db-shell: ## Open psql on the control database
 check: ## Everything CI runs: typecheck, lint, tests, import boundaries
 	@npm run --silent check
 
-test: ## Unit tests
+test: ## The whole suite (what CI runs on every merge to master)
 	@npx vitest run
+
+test-changed: ## Only the tests your uncommitted and unmerged changes touch
+	@npx vitest run --changed origin/master --passWithNoTests
+
+test-long: ## The long suite: runs that sit through the banks' real hazards for minutes
+	@npx vitest run --config vitest.long.config.ts
 
 typecheck: ## TypeScript, every package
 	@npx tsc -b --pretty
@@ -234,7 +240,7 @@ clean: ## Remove build output (dist, tsbuildinfo, .run)
 
 .PHONY: help requirements requirements-dev plan plan-html setup dev-setup fork-ports tools doctor install secrets-init env secrets-edit secret-set secret-rotate secrets-keys \
   console-password build build-nc image up down restart ps urls data backend console crawlers bank \
-  bank-more factory migrate logs vault-status db-shell check test typecheck lint format boundaries \
+  bank-more factory migrate logs vault-status db-shell check test test-changed test-long typecheck lint format boundaries \
   demo try evals check-prompts memory-seed memory-export memory-import export import trace observe \
   docs reset clean
 

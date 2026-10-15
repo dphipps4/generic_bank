@@ -2600,6 +2600,7 @@ within the same discipline:
 | Bank | `apps/bank/test` | every page in all four banks, every hazard on and off, the ledger, statements, the markup dialects. |
 | Browser | `tests/browser` | the Runner against the real bank in Chromium. Skipped only if the browser cannot launch; CI fails on any skip. |
 | Outcomes | `tests/outcomes` | for each forced hazard and each seeded member case, the exact typed result. This table is the error taxonomy's proof. |
+| Long | `tests/long` | runs that sit through the banks' real ambient hazards for minutes: Check Balance, run after run. On every merge to master and every night, and with `make test-long`. |
 | Escalation | `tests/escalation` | staff code, approval, supervisor code, reject, take-over, cancel and expiry, all driven through the Console API. |
 | Transfer safety | `tests/transfer` | swallowed submit, lost session while parked, grant mismatch (amount changed on screen), grant replay, duplicate detection. The bank ledger is the oracle: never two transfers for one grant. |
 | Trap matrix | `tests/guards` | every trap, every layer removed in turn, injected text changes no verdict, clean runs leave the state-change counter at zero. |
@@ -2608,9 +2609,11 @@ within the same discipline:
 | Memory | `apps/memory/test` | screens, merge, confirm, dispute, retire, widen, return, demote, pack budget, chain verification. |
 | Prompts | `packages/prompts/test` | the checker, the loader, schemas. |
 
-CI (GitHub Actions): typecheck, lint (including E0 and the import boundaries), unit,
-check-prompts, then a compose-based job for bank, browser, outcomes, escalation, transfer,
-guards and PII. `gitleaks` over the history and `npm audit`.
+CI (GitHub Actions): typecheck, lint (including E0 and the import boundaries), and on a pull
+request the tests its change touches; a change to migrations, seeds, config, infrastructure or
+CI runs them all. Every merge to master and every night run the whole suite in three parallel
+shards, the long suite, check-prompts, and a compose-based job for bank, browser, outcomes,
+escalation, transfer, guards and PII. `gitleaks` over the history and `npm audit`.
 
 **Rules every test follows:**
 

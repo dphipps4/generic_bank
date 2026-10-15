@@ -4,6 +4,9 @@ on:
   pull_request:
   push:
     branches: [master]
+  # Every night, the whole suite and the long suite, whatever changed.
+  schedule:
+    - cron: '17 9 * * *'
 
 permissions:
   contents: read
@@ -14,6 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The whole history, so a pull request's tests can be chosen by what it changed.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -25,10 +31,51 @@ jobs:
           CONTROL_DATABASE_URL: postgresql://ci:ci@localhost:5432/control
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm run depcruise
       - name: Headless Chromium for the browser tests
         run: infra/scripts/browser.sh
-      - run: npm run test
-      - run: npm run depcruise
+      # A pull request runs the tests its change touches; a change to migrations, seeds, config,
+      # infrastructure or CI runs them all (vitest.config.ts, forceRerunTriggers). The whole suite
+      # runs on every merge to master and every night, below.
+      - name: The tests this change touches
+        if: github.event_name == 'pull_request'
+        run: npx vitest run --changed origin/${{ github.base_ref }} --passWithNoTests
+
+  suite:
+    name: the whole suite (${{ matrix.shard }} of 3)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run db:generate
+      - name: Headless Chromium for the browser tests
+        run: infra/scripts/browser.sh
+      - run: npx vitest run --shard=${{ matrix.shard }}/3
+
+  long:
+    name: the long suite
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run db:generate
+      - name: Headless Chromium for the browser tests
+        run: infra/scripts/browser.sh
+      - run: npx vitest run --config vitest.long.config.ts
 
   image:
     name: build what ships
