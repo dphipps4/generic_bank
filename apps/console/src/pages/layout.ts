@@ -63,6 +63,8 @@ tr:last-child td{border-bottom:0}a{color:var(--accent)}code{font:12px ui-monospa
 form.row{display:flex;gap:6px;align-items:center;margin:0 0 6px}input{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:6px}
 button{font:inherit;padding:5px 12px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer}button.quiet{background:#fff;color:var(--bad);border-color:var(--bad)}
 details summary{color:var(--soft);cursor:pointer;font-size:13px}
+dl.review{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:6px 0}dl.review dt{color:var(--soft);font-size:12px}dl.review dd{margin:0}
+img.thumb{display:block;max-width:260px;border:1px solid var(--line);border-radius:6px;margin:4px 0}
 </style></head><body><header><div class="in"><b>Generic Bank Console</b>${nav}<span class="who">${o.admin ? esc(o.admin) : ''}</span></div></header>${banner}
 <main>${body}</main></body></html>`;
 }

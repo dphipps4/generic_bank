@@ -1,11 +1,13 @@
 // The inbox (plan, §G.2, §F.3): every open human task, oldest deadline first, with how long the agent
 // has been waiting and how often it has asked. A person answers here, and every answer is also an
 // API call (`POST /human-tasks/:id/:action`), so tests drive the same path a person does. A code is
-// sealed the moment it arrives and is never shown again, not here and not in the audit.
+// sealed the moment it arrives and is never shown again, not here and not in the audit. An approval
+// shows what is being approved, as the crawler read it off the bank's review page, and its masked
+// picture.
 import formbody from '@fastify/formbody';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { ACTIONS, HumanAction, type HumanTaskKind, problem } from '@gb/contracts';
-import { actOnHumanTask } from '@gb/runs';
+import { actOnHumanTask, type ApprovalContext } from '@gb/runs';
 import { esc, page, type Sql, type Viewer } from './layout.js';
 
 export interface InboxDeps {
@@ -35,8 +37,35 @@ const KIND_LABEL: Record<HumanTaskKind, string> = {
 
 const NOTICE: Partial<Record<HumanAction, string>> = {
   answer: 'The code went to the run. It is typed into the bank and not kept.',
+  approve: 'Approved: the transfer will be submitted once, under a grant valid for five minutes.',
+  reject: 'Rejected: the run ends and nothing is submitted.',
+  take_over: 'Taken over: finish it by hand in the bank.',
   cancel: 'The run is cancelled.',
 };
+
+/** The written reason every action but a code carries (plan, §G.1). */
+const REASONED: Partial<Record<HumanAction, { label: string; summary?: string; quiet?: boolean }>> =
+  {
+    approve: { label: 'Approve' },
+    reject: { label: 'Reject', summary: 'Reject the transfer', quiet: true },
+    take_over: { label: 'Take over', summary: 'Take over, by hand in the bank', quiet: true },
+    cancel: { label: 'Cancel', summary: 'Cancel the run', quiet: true },
+  };
+
+export const dollars = (cents: number) =>
+  (cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
+// What an approval asks a person to approve: the review page's values and its masked picture.
+function review(t: { runId: string; contextMasked: Partial<ApprovalContext> | null }): string {
+  const r = t.contextMasked?.review;
+  if (!r) return '';
+  const f = t.contextMasked?.frame;
+  const pic =
+    f && f.runId === t.runId
+      ? `<a href="/runs/${esc(f.runId)}/frames/${f.seq}.png"><img class="thumb" src="/runs/${esc(f.runId)}/frames/${f.seq}.png" alt="The review page, masked" loading="lazy"></a>`
+      : '';
+  return `<dl class="review"><dt>From</dt><dd><code>${esc(r.from)}</code></dd><dt>To</dt><dd><code>${esc(r.to)}</code></dd><dt>Amount</dt><dd><b>${esc(dollars(r.amountCents))}</b></dd><dt>Memo</dt><dd>${esc(r.memo)}</dd></dl>${pic}`;
+}
 
 /** "4 min", "1 h 12 min": how long, for a person reading a list. */
 export function duration(ms: number): string {
@@ -61,7 +90,7 @@ export function inboxPages(app: FastifyInstance, deps: InboxDeps) {
         runId: string;
         task: string;
         bank: string;
-        contextMasked: { prompt?: string } | null;
+        contextMasked: Partial<ApprovalContext> | null;
         openedAt: Date;
         deadline: Date;
         asks: number;
@@ -81,15 +110,22 @@ export function inboxPages(app: FastifyInstance, deps: InboxDeps) {
       const answer = ACTIONS[t.kind].includes('answer')
         ? `<form method="post" action="${at('answer')}" class="row"><input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4,8}" maxlength="8" required aria-label="Code" placeholder="Code"><button>Enter code</button></form>`
         : '';
-      const cancel = `<details><summary>Cancel the run</summary><form method="post" action="${at('cancel')}" class="row"><input name="reason" minlength="10" required aria-label="Reason" placeholder="Why (at least ten characters)"><button class="quiet">Cancel</button></form></details>`;
-      return answer + cancel;
+      const reasoned = ACTIONS[t.kind]
+        .filter((a) => REASONED[a])
+        .map((a) => {
+          const o = REASONED[a]!;
+          const form = `<form method="post" action="${at(a)}" class="row"><input name="reason" minlength="10" required aria-label="Reason" placeholder="Why (at least ten characters)"><button${o.quiet ? ' class="quiet"' : ''}>${o.label}</button></form>`;
+          return o.summary ? `<details><summary>${o.summary}</summary>${form}</details>` : form;
+        })
+        .join('');
+      return answer + reasoned;
     };
 
     const rows = tasks
       .map((t) => {
         const left = new Date(t.deadline).getTime() - now;
         return `<tr><td><span class="pill needs_human">${KIND_LABEL[t.kind]}</span></td>
-<td>${esc(t.contextMasked?.prompt ?? '')}<br><small><a href="/runs/${esc(t.runId)}">${esc(t.task)} on ${esc(t.bank)}</a></small></td>
+<td>${esc(t.contextMasked?.prompt ?? '')}${review(t)}<br><small><a href="/runs/${esc(t.runId)}">${esc(t.task)} on ${esc(t.bank)}</a></small></td>
 <td>${duration(now - new Date(t.openedAt).getTime())}${t.asks ? `<br><small>asked ${t.asks} ${t.asks === 1 ? 'time' : 'times'}</small>` : ''}</td>
 <td>${left > 0 ? duration(left) : '<b>due now</b>'}</td>
 <td>${actions(t)}</td></tr>`;
@@ -132,7 +168,8 @@ export function inboxPages(app: FastifyInstance, deps: InboxDeps) {
         const who = deps.whoIs(req);
         if (!who) return fail(reply, fromForm, 401, 'sign in first');
         if (!mayAct(who)) return fail(reply, fromForm, 403, 'only approvers can answer');
-        const action = HumanAction.safeParse(req.params.action);
+        // The plan's paths spell it take-over; the contract, take_over.
+        const action = HumanAction.safeParse(req.params.action.replace('-', '_'));
         if (!action.success) return fail(reply, fromForm, 404, 'there is no such action');
         const r = await actOnHumanTask(
           deps.sql,

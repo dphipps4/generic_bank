@@ -1,7 +1,7 @@
 // Runs: what the API starts and the Runner carries out. A run's real inputs are sealed with a key
 // only the API and the Runner hold; what anyone else can read is masked. A run ends in exactly one
 // of the contract's results. Human tasks carry what a person was asked, and a person's answer (a
-// staff code) is sealed and cleared once used.
+// staff code) is sealed and cleared once used; a person's approval issues the run's one grant.
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import {
   HUMAN_BODIES,
@@ -14,6 +14,7 @@ import {
   type TaskName,
   type TaskResult,
 } from '@gb/contracts';
+import { issueGrant } from '@gb/guardrails';
 
 export interface Sql {
   query<R = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<{ rows: R[] }>;
@@ -256,6 +257,38 @@ const AWAITING: Record<Exclude<HumanTaskKind, 'escalation'>, ResultCode> = {
   supervisor_code: 'awaiting_approval',
 };
 
+/** A transfer's review page as the crawler read it off the screen; the accounts already masked. */
+export type Review = {
+  from: string;
+  to: string;
+  amountCents: number;
+  memo: string;
+  memoToken: string;
+};
+
+/** What an approval shows a person: the review, and the frame of the review page, masked. */
+export type ApprovalContext = {
+  prompt?: string;
+  review: Review;
+  frame?: { runId: string; seq: number };
+};
+
+const isReview = (r: unknown): r is Review => {
+  const v = r as Partial<Review> | null;
+  return (
+    typeof v?.from === 'string' &&
+    typeof v.to === 'string' &&
+    typeof v.memo === 'string' &&
+    typeof v.memoToken === 'string' &&
+    Number.isInteger(v.amountCents) &&
+    v.amountCents! > 0
+  );
+};
+
+/**
+ * For an approval, the context is an `ApprovalContext`; it is shown to people as it is, and an
+ * approval without its review cannot be approved.
+ */
 export async function openHumanTask(
   sql: Sql,
   runId: string,
@@ -289,6 +322,57 @@ export async function answerHumanTask(
 
 export type ActResult = { ok: true } | { ok: false; status: 400 | 404 | 409; reason: string };
 
+// A person decides an open task: one UPDATE, so of two people deciding at once only one wins.
+async function decide(
+  sql: Sql,
+  taskId: string,
+  status: 'answered' | 'cancelled',
+  action: HumanAction,
+  reason: string,
+  by: string,
+): Promise<boolean> {
+  const r = await sql.query(
+    `UPDATE "HumanTask" SET status = $2, action = $3, reason = $4, "answeredAt" = now(), "answeredBy" = $5 WHERE id = $1 AND status = 'open' RETURNING id`,
+    [taskId, status, action, reason, by],
+  );
+  return r.rows.length === 1;
+}
+
+/**
+ * Approve (plan, §F.1 step 3): the task is decided and the run's single-use grant issued, bound to
+ * the review as read. If the grant cannot be issued, the task is opened again: an approval without
+ * a grant would leave the run waiting on a key that does not exist.
+ */
+async function approve(
+  sql: Sql,
+  taskId: string,
+  task: { runId: string; contextMasked: unknown },
+  reason: string,
+  by: string,
+): Promise<ActResult | boolean> {
+  const review = (task.contextMasked as Partial<ApprovalContext> | null)?.review;
+  if (!isReview(review))
+    return { ok: false, status: 409, reason: 'the task has no review to approve' };
+  if (!(await decide(sql, taskId, 'answered', 'approve', reason, by))) return false;
+  try {
+    await issueGrant(sql, {
+      runId: task.runId,
+      humanTaskId: taskId,
+      fromRef: review.from,
+      toRef: review.to,
+      amountCents: review.amountCents,
+      memoToken: review.memoToken,
+    });
+  } catch (e) {
+    await sql.query(
+      `UPDATE "HumanTask" SET status = 'open', action = NULL, reason = NULL, "answeredAt" = NULL, "answeredBy" = NULL WHERE id = $1`,
+      [taskId],
+    );
+    throw e;
+  }
+  return true;
+}
+
 /**
  * A person acts on a human task, from the Console or its API (plan, §F.3). The body is checked
  * against the action's contract, the action against the task's kind and state, and every action
@@ -306,36 +390,45 @@ export async function actOnHumanTask(
   if (!parsed.success)
     return { ok: false, status: 400, reason: parsed.error.issues[0]?.message ?? 'invalid' };
   const task = (
-    await sql.query<{ kind: HumanTaskKind; status: string; resolvable: boolean; runId: string }>(
-      'SELECT kind, status, resolvable, "runId" FROM "HumanTask" WHERE id = $1',
-      [taskId],
-    )
+    await sql.query<{
+      kind: HumanTaskKind;
+      status: string;
+      resolvable: boolean;
+      runId: string;
+      contextMasked: unknown;
+    }>('SELECT kind, status, resolvable, "runId", "contextMasked" FROM "HumanTask" WHERE id = $1', [
+      taskId,
+    ])
   ).rows[0];
   if (!task) return { ok: false, status: 404, reason: 'there is no such task' };
   const refused = refusal(task, action);
   if (refused) return { ok: false, status: 409, reason: refused };
 
-  let done: boolean;
+  let done: ActResult | boolean;
   let reason: string;
   switch (action) {
     case 'answer':
       done = await answerHumanTask(sql, taskId, (parsed.data as { code: string }).code, by, secret);
       reason = 'entered the code the bank sent';
       break;
+    case 'approve':
+      reason = (parsed.data as { reason: string }).reason;
+      done = await approve(sql, taskId, task, reason, by);
+      break;
+    case 'reject':
+    case 'take_over':
+      reason = (parsed.data as { reason: string }).reason;
+      done = await decide(sql, taskId, 'answered', action, reason, by);
+      break;
     case 'cancel':
       reason = (parsed.data as { reason: string }).reason;
-      done =
-        (
-          await sql.query(
-            `UPDATE "HumanTask" SET status = 'cancelled', action = 'cancel', reason = $2, "answeredAt" = now(), "answeredBy" = $3 WHERE id = $1 AND status = 'open' RETURNING id`,
-            [taskId, reason, by],
-          )
-        ).rows.length === 1;
+      done = await decide(sql, taskId, 'cancelled', action, reason, by);
       break;
     default:
-      // Approvals and escalations are acted on by their own steps, each with its own effects.
+      // Escalations are acted on by their own step, with its own effects.
       return { ok: false, status: 409, reason: `${action.replace('_', ' ')} is not offered here` };
   }
+  if (typeof done !== 'boolean') return done;
   // Someone else acted first, between the read and the write.
   if (!done) return { ok: false, status: 409, reason: 'the task was answered by someone else' };
   await sql.query(
@@ -379,6 +472,68 @@ export async function awaitAnswer(
     if (!t || t.status !== 'open' || Date.now() >= deadline.getTime()) {
       if (t?.status === 'open')
         await sql.query(`UPDATE "HumanTask" SET status = 'expired' WHERE id = $1`, [taskId]);
+      return { status: 'expired' };
+    }
+    await new Promise((res) => setTimeout(res, pollMs));
+  }
+}
+
+export type Decision =
+  | { status: 'approved'; grantId: string }
+  | { status: 'rejected' }
+  | { status: 'taken_over' }
+  | { status: 'cancelled' }
+  | { status: 'expired' };
+
+const DECIDED: Record<string, Decision> = {
+  reject: { status: 'rejected' },
+  take_over: { status: 'taken_over' },
+};
+
+/**
+ * The run waits for a person's decision on an approval, until the deadline. Approved, it goes back
+ * to running and holds the grant's id; every other decision is the run's to settle.
+ */
+export async function awaitDecision(
+  sql: Sql,
+  taskId: string,
+  deadline: Date,
+  pollMs = 1000,
+): Promise<Decision> {
+  for (;;) {
+    const t = (
+      await sql.query<{
+        status: string;
+        action: string | null;
+        runId: string;
+        grantId: string | null;
+      }>(
+        `SELECT h.status, h.action, h."runId", g.id AS "grantId"
+           FROM "HumanTask" h LEFT JOIN "ApprovalGrant" g ON g."humanTaskId" = h.id
+          WHERE h.id = $1`,
+        [taskId],
+      )
+    ).rows[0];
+    if (t?.status === 'answered' && t.action === 'approve' && t.grantId) {
+      await setStatus(sql, t.runId, 'running');
+      return { status: 'approved', grantId: t.grantId };
+    }
+    if (t?.status === 'answered' && t.action && DECIDED[t.action]) return DECIDED[t.action]!;
+    if (t?.status === 'cancelled') return { status: 'cancelled' };
+    // An approval whose grant is still being issued is not yet a decision.
+    const issuing = t?.status === 'answered' && t.action === 'approve';
+    if (!t || (t.status !== 'open' && !issuing)) return { status: 'expired' };
+    if (Date.now() >= deadline.getTime()) {
+      const expired =
+        t.status === 'open' &&
+        (
+          await sql.query(
+            `UPDATE "HumanTask" SET status = 'expired' WHERE id = $1 AND status = 'open' RETURNING id`,
+            [taskId],
+          )
+        ).rows.length === 1;
+      // Decided at the last moment: read the decision.
+      if (t.status === 'open' && !expired) continue;
       return { status: 'expired' };
     }
     await new Promise((res) => setTimeout(res, pollMs));

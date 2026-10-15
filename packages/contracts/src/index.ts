@@ -214,14 +214,9 @@ const Reason = z.string().trim().min(10, 'a reason of at least ten characters');
 
 export const HUMAN_BODIES = {
   answer: z.object({ code: z.string().regex(/^\d{4,8}$/, 'the code as the bank sent it') }),
-  approve: z.object({
-    reason: Reason,
-    supervisorCode: z
-      .string()
-      .regex(/^\d{4,8}$/)
-      .optional()
-      .describe("Over the bank's threshold: the code the bank sent the supervisor."),
-  }),
+  // Over the bank's threshold, the bank sends the supervisor's code only after the submit, so it
+  // is answered as its own supervisor_code task, not here.
+  approve: z.object({ reason: Reason }),
   reject: z.object({ reason: Reason }),
   take_over: z.object({ reason: Reason }),
   resume: z.object({ reason: Reason }),
