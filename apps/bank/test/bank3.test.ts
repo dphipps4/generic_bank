@@ -60,9 +60,10 @@ describe('Sample Savings Bank', () => {
       amount: '500.01',
       memo: 'SSB1',
     });
-    expect((await c.post(`members/${MEMBERS.demo}/transfer/submit`, {})).body).toContain(
-      'Supervisor approval required',
-    );
+    // The heading is drawn as pixels here; the field label is not.
+    const page = (await c.post(`members/${MEMBERS.demo}/transfer/submit`, {})).body;
+    expect(page).not.toContain('Supervisor approval required');
+    expect(page).toContain('Supervisor ID');
     await c.get(`members/${MEMBERS.demo}/transfer/cancel`);
   });
 });
