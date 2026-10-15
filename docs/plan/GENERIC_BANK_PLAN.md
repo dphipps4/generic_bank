@@ -286,8 +286,16 @@ promotion.
 
 **What keeps it safe.** The agents have no tool that moves money, runs script in a page or
 reaches an unknown site. Their code runs only in the sandbox until a person approves it.
-Spending, turns, sign-ins and hours are capped in code. Without an API key, the factory runs
-in mock mode and replays a recorded run, so anyone can watch it.
+Without an API key, the factory runs in mock mode and replays a recorded run, so anyone can
+watch it.
+
+**What it costs, and the hard ceiling.** Only the factory spends money on models; a bank task
+runs no model at all. Every model request is metered: tokens and cost are recorded per call and
+per run, and shown in the Console's Cost page. **Each run is capped at $25 and each rolling week
+at $150.** Turns, live sign-ins and active hours are capped too. The meter checks before every
+call and refuses when a cap is reached, when the ledger cannot be read, or when a model has no
+known price. A run may lower a cap, never raise it, and no model can change one. The full list
+is in [§M.5](#m5-caps-in-code).
 
 Details: [Appendix M](#appendix-m-the-software-factory) (factory), [Appendix N](#appendix-n-evaluations) (tests it must pass), [Appendix O](#appendix-o-the-prompt-library) (prompts).
 
@@ -534,7 +542,8 @@ factory is the point, and the README says so plainly.
 6. Transfers, approval and the swallowed submit
 7. Escalation and safety: guardrails, masking, the trap matrix
 8. The factory: how a second tenant is learned, proven and promoted, and how memory makes
-   the next one cheaper
+   the next one cheaper; what it costs, with spend capped at $25 per run and $150 per rolling
+   week
 9. From 80% to 100%: what AI produced, what was changed and why, what was cut, and what is
    still needed before running unattended
 10. With more time: Part 2
