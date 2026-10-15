@@ -6,6 +6,7 @@ import { controlDb } from '../../../packages/oauth/test/control.js';
 import { openapi, tools } from '../src/catalog.js';
 import { buildServer } from '../src/server.js';
 
+const SEAL = 'r'.repeat(40);
 let db: Awaited<ReturnType<typeof controlDb>>;
 let app: Awaited<ReturnType<typeof buildServer>>;
 let token: string;
@@ -14,7 +15,7 @@ let o: ReturnType<typeof oauth>;
 beforeAll(async () => {
   db = await controlDb();
   o = oauth(db, 'k'.repeat(40));
-  app = await buildServer({ oauth: o, sql: db });
+  app = await buildServer({ oauth: o, sql: db, sealKey: SEAL, enqueue: async () => undefined });
   const c = await o.createClient({
     name: 't',
     scopes: ['tasks:read', 'tasks:balance', 'tasks:statements', 'tasks:transfer'],
@@ -137,7 +138,7 @@ describe('the registry decides which banks can do what', () => {
     ]);
     const unknown = await call('nonesuch');
     expect([unknown.statusCode, unknown.json().code]).toEqual([404, 'unknown_bank']);
-    expect((await call('generic')).statusCode).toBe(501);
+    expect((await call('generic')).statusCode).toBe(202);
   });
 
   it('shows a client limited to some banks only those banks', async () => {
