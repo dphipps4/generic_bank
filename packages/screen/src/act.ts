@@ -1,10 +1,11 @@
-// Acting like a person (plan, §E.4): the real mouse and keyboard, at a control's centre in page
+// Acting like a person (plan, §E.4): the real mouse and keyboard, at a control's center in page
 // coordinates. Right before a click the screen is read again and the same control must still be
 // there; if it moved (tiles that re-render), it is found again, up to twice. Typing is key by key,
 // and every key comes from a fixed set.
 import type { Page } from './browser.js';
 import { type Control, readScreen, type ScreenModel } from './model.js';
 import { normalize } from './recognize.js';
+import { waitFullyRendered } from './render.js';
 
 export class ActError extends Error {
   constructor(message: string) {
@@ -78,8 +79,9 @@ export async function click(
 ): Promise<Control> {
   let c = target;
   for (let attempt = 0; attempt <= (o.retargets ?? 2); attempt++) {
-    const now = await readScreen(page);
-    const again = findAgain(now, c);
+    let again = findAgain(await readScreen(page), c);
+    // The page may be redrawing (a frame still loading): wait for it to settle, then look once more.
+    if (!again) again = findAgain((await waitFullyRendered(page, { limitMs: 30_000 })).model, c);
     if (!again) throw new ActError(`the ${c.role} "${c.name}" is no longer on the screen`);
     if (!again.enabled) throw new ActError(`the ${c.role} "${c.name}" is disabled`);
     const moved = Math.abs(again.box.x - c.box.x) > 2 || Math.abs(again.box.y - c.box.y) > 2;

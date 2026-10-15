@@ -219,8 +219,9 @@ pass) and the memory. Details: [Appendix G](#appendix-g-the-console).
 
 ## 9. Reviewing the evidence
 
-Every run leaves a trail: one masked screenshot per step, first to last, with the screen, the
-action and the result, always ending on the last screen. Account numbers, amounts, names, emails,
+Every run leaves a trail: a frame for every page it acts on, grabbed as soon as the page is ready
+(a masked screenshot and the visible page as JSON), with the screen, the action and the result.
+In the Console, a run's Frames button opens them in a popup, one at a time. Account numbers, amounts, names, emails,
 addresses and typed fields are covered with white boxes before a frame is stored; a frame that
 cannot be proven clean is withheld with the reason. Details: [Appendix I](#appendix-i-evidence-redaction-and-observability).
 
@@ -390,6 +391,7 @@ ground under it does:
 - **Workflows** move from DBOS to Temporal behind the same interface.
 - **Memory** moves onto a graph ([chapter 20](#20-memory-on-a-graph-neo4j-and-graphiti)).
 - **OCR** as a second masking check on every stored frame.
+- **Frames in color** instead of gray.
 - **Real Chrome on real Macs,** so every fingerprint field is genuine.
 - **Detection and alerting:** Falco, CrowdSec, Wazuh, Vector, and ntfy to a phone.
 - **Recovery:** encrypted, append-only backups, rebuild-and-restore, drilled.
@@ -1041,16 +1043,13 @@ the page**. After every navigation or action it builds a **screen model**:
 
 ### E.2 Fully rendered, not "network idle"
 
-Never network idle. A page is fully rendered when all hold:
+Never network idle. A page is ready as soon as its frames have loaded, the screen the step
+expects is recognized, a control on it is visible and enabled, nothing says it is still loading
+(no `aria-busy`, spinner, skeleton or short "Loading…" text), and its layout holds for 300 ms.
 
-- the load event has fired in the top document and in every frame
-- two screenshots taken 700 ms apart are identical, and the layout's structure key has not
-  changed between them
-- no loading signals: no `aria-busy`, no spinner or skeleton class names, no short "Loading…"
-  text, no disabled form waiting for hydration
-- there is something to act on: at least one visible control or a recognized screen. An empty
-  shell that has stopped changing is "not drawn yet" until its limit is reached; then it is
-  captured and reported as such
+Otherwise it is ready when two screenshots 700 ms apart are identical with the same layout
+structure. A still page that is no known screen is handed back after 20
+seconds as an unknown screen. A page that is still loading is waited on for up to 3 minutes.
 
 Signed in means a recognized signed-in screen, never a missing password field. Every browser
 call has its own timeout.
@@ -1278,10 +1277,11 @@ run's workflow is in [§M.3](#m3-phases).
 
 ### I.1 What every run writes
 
-- **The trail:** one frame per step from the first step, one every 15 seconds while waiting, and
-  always a final frame, whatever the ending. A frame is a masked screenshot (viewport only), the
-  masked screen model, host and path, the step and the time. At most 60 frames per run. A capture
-  failure is logged and never breaks the run.
+- **The trail:** one frame per step, grabbed when the page is ready ([§E.2](#e2-fully-rendered-not-network-idle)).
+  A frame is a masked screenshot (viewport only, 8-bit gray PNG at one pixel per CSS pixel), the
+  masked screen model as JSON (visible elements only; no shadow DOM, nothing hidden), host and
+  path, the step and the time. At most 60 frames per run. A capture failure is logged and never
+  breaks the run.
 - **Steps:** name, recognized screen, action, outcome, timing.
 - **The journal:** intent before every action, result after, hash-chained, append-only.
 - **Network events:** method, host, path, status, duration. No bodies, no query strings.

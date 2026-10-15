@@ -140,8 +140,8 @@ export class Browser {
         `--lang=${MAC.locale}`,
         // The identity extension is loaded over this pipe (Chrome ignores --load-extension).
         '--enable-unsafe-extension-debugging',
-        // A Mac's display: wide colour gamut and high dynamic range in CSS media queries, as the
-        // engine itself answers them; screenshots keep their colours.
+        // A Mac's display: wide color gamut and high dynamic range in CSS media queries, as the
+        // engine itself answers them; screenshots keep their colors.
         '--force-color-profile=scrgb-linear',
         // Chrome on a Mac has Web Bluetooth; on Linux it sits behind this switch.
         '--enable-blink-features=WebBluetooth',

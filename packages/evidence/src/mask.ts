@@ -4,7 +4,7 @@
 // model, which already knows where every piece of text is: every input, every text run that holds a
 // known value or a pattern, and every picture the crawler cannot read is covered with a white box
 // filled with asterisks, the way a redacted form looks.
-import { type Box, type Control, decodePng, encodePng, type ScreenModel } from '@gb/screen';
+import { type Box, type Control, decodePng, encodeGrayPng, type ScreenModel } from '@gb/screen';
 
 export interface MaskPolicy {
   /** Values known before the run: credentials, codes, the member's name and numbers. */
@@ -67,15 +67,11 @@ export function maskModel(m: ScreenModel, policy: MaskPolicy) {
     url: maskText(m.url, policy),
     title: maskText(m.title, policy),
     frames: m.frames.map((f) => ({ ...f, url: maskText(f.url, policy) })),
-    controls: m.controls.map(({ backendNodeId: _b, session: _s, ...c }) => ({
+    // Only what is on screen: a closed list shows its selected option, not the others.
+    controls: m.controls.map(({ backendNodeId: _b, session: _s, options: _o, ...c }) => ({
       ...c,
       name: maskText(c.name, policy),
-      ...(c.options
-        ? {
-            options: c.options.map((o) => maskText(o, policy)),
-            selected: c.selected ? maskText(c.selected, policy) : undefined,
-          }
-        : {}),
+      ...(c.selected ? { selected: maskText(c.selected, policy) } : {}),
     })),
     texts: m.texts.map((t) => ({ ...t, text: maskText(t.text, policy) })),
     structureKey: m.structureKey,
@@ -83,10 +79,10 @@ export function maskModel(m: ScreenModel, policy: MaskPolicy) {
 }
 export type MaskedModel = ReturnType<typeof maskModel>;
 
-// A five-by-five asterisk, drawn in grey on the white boxes.
+// A five-by-five asterisk, drawn in gray on the white boxes.
 const STAR = ['00100', '10101', '01110', '10101', '00100'];
 
-/** The screenshot with every box covered: white, filled with grey asterisks, outlined. */
+/** The screenshot with every box covered (white, gray asterisks, outlined), stored in gray. */
 export function maskScreenshot(png: Buffer, boxes: Box[]): Buffer {
   const img = decodePng(png);
   const set = (x: number, y: number, v: number) => {
@@ -117,5 +113,5 @@ export function maskScreenshot(png: Buffer, boxes: Box[]): Buffer {
         for (let k = 0; k < 5; k++) if (STAR[r]![k] === '1') set(sx + k, cy + r, 120);
     }
   }
-  return encodePng(img);
+  return encodeGrayPng(img);
 }

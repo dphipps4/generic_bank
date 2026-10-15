@@ -2,7 +2,7 @@
 //
 // For the top document and every frame, Chromium's own layout (DOMSnapshot), its accessibility
 // tree and a screenshot. Frames are flattened into page coordinates so the screen is one picture.
-// Only what is visible and on top is kept: a hit test at each control's centre drops anything
+// Only what is visible and on top is kept: a hit test at each control's center drops anything
 // hidden, covered or off-screen, so a hidden twin of the real button is never in the model. Each
 // visible control gets a stable reference (c1, c2, ...) with its role, name, box and state, and
 // never its value.
@@ -98,6 +98,7 @@ interface SnapDoc {
     optionSelected?: { index: number[] };
     isClickable?: { index: number[] };
     contentDocumentIndex?: { index: number[]; value: number[] };
+    shadowRootType?: { index: number[]; value: number[] };
   };
   layout: {
     nodeIndex: number[];
@@ -194,6 +195,31 @@ async function readSession(
     );
     const label = `${frameLabel}${di === 0 ? '' : `/${di}`}`;
 
+    // A page's own shadow roots are left out: frameworks rewrite them constantly, so what is in
+    // them is not evidence of what the page shows. The browser's built-in ones (inside an input
+    // or a list) stay, since they draw the control itself.
+    const shadowRoots = new Set<number>();
+    n.shadowRootType?.index.forEach((ni, k) => {
+      const t = S(n.shadowRootType!.value[k]);
+      if (t === 'open' || t === 'closed') shadowRoots.add(ni);
+    });
+    // Opacity is not inherited: a node is only as visible as its most transparent ancestor.
+    const opacityOf = new Map<number, number>();
+    const effectiveOpacity = (ni: number): number => {
+      if (ni < 0) return 1;
+      const known = opacityOf.get(ni);
+      if (known !== undefined) return known;
+      const li = layoutOf.get(ni);
+      const own = li === undefined ? 1 : Number(S(doc.layout.styles[li]?.[1]) || '1');
+      const v = own * effectiveOpacity(n.parentIndex[ni]!);
+      opacityOf.set(ni, v);
+      return v;
+    };
+    const inShadow = (ni: number) => {
+      for (let p = ni; p >= 0; p = n.parentIndex[p]!) if (shadowRoots.has(p)) return true;
+      return false;
+    };
+
     // Ancestors that are links or buttons make their text part of one control, not two.
     const insideControl = (ni: number) => {
       for (let p = n.parentIndex[ni]!; p >= 0; p = n.parentIndex[p]!) {
@@ -235,6 +261,10 @@ async function readSession(
         });
       }
       if (li === undefined) continue;
+      if (shadowRoots.size > 0 && inShadow(ni)) {
+        if (tag !== '#text') out.dropped++;
+        continue;
+      }
       const box = toPage(doc.layout.bounds[li]!);
       // Things that move on their own: a marquee, or an image that may be animated.
       if (
@@ -245,7 +275,7 @@ async function readSession(
         out.animated.push(box);
       const styles = doc.layout.styles[li] ?? [];
       const visible =
-        S(styles[0]) !== 'hidden' && S(styles[0]) !== 'collapse' && Number(S(styles[1]) || '1') > 0;
+        S(styles[0]) !== 'hidden' && S(styles[0]) !== 'collapse' && effectiveOpacity(ni) > 0.05;
 
       // Text runs: what an operator reads.
       if (tag === '#text') {
@@ -361,7 +391,7 @@ async function readSession(
   if (frameLabel === 'top' && docs[0]) out.title = S(docs[0].title);
 }
 
-/** Hit-tests each control at its centre: only a control on top of the screen is kept. */
+/** Hit-tests each control at its center: only a control on top of the screen is kept. */
 async function onTop(
   page: Page,
   controls: Omit<Control, 'ref'>[],

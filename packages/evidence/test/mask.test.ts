@@ -31,7 +31,7 @@ describe('masking text', () => {
 });
 
 describe('masking a screenshot', () => {
-  it('covers each box white, with asterisks and an outline, and leaves the rest untouched', () => {
+  it('covers each box white, with asterisks and an outline, and stores the rest in gray', () => {
     const w = 60;
     const h = 30;
     const data = new Uint8Array(w * h * 4);
@@ -42,7 +42,9 @@ describe('masking a screenshot', () => {
     const px = (x: number, y: number) => [
       ...out.data.subarray((y * w + x) * 4, (y * w + x) * 4 + 3),
     ];
-    expect(px(0, 0)).toEqual([20, 40, 200]);
+    // Gray of (20, 40, 200): (20*77 + 40*150 + 200*29) >> 8.
+    const g = (20 * 77 + 40 * 150 + 200 * 29) >> 8;
+    expect(px(0, 0)).toEqual([g, g, g]);
     const inside: number[][] = [];
     for (let y = 6; y < 21; y++) for (let x = 11; x < 40; x++) inside.push(px(x, y));
     expect(inside.every(([r, g, b]) => r === g && g === b)).toBe(true);
