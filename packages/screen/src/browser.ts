@@ -412,7 +412,8 @@ export class Page {
           const sessionId = e.params.sessionId as string;
           const go = (s: string) =>
             cdp.call('Runtime.runIfWaitingForDebugger', {}, { sessionId: s });
-          if (info.openerId !== this.targetId || popup) {
+          // Only a window opened now is the one: a window still open from before is not.
+          if (info.openerId !== this.targetId || popup || e.params.waitingForDebugger !== true) {
             // Any other page, this one included: let it go on, and let go of it.
             void go(sessionId)
               .catch(() => undefined)
@@ -460,6 +461,14 @@ export class Page {
           );
           const contentType =
             p.responseHeaders?.find((h) => h.name.toLowerCase() === 'content-type')?.value ?? '';
+          // The window has nothing more to do with it.
+          await cdp
+            .call(
+              'Fetch.failRequest',
+              { requestId: p.requestId, errorReason: 'Aborted' },
+              { sessionId },
+            )
+            .catch(() => undefined);
           done(() =>
             resolve({
               url: p.request.url,
@@ -492,7 +501,22 @@ export class Page {
         })
         .catch(() => undefined);
       const p = popup as { targetId: string } | null;
-      if (p) await cdp.call('Target.closeTarget', { targetId: p.targetId }).catch(() => undefined);
+      if (p) await this.closeWindow(p.targetId);
+    }
+  }
+
+  /**
+   * Closes a window and waits until it is gone: a page opening a window by the same name while the
+   * old one is still closing would load into the old one.
+   */
+  private async closeWindow(targetId: string) {
+    await this.cdp.call('Target.closeTarget', { targetId }).catch(() => undefined);
+    for (let i = 0; i < 50; i++) {
+      const { targetInfos } = await this.cdp
+        .call<{ targetInfos: { targetId: string }[] }>('Target.getTargets')
+        .catch(() => ({ targetInfos: [] }));
+      if (!targetInfos.some((t) => t.targetId === targetId)) return;
+      await new Promise((r) => setTimeout(r, 100));
     }
   }
 

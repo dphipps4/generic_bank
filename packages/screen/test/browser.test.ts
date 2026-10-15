@@ -124,13 +124,18 @@ describe('a document a button opens in a new window', () => {
     await page.close();
   });
 
-  it('follows a redirect to the document, and the page goes on working', async () => {
+  it('follows a redirect, opens the same window name again, and the page goes on working', async () => {
     const page = await browser.newPage();
     await page.goto(`http://localhost:${port}/`);
     const doc = await page.openedDocument(async () =>
       click(page, button(await readScreen(page), 'Moved')),
     );
     expect([doc.url.endsWith('/doc.pdf?moved=1'), doc.body.equals(pdf)]).toEqual([true, true]);
+    // Both buttons open a window named "statement": the second is a new window, caught too.
+    const again = await page.openedDocument(async () =>
+      click(page, button(await readScreen(page), 'Statement')),
+    );
+    expect(again.body.equals(pdf)).toBe(true);
     await page.goto(`http://localhost:${port}/`);
     expect((await readScreen(page)).controls.map((c) => c.name)).toContain('Statement');
     await page.close();
