@@ -78,6 +78,8 @@ model TaskRun {
   /// The API client that started the run.
   clientId        String?
   inputsMasked    Json
+  /// The real inputs, sealed (AES-GCM) with a key only the API and the Runner hold.
+  inputsSealed    String?
   /// Transfers carry one; the same key always returns the same run.
   idempotencyKey  String?      @unique
   status          TaskStatus   @default(running)
@@ -133,6 +135,8 @@ model HumanTask {
   kind          HumanTaskKind
   status        HumanTaskStatus @default(open)
   contextMasked Json
+  /// A person's answer (a staff code), sealed, and cleared once the run has used it.
+  answerSealed  String?
   openedAt      DateTime        @default(now())
   answeredAt    DateTime?
   answeredBy    String?

@@ -11,6 +11,7 @@ COPY packages/db/package.json packages/db/
 COPY packages/drivers/package.json packages/drivers/
 COPY packages/evidence/package.json packages/evidence/
 COPY packages/oauth/package.json packages/oauth/
+COPY packages/runs/package.json packages/runs/
 COPY packages/screen/package.json packages/screen/
 COPY apps/api/package.json apps/api/
 COPY apps/bank/package.json apps/bank/

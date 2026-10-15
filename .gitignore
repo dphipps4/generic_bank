@@ -169,10 +169,10 @@ minio-data/
 postgres-data/
 
 # Run evidence: trails, frames, run folders, exports. Never committed.
-runs/
-.runs/
+/runs/
+/.runs/
 /evidence/
-exports/
+/exports/
 *.dump
 *.tar.zst
 

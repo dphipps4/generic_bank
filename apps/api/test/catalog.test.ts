@@ -105,7 +105,7 @@ describe('the API describes itself, and the descriptions agree', () => {
 });
 
 describe('the registry decides which banks can do what', () => {
-  it('lists the four banks, and no task until a crawler is promoted', async () => {
+  it('lists the four banks; only Generic Bank’s Check Balance is promoted from the start', async () => {
     const banks = (await get('/banks')).json();
     expect(banks.map((b: { id: string }) => b.id)).toEqual([
       'generic',
@@ -113,11 +113,15 @@ describe('the registry decides which banks can do what', () => {
       'sample',
       'placeholder',
     ]);
-    expect(banks.every((b: { tasks: unknown[] }) => b.tasks.length === 0)).toBe(true);
+    expect(banks[0].tasks).toEqual([{ task: 'check-balance', crawlerVersion: 'v1' }]);
+    expect(banks.slice(1).every((b: { tasks: unknown[] }) => b.tasks.length === 0)).toBe(true);
   });
 
   it('refuses a task on a bank with no promoted crawler, naming the banks that have one', async () => {
-    await promote('generic', 'check-balance', 3);
+    await promote('example', 'download-statements', 3);
+    expect((await get('/banks')).json()[1].tasks).toEqual([
+      { task: 'download-statements', crawlerVersion: 'v3' },
+    ]);
     const call = (bank: string) =>
       app.inject({
         method: 'POST',
@@ -125,9 +129,6 @@ describe('the registry decides which banks can do what', () => {
         headers: { authorization: `Bearer ${token}` },
         payload: { bank, memberId: '40017732', account: '7890' },
       });
-    expect((await get('/banks')).json()[0].tasks).toEqual([
-      { task: 'check-balance', crawlerVersion: 'v3' },
-    ]);
     const notYet = await call('example');
     expect([notYet.statusCode, notYet.json().code, notYet.json().banksThatSupportIt]).toEqual([
       404,
