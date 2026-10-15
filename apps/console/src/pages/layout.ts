@@ -18,12 +18,17 @@ export const esc = (s: unknown) =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
   );
 
-const NAV = [
+const NAV: [href: string, label: string][] = [
   ['/inbox', 'Inbox'],
   ['/runs', 'Runs'],
   ['/journal', 'Journal'],
   ['/admin', 'Data'],
-] as const;
+];
+
+/** The hazard lab is in the bar only on a stack whose banks obey forced hazards. */
+export function showLabInNav() {
+  if (!NAV.some(([href]) => href === '/lab')) NAV.splice(3, 0, ['/lab', 'Hazard lab']);
+}
 
 export function page(
   title: string,

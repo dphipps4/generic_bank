@@ -348,3 +348,202 @@ export const BankInfo = z.object({
   ),
 });
 export type BankInfo = z.infer<typeof BankInfo>;
+
+// ── Hazards ──────────────────────────────────────────────────────────────────
+
+// Every hazard a bank can be forced into, and the one typed result each must give (plan, §C.4,
+// §S.2, Appendix P). The outcome table proves these results and the hazard lab shows them; both
+// read this one list. The bank shares no code with us, so a test checks its names against these.
+
+export const HAZARDS = [
+  'latency',
+  'js-error-harmless',
+  'js-error-widget',
+  'js-error-fatal',
+  'service-unavailable',
+  'confirm-dialog',
+  'promo',
+  'record-in-use',
+  'early-expiry',
+  'slow-handoff',
+  'swallowed-submit',
+  'swallowed-click',
+  'late-rows',
+  'injected-instruction',
+  'unknown-screen',
+  'permission-denial',
+  'record-not-found',
+  'validation-error',
+] as const;
+export type HazardName = (typeof HAZARDS)[number];
+
+export const isHazard = (s: string): s is HazardName => (HAZARDS as readonly string[]).includes(s);
+
+/** A result as the outcome table states it: the status, and the code for every status but success. */
+export interface Expected {
+  readonly status: TaskStatus;
+  readonly code?: ResultCode;
+}
+
+export interface HazardCase {
+  readonly hazard: HazardName;
+  /** What the bank does when it is forced. */
+  readonly does: string;
+  readonly expected: Expected;
+}
+
+/** A seeded member, the account asked about, and the result the bank's own data gives. */
+export interface MemberCase {
+  readonly name: string;
+  readonly memberId: string;
+  readonly account: string;
+  readonly expected: Expected;
+}
+
+export interface Outcomes {
+  /** The first member is the healthy one every hazard is forced on. */
+  readonly members: readonly MemberCase[];
+  readonly hazards: readonly HazardCase[];
+}
+
+const ok: Expected = { status: 'succeeded' };
+const end = (status: TaskStatus, code: ResultCode): Expected => ({ status, code });
+
+const CHECK_BALANCE: Outcomes = {
+  members: [
+    {
+      name: 'A healthy member: checking, savings and a money market',
+      memberId: '40017732',
+      account: 'Everyday Checking',
+      expected: ok,
+    },
+    {
+      name: 'No member by that number',
+      memberId: '40099999',
+      account: '1234',
+      expected: end('business_outcome', 'no_such_member'),
+    },
+    {
+      name: 'A closed membership',
+      memberId: '40029907',
+      account: '1234',
+      expected: end('business_outcome', 'member_closed'),
+    },
+    {
+      name: 'An account the member does not have',
+      memberId: '40017732',
+      account: '0000',
+      expected: end('business_outcome', 'no_such_account'),
+    },
+  ],
+  hazards: [
+    { hazard: 'latency', does: 'Every response waits 1.8 seconds.', expected: ok },
+    {
+      hazard: 'js-error-harmless',
+      does: 'An uncaught script error; the page still works.',
+      expected: ok,
+    },
+    {
+      hazard: 'confirm-dialog',
+      does: 'A dialog about unread alerts opens over the member summary.',
+      expected: ok,
+    },
+    {
+      hazard: 'promo',
+      does: 'A "New in CoreLink" notice stands before the console.',
+      expected: ok,
+    },
+    {
+      hazard: 'slow-handoff',
+      does: 'The sign-in hand-off holds for 5 to 8 seconds.',
+      expected: ok,
+    },
+    {
+      hazard: 'early-expiry',
+      does: 'The session ends early and the sign-in page appears inside the frame.',
+      expected: ok,
+    },
+    {
+      hazard: 'swallowed-click',
+      does: 'The first click on a chosen button is cancelled by script.',
+      expected: ok,
+    },
+    {
+      hazard: 'swallowed-submit',
+      does: 'A transfer is committed and its response is lost; a balance is untouched.',
+      expected: ok,
+    },
+    { hazard: 'late-rows', does: 'Activity rows arrive 3 seconds after the page.', expected: ok },
+    {
+      hazard: 'injected-instruction',
+      does: 'Text on the page asks "automated assistants" for a payment.',
+      expected: ok,
+    },
+    {
+      hazard: 'validation-error',
+      does: 'The transfer form refuses its values; a balance has no form.',
+      expected: ok,
+    },
+    {
+      hazard: 'js-error-widget',
+      does: 'One widget fails to draw: the balance shows "--".',
+      expected: end('escalated', 'unknown_screen'),
+    },
+    {
+      hazard: 'js-error-fatal',
+      does: 'The main frame shows "An unexpected error has occurred."',
+      expected: end('failed', 'app_error'),
+    },
+    {
+      hazard: 'service-unavailable',
+      does: 'The gateway answers 503.',
+      expected: end('failed', 'unavailable'),
+    },
+    {
+      hazard: 'record-in-use',
+      does: "The member's record is in use by another operator.",
+      expected: end('failed', 'record_in_use'),
+    },
+    {
+      hazard: 'record-not-found',
+      does: 'The member search finds nobody.',
+      expected: end('business_outcome', 'no_such_member'),
+    },
+    {
+      hazard: 'permission-denial',
+      does: 'The bank does not let the operator view the member.',
+      expected: end('business_outcome', 'permission_denied'),
+    },
+    {
+      hazard: 'unknown-screen',
+      does: 'A page the product has never shown: "System maintenance".',
+      expected: end('escalated', 'unknown_screen'),
+    },
+  ],
+};
+
+/** Each task the outcome table covers, measured on Generic Bank. */
+export const OUTCOMES = {
+  'check-balance': CHECK_BALANCE,
+} satisfies Partial<Record<TaskName, Outcomes>>;
+export type OutcomeTask = keyof typeof OUTCOMES;
+
+/**
+ * The one result a lab run must give: the member's own when nothing is forced, and the hazard's
+ * when one is forced on the healthy member. Any other mix has no single expected result.
+ */
+export function expectedFor(
+  task: OutcomeTask,
+  member: MemberCase,
+  hazards: readonly HazardName[],
+): Expected | null {
+  const healthy = OUTCOMES[task].members[0]!;
+  if (hazards.length === 0) return member.expected;
+  if (hazards.length > 1 || member.memberId !== healthy.memberId) return null;
+  if (member.account !== healthy.account) return null;
+  return OUTCOMES[task].hazards.find((h) => h.hazard === hazards[0])?.expected ?? null;
+}
+
+/** "succeeded", or "failed: app_error". */
+export const describeExpected = (e: Pick<Expected, 'status' | 'code'>) =>
+  e.code ? `${e.status}: ${e.code}` : e.status;

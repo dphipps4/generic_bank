@@ -4,6 +4,7 @@
 // staff code) is sealed and cleared once used; a person's approval issues the run's one grant.
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from 'node:crypto';
 import {
+  type HazardName,
   HUMAN_BODIES,
   type HumanAction,
   type HumanTaskKind,
@@ -103,6 +104,8 @@ export async function createRun(
     idempotencyKey?: string;
     /** What makes two runs the same request, such as a transfer's member, accounts and amount. */
     dedupeOn?: readonly unknown[];
+    /** A hazard-lab run's forced hazards, even none; kept readable, beside the masked inputs. */
+    forcedHazards?: readonly HazardName[];
   },
   secret: string,
 ): Promise<{ runId: string; existing: boolean }> {
@@ -131,6 +134,9 @@ export async function createRun(
   const open = await byDedupe();
   if (open) throw new DuplicateRun(open);
   const runId = id('r');
+  const masked = maskInputs(o.inputs);
+  delete masked.forcedHazards;
+  if (o.forcedHazards) masked.forcedHazards = [...o.forcedHazards];
   try {
     await sql.query(
       `INSERT INTO "TaskRun" (id, task, bank, "clientId", "inputsMasked", "inputsSealed", "idempotencyKey", "dedupeKey", status)
@@ -140,7 +146,7 @@ export async function createRun(
         o.task,
         o.bank,
         o.clientId,
-        JSON.stringify(maskInputs(o.inputs)),
+        JSON.stringify(masked),
         seal(o.inputs, secret),
         o.idempotencyKey ?? null,
         dedupe,
@@ -603,5 +609,6 @@ export async function awaitDecision(
   }
 }
 
+export { forcedHazardsOf, HAZARD_HEADER, hazardHeader } from './hazards.js';
 export { hashOf, journal, type JournalLine, type Verdict, verifyJournal } from './journal.js';
 export { statementKey, statementOf, statementRef } from './statements.js';

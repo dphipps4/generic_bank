@@ -5,7 +5,7 @@ import { brief, outcomeBank, run, TABLE } from './support.js';
 const env = outcomeBank();
 
 describe('every hazard, forced alone, gives its one result (3 of 3)', () => {
-  for (const [hazard, want] of TABLE.slice(12, 18)) {
+  for (const [hazard, want] of TABLE.slice(12)) {
     it(`${hazard} → ${want.status}${want.code ? `: ${want.code}` : ''}`, async () => {
       expect(brief(await run(env, 'Everyday Checking', [hazard]))).toEqual(want);
     }, 240_000);

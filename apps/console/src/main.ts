@@ -9,9 +9,10 @@ import { loadConfig, port, secret } from '@gb/config';
 import { db, sql } from '@gb/db';
 import { oauth } from '@gb/oauth';
 import { apiClientActions, onceStore } from './api-clients.js';
-import { ADMIN_BAR_JS } from './pages/layout.js';
+import { ADMIN_BAR_JS, showLabInNav } from './pages/layout.js';
 import { inboxPages } from './pages/inbox.js';
 import { journalPages } from './pages/journal.js';
+import { labPages, throughTheApi } from './pages/lab.js';
 import { runPages, type Viewer } from './pages/runs.js';
 import { s3Store } from '@gb/evidence';
 import { resources } from './resources.js';
@@ -29,6 +30,8 @@ const cfg = loadConfig(
     MINIO_ROOT_USER: z.string().min(3),
     MINIO_ROOT_PASSWORD: secret(),
     ANSWER_SEAL_KEY: secret(),
+    HAZARDS_FORCEABLE: z.enum(['true', 'false']).default('false'),
+    API_URL: z.url().default('http://api:8000'),
   },
   process.env,
   [
@@ -41,6 +44,8 @@ const cfg = loadConfig(
 );
 
 const client = db();
+const control = sql(cfg.CONTROL_DATABASE_URL);
+const tokens = oauth(control, cfg.API_TOKEN_HASH_KEY);
 
 // The first admin comes from .env; later users are created in the Console.
 const existing = await client.consoleUser.findUnique({ where: { email: cfg.CONSOLE_ADMIN_EMAIL } });
@@ -62,10 +67,7 @@ const admin = new AdminJS({
   rootPath: '/admin',
   loginPath: '/admin/login',
   logoutPath: '/admin/logout',
-  resources: resources(
-    client,
-    apiClientActions(oauth(sql(cfg.CONTROL_DATABASE_URL), cfg.API_TOKEN_HASH_KEY), once),
-  ),
+  resources: resources(client, apiClientActions(tokens, once)),
   branding: { companyName: 'Generic Bank Console', withMadeWithLove: false },
   // A bar back to the Console's own pages, and a trail link on a run's record.
   assets: { scripts: ['/console-bar.js'] },
@@ -94,7 +96,6 @@ await AdminJSFastify.buildAuthenticatedRouter(
 );
 
 // The Console's own pages, behind the same sign-in as AdminJS.
-const control = sql(cfg.CONTROL_DATABASE_URL);
 const whoIs = (req: FastifyRequest): Viewer | null => {
   const s = (req as unknown as { session?: { get(k: string): Partial<Viewer> | undefined } })
     .session;
@@ -113,5 +114,13 @@ runPages(app, {
 });
 inboxPages(app, { sql: control, answerKey: cfg.ANSWER_SEAL_KEY, whoIs });
 journalPages(app, { sql: control, whoIs });
+if (cfg.HAZARDS_FORCEABLE === 'true') {
+  showLabInNav();
+  labPages(app, {
+    sql: control,
+    whoIs,
+    start: throughTheApi({ sql: control, tokens, apiUrl: cfg.API_URL }),
+  });
+}
 
 await app.listen({ host: '0.0.0.0', port: cfg.CONSOLE_PORT });
