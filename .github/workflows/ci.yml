@@ -102,6 +102,9 @@ jobs:
           docker build -f infra/docker/tools.Dockerfile -t generic-bank/tools:ci infra/docker
           docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/work" generic-bank/tools:ci bash -c \
             'source infra/scripts/lib.sh && sops --version && age --version && jq --version && node infra/docs/render-plan.cjs'
+      # A secret baked into an image fails the build: gitleaks reads each image's whole filesystem.
+      - name: No secrets in the images
+        run: infra/scripts/secrets-scan.sh image generic-bank/node:ci generic-bank/runner:ci generic-bank/tools:ci
       - name: Compose file is valid
         run: |
           mkdir -p .run/env
