@@ -1,8 +1,11 @@
-// Fully rendered, not "network idle" (plan, §E.2). Legacy pages poll, stream and keep connections
-// open; a quiet network says nothing about what is drawn. A page is fully rendered when every frame
-// has loaded, two readings 700 ms apart show the same picture (outside what the page animates on
-// its own) and the same structure, nothing says it is still loading, and there is something to act
-// on. An empty shell that has stopped changing is "not drawn yet", until the limit says otherwise.
+// When a page is ready to read and act on (plan, §E.2), never "network idle": legacy pages poll,
+// stream and keep connections open. A screen the caller recognizes, with something enabled to press
+// and nothing saying it is still loading, is ready once its frames have loaded and two readings
+// 300 ms apart have the same layout; no picture comparison is needed. (Framesets finish drawing
+// at their load event, and legacy scripts redraw a page just after it first appears.) Otherwise a page is ready when every frame has loaded, two readings 700 ms apart
+// show the same picture and structure, and there is something to act on. A still page that is no
+// screen the caller knows is handed back after a while as it is, so an unknown screen is reported
+// rather than waited on; a page that is still loading is waited on up to the limit (3 minutes).
 import type { Page } from './browser.js';
 import { readScreen, type ScreenModel } from './model.js';
 import { decodePng, type Image, sameOutside } from './png.js';
@@ -59,12 +62,14 @@ export async function waitFullyRendered(
     until?: (m: ScreenModel) => boolean;
   } = {},
 ): Promise<Rendered> {
-  const limit = o.limitMs ?? 45_000;
+  const limit = o.limitMs ?? 180_000;
   const quiet = o.quietMs ?? 700;
   const start = Date.now();
   let prev: { image: Image; key: string } | null = null;
   let last: ScreenModel | null = null;
   let reason = 'not read yet';
+  let stillSince: number | null = null;
+  let readyKey: string | null = null;
   while (Date.now() - start < limit) {
     // A dialog freezes the page, screenshots included: hand it back to the caller to answer.
     if (page.dialog) {
@@ -78,6 +83,8 @@ export async function waitFullyRendered(
     }
     if (!page.allLoaded()) {
       reason = 'a frame is still loading';
+      prev = null;
+      readyKey = null;
       await sleep(150);
       continue;
     }
@@ -91,17 +98,30 @@ export async function waitFullyRendered(
       await sleep(200);
       continue;
     }
-    const image = decodePng(model.screenshot);
     const signals = loadingSignals(model);
     const complete = !o.until || o.until(model);
     // Something to act on: a usable control, or a screen the caller recognizes (an error page may
     // have no controls at all, and is still an answer).
     const actionable = model.controls.some((c) => c.enabled) || (o.until !== undefined && complete);
+    // The screen the caller is waiting for, ready to act on, and no longer being redrawn.
+    if (o.until && complete && actionable && signals.length === 0) {
+      if (readyKey === model.structureKey)
+        return { model, rendered: true, waitedMs: Date.now() - start };
+      readyKey = model.structureKey;
+      await sleep(300);
+      continue;
+    }
+    readyKey = null;
+    const image = decodePng(model.screenshot);
     const still =
       prev !== null &&
       prev.key === model.structureKey &&
       sameOutside(prev.image, image, model.animated);
     if (still && signals.length === 0 && actionable && complete)
+      return { model, rendered: true, waitedMs: Date.now() - start };
+    // Still, loaded and usable, but no screen the caller knows: after 20 s it is what it is.
+    stillSince = still && signals.length === 0 && actionable ? (stillSince ?? Date.now()) : null;
+    if (stillSince !== null && Date.now() - stillSince >= 20_000)
       return { model, rendered: true, waitedMs: Date.now() - start };
     reason =
       signals[0] ??

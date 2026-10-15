@@ -168,39 +168,73 @@ export function runPages(app: FastifyInstance, deps: PagesDeps) {
           `<tr><td><code>${esc(t.id)}</code></td><td>${esc(t.kind.replace('_', ' '))}</td><td>${pill(t.status)}</td><td>${when(t.openedAt)}</td><td>${t.answeredAt ? `${when(t.answeredAt)} by ${esc(t.answeredBy)}` : ''}</td></tr>`,
       )
       .join('');
-    const frameCards = frames
-      .map((f) => {
-        const s = stepName.get(f.stepSeq);
-        const pic = f.imageKey
-          ? `<a href="/runs/${esc(run.id)}/frames/${f.seq}.png"><img src="/runs/${esc(run.id)}/frames/${f.seq}.png" alt="Frame ${f.seq}, masked" loading="lazy"></a>`
-          : `<div class="withheld">Withheld: ${esc(f.withheldReason ?? 'no image')}</div>`;
-        return `<div class="frame">${pic}<div class="cap"><b>${f.seq}. ${esc(s?.name ?? '')}</b> <code>${esc(s?.screen ?? '')}</code><br><small>${esc(f.path)} · ${when(f.at)}</small></div></div>`;
-      })
-      .join('');
+    const frameList = frames.map((f) => {
+      const st = stepName.get(f.stepSeq);
+      return {
+        seq: f.seq,
+        image: f.imageKey !== null,
+        withheld: f.withheldReason,
+        caption: `${f.seq}. ${st?.name ?? ''}${st?.screen ? ` (${st.screen})` : ''} · ${f.path} · ${when(f.at)}`,
+      };
+    });
     return reply.type('text/html; charset=utf-8').send(
       page(
         `Run ${run.id}`,
         `<h1>Run <code>${esc(run.id)}</code></h1><div class="facts">${facts}</div>
 <h2>Steps</h2>${stepRows ? `<table><tr><th>#</th><th>Step</th><th>Screen</th><th>Action</th><th>Outcome</th><th>Took</th></tr>${stepRows}</table>` : '<p class="empty">No steps yet.</p>'}
 <h2>People asked</h2>${taskRows ? `<table><tr><th>Task</th><th>Kind</th><th>Status</th><th>Opened</th><th>Answered</th></tr>${taskRows}</table>` : '<p class="empty">Nobody was asked anything.</p>'}
-<h2>Screens (masked)</h2>${frameCards ? `<div class="frames">${frameCards}</div>` : '<p class="empty">No frames.</p>'}`,
+<h2>Screens (masked)</h2>${frameList.length ? framesButton(run.id, frameList) : '<p class="empty">No frames.</p>'}`,
         { active: '/runs', admin: who, waiting: await waitingTooLong(deps.sql) },
       ),
     );
   });
 
-  // A frame's masked picture, from the store; only for a signed-in person.
+  // A frame's masked picture (.png) or masked screen model (.json), from the store; only for a
+  // signed-in person.
   app.get<{ Params: { id: string; seq: string } }>('/runs/:id/frames/:seq', async (req, reply) => {
     if (!signedIn(req, reply)) return;
-    const seq = Number(String(req.params.seq).replace(/\.png$/, ''));
+    const json = String(req.params.seq).endsWith('.json');
+    const seq = Number(String(req.params.seq).replace(/\.(png|json)$/, ''));
     const f = (
-      await deps.sql.query<{ imageKey: string | null }>(
-        'SELECT "imageKey" FROM "TrailFrame" WHERE "runId" = $1 AND seq = $2',
+      await deps.sql.query<{ imageKey: string | null; screenModelKey: string | null }>(
+        'SELECT "imageKey", "screenModelKey" FROM "TrailFrame" WHERE "runId" = $1 AND seq = $2',
         [req.params.id, seq],
       )
     ).rows[0];
-    const img = f?.imageKey ? await deps.store.get(f.imageKey) : null;
-    if (!img) return reply.code(404).send();
-    return reply.header('cache-control', 'private, max-age=3600').type('image/png').send(img);
+    const key = json ? f?.screenModelKey : f?.imageKey;
+    const body = key ? await deps.store.get(key) : null;
+    if (!body) return reply.code(404).send();
+    return reply
+      .header('cache-control', 'private, max-age=3600')
+      .type(json ? 'application/json' : 'image/png')
+      .send(body);
   });
+}
+
+/**
+ * A button that opens a run's frames in a popup, one at a time: the masked picture, its step and
+ * screen, and a link to the masked screen model. Only the frame on show is loaded.
+ */
+export function framesButton(
+  runId: string,
+  frames: { seq: number; image: boolean; withheld: string | null; caption: string }[],
+): string {
+  const data = esc(JSON.stringify(frames));
+  const base = `/runs/${esc(runId)}/frames/`;
+  return `<button type="button" class="btn" onclick="openFrames(this)" data-base="${base}" data-frames="${data}">Frames (${frames.length})</button>
+<dialog id="frames" class="frames-pop"><div class="bar"><button type="button" class="btn" onclick="stepFrame(-1)">&larr;</button><span id="frame-cap"></span><button type="button" class="btn" onclick="stepFrame(1)">&rarr;</button><a id="frame-json" target="_blank">screen model</a><button type="button" class="btn" onclick="this.closest('dialog').close()">Close</button></div><div id="frame-body"></div></dialog>
+<script>
+let fl = [], fi = 0, fb = '';
+function openFrames(b) { fl = JSON.parse(b.dataset.frames); fb = b.dataset.base; fi = fl.length - 1; showFrame(); document.getElementById('frames').showModal(); }
+function stepFrame(d) { fi = Math.max(0, Math.min(fl.length - 1, fi + d)); showFrame(); }
+function showFrame() {
+  const f = fl[fi];
+  document.getElementById('frame-cap').textContent = f.caption;
+  document.getElementById('frame-json').href = fb + f.seq + '.json';
+  const body = document.getElementById('frame-body');
+  body.textContent = '';
+  if (f.image) { const i = document.createElement('img'); i.src = fb + f.seq + '.png'; i.alt = 'Frame ' + f.seq + ', masked'; body.append(i); }
+  else { const w = document.createElement('div'); w.className = 'withheld'; w.textContent = 'Withheld: ' + (f.withheld || 'no image'); body.append(w); }
+}
+</script>`;
 }

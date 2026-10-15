@@ -4,7 +4,7 @@
 // crawler matches pictures on screen against those fingerprints, so a picture gets a name like any
 // other control. A picture with no match has no name, and is never clicked.
 //
-// The fingerprint is a difference hash shaped for text: the picture is reduced to 33 x 8 grey
+// The fingerprint is a difference hash shaped for text: the picture is reduced to 33 x 8 gray
 // cells and each bit says whether a cell is brighter than its right-hand neighbour: 256 bits,
 // stable across loads and small rendering differences, different for different words.
 import type { Box, Control, ScreenModel } from './model.js';
@@ -21,7 +21,7 @@ export interface KnownPicture {
   aspect: number;
 }
 
-function grey(img: Image, x: number, y: number): number {
+function gray(img: Image, x: number, y: number): number {
   const i = (y * img.width + x) * 4;
   return 0.299 * img.data[i]! + 0.587 * img.data[i + 1]! + 0.114 * img.data[i + 2]!;
 }
@@ -43,7 +43,7 @@ export function fingerprint(img: Image, box: Box): string {
       let n = 0;
       for (let y = ay; y < by && y < y1; y++) {
         for (let x = ax; x < bx && x < x1; x++) {
-          sum += grey(img, x, y);
+          sum += gray(img, x, y);
           n++;
         }
       }

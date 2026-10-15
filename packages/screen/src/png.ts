@@ -1,5 +1,5 @@
-// A PNG decoder for screenshots: RGBA, 8 bits per channel, the five standard filters. Enough for
-// what Chromium's screenshots are, with no dependency.
+// A PNG decoder for screenshots (RGBA, RGB or gray, 8 bits per channel, the five standard filters)
+// and two encoders: RGBA, and the light gray one stored frames use. No dependency.
 import { deflateSync, inflateSync } from 'node:zlib';
 
 export interface Image {
@@ -29,9 +29,9 @@ export function decodePng(buf: Buffer): Image {
     else if (type === 'IEND') break;
     o += 12 + len;
   }
-  if (bitDepth !== 8 || (colorType !== 6 && colorType !== 2))
-    throw new Error(`unsupported PNG: depth ${bitDepth}, colour type ${colorType}`);
-  const channels = colorType === 6 ? 4 : 3;
+  const channels = ({ 6: 4, 2: 3, 0: 1 } as Record<number, number>)[colorType];
+  if (bitDepth !== 8 || !channels)
+    throw new Error(`unsupported PNG: depth ${bitDepth}, color type ${colorType}`);
   const raw = inflateSync(Buffer.concat(idat));
   const stride = width * channels;
   const out = new Uint8Array(width * height * 4);
@@ -76,8 +76,8 @@ export function decodePng(buf: Buffer): Image {
       const s = xx * channels;
       const d = (y * width + xx) * 4;
       out[d] = cur[s]!;
-      out[d + 1] = cur[s + 1]!;
-      out[d + 2] = cur[s + 2]!;
+      out[d + 1] = cur[channels === 1 ? s : s + 1]!;
+      out[d + 2] = cur[channels === 1 ? s : s + 2]!;
       out[d + 3] = channels === 4 ? cur[s + 3]! : 255;
     }
     prev = cur;
@@ -146,6 +146,38 @@ export function encodePng(img: Image): Buffer {
       raw,
       y * (img.width * 4 + 1) + 1,
     );
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+/**
+ * Encodes pixels as an 8-bit gray PNG, each row filtered against the one above: about a tenth of
+ * the RGBA size for a page of text, and still readable at one pixel per CSS pixel.
+ */
+export function encodeGrayPng(img: Image): Buffer {
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(img.width, 0);
+  ihdr.writeUInt32BE(img.height, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 0;
+  const raw = Buffer.alloc((img.width + 1) * img.height);
+  let prev = new Uint8Array(img.width);
+  for (let y = 0; y < img.height; y++) {
+    const row = new Uint8Array(img.width);
+    const o = y * (img.width + 1);
+    raw[o] = 2;
+    for (let x = 0; x < img.width; x++) {
+      const i = (y * img.width + x) * 4;
+      const d = img.data;
+      row[x] = (d[i]! * 77 + d[i + 1]! * 150 + d[i + 2]! * 29) >> 8;
+      raw[o + 1 + x] = (row[x]! - prev[x]!) & 0xff;
+    }
+    prev = row;
+  }
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     chunk('IHDR', ihdr),

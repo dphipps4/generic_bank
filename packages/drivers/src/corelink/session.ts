@@ -56,7 +56,7 @@ export function startSession(ctx: DriverContext): Session {
 /** The next screen, fully rendered and recognized; a dialog is answered with the non-committal choice. */
 export async function next(sess: Session): Promise<Seen | null> {
   sess.stepStart = Date.now();
-  const s = await see(sess.ctx, sess.sigs, { limitMs: 45_000 });
+  const s = await see(sess.ctx, sess.sigs);
   if (s.dialog) {
     await sess.ctx.page.answerDialog(false);
     await sess.record('dialog', null, null, `answered "${s.dialog.type}" with Cancel`, 'recovered');

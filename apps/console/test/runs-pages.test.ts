@@ -42,10 +42,11 @@ beforeAll(async () => {
     ms: 400,
   });
   await store.put(`runs/${runId}/001.png`, Buffer.from('\x89PNG fake'), 'image/png');
+  await store.put(`runs/${runId}/001.json`, Buffer.from('{"texts":[]}'), 'application/json');
   await addFrame(db, runId, 1, {
     stepSeq: 1,
     imageKey: `runs/${runId}/001.png`,
-    modelKey: null,
+    modelKey: `runs/${runId}/001.json`,
     host: 'bank-generic:8081',
     path: '/corelink/signin',
   });
@@ -76,7 +77,7 @@ describe('runs in the Console', () => {
     expect(r.body).toContain('business outcome');
   });
 
-  it('show one run: facts, what the caller was told, steps, people asked, and screens', async () => {
+  it('show one run: facts, what the caller was told, steps, people asked, and a Frames button', async () => {
     const r = (await app.inject({ url: `/runs/${runId}` })).body;
     for (const s of [
       'check-balance',
@@ -84,8 +85,9 @@ describe('runs in the Console', () => {
       'The bank has no member with that number.',
       'typed the operator ID and password',
       'staff code',
-      `/runs/${runId}/frames/1.png`,
-      'Withheld: a frame on this screen could not be read',
+      'Frames (2)',
+      `data-base="/runs/${runId}/frames/"`,
+      'a frame on this screen could not be read',
     ]) {
       expect(r).toContain(s);
     }
@@ -96,5 +98,14 @@ describe('runs in the Console', () => {
     const r = await app.inject({ url: `/runs/${runId}/frames/1.png` });
     expect([r.statusCode, r.headers['content-type']]).toEqual([200, 'image/png']);
     expect((await app.inject({ url: `/runs/${runId}/frames/2.png` })).statusCode).toBe(404);
+  });
+
+  it('serve a frame’s masked screen model as JSON', async () => {
+    const r = await app.inject({ url: `/runs/${runId}/frames/1.json` });
+    expect([r.statusCode, r.headers['content-type'], r.body]).toEqual([
+      200,
+      'application/json',
+      '{"texts":[]}',
+    ]);
   });
 });
