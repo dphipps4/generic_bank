@@ -251,7 +251,7 @@ ${scripts.length ? `<SCRIPT>${scripts.join('\n')}</SCRIPT>` : ''}
 export const CORELINK_JS = `var CL = window.CL || {};
 CL.swallow = false;
 CL.formOf = function (el) { while (el && el.nodeName !== 'FORM') { el = el.parentNode; } return el; };
-CL.go = function (el) { var f = CL.formOf(el); if (f) { f.submit(); } return false; };
+CL.go = function (el) { var f = CL.formOf(el); if (f && (!f.onsubmit || f.onsubmit() !== false)) { f.submit(); } return false; };
 CL.isSubmit = function (el) {
   for (var i = 0; el && i < 6; i++, el = el.parentNode) {
     if (!el.getAttribute) { continue; }

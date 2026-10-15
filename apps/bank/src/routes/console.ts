@@ -92,7 +92,8 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
   const searchPage =
     (next: string, number: string) =>
     async ({ c, d }: Parameters<Parameters<typeof mainFrame>[4]>[0]) => {
-      const rows = row(c, d, L.memberNumber, input(c, 'number', { size: 10, value: number }));
+      const label = bank.t.searchByName ? `${L.memberNumber} or last name` : L.memberNumber;
+      const rows = row(c, d, label, input(c, 'number', { size: 14, value: number }));
       const results = d.cls('results');
       const script = number
         ? `CL.get(${js(`${base}api/members?number=${encodeURIComponent(number)}&next=${encodeURIComponent(next)}`)}, function (err, r) {
@@ -100,10 +101,14 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
   if (err) { (${onSignedOut(base)})(err); box.innerHTML = '<font color="#CC0000"><b>The search could not be completed.</b></font>'; return; }
   var h = '';
   if (r.error) { h += '<p><font face="Verdana" size="2" color="#CC0000"><b>' + r.error + '</b></font></p>'; }
-  if (r.member) {
-    h += '<table border="1" cellpadding="3" cellspacing="0"><tr><th><font size="1">Member</font></th><th><font size="1">Name</font></th><th><font size="1">Status</font></th><th></th></tr>' +
-      '<tr><td><font size="2">' + r.member.number + '</font></td><td><font size="2">' + r.member.name + '</font></td><td><font size="2">' + r.member.status + '</font></td><td>' +
-      (r.open ? '<a href="' + r.open + '"><font size="2">Open</font></a>' : '&nbsp;') + '</td></tr></table>';
+  if (r.members && r.members.length) {
+    h += '<table border="1" cellpadding="3" cellspacing="0"><tr><th><font size="1">Member</font></th><th><font size="1">Name</font></th><th><font size="1">Status</font></th><th></th></tr>';
+    for (var i = 0; i < r.members.length; i++) {
+      var m = r.members[i];
+      h += '<tr><td><font size="2">' + m.number + '</font></td><td><font size="2">' + m.name + '</font></td><td><font size="2">' + m.status + '</font></td><td>' +
+        (m.open ? '<a href="' + m.open + '"><font size="2">Open</font></a>' : '&nbsp;') + '</td></tr>';
+    }
+    h += '</table>';
   }
   box.innerHTML = h;
 });`
@@ -146,7 +151,35 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
     async (req, reply) => {
       if (!(await apiOperator(bank, req, reply))) return;
       const number = String(req.query.number ?? '').trim();
-      if (!MEMBER.test(number)) return { error: 'Enter an 8-digit member number.' };
+      const next = String(req.query.next ?? '');
+      const where =
+        next === 'transfer' || next === 'statements' || next in DECOYS ? `/${next}` : '';
+      // Bank 3 also finds members by last name, and may find several.
+      if (bank.t.searchByName && /^[A-Za-z' -]{2,30}$/.test(number)) {
+        const r = await bank.db.query<{ number: string }>(
+          'SELECT number FROM members WHERE lower(last_name) = lower($1) ORDER BY number',
+          [number],
+        );
+        if (!r.rows.length) return { error: 'No member found with that name.' };
+        const members = [];
+        for (const row of r.rows) {
+          const m = (await findMember(bank.db, row.number))!;
+          const closed = m.status === 'closed';
+          members.push({
+            number: m.number,
+            name: maskedName(m),
+            status: closed ? 'Closed' : 'Active',
+            ...(closed ? {} : { open: `${base}members/${m.number}${where}` }),
+          });
+        }
+        return { members };
+      }
+      if (!MEMBER.test(number))
+        return {
+          error: bank.t.searchByName
+            ? 'Enter a member number or a last name.'
+            : 'Enter an 8-digit member number.',
+        };
       if (req.hz.on('record-in-use'))
         return { error: "This member's record is in use by another operator." };
       const m = req.hz.on('record-not-found') ? null : await findMember(bank.db, number);
@@ -156,11 +189,10 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
         name: maskedName(m),
         status: m.status === 'closed' ? 'Closed' : 'Active',
       };
-      if (m.status === 'closed') return { member, error: 'Member status: Closed.' };
-      const next = String(req.query.next ?? '');
-      const where =
-        next === 'transfer' || next === 'statements' || next in DECOYS ? `/${next}` : '';
-      return { member, open: `${base}members/${m.number}${where}` };
+      if (m.status === 'closed')
+        return { member, members: [member], error: 'Member status: Closed.' };
+      const open = `${base}members/${m.number}${where}`;
+      return { member, open, members: [{ ...member, open }] };
     },
   );
 

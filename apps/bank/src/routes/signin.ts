@@ -16,6 +16,7 @@ import {
   trustWorkstation,
   WORKSTATION_DAYS,
 } from '../auth.js';
+import { has } from '../tenants.js';
 import { dialect, readFields } from '../markup/dialect.js';
 import {
   type Ctx,
@@ -81,11 +82,16 @@ ${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}
     bank.t.theme === 'y2003'
       ? `<MARQUEE SCROLLAMOUNT="3">${font(c, `Welcome to ${esc(bank.t.brand)} Online Branch &nbsp;&middot;&nbsp; Branch hours are 9 to 5 &nbsp;&middot;&nbsp; Remember to sign out when you leave your workstation`)}</MARQUEE>`
       : '';
+  // Bank 3: a hidden copy of the password field and the button, earlier in the page. Whatever is
+  // typed there is never sent.
+  const shadow = has(bank.t, 'hidden-duplicate')
+    ? `<DIV STYLE="display:none"><FORM METHOD="post" ACTION="${c.base}signin">${row(c, d, L.password, input(c, 'password-shadow', { type: 'password' }))}${submit(c, d, L.signIn, 'button')}</FORM></DIV>`
+    : '';
   const body = nest(
     c,
     d,
     `${banner}${heading(c, d, `${bank.t.brand}: CoreLink Branch Console`)}${o.error ? message(c, o.error) : ''}${o.note ? `<P>${font(c, esc(o.note))}</P>` : ''}
-${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}`,
+${shadow}${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}`,
   );
   return doc(c, d, { title: L.signIn, body, script: hydrate(randomInt(300, 900)) });
 }
@@ -309,8 +315,33 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
     });
     // Bank 4 signs in on its second origin; the console lives on the main one.
     const to = bank.t.secondOrigin === 'signin' ? origins(bank, req).main : '';
-    return reply.redirect(`${to}${base}console`);
+    return reply.redirect(`${to}${base}${bank.t.termsAfterSignIn ? 'terms' : 'console'}`);
   });
+
+  // Bank 3: "Terms updated: Acknowledge" after every sign-in, before the console.
+  if (bank.t.termsAfterSignIn) {
+    app.get(`${base}terms`, async (req, reply) => {
+      if (!(await current(bank, req))) return reply.redirect(`${base}signin`);
+      const c = ctxOf(bank, req);
+      const d = dialect(bank.t, bank.uiVersion, 'terms');
+      return html(
+        reply,
+        doc(c, d, {
+          title: 'Terms updated',
+          body: nest(
+            c,
+            d,
+            `${heading(c, d, 'Terms updated')}<P>${font(c, 'The staff terms of use have changed. Read them and acknowledge to continue.')}</P>
+<P>${font(c, 'Staff may act for a member only with the member present or on a verified call. Every action is recorded.')}</P>
+${form(c, d, `${base}terms`, '', submit(c, d, 'Acknowledge'), '_top')}`,
+          ),
+        }),
+      );
+    });
+    app.post(`${base}terms`, async (req, reply) =>
+      reply.redirect(`${base}${(await current(bank, req)) ? 'console' : 'signin'}`),
+    );
+  }
 
   app.post(`${base}keepalive`, async (req, reply) =>
     reply.code((await current(bank, req)) ? 204 : 401).send(),

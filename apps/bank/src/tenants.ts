@@ -28,12 +28,32 @@ export interface Labels {
   statements: string;
 }
 
+/**
+ * Failure modes that only some banks show, so crawling them teaches the factory something new.
+ * Bank 3's six, then bank 4's six (plan, Appendix C.4).
+ */
+export type Trouble =
+  | 'hidden-duplicate'
+  | 'keypress-only'
+  | 'documents-among-statements'
+  | 'view-more'
+  | 'detached-menu'
+  | 'covering-bar'
+  | 'handoff-bounce'
+  | 'silent-code-clear'
+  | 'html-statement-viewer'
+  | 'window-token'
+  | 'shuffled-tiles'
+  | 'false-notice';
+
 /** Words this bank shows only as pixels: some labels, some buttons, or every section heading. */
 export interface ImageText {
   labels?: string[];
   buttons?: string[];
   headings?: boolean;
 }
+
+export const has = (t: { trouble?: Trouble[] }, x: Trouble) => !!t.trouble?.includes(x);
 
 export interface Tenant {
   id: TenantId;
@@ -51,6 +71,11 @@ export interface Tenant {
   supervisorThresholdCents: number;
   codeChannels: CodeChannel[];
   imageText?: ImageText;
+  /** Member lookup also by last name (bank 3). */
+  searchByName?: boolean;
+  /** A "Terms updated: Acknowledge" page after every sign-in (bank 3). */
+  termsAfterSignIn?: boolean;
+  trouble?: Trouble[];
   /** Fixes every page's markup dialect, so a tenant's UI is the same from run to run. */
   markupSeed: number;
   /** The database the bank keeps its ledger in. */
@@ -141,6 +166,16 @@ export const TENANTS: Record<TenantId, Tenant> = {
     supervisorThresholdCents: 50_000,
     codeChannels: ['text'],
     imageText: { headings: true },
+    searchByName: true,
+    termsAfterSignIn: true,
+    trouble: [
+      'hidden-duplicate',
+      'keypress-only',
+      'documents-among-statements',
+      'view-more',
+      'detached-menu',
+      'covering-bar',
+    ],
     markupSeed: 4302,
     database: 'bank_sample',
   },
