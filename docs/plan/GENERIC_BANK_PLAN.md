@@ -493,6 +493,8 @@ Tempo, or to LangSmith or Langfuse, later, by configuration. Details: [Appendix 
 - Account numbers, amounts and names are masked before anything is written; a screenshot
   that cannot be proven clean is not kept.
 - Text on a page is never treated as an instruction.
+- No secret reaches the repository or an image: `gitleaks` runs in `make check`, in CI over the
+  whole history, and over every built image's filesystem.
 
 Every one of these is enforced in code and proven by tests. Details: [Appendix J](#appendix-j-guardrails). Why each
 rule exists: [Appendix U](#appendix-u-why-each-rule-exists).
@@ -2613,7 +2615,9 @@ CI (GitHub Actions): typecheck, lint (including E0 and the import boundaries), a
 request the tests its change touches; a change to migrations, seeds, config, infrastructure or
 CI runs them all. Every merge to master and every night run the whole suite in three parallel
 shards, the long suite, check-prompts, and a compose-based job for bank, browser, outcomes,
-escalation, transfer, guards and PII. `gitleaks` over the history and `npm audit`.
+escalation, transfer, guards and PII. `gitleaks` over the whole history and over every built
+image's filesystem, and `npm audit`. `make check` runs the same `gitleaks` scan over the history and every
+uncommitted change.
 
 **Rules every test follows:**
 
@@ -3204,7 +3208,7 @@ Each entry gives the choice, the reason, and what else was considered.
 | Driver rules (E0) | Custom rules on the **TypeScript compiler API** | Forbids CSS and id locators, page script, non-GET requests and model calls in drivers, without running the code |
 | Import boundaries | **dependency-cruiser** | Guardrails, evals and lint never import the Runner or the factory; nothing imports the bank |
 | Spelling and prose | **cspell** with a project dictionary, **markdownlint** | Keeps typos out of prompts and docs |
-| Secret scanning | **gitleaks** | Over the whole history |
+| Secret scanning | **gitleaks**, from its pinned image | In `make check` (the history and every uncommitted change), in CI over the whole history, and over every built image's filesystem |
 | Dependencies | `npm audit` | |
 | CI | **GitHub Actions** | Typecheck, lint, unit, `check-prompts`, then a compose job for the browser, outcome, escalation, transfer, guard and PII suites |
 

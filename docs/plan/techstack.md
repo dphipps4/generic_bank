@@ -120,7 +120,7 @@ Each entry gives the choice, the reason, and what else was considered.
 | Driver rules (E0) | Custom rules on the **TypeScript compiler API** | Forbids CSS and id locators, page script, non-GET requests and model calls in drivers, without running the code |
 | Import boundaries | **dependency-cruiser** | Guardrails, evals and lint never import the Runner or the factory; nothing imports the bank |
 | Spelling and prose | **cspell** with a project dictionary, **markdownlint** | Keeps typos out of prompts and docs |
-| Secret scanning | **gitleaks** | Over the whole history |
+| Secret scanning | **gitleaks**, from its pinned image | In `make check` (the history and every uncommitted change), in CI over the whole history, and over every built image's filesystem |
 | Dependencies | `npm audit` | |
 | CI | **GitHub Actions** | Typecheck, lint, unit, `check-prompts`, then a compose job for the browser, outcome, escalation, transfer, guard and PII suites |
 

@@ -196,8 +196,9 @@ db-shell: ## Open psql on the control database
 
 ##@ Quality
 
-check: ## Everything CI runs: typecheck, lint, tests, import boundaries
+check: ## Everything CI runs: typecheck, lint, tests, import boundaries, secrets
 	@npm run --silent check
+	@$(MAKE) secrets-scan
 
 test: ## The whole suite (what CI runs on every merge to master)
 	@npx vitest run
@@ -220,6 +221,9 @@ format: ## Format everything with Prettier
 boundaries: ## Import boundaries (dependency-cruiser)
 	@npm run --silent depcruise
 
+secrets-scan: ## Secrets (gitleaks, in its pinned image): the whole history and every uncommitted change
+	@$(SCRIPTS)/secrets-scan.sh
+
 ##@ Later milestones (named now so the plan and the Makefile agree)
 
 demo try evals check-prompts memory-seed memory-export memory-import export import trace observe docs: ## Not built yet: each says which milestone brings it
@@ -240,7 +244,7 @@ clean: ## Remove build output (dist, tsbuildinfo, .run)
 
 .PHONY: help requirements requirements-dev plan plan-html setup dev-setup fork-ports tools doctor install secrets-init env secrets-edit secret-set secret-rotate secrets-keys \
   console-password build build-nc image up down restart ps urls data backend console crawlers bank \
-  bank-more factory migrate logs vault-status db-shell check test test-changed test-long typecheck lint format boundaries \
+  bank-more factory migrate logs vault-status db-shell check test test-changed test-long typecheck lint format boundaries secrets-scan \
   demo try evals check-prompts memory-seed memory-export memory-import export import trace observe \
   docs reset clean
 
