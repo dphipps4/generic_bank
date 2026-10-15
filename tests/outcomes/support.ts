@@ -10,7 +10,7 @@ import {
   type Outcome,
 } from '../../packages/drivers/src/index.js';
 import { Browser } from '../../packages/screen/src/index.js';
-import type { HazardName } from '../../apps/bank/src/hazards.js';
+import { type Expected, type HazardName, OUTCOMES } from '../../packages/contracts/src/index.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
 import { type LiveBank, liveBank, PASSWORDS } from '../support/banks.js';
 
@@ -65,24 +65,6 @@ export async function run(
 export const brief = (o: Outcome<{ availableCents: number }>) =>
   o.status === 'succeeded' ? { status: 'succeeded' } : { status: o.status, code: o.code };
 
-// Every hazard, forced alone, and the one result it must give.
-export const TABLE: [HazardName, { status: string; code?: string }][] = [
-  ['latency', { status: 'succeeded' }],
-  ['js-error-harmless', { status: 'succeeded' }],
-  ['confirm-dialog', { status: 'succeeded' }],
-  ['promo', { status: 'succeeded' }],
-  ['slow-handoff', { status: 'succeeded' }],
-  ['early-expiry', { status: 'succeeded' }],
-  ['swallowed-click', { status: 'succeeded' }],
-  ['swallowed-submit', { status: 'succeeded' }],
-  ['late-rows', { status: 'succeeded' }],
-  ['injected-instruction', { status: 'succeeded' }],
-  ['validation-error', { status: 'succeeded' }],
-  ['js-error-widget', { status: 'escalated', code: 'unknown_screen' }],
-  ['js-error-fatal', { status: 'failed', code: 'app_error' }],
-  ['service-unavailable', { status: 'failed', code: 'unavailable' }],
-  ['record-in-use', { status: 'failed', code: 'record_in_use' }],
-  ['record-not-found', { status: 'business_outcome', code: 'no_such_member' }],
-  ['permission-denial', { status: 'business_outcome', code: 'permission_denied' }],
-  ['unknown-screen', { status: 'escalated', code: 'unknown_screen' }],
-];
+// Every hazard, forced alone, and the one result it must give: the same list the hazard lab shows.
+export const CASES = OUTCOMES['check-balance'];
+export const TABLE: [HazardName, Expected][] = CASES.hazards.map((c) => [c.hazard, c.expected]);
