@@ -52,8 +52,17 @@ function pipeTransport(child: ChildProcess): Transport {
       for (const l of messageListeners) l(m);
     }
   });
-  const closed = () => closeListeners.forEach((l) => l());
+  let done = false;
+  const closed = () => {
+    if (done) return;
+    done = true;
+    closeListeners.forEach((l) => l());
+  };
   fromChrome.on('close', closed);
+  // When the browser is killed, its pipe can fail with ECONNRESET or EPIPE: that is the browser
+  // going away, not an error that may crash the process.
+  fromChrome.on('error', closed);
+  toChrome.on('error', closed);
   child.on('exit', closed);
   return {
     send: (m) => {
