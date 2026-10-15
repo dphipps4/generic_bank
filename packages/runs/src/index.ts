@@ -4,6 +4,7 @@
 // staff code) is sealed and cleared once used.
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import {
+  type HumanTaskKind,
   messageFor,
   type ResultCode,
   RETRYABLE,
@@ -153,11 +154,21 @@ export async function resultOf(sql: Sql, runId: string): Promise<TaskResult | nu
   if (run.status === 'running') return base;
   if (run.status === 'succeeded') return { ...base, data: run.result as TaskResult['data'] };
   const code = (run.resultCode ?? undefined) as ResultCode | undefined;
-  const escalation =
-    run.status === 'escalated'
+  // The person's side of it: the open task a waiting run waits on, the escalation a stopped run
+  // hands over, or who finished it by hand.
+  const task =
+    run.status === 'escalated' || run.status === 'needs_human' || run.status === 'handed_off'
       ? (
-          await sql.query<{ id: string }>(
-            `SELECT id FROM "HumanTask" WHERE "runId" = $1 ORDER BY "openedAt" DESC LIMIT 1`,
+          await sql.query<{
+            id: string;
+            kind: HumanTaskKind;
+            deadline: Date;
+            resolvable: boolean;
+            answeredBy: string | null;
+            answeredAt: Date | null;
+          }>(
+            `SELECT id, kind, deadline, resolvable, "answeredBy", "answeredAt" FROM "HumanTask"
+              WHERE "runId" = $1 ORDER BY "openedAt" DESC LIMIT 1`,
             [runId],
           )
         ).rows[0]
@@ -166,7 +177,19 @@ export async function resultOf(sql: Sql, runId: string): Promise<TaskResult | nu
     ...base,
     ...(code ? { code, message: messageFor(code) } : {}),
     ...(run.status === 'failed' ? { retryable: !!run.retryable } : {}),
-    ...(escalation ? { escalationId: escalation.id, resolvable: code !== 'guard_tripped' } : {}),
+    ...(run.status === 'escalated' && task
+      ? { escalationId: task.id, resolvable: task.resolvable && code !== 'guard_tripped' }
+      : {}),
+    ...(run.status === 'needs_human' && task && task.kind !== 'escalation'
+      ? { pending: { kind: task.kind, deadline: new Date(task.deadline).toISOString() } }
+      : {}),
+    ...(run.status === 'handed_off'
+      ? {
+          ...(run.result ? { data: run.result as TaskResult['data'] } : {}),
+          ...(task?.answeredBy ? { resolvedBy: task.answeredBy } : {}),
+          ...(task?.answeredAt ? { resolvedAt: new Date(task.answeredAt).toISOString() } : {}),
+        }
+      : {}),
   };
 }
 
@@ -223,10 +246,17 @@ export async function addFrame(
 
 // ── People ───────────────────────────────────────────────────────────────────
 
+/** The needs_human code a waiting run shows for each kind of task; an escalation is not a wait. */
+const AWAITING: Record<Exclude<HumanTaskKind, 'escalation'>, ResultCode> = {
+  staff_code: 'awaiting_staff_code',
+  approval: 'awaiting_approval',
+  supervisor_code: 'awaiting_approval',
+};
+
 export async function openHumanTask(
   sql: Sql,
   runId: string,
-  kind: 'staff_code',
+  kind: Exclude<HumanTaskKind, 'escalation'>,
   context: Record<string, unknown>,
   deadline: Date,
 ): Promise<string> {
@@ -235,7 +265,7 @@ export async function openHumanTask(
     'INSERT INTO "HumanTask" (id, "runId", kind, "contextMasked", deadline) VALUES ($1, $2, $3, $4, $5)',
     [taskId, runId, kind, JSON.stringify(context), deadline],
   );
-  await setStatus(sql, runId, 'needs_human', kind === 'staff_code' ? 'awaiting_staff_code' : null);
+  await setStatus(sql, runId, 'needs_human', AWAITING[kind]);
   return taskId;
 }
 

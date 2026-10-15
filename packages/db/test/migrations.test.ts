@@ -40,4 +40,29 @@ describe('control database migrations', () => {
     );
     await db.close();
   });
+
+  it('keep human tasks when take-over becomes an escalation', async () => {
+    const db = new PGlite();
+    const at = migrations.indexOf('0005_human_steps');
+    for (const m of migrations.slice(0, at))
+      await db.exec(readFileSync(join(dir, m, 'migration.sql'), 'utf8'));
+    await db.exec(
+      `INSERT INTO "TaskRun" (id, task, bank, "inputsMasked") VALUES ('r1', 'transfer', 'generic', '{}');
+       INSERT INTO "HumanTask" (id, "runId", kind, "contextMasked", deadline)
+         VALUES ('h1', 'r1', 'take_over', '{}', now()), ('h2', 'r1', 'staff_code', '{}', now())`,
+    );
+    for (const m of migrations.slice(at))
+      await db.exec(readFileSync(join(dir, m, 'migration.sql'), 'utf8'));
+    const r = await db.query<{ id: string; kind: string; resolvable: boolean; asks: number }>(
+      `SELECT id, kind::text AS kind, resolvable, asks FROM "HumanTask" ORDER BY id`,
+    );
+    expect(r.rows).toEqual([
+      { id: 'h1', kind: 'escalation', resolvable: true, asks: 0 },
+      { id: 'h2', kind: 'staff_code', resolvable: true, asks: 0 },
+    ]);
+    await db.query(
+      `INSERT INTO "HumanTask" (id, "runId", kind, "contextMasked", deadline) VALUES ('h3', 'r1', 'supervisor_code', '{}', now())`,
+    );
+    await db.close();
+  });
 });

@@ -134,7 +134,14 @@ describe('human tasks', () => {
       { bank: 'generic' },
       new Date(Date.now() + 60_000),
     );
-    expect(await resultOf(db, runId)).toMatchObject({ status: 'needs_human' });
+    const deadline = (
+      await db.query<{ deadline: Date }>('SELECT deadline FROM "HumanTask" WHERE id = $1', [task])
+    ).rows[0]!.deadline;
+    expect(await resultOf(db, runId)).toMatchObject({
+      status: 'needs_human',
+      code: 'awaiting_staff_code',
+      pending: { kind: 'staff_code', deadline: new Date(deadline).toISOString() },
+    });
     setTimeout(() => void answerHumanTask(db, task, '123456', 'admin@test', KEY), 300);
     expect(await awaitAnswer(db, task, KEY, new Date(Date.now() + 10_000), 100)).toBe('123456');
     const row = (
@@ -145,6 +152,24 @@ describe('human tasks', () => {
     ).rows[0]!;
     expect(row).toEqual({ answerSealed: null, answeredBy: 'admin@test' });
     expect((await resultOf(db, runId))!.status).toBe('running');
+  });
+
+  it('say what a transfer waits for: an approval, then a supervisor code, both as approval', async () => {
+    const { runId } = await createRun(
+      db,
+      { task: 'check-balance', bank: 'generic', clientId: null, inputs: input },
+      KEY,
+    );
+    await openHumanTask(db, runId, 'approval', {}, new Date(Date.now() + 60_000));
+    expect(await resultOf(db, runId)).toMatchObject({
+      code: 'awaiting_approval',
+      pending: { kind: 'approval' },
+    });
+    await openHumanTask(db, runId, 'supervisor_code', {}, new Date(Date.now() + 60_000));
+    expect(await resultOf(db, runId)).toMatchObject({
+      code: 'awaiting_approval',
+      pending: { kind: 'supervisor_code' },
+    });
   });
 
   it('expire at the deadline, and cannot be answered twice', async () => {

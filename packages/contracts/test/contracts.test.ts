@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ACTIONS,
   CANNED,
   CheckBalanceInput,
   CODES,
+  HUMAN_BODIES,
+  HumanAction,
+  HumanTaskKind,
   httpStatus,
   messageFor,
   problem,
+  refusal,
   RETRYABLE,
   type ResultCode,
   safeMessage,
@@ -101,5 +106,40 @@ describe('the caller gets our words', () => {
       expect(safeMessage(leak)).toBe(CANNED.generic);
     }
     expect(problem(502, 'app_error', 'TypeError: x is null').detail).toBe(CANNED.generic);
+  });
+});
+
+describe('human steps', () => {
+  it('give every kind of task its own actions, and every action a body', () => {
+    for (const k of HumanTaskKind.options) expect(ACTIONS[k].length).toBeGreaterThan(1);
+    for (const a of HumanAction.options) expect(HUMAN_BODIES[a]).toBeDefined();
+    // Every action is offered by some kind of task, and Cancel by all of them.
+    expect(new Set(Object.values(ACTIONS).flat())).toEqual(new Set(HumanAction.options));
+    for (const k of HumanTaskKind.options) expect(ACTIONS[k]).toContain('cancel');
+  });
+
+  it('refuse an action from the wrong state or the wrong kind', () => {
+    const open = { kind: 'approval', status: 'open' } as const;
+    expect(refusal(open, 'approve')).toBeNull();
+    expect(refusal({ ...open, status: 'answered' }, 'approve')).toMatch(/answered/);
+    expect(refusal({ ...open, status: 'expired' }, 'cancel')).toMatch(/expired/);
+    expect(refusal(open, 'answer')).toMatch(/cannot be answered/);
+    expect(refusal({ kind: 'staff_code', status: 'open' }, 'approve')).toMatch(/cannot/);
+    expect(refusal({ kind: 'escalation', status: 'open' }, 'resume')).toBeNull();
+    expect(refusal({ kind: 'escalation', status: 'open', resolvable: false }, 'resume')).toMatch(
+      /cannot resume/,
+    );
+    expect(refusal({ kind: 'escalation', status: 'open', resolvable: false }, 'cancel')).toBeNull();
+  });
+
+  it('need a written reason for everything but a code', () => {
+    expect(HUMAN_BODIES.answer.safeParse({ code: '123456' }).success).toBe(true);
+    expect(HUMAN_BODIES.answer.safeParse({ code: '12a456' }).success).toBe(false);
+    for (const a of ['approve', 'reject', 'take_over', 'resume', 'finish', 'cancel'] as const) {
+      expect(HUMAN_BODIES[a].safeParse({}).success).toBe(false);
+      expect(HUMAN_BODIES[a].safeParse({ reason: 'ok' }).success).toBe(false);
+      expect(HUMAN_BODIES[a].safeParse({ reason: '  checked the member  ' }).success).toBe(true);
+      expect(HUMAN_BODIES[a].safeParse({ reason: '          ' }).success).toBe(false);
+    }
   });
 });
