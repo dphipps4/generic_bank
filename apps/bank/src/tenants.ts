@@ -76,6 +76,12 @@ export interface Tenant {
   /** A "Terms updated: Acknowledge" page after every sign-in (bank 3). */
   termsAfterSignIn?: boolean;
   trouble?: Trouble[];
+  /** Bank 4: codes come from an authenticator app, not by text or email. */
+  codeStyle?: 'sent' | 'authenticator';
+  /** Bank 4: member search results open in a popup window. */
+  searchPopup?: boolean;
+  /** Bank 4: the transfer is split over pages: Amount, then Accounts, then Authorize. */
+  splitTransfer?: boolean;
   /** Fixes every page's markup dialect, so a tenant's UI is the same from run to run. */
   markupSeed: number;
   /** The database the bank keeps its ledger in. */
@@ -203,6 +209,17 @@ export const TENANTS: Record<TenantId, Tenant> = {
     accountWording: (n) => `··· ${last4(n)}`,
     supervisorThresholdCents: 200_000,
     codeChannels: ['text'],
+    codeStyle: 'authenticator',
+    searchPopup: true,
+    splitTransfer: true,
+    trouble: [
+      'handoff-bounce',
+      'silent-code-clear',
+      'html-statement-viewer',
+      'window-token',
+      'shuffled-tiles',
+      'false-notice',
+    ],
     markupSeed: 4400,
     database: 'bank_placeholder',
   },

@@ -1,5 +1,7 @@
+import { randomInt } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { type Bank, ctxOf, current } from '../context.js';
+import { has } from '../tenants.js';
 import { accountsOf, activity, findMember, maskedName } from '../ledger.js';
 import { dialect, readFields } from '../markup/dialect.js';
 import {
@@ -95,6 +97,18 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
       const label = bank.t.searchByName ? `${L.memberNumber} or last name` : L.memberNumber;
       const rows = row(c, d, label, input(c, 'number', { size: 14, value: number }));
       const results = d.cls('results');
+      // Bank 4: the results open in a popup window.
+      const popup = `${base}members/results?number=${encodeURIComponent(number)}&next=${encodeURIComponent(next)}`;
+      if (number && bank.t.searchPopup) {
+        return {
+          body: nest(
+            c,
+            d,
+            `${heading(c, d, L.memberSearch)}${form(c, d, `${base}members/search${next ? `?next=${encodeURIComponent(next)}` : ''}`, rows, submit(c, d, L.search))}<P>${font(c, 'The results open in a new window.')}</P>`,
+          ),
+          script: `window.open(${js(popup)}, 'results', 'width=560,height=380');`,
+        };
+      }
       const script = number
         ? `CL.get(${js(`${base}api/members?number=${encodeURIComponent(number)}&next=${encodeURIComponent(next)}`)}, function (err, r) {
   var box = CL.byClass('div', ${js(results)})[0];
@@ -196,6 +210,40 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
     },
   );
 
+  // Bank 4's search results, in their own window: Open sends the console's main frame there.
+  app.get<{ Querystring: { number?: string; next?: string } }>(
+    `${base}members/results`,
+    async (req, reply) => {
+      if (!(await current(bank, req)))
+        return reply.code(401).type('text/plain').send('Your session has ended.');
+      const c = ctxOf(bank, req);
+      const d = dialect(bank.t, bank.uiVersion, 'results');
+      const box = d.cls('results');
+      const api = `${base}api/members?number=${encodeURIComponent(String(req.query.number ?? ''))}&next=${encodeURIComponent(String(req.query.next ?? ''))}`;
+      const script = `CL.get(${js(api)}, function (err, r) {
+  var box = CL.byClass('div', ${js(box)})[0], h = '';
+  if (err) { box.innerHTML = '<b>The search could not be completed.</b>'; return; }
+  if (r.error) { h += '<p><font color="#CC0000"><b>' + r.error + '</b></font></p>'; }
+  var ms = r.members || [];
+  for (var i = 0; i < ms.length; i++) {
+    var m = ms[i];
+    h += '<p><font size="2">' + m.number + ' &nbsp; ' + m.name + ' &nbsp; ' + m.status + ' &nbsp; ' +
+      (m.open ? '<a href="javascript:void(0)" onclick="window.opener.location.href = \\'' + m.open + '\\'; window.close(); return false;">Open</a>' : '') + '</font></p>';
+  }
+  box.innerHTML = h;
+});`;
+      return html(
+        reply,
+        doc(c, d, {
+          title: 'Search results',
+          footer: false,
+          body: `${heading(c, d, 'Search results')}<DIV CLASS="${box}"></DIV>`,
+          script,
+        }),
+      );
+    },
+  );
+
   // The member summary: one tile per account, drawn by script, and drawn again a moment later.
   app.get<{ Params: { n: string } }>(`${base}members/:n`, async (req, reply) =>
     mainFrame(
@@ -205,6 +253,10 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
       { page: 'summary', title: 'Member Summary', member: req.params.n },
       async ({ c, d, member }) => {
         const tiles = d.cls('tiles');
+        // Bank 4 shows a notice on a summary that works perfectly well.
+        const notice = has(bank.t, 'false-notice')
+          ? `<P>${font(c, '<B>Bill pay is temporarily unavailable.</B> Please try again later.', ' COLOR="#AA5500"')}</P>`
+          : '';
         const n = member!.number;
         const broken = c.hz.on('js-error-widget');
         const confirm = c.hz.on('confirm-dialog');
@@ -235,7 +287,7 @@ ${confirm ? `setTimeout(function () { if (window.confirm("This member has 2 unre
           body: nest(
             c,
             d,
-            `${heading(c, d, 'Member Summary')}<P>${linkButton(c, `${base}members/${n}/transfer`, L.transferFunds)}</P><DIV CLASS="${tiles}"></DIV><P>${font(c, decoys)}</P>`,
+            `${heading(c, d, 'Member Summary')}${notice}<P>${linkButton(c, `${base}members/${n}/transfer`, L.transferFunds)}</P><DIV CLASS="${tiles}"></DIV><P>${font(c, decoys)}</P>`,
           ),
           script,
         };
@@ -248,6 +300,13 @@ ${confirm ? `setTimeout(function () { if (window.confirm("This member has 2 unre
     const m = await findMember(bank.db, req.params.n);
     if (!m) return reply.code(404).send({ error: 'No member found with that number.' });
     const accounts = await accountsOf(bank.db, m.number);
+    // Bank 4 draws its tiles in a different order on every load.
+    if (has(bank.t, 'shuffled-tiles')) {
+      for (let i = accounts.length - 1; i > 0; i--) {
+        const j = randomInt(0, i + 1);
+        [accounts[i], accounts[j]] = [accounts[j]!, accounts[i]!];
+      }
+    }
     return {
       accounts: accounts.map((a) => ({
         id: a.id,
