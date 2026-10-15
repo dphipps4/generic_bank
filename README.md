@@ -67,6 +67,7 @@ all moved up by 10000 (its Console is on http://localhost:18080).
 make requirements-dev           # make requirements, plus Node 22
 make dev-setup                  # once: Node dependencies, the Prisma client, Chromium for the tests
 make check                      # everything CI runs: types, lint, tests, import boundaries
+make api-docs                   # write the API reference from the contracts and open it in Chrome
 ```
 
 ## Documents
