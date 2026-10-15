@@ -1,0 +1,34 @@
+{
+  "set": "generic-bank-starting-knowledge",
+  "approval": {
+    "role": "curator",
+    "reason": "The starting knowledge for Generic Bank, reviewed and approved as one set by the maintainer."
+  },
+  "files": {
+    "rules": {
+      "path": "rules.json",
+      "entries": 19,
+      "sha256": "7707f5421533ae55fb6da7358cf838356b299469368df0367a4cfb1bed7ff22d"
+    },
+    "checks": {
+      "path": "checks.json",
+      "entries": 7,
+      "sha256": "6f7cb72568390b1bb3835fcc9013a2252aed0b5128811da96d1fd499c588d388"
+    },
+    "lessons": {
+      "path": "lessons.json",
+      "entries": 276,
+      "sha256": "40631ea53134b19c151d53a683f32061665471714bfb0a39d5b2ef6658c98661"
+    },
+    "scenarios": {
+      "path": "scenarios.json",
+      "entries": 49,
+      "sha256": "2fe024779cb09fdb5770697452846b85acb408b7a5fc686434f4f7b057f4eee3"
+    },
+    "approaches": {
+      "path": "approaches.json",
+      "entries": 46,
+      "sha256": "c70f1054b9f1b848f01a4679dcf72e6a904a4a5c66f5564252b3c0b00864d3c2"
+    }
+  }
+}

@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 910" width="1240" height="910" role="img" font-family='-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif'><title>Generic Bank: the shape in one picture</title><desc>Callers reach box A. Box A holds no durable data; box B holds everything and reaches nothing. Box D, the factory, is created per session. The runner is the only path to the bank tenants, which stand in for the outside world.</desc><defs><marker id="a-grey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7b7b7b"/></marker><marker id="a-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f4d7a"/></marker><marker id="a-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c0484f"/></marker><marker id="a-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6f5fb0"/></marker><marker id="a-rose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c0707a"/></marker><marker id="a-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3f8f8f"/></marker><style>.zone{font-size:11px;font-weight:700;letter-spacing:.11em}.ttl{font-size:13.5px;font-weight:650;fill:#15304a}.sub{font-size:11px;fill:#45586b}.fl{font-size:10.5px}.badge{font-size:11px;font-weight:700;fill:#ffffff}.lane{font-size:10.5px;font-weight:700;letter-spacing:.12em;fill:#8a8a8a}.note{font-size:11px;fill:#6e6e6e;font-style:italic}.chip{font-size:10.5px;fill:#45586b}.tag{font-size:10.5px;font-family:ui-monospace,Menlo,monospace;fill:#8a8a8a}</style></defs><rect width="1240" height="910" fill="#ffffff"/><text class="zone" x="30" y="64" text-anchor="start" fill="#6e6e6e">CALLERS AND PEOPLE</text>
+<rect x="30" y="80" width="180" height="74" rx="9" fill="#eef3f8" stroke="#9db8d0" stroke-width="1.5"/>
+<text class="ttl" x="44" y="106">AI agent</text>
+<text class="sub" x="44" y="125">member ID + typed task</text>
+<text class="sub" x="44" y="141">never sees the UI</text>
+<rect x="30" y="176" width="180" height="92" rx="9" fill="#eef3f8" stroke="#9db8d0" stroke-width="1.5"/>
+<text class="ttl" x="44" y="202">Approvers, operators</text>
+<text class="sub" x="44" y="221">approve every transfer</text>
+<text class="sub" x="44" y="237">enter staff codes</text>
+<text class="sub" x="44" y="253">review and promote drivers</text>
+<rect x="250" y="34" width="500" height="494" rx="14" fill="none" stroke="#c9c4b8" stroke-width="1.3" stroke-dasharray="5 4"/>
+<text class="zone" x="268" y="58" fill="#6e6e6e">BOX A · APP · NO DURABLE DATA</text>
+<text class="tag" x="732" y="58" text-anchor="end">make backend · console · crawlers</text>
+<rect x="272" y="76" width="210" height="80" rx="9" fill="#e9f2ec" stroke="#8fb79c" stroke-width="1.5"/>
+<text class="ttl" x="286" y="102">Task API</text>
+<text class="sub" x="286" y="121">Fastify · zod contracts</text>
+<text class="sub" x="286" y="137">one typed result per task</text>
+<rect x="272" y="186" width="210" height="80" rx="9" fill="#e9f2ec" stroke="#8fb79c" stroke-width="1.5"/>
+<text class="ttl" x="286" y="212">Console</text>
+<text class="sub" x="286" y="231">AdminJS over Prisma</text>
+<text class="sub" x="286" y="247">approval inbox · hazard lab</text>
+<rect x="518" y="76" width="210" height="80" rx="9" fill="#e9f2ec" stroke="#8fb79c" stroke-width="1.5"/>
+<text class="ttl" x="532" y="102">Workflow engine</text>
+<text class="sub" x="532" y="121">DBOS · state in Postgres</text>
+<text class="sub" x="532" y="137">durable waits for people</text>
+<rect x="272" y="300" width="456" height="216" rx="9" fill="#f6faf7" stroke="#8fb79c" stroke-width="1.5"/>
+<text class="ttl" x="286" y="326">Runner: the crawlers</text>
+<text class="sub" x="286" y="345">one headless Chromium per task; the page runs its own JavaScript,</text>
+<text class="sub" x="286" y="361">and we read the drawn result from outside it</text>
+<rect x="290" y="370" width="200" height="62" rx="9" fill="#ffffff" stroke="#c8ced6" stroke-width="1.5"/>
+<text class="ttl" x="304" y="396">Screen model</text>
+<text class="sub" x="304" y="415">layout · accessibility · images</text>
+<text class="sub" x="304" y="431">no selectors, ever</text>
+<rect x="510" y="370" width="200" height="62" rx="9" fill="#ffffff" stroke="#c8ced6" stroke-width="1.5"/>
+<text class="ttl" x="524" y="396">Drivers</text>
+<text class="sub" x="524" y="415">one per vendor product</text>
+<text class="sub" x="524" y="431">a profile per bank</text>
+<rect x="290" y="444" width="200" height="62" rx="9" fill="#fdecec" stroke="#cf7f7f" stroke-width="1.5"/>
+<text class="ttl" x="304" y="470">Guardrails</text>
+<text class="sub" x="304" y="489">member scope · session guard</text>
+<text class="sub" x="304" y="505">the approval grant</text>
+<rect x="510" y="444" width="200" height="62" rx="9" fill="#ffffff" stroke="#c8ced6" stroke-width="1.5"/>
+<text class="ttl" x="524" y="470">Evidence</text>
+<text class="sub" x="524" y="489">masked before any write</text>
+<text class="sub" x="524" y="505">withheld if not provable</text>
+<rect x="790" y="34" width="420" height="494" rx="14" fill="none" stroke="#c9c4b8" stroke-width="1.3" stroke-dasharray="5 4"/>
+<text class="zone" x="808" y="58" fill="#6e6e6e">BOX B · DATA · NO PUBLIC ADDRESS</text>
+<text class="tag" x="1192" y="58" text-anchor="end">make data</text>
+<rect x="812" y="76" width="376" height="80" rx="9" fill="#fdf6e3" stroke="#d8c07a" stroke-width="1.5"/>
+<text class="ttl" x="826" y="102">Postgres + pgvector</text>
+<text class="sub" x="826" y="121">control · workflow state · registry · memory schemas</text>
+<text class="sub" x="826" y="137">one Prisma schema per owner</text>
+<rect x="812" y="176" width="376" height="80" rx="9" fill="#fdecec" stroke="#d99b9b" stroke-width="1.5"/>
+<text class="ttl" x="826" y="202">Vault</text>
+<text class="sub" x="826" y="221">staff service account per bank, workstation cookies</text>
+<text class="sub" x="826" y="237">typed at the moment of use, never returned</text>
+<rect x="812" y="276" width="376" height="80" rx="9" fill="#fdf6e3" stroke="#d8c07a" stroke-width="1.5"/>
+<text class="ttl" x="826" y="302">MinIO</text>
+<text class="sub" x="826" y="321">masked frames, screen models, run folders</text>
+<text class="sub" x="826" y="337">manifests with sha256, written last</text>
+<rect x="812" y="376" width="376" height="112" rx="9" fill="#e8f3f3" stroke="#86b8b8" stroke-width="1.5"/>
+<text class="ttl" x="826" y="402">Memory service</text>
+<text class="sub" x="826" y="421">episodes · facts · lessons, versioned and append-only</text>
+<text class="sub" x="826" y="437">models propose; evidence decides;</text>
+<text class="sub" x="826" y="453">code applies the rules · seeded, exportable</text>
+<text class="sub" x="826" y="469">hash-chained change log</text>
+<rect x="250" y="572" width="500" height="300" rx="14" fill="none" stroke="#b7aed6" stroke-width="1.3" stroke-dasharray="5 4"/>
+<text class="zone" x="268" y="596" fill="#6f5fb0">BOX D · FACTORY · DISPOSABLE</text>
+<text class="tag" x="732" y="596" text-anchor="end">make factory</text>
+<rect x="272" y="614" width="210" height="96" rx="9" fill="#f0eef6" stroke="#a9a0c4" stroke-width="1.5"/>
+<text class="ttl" x="286" y="640">Factory agent</text>
+<text class="sub" x="286" y="659">Operator writes the driver</text>
+<text class="sub" x="286" y="675">Supervisor checks every step</text>
+<text class="sub" x="286" y="691">caps in code · closed tools</text>
+<rect x="518" y="614" width="210" height="96" rx="9" fill="#f0eef6" stroke="#a9a0c4" stroke-width="1.5"/>
+<text class="ttl" x="532" y="640">Operator browser</text>
+<text class="sub" x="532" y="659">one live browser</text>
+<text class="sub" x="532" y="675">read-only session</text>
+<text class="sub" x="532" y="691">secrets typed by the server</text>
+<rect x="272" y="730" width="456" height="124" rx="14" fill="none" stroke="#b7aed6" stroke-width="1.3" stroke-dasharray="5 4"/>
+<text class="zone" x="290" y="754" fill="#6f5fb0">SANDBOX · NO ROUTE OUT</text>
+<rect x="290" y="768" width="200" height="70" rx="9" fill="#ffffff" stroke="#c8ced6" stroke-width="1.5"/>
+<text class="ttl" x="304" y="794">Eval runner</text>
+<text class="sub" x="304" y="813">E0 lint · E1 contract</text>
+<text class="sub" x="304" y="829">E2 hazards · E3 replay</text>
+<rect x="510" y="768" width="200" height="70" rx="9" fill="#ffffff" stroke="#c8ced6" stroke-width="1.5"/>
+<text class="ttl" x="524" y="794">Throwaway bank</text>
+<text class="sub" x="524" y="813">forced hazards only</text>
+<text class="sub" x="524" y="829">its own database</text>
+<rect x="790" y="572" width="420" height="300" rx="14" fill="none" stroke="#c4c4c4" stroke-width="1.3" stroke-dasharray="5 4"/>
+<text class="zone" x="808" y="596" fill="#6e6e6e">THE WORLD</text>
+<text class="tag" x="1192" y="596" text-anchor="end">make bank · bank-more</text>
+<rect x="812" y="610" width="180" height="62" rx="9" fill="#f2f2f2" stroke="#b5b5b5" stroke-width="1.5"/>
+<text class="ttl" x="826" y="636">Generic Bank</text>
+<text class="sub" x="826" y="655">4.2 · :8081/corelink/</text>
+<rect x="1008" y="610" width="180" height="62" rx="9" fill="#f2f2f2" stroke="#b5b5b5" stroke-width="1.5"/>
+<text class="ttl" x="1022" y="636">Example CU</text>
+<text class="sub" x="1022" y="655">4.3 · :8082 · image labels</text>
+<rect x="812" y="682" width="180" height="62" rx="9" fill="#ffffff" stroke="#c8ced6" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text class="ttl" x="826" y="708">Sample Savings</text>
+<text class="sub" x="826" y="727">later · :8083/online/branch/</text>
+<rect x="1008" y="682" width="180" height="62" rx="9" fill="#ffffff" stroke="#c8ced6" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text class="ttl" x="1022" y="708">Placeholder FCU</text>
+<text class="sub" x="1022" y="727">later · 127.0.0.1:8084/cu/ib/</text>
+<rect x="812" y="754" width="180" height="52" rx="9" fill="#f2f2f2" stroke="#b5b5b5" stroke-width="1.5"/>
+<text class="ttl" x="826" y="780">bank-db</text>
+<text class="sub" x="826" y="799">ledger · members · hazards</text>
+<rect x="1008" y="754" width="180" height="52" rx="9" fill="#f2f2f2" stroke="#b5b5b5" stroke-width="1.5"/>
+<text class="ttl" x="1022" y="780">Message inbox</text>
+<text class="sub" x="1022" y="799">staff codes · people only</text>
+<text class="note" x="812" y="828" text-anchor="start">Shells until their own JavaScript draws them; fake money.</text>
+<text class="note" x="812" y="846" text-anchor="start">The automation shares no code, data or network with them.</text>
+<rect x="30" y="614" width="180" height="80" rx="9" fill="#f2f2f2" stroke="#b5b5b5" stroke-width="1.5"/>
+<text class="ttl" x="44" y="640">Model API</text>
+<text class="sub" x="44" y="659">Claude · metered and capped</text>
+<text class="sub" x="44" y="675">factory only, never a task</text>
+<text class="zone" x="30" y="744" text-anchor="start" fill="#6e6e6e">LINES</text>
+<path d="M30,764 H74" fill="none" stroke="#ffffff" stroke-width="6.8" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M30,764 H74" fill="none" stroke="#1f4d7a" stroke-width="1.8" stroke-linejoin="round" marker-end="url(#a-blue)"/>
+<text class="fl" x="84" y="768" text-anchor="start" fill="#7b7b7b">callers and people</text>
+<path d="M30,784 H74" fill="none" stroke="#ffffff" stroke-width="6.8" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M30,784 H74" fill="none" stroke="#7b7b7b" stroke-width="1.8" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<text class="fl" x="84" y="788" text-anchor="start" fill="#7b7b7b">internal calls</text>
+<path d="M30,804 H74" fill="none" stroke="#ffffff" stroke-width="6.8" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M30,804 H74" fill="none" stroke="#c0484f" stroke-width="1.8" stroke-linejoin="round" marker-end="url(#a-red)"/>
+<text class="fl" x="84" y="808" text-anchor="start" fill="#7b7b7b">the only path to a bank</text>
+<path d="M30,824 H74" fill="none" stroke="#ffffff" stroke-width="6.8" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M30,824 H74" fill="none" stroke="#6f5fb0" stroke-width="1.8" stroke-dasharray="5 4" stroke-linejoin="round" marker-end="url(#a-violet)"/>
+<text class="fl" x="84" y="828" text-anchor="start" fill="#7b7b7b">factory, guarded</text>
+<path d="M30,844 H74" fill="none" stroke="#ffffff" stroke-width="6.8" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M30,844 H74" fill="none" stroke="#c0707a" stroke-width="1.8" stroke-dasharray="5 4" stroke-linejoin="round" marker-end="url(#a-rose)"/>
+<text class="fl" x="84" y="848" text-anchor="start" fill="#7b7b7b">secrets, typed at use</text>
+<path d="M210,116 H268" fill="none" stroke="#ffffff" stroke-width="7.2" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M210,116 H268" fill="none" stroke="#1f4d7a" stroke-width="2.2" stroke-linejoin="round" marker-end="url(#a-blue)"/>
+<path d="M210,224 H268" fill="none" stroke="#ffffff" stroke-width="7.2" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M210,224 H268" fill="none" stroke="#1f4d7a" stroke-width="2.2" stroke-linejoin="round" marker-end="url(#a-blue)"/>
+<path d="M482,116 H514" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M482,116 H514" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<text class="fl" x="498" y="108" text-anchor="middle" fill="#7b7b7b">start</text>
+<path d="M482,236 H500 Q506,236 506,230 V172 Q506,164 514,164 H560 V160" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M482,236 H500 Q506,236 506,230 V172 Q506,164 514,164 H560 V160" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<text class="fl" x="512" y="200" text-anchor="start" fill="#7b7b7b">answers</text>
+<path d="M680,156 V296" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M680,156 V296" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<text class="fl" x="688" y="230" text-anchor="start" fill="#7b7b7b">run steps</text>
+<path d="M728,116 H808" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M728,116 H808" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<text class="fl" x="768" y="108" text-anchor="middle" fill="#7b7b7b">state</text>
+<path d="M808,232 H770 Q760,232 760,242 V304 Q760,312 752,312 H732" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M808,232 H770 Q760,232 760,242 V304 Q760,312 752,312 H732" fill="none" stroke="#c0707a" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round" marker-end="url(#a-rose)"/>
+<text class="fl" x="766" y="284" text-anchor="start" fill="#c0707a">secret</text>
+<path d="M728,340 H808" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M728,340 H808" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<text class="fl" x="736" y="332" text-anchor="start" fill="#7b7b7b">masked</text>
+<path d="M728,420 H808" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M728,420 H808" fill="none" stroke="#3f8f8f" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-teal)"/>
+<text class="fl" x="736" y="412" text-anchor="start" fill="#3f8f8f">episodes</text>
+<path d="M640,516 V542 Q640,548 646,548 H896 Q902,548 902,554 V606" fill="none" stroke="#ffffff" stroke-width="7.2" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M640,516 V542 Q640,548 646,548 H896 Q902,548 902,554 V606" fill="none" stroke="#c0484f" stroke-width="2.2" stroke-linejoin="round" marker-end="url(#a-red)"/>
+<path d="M902,548 H1034 Q1040,548 1040,554 V606" fill="none" stroke="#ffffff" stroke-width="7.2" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M902,548 H1034 Q1040,548 1040,554 V606" fill="none" stroke="#c0484f" stroke-width="2.2" stroke-linejoin="round" marker-end="url(#a-red)"/>
+<text class="fl" x="796" y="541" text-anchor="start" fill="#c0484f">clicks and keys only: the only path to a bank</text>
+<path d="M728,642 H808" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M728,642 H808" fill="none" stroke="#6f5fb0" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round" marker-end="url(#a-violet)"/>
+<text class="fl" x="768" y="634" text-anchor="middle" fill="#6f5fb0">read-only</text>
+<path d="M742,572 V478 Q742,470 750,470 H808" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M742,572 V478 Q742,470 750,470 H808" fill="none" stroke="#6f5fb0" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round" marker-end="url(#a-violet)"/>
+<text class="fl" fill="#6f5fb0" transform="translate(760,548) rotate(-90)">pack · lessons</text>
+<path d="M272,690 H214" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M272,690 H214" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<path d="M272,652 H240 Q232,652 232,644 V268 Q232,256 244,256 H268" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M272,652 H240 Q232,652 232,644 V268 Q232,256 244,256 H268" fill="none" stroke="#6f5fb0" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round" marker-end="url(#a-violet)"/>
+<text class="fl" x="226" y="470" text-anchor="end" fill="#6f5fb0">candidate driver</text>
+<text class="fl" x="226" y="484" text-anchor="end" fill="#6f5fb0">to the review gate</text>
+<path d="M1180,806 V892 H16 Q10,892 10,886 V230 Q10,222 18,222 H26" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M1180,806 V892 H16 Q10,892 10,886 V230 Q10,222 18,222 H26" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<text class="fl" x="620" y="886" text-anchor="middle" fill="#7b7b7b">people read staff codes from the inbox; the automation never can</text></svg>

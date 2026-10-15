@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+.git
+.run
+.sops.yaml
+config/*.secrets.enc.env
+plan
+docs
+sessions
+seeds
+coverage

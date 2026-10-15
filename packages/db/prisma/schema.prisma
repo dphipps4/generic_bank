@@ -1,0 +1,290 @@
+// The control database (box B). Memory has its own database and schema.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("CONTROL_DATABASE_URL")
+}
+
+enum Role {
+  viewer
+  approver
+  admin
+}
+
+enum TaskStatus {
+  running
+  succeeded
+  business_outcome
+  needs_human
+  handed_off
+  escalated
+  failed
+  expired
+  cancelled
+}
+
+enum HumanTaskKind {
+  staff_code
+  approval
+  take_over
+}
+
+enum HumanTaskStatus {
+  open
+  answered
+  expired
+  cancelled
+}
+
+enum DriverState {
+  draft
+  candidate
+  probation
+  promoted
+  demoted
+  frozen
+  stuck
+  retired
+}
+
+enum BundleKind {
+  profile
+  code
+}
+
+enum EvalOutcome {
+  passed
+  failed
+  could_not_run
+}
+
+model ConsoleUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(viewer)
+  createdAt    DateTime @default(now())
+}
+
+model TaskRun {
+  id              String       @id @default(cuid())
+  task            String
+  tenant          String
+  inputsMasked    Json
+  idempotencyKey  String       @unique
+  status          TaskStatus   @default(running)
+  resultCode      String?
+  retryable       Boolean?
+  result          Json?
+  driverVersionId String?
+  startedAt       DateTime     @default(now())
+  settledAt       DateTime?
+  steps           Step[]
+  frames          TrailFrame[]
+  humanTasks      HumanTask[]
+  journal         JournalEntry[]
+
+  @@index([tenant, task, startedAt])
+}
+
+model Step {
+  id        String   @id @default(cuid())
+  runId     String
+  run       TaskRun  @relation(fields: [runId], references: [id])
+  seq       Int
+  name      String
+  screen    String?
+  action    String?
+  outcome   String?
+  startedAt DateTime @default(now())
+  ms        Int?
+
+  @@unique([runId, seq])
+}
+
+model TrailFrame {
+  id             String   @id @default(cuid())
+  runId          String
+  run            TaskRun  @relation(fields: [runId], references: [id])
+  seq            Int
+  stepSeq        Int
+  imageKey       String?
+  withheldReason String?
+  screenModelKey String?
+  host           String
+  path           String
+  at             DateTime @default(now())
+
+  @@unique([runId, seq])
+}
+
+model HumanTask {
+  id            String          @id @default(cuid())
+  runId         String
+  run           TaskRun         @relation(fields: [runId], references: [id])
+  kind          HumanTaskKind
+  status        HumanTaskStatus @default(open)
+  contextMasked Json
+  openedAt      DateTime        @default(now())
+  answeredAt    DateTime?
+  answeredBy    String?
+  deadline      DateTime
+  grant         ApprovalGrant?
+}
+
+model ApprovalGrant {
+  id          String    @id @default(cuid())
+  humanTaskId String    @unique
+  humanTask   HumanTask @relation(fields: [humanTaskId], references: [id])
+  runId       String
+  fromRef     String
+  toRef       String
+  amountCents Int
+  memoToken   String
+  nonce       String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+}
+
+model JournalEntry {
+  id      String   @id @default(cuid())
+  runId   String
+  run     TaskRun  @relation(fields: [runId], references: [id])
+  seq     Int
+  intent  String
+  action  String?
+  result  String?
+  prevHash String
+  rowHash String   @unique
+  at      DateTime @default(now())
+
+  @@unique([runId, seq])
+}
+
+model Driver {
+  id                 String          @id @default(cuid())
+  tenant             String
+  task               String
+  state              DriverState     @default(draft)
+  activeVersionId    String?
+  candidateVersionId String?
+  previousVersionId  String?
+  versions           DriverVersion[]
+  events             RegistryEvent[]
+
+  @@unique([tenant, task])
+}
+
+model DriverVersion {
+  id                 String      @id @default(cuid())
+  driverId           String
+  driver             Driver      @relation(fields: [driverId], references: [id])
+  version            Int
+  sha256             String
+  kind               BundleKind
+  state              DriverState @default(draft)
+  sourceFactoryRunId String?
+  createdAt          DateTime    @default(now())
+
+  @@unique([driverId, version])
+}
+
+model RegistryEvent {
+  id        String      @id @default(cuid())
+  driverId  String
+  driver    Driver      @relation(fields: [driverId], references: [id])
+  fromState DriverState
+  toState   DriverState
+  by        String
+  reason    String
+  at        DateTime    @default(now())
+}
+
+model FactoryRun {
+  id             String       @id @default(cuid())
+  tenant         String
+  task           String
+  mode           String
+  phase          String
+  status         String
+  spendUsd       Decimal      @default(0) @db.Decimal(10, 4)
+  turns          Int          @default(0)
+  stalls         Int          @default(0)
+  startedAt      DateTime     @default(now())
+  lastActivityAt DateTime     @default(now())
+  modelCalls     ModelCall[]
+  evals          EvalResult[]
+}
+
+model ModelCall {
+  id            String     @id @default(cuid())
+  factoryRunId  String
+  factoryRun    FactoryRun @relation(fields: [factoryRunId], references: [id])
+  role          String
+  model         String
+  promptId      String
+  promptVersion Int
+  tokensIn      Int
+  tokensOut     Int
+  tokensCached  Int        @default(0)
+  costUsd       Decimal    @db.Decimal(10, 4)
+  at            DateTime   @default(now())
+}
+
+model EvalResult {
+  id              String      @id @default(cuid())
+  factoryRunId    String?
+  factoryRun      FactoryRun? @relation(fields: [factoryRunId], references: [id])
+  driverVersionId String?
+  rung            String
+  outcome         EvalOutcome
+  details         Json
+  at              DateTime    @default(now())
+}
+
+model RepairCase {
+  id                  String    @id @default(cuid())
+  tenant              String
+  task                String
+  status              String    @default("open")
+  consecutiveFailures Int       @default(0)
+  lastFailureAt       DateTime?
+  lastSuccessAt       DateTime?
+  openedAt            DateTime  @default(now())
+}
+
+model Freeze {
+  id        String    @id @default(cuid())
+  tenant    String
+  layer     String
+  runId     String?
+  reason    String
+  frozenAt  DateTime  @default(now())
+  clearedAt DateTime?
+  clearedBy String?
+}
+
+model SignInAttempt {
+  id       String   @id @default(cuid())
+  tenant   String
+  operator String
+  runId    String?
+  outcome  String
+  at       DateTime @default(now())
+
+  @@index([tenant, operator, at])
+}
+
+model AuditEntry {
+  id     String   @id @default(cuid())
+  actor  String
+  action String
+  target String
+  reason String
+  at     DateTime @default(now())
+}
