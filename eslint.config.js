@@ -25,4 +25,18 @@ export default tseslint.config(
       'no-console': 'off',
     },
   },
+  {
+    // Plain Node scripts run outside the workspaces (the plan renderer, in the tools image).
+    files: ['**/*.cjs'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: {
+        require: 'readonly',
+        module: 'writable',
+        __dirname: 'readonly',
+        console: 'readonly',
+      },
+    },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
 );

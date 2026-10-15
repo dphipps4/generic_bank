@@ -37,17 +37,33 @@ help: ## List every target
 	  /^[a-zA-Z0-9_%-]+:.*## / { printf "  $(G)%-22s$(N) %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 	@echo
 
-setup: doctor secrets-init install browser build env ## Once, after git clone: check tools, create secrets, install, build
-	@echo
-	@printf '%b\n' \"$(B)Ready.$(N) Next: $(G)make up$(N), then open http://localhost:$(CONSOLE_PORT)\"
-	@printf '%b\n' \"Console sign-in: $(CONSOLE_ADMIN_EMAIL), password: $(G)make console-password$(N)\"
+requirements: ## Check this Mac can build and run the stack (explicit versions); fails if not
+	@$(SCRIPTS)/requirements.sh
 
-doctor: ## Check tools, Docker memory, disk and ports
-	@$(SCRIPTS)/doctor.sh
+requirements-dev: ## The same, plus Node 22 for developing and running the tests
+	@$(SCRIPTS)/requirements.sh --dev
+
+doctor: requirements ## The same as make requirements
+
+plan: plan-html ## Render the plan as HTML pages and open them
+	@open .run/plan/GENERIC_BANK_PLAN.html 2>/dev/null || echo "  open .run/plan/GENERIC_BANK_PLAN.html in a browser"
+
+plan-html: ## Render every document in docs/plan as an HTML page into .run/plan (in a container)
+	@$(SCRIPTS)/tool.sh node infra/docs/render-plan.cjs
+
+setup: requirements tools secrets-init build env ## Once, after git clone: check the Mac, create secrets, build the images
+	@echo
+	@printf '%b\n' "$(B)Ready.$(N) Next: $(G)make up$(N), then open http://localhost:$(CONSOLE_PORT)"
+	@printf '%b\n' "Console sign-in: $(CONSOLE_ADMIN_EMAIL), password: $(G)make console-password$(N)"
+
+dev-setup: requirements-dev install browser ## Once, to develop: Node dependencies, the Prisma client, Chromium for the tests
 
 install: ## Install Node dependencies and generate the Prisma client
 	@npm ci --no-audit --no-fund
 	@npm run --silent db:generate
+
+tools: ## Build the tools image (sops, age, jq, the plan renderer), if its Dockerfile changed
+	@$(SCRIPTS)/tool.sh true
 
 ##@ Secrets (SOPS + age)
 
@@ -57,8 +73,8 @@ secrets-init: ## Create this machine's age key, .sops.yaml and the encrypted sec
 env: ## Render one env file per service into .run/env/ (least privilege)
 	@$(SCRIPTS)/render-env.sh
 
-secrets-edit: ## Edit secrets in your editor: make secrets-edit FILE=local|ops|factory
-	@sops config/$(or $(FILE),local).secrets.enc.env
+secrets-edit: ## Edit secrets (in vi, in the tools image): make secrets-edit FILE=local|ops|factory
+	@$(SCRIPTS)/tool.sh sops config/$(or $(FILE),local).secrets.enc.env
 
 secret-set: ## Set one secret unseen: make secret-set FILE=factory KEY=ANTHROPIC_API_KEY [FROM=path]
 	@$(SCRIPTS)/secret-set.sh "$(FILE)" "$(KEY)" "$(FROM)"
@@ -68,10 +84,10 @@ secret-rotate: ## Rotate one generated secret: make secret-rotate FILE=local KEY
 
 secrets-keys: ## List the secret names in each file (never the values)
 	@for f in local factory ops; do printf "%b\n" "$(B)$$f$(N)"; \
-	  sops decrypt --input-type dotenv --output-type dotenv config/$$f.secrets.enc.env | cut -d= -f1 | sed 's/^/  /'; done
+	  $(SCRIPTS)/tool.sh sops decrypt --input-type dotenv --output-type dotenv config/$$f.secrets.enc.env | cut -d= -f1 | sed 's/^/  /'; done
 
 console-password: ## Show the Console's first admin password
-	@sops decrypt --input-type dotenv --output-type dotenv config/local.secrets.enc.env \
+	@$(SCRIPTS)/tool.sh sops decrypt --input-type dotenv --output-type dotenv config/local.secrets.enc.env \
 	  | grep '^CONSOLE_ADMIN_PASSWORD=' | cut -d= -f2-
 
 ##@ Build
@@ -204,7 +220,7 @@ reset: ## Delete all local data (volumes) and start again from nothing. Asks fir
 clean: ## Remove build output (dist, tsbuildinfo, .run)
 	@rm -rf apps/*/dist packages/*/dist **/*.tsbuildinfo .run
 
-.PHONY: help setup doctor install secrets-init env secrets-edit secret-set secret-rotate secrets-keys \
+.PHONY: help requirements requirements-dev plan plan-html setup dev-setup tools doctor install secrets-init env secrets-edit secret-set secret-rotate secrets-keys \
   console-password build build-nc image up down restart ps urls data backend console crawlers bank \
   bank-more factory migrate logs vault-status db-shell check test typecheck lint format boundaries \
   demo try evals check-prompts memory-seed memory-export memory-import export import trace observe \

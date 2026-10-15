@@ -42,7 +42,7 @@ target or the demo step a reviewer can run.
 | The brief says | How we meet it | Where | Proof |
 |---|---|---|---|
 | **A public or shared GitHub repository** with the system, the target app and a README | One public repository: the banks, the crawler, the factory, memory, the Console and the docs | [§Q.1](GENERIC_BANK_PLAN.md#q1-layout), [§Q.2](GENERIC_BANK_PLAN.md#q2-documentation-a-short-readme-and-sixteen-documents) | the repository |
-| **Clear, reproducible run instructions:** clone and run both tasks locally in a few minutes | `make setup`, then `make up`, then `make demo`; every step is a make target; fits an 8 GB laptop | [§14](GENERIC_BANK_PLAN.md#14-running-it), [Appendix S](GENERIC_BANK_PLAN.md#appendix-s-running-it) | `docs/01-setup.md`, `docs/02-running.md` |
+| **Clear, reproducible run instructions:** clone and run both tasks locally in a few minutes | `make requirements` (fails until the Mac is ready), `make setup`, then `make up`, then `make demo`; every step is a make target; the Mac needs only Docker and Xcode's tools; fits an 8 GB laptop | [§14](GENERIC_BANK_PLAN.md#14-running-it), [Appendix S](GENERIC_BANK_PLAN.md#appendix-s-running-it) | `docs/01-setup.md`, `docs/02-running.md` |
 | **Tests where they help,** especially the error taxonomy and the escalation path | Outcome, escalation, transfer-safety, guard, PII, browser, memory and factory suites | [Appendix P](GENERIC_BANK_PLAN.md#appendix-p-tests) | `make check`, CI |
 | **Share the repo link ahead of the session** | The `master` branch is always releasable; a `submission` tag marks what was sent | [§Q.3](GENERIC_BANK_PLAN.md#q3-branches) | the tag |
 

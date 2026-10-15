@@ -2684,7 +2684,10 @@ can be brought up, down or rebuilt alone.
 
 | Target | What it does |
 |---|---|
-| `make setup` | once after `git clone`: checks Docker and memory (`make doctor`), creates `.env` from `.env.example`, generates the age key and dev secrets, builds images |
+| `make requirements` | checks the Mac with explicit versions (macOS 14, Xcode command line tools, Docker Engine 27 and Compose 2.29 with 5 GB of memory, disk, ports) and fails, saying what to install, until every one is met; `make requirements-dev` adds Node 22 |
+| `make plan` | renders every document in `docs/plan` as HTML pages, in a container, and opens them |
+| `make setup` | once after `git clone`: `make requirements`, then generates the age key and dev secrets and builds the images; SOPS, age and jq run from a pinned tools image, so the Mac needs only Docker |
+| `make dev-setup` | once, to develop: Node dependencies, the Prisma client, Chromium for the browser tests |
 | `make up` | everything in the base stack: data, back end, console, crawlers, banks 1 and 2 |
 | `make down` | stops everything; volumes are kept |
 | `make data` | box B: Postgres, Vault, MinIO, Memory |
@@ -2712,7 +2715,6 @@ can be brought up, down or rebuilt alone.
 | `make export` | the whole system's state: a Postgres dump of every schema, MinIO evidence, the Vault seed (encrypted with SOPS), and a memory bundle, with a manifest of sha256 sums, in one archive under `exports/` |
 | `make import BUNDLE=…` | brings the whole system up from an export on a fresh machine: checks the manifest, restores in order (data, then memory, then evidence), runs migrations, starts `make up` |
 | `make reset` | deletes volumes and starts again from the seed (asks first) |
-| `make doctor` | checks Docker's memory, ports and required tools, and says what to change |
 
 Then open the Console at `http://localhost:8080`, the banks at their URLs ([§C.1](#c1-one-product-four-banks)), and the
 inbox at `:8089`. `make demo` pauses at the transfer approval and prints the Console link.
@@ -2758,8 +2760,8 @@ runs as the headless shell, with no virtual display.
 | `sandbox` (eval runner with its own Chromium), `bank-sandbox`, `sandbox-db` | D | 768 MB |
 | **With the factory running** | | **about 4.5 GB** |
 
-`make doctor` checks Docker's memory allowance before starting and says what to change if it
-is too small.
+`make requirements` checks Docker's memory allowance before anything starts and fails, saying
+what to change, if it is too small.
 
 Networks: `edge` (published ports), `app` (A to B), `data` (B internal), `world` (banks;
 reachable from the Runner and the Operator browser), `factory` (D to A and B), `sandbox`
@@ -3135,7 +3137,7 @@ Each entry gives the choice, the reason, and what else was considered.
 | Element | Choice | Why |
 |---|---|---|
 | Containers | **Docker** with **docker compose** profiles (`default`, `factory`) | One command locally; every service has a memory limit |
-| Entry point | **make** | `make up`, `make demo`, `make factory`, `make try`, `make doctor`, `make down` |
+| Entry point | **make** | `make up`, `make demo`, `make factory`, `make try`, `make requirements`, `make down` |
 | Images | Node 22 slim; Playwright's Chromium headless shell only in the Runner, Operator browser and sandbox images | Keeps every other image small |
 
 ---
