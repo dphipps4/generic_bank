@@ -16,6 +16,7 @@ import {
 import { type OAuth, TASK_SCOPES } from '@gb/oauth';
 import { waitingTooLong } from './inbox.js';
 import { esc, page, type Sql, type Viewer } from './layout.js';
+import { FRAMES_POPUP, framesButton, framesOf } from './runs.js';
 
 export interface LabRun {
   task: OutcomeTask;
@@ -95,7 +96,7 @@ export function labPages(app: FastifyInstance, deps: LabDeps) {
           `<tr data-hazard="${esc(h.hazard)}"><td><input type="checkbox" name="hazards" value="${esc(h.hazard)}" id="h-${esc(h.hazard)}"></td><td><label for="h-${esc(h.hazard)}"><code>${esc(h.hazard)}</code></label></td><td>${esc(h.does)}</td><td>${outcome(h.expected)}</td></tr>`,
       )
       .join('');
-    const recent = (
+    const rows = (
       await deps.sql.query<{
         id: string;
         task: string;
@@ -108,12 +109,16 @@ export function labPages(app: FastifyInstance, deps: LabDeps) {
            FROM "TaskRun" WHERE "inputsMasked" ? 'forcedHazards'
           ORDER BY "startedAt" DESC LIMIT 15`,
       )
-    ).rows
-      .map(
-        (r) =>
-          `<tr><td><a href="/runs/${esc(r.id)}"><code>${esc(r.id)}</code></a></td><td>${esc(r.task)} on ${esc(r.bank)}</td><td>${r.forced.length ? r.forced.map((h) => `<code>${esc(h)}</code>`).join(' ') : '<span class="soft">none</span>'}</td><td>${outcome({ status: r.status, code: r.resultCode })}</td></tr>`,
+    ).rows;
+    // Beside each result, the evidence it was reached on: the run's frames, in a popup.
+    const recent = (
+      await Promise.all(
+        rows.map(async (r) => {
+          const frames = await framesOf(deps.sql, r.id);
+          return `<tr><td><a href="/runs/${esc(r.id)}"><code>${esc(r.id)}</code></a></td><td>${esc(r.task)} on ${esc(r.bank)}</td><td>${r.forced.length ? r.forced.map((h) => `<code>${esc(h)}</code>`).join(' ') : '<span class="soft">none</span>'}</td><td>${outcome({ status: r.status, code: r.resultCode })}</td><td>${frames.length ? framesButton(r.id, frames) : '<span class="soft">none yet</span>'}</td></tr>`;
+        }),
       )
-      .join('');
+    ).join('');
 
     return wrap(`${note}<p class="soft">Each result beside a hazard is the one the outcome table proves on Generic Bank, with the hazard forced alone on the healthy member. Forced hazards reach the bank in a header signed by the Runner.</p>
 <form method="post" action="/lab">
@@ -126,7 +131,7 @@ export function labPages(app: FastifyInstance, deps: LabDeps) {
 <p><button>Start the run</button></p>
 </form>
 <h2>Recent lab runs</h2>
-${recent ? `<table><tr><th>Run</th><th>Task</th><th>Forced</th><th>Result</th></tr>${recent}</table>` : '<p class="empty">No lab runs yet.</p>'}`);
+${recent ? `<table><tr><th>Run</th><th>Task</th><th>Forced</th><th>Result</th><th>Evidence</th></tr>${recent}</table>${FRAMES_POPUP}` : '<p class="empty">No lab runs yet.</p>'}`);
   });
 
   void app.register(async (scope) => {

@@ -26,6 +26,7 @@ let answering: NodeJS.Timeout;
 let api: Awaited<ReturnType<typeof buildServer>>;
 const consoleApp = Fastify();
 const runs = new Map<string, Promise<unknown>>();
+const store = memoryStore();
 
 beforeAll(async () => {
   [db, bank] = await Promise.all([controlDb(), liveBank('generic')]);
@@ -33,7 +34,7 @@ beforeAll(async () => {
   const tokens = oauth(db, 't'.repeat(40));
   const deps: RunDeps = {
     sql: db,
-    store: memoryStore(),
+    store,
     sealKey: SEAL,
     answerKey: ANSWER_KEY,
     credentials: async () => ({ operatorId: OPERATORS.service.id, password: PASSWORDS.service }),
@@ -112,6 +113,20 @@ describe('a run started in the hazard lab', () => {
       ).toEqual(want);
       const html = (await consoleApp.inject({ url: '/lab' })).body;
       expect(html).toContain(`<a href="/runs/${runId}">`);
+      // The result comes with its evidence: frames behind a button, the last one the bank's own
+      // screen, as the masked picture and the visible page.
+      expect(html).toContain(`data-base="/runs/${runId}/frames/"`);
+      const last = (
+        await db.query<{ imageKey: string; screenModelKey: string }>(
+          'SELECT "imageKey", "screenModelKey" FROM "TrailFrame" WHERE "runId" = $1 ORDER BY seq DESC LIMIT 1',
+          [runId],
+        )
+      ).rows[0]!;
+      expect((await store.get(last.imageKey))!.subarray(1, 4).toString()).toBe('PNG');
+      const seen = JSON.parse((await store.get(last.screenModelKey))!.toString()) as {
+        texts: { text: string }[];
+      };
+      expect(seen.texts.length).toBeGreaterThan(0);
     }, 240_000);
   }
 });

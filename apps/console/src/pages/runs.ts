@@ -183,7 +183,7 @@ export function runPages(app: FastifyInstance, deps: PagesDeps) {
         `<h1>Run <code>${esc(run.id)}</code></h1><div class="facts">${facts}</div>
 <h2>Steps</h2>${stepRows ? `<table><tr><th>#</th><th>Step</th><th>Screen</th><th>Action</th><th>Outcome</th><th>Took</th></tr>${stepRows}</table>` : '<p class="empty">No steps yet.</p>'}
 <h2>People asked</h2>${taskRows ? `<table><tr><th>Task</th><th>Kind</th><th>Status</th><th>Opened</th><th>Answered</th></tr>${taskRows}</table>` : '<p class="empty">Nobody was asked anything.</p>'}
-<h2>Screens (masked)</h2>${frameList.length ? framesButton(run.id, frameList) : '<p class="empty">No frames.</p>'}`,
+<h2>Screens (masked)</h2>${frameList.length ? framesButton(run.id, frameList) + FRAMES_POPUP : '<p class="empty">No frames.</p>'}`,
         { active: '/runs', admin: who, waiting: await waitingTooLong(deps.sql) },
       ),
     );
@@ -211,18 +211,45 @@ export function runPages(app: FastifyInstance, deps: PagesDeps) {
   });
 }
 
-/**
- * A button that opens a run's frames in a popup, one at a time: the masked picture, its step and
- * screen, and a link to the masked screen model. Only the frame on show is loaded.
- */
+/** A run's frames for the Frames button: one entry per frame, the picture loaded only when shown. */
+export async function framesOf(sql: Sql, runId: string) {
+  const rows = (
+    await sql.query<{
+      seq: number;
+      imageKey: string | null;
+      withheldReason: string | null;
+      path: string;
+      at: Date;
+      name: string | null;
+      screen: string | null;
+    }>(
+      `SELECT f.seq, f."imageKey", f."withheldReason", f.path, f.at, s.name, s.screen
+         FROM "TrailFrame" f LEFT JOIN "Step" s ON s."runId" = f."runId" AND s.seq = f."stepSeq"
+        WHERE f."runId" = $1 ORDER BY f.seq`,
+      [runId],
+    )
+  ).rows;
+  return rows.map((f) => ({
+    seq: f.seq,
+    image: f.imageKey !== null,
+    withheld: f.withheldReason,
+    caption: `${f.seq}. ${f.name ?? ''}${f.screen ? ` (${f.screen})` : ''} · ${f.path} · ${when(f.at)}`,
+  }));
+}
+
+/** A button that opens a run's frames in the page's frames popup ({@link FRAMES_POPUP}). */
 export function framesButton(
   runId: string,
   frames: { seq: number; image: boolean; withheld: string | null; caption: string }[],
 ): string {
-  const data = esc(JSON.stringify(frames));
-  const base = `/runs/${esc(runId)}/frames/`;
-  return `<button type="button" class="btn" onclick="openFrames(this)" data-base="${base}" data-frames="${data}">Frames (${frames.length})</button>
-<dialog id="frames" class="frames-pop"><div class="bar"><button type="button" class="btn" onclick="stepFrame(-1)">&larr;</button><span id="frame-cap"></span><button type="button" class="btn" onclick="stepFrame(1)">&rarr;</button><a id="frame-json" target="_blank">screen model</a><button type="button" class="btn" onclick="this.closest('dialog').close()">Close</button></div><div id="frame-body"></div></dialog>
+  return `<button type="button" class="btn" onclick="openFrames(this)" data-base="/runs/${esc(runId)}/frames/" data-frames="${esc(JSON.stringify(frames))}">Frames (${frames.length})</button>`;
+}
+
+/**
+ * The popup the Frames buttons open, once per page: one frame at a time, the masked picture, its
+ * step and screen, and a link to the masked screen model. Only the frame on show is loaded.
+ */
+export const FRAMES_POPUP = `<dialog id="frames" class="frames-pop"><div class="bar"><button type="button" class="btn" onclick="stepFrame(-1)">&larr;</button><span id="frame-cap"></span><button type="button" class="btn" onclick="stepFrame(1)">&rarr;</button><a id="frame-json" target="_blank">screen model</a><button type="button" class="btn" onclick="this.closest('dialog').close()">Close</button></div><div id="frame-body"></div></dialog>
 <script>
 let fl = [], fi = 0, fb = '';
 function openFrames(b) { fl = JSON.parse(b.dataset.frames); fb = b.dataset.base; fi = fl.length - 1; showFrame(); document.getElementById('frames').showModal(); }
@@ -237,4 +264,3 @@ function showFrame() {
   else { const w = document.createElement('div'); w.className = 'withheld'; w.textContent = 'Withheld: ' + (f.withheld || 'no image'); body.append(w); }
 }
 </script>`;
-}
