@@ -604,3 +604,4 @@ export async function awaitDecision(
 }
 
 export { hashOf, journal, type JournalLine, type Verdict, verifyJournal } from './journal.js';
+export { statementKey, statementOf, statementRef } from './statements.js';

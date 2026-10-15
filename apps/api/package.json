@@ -15,6 +15,7 @@
     "@gb/config": "*",
     "@gb/contracts": "*",
     "@gb/db": "*",
+    "@gb/evidence": "*",
     "@gb/oauth": "*",
     "@gb/runs": "*",
     "fastify": "^5.6.0",
