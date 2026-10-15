@@ -194,6 +194,10 @@ vault-status: ## Show whether Vault is initialized and unsealed
 db-shell: ## Open psql on the control database
 	@$(COMPOSE) exec postgres psql -U postgres control
 
+try: ## A task under forced hazards: make try HAZARD=late-rows [TASK=check-balance] [MEMBER=…] [ACCOUNT=…] [BANK_ID=generic]
+	@$(COMPOSE) exec -T -e CONSOLE_PORT=$(CONSOLE_PORT) api node apps/api/dist/try-cli.js \
+	  "$(TASK)" "$(HAZARD)" "$(MEMBER)" "$(ACCOUNT)" "$(BANK_ID)"
+
 ##@ Quality
 
 check: ## Everything CI runs: typecheck, lint, tests, import boundaries, secrets
@@ -226,9 +230,9 @@ secrets-scan: ## Secrets (gitleaks, in its pinned image): the whole history and 
 
 ##@ Later milestones (named now so the plan and the Makefile agree)
 
-demo try evals check-prompts memory-seed memory-export memory-import export import trace observe docs: ## Not built yet: each says which milestone brings it
+demo evals check-prompts memory-seed memory-export memory-import export import trace observe docs: ## Not built yet: each says which milestone brings it
 	@case "$@" in \
-	  demo|try) m=M4 ;; evals) m=M7 ;; check-prompts) m=M9 ;; \
+	  demo) m=M4 ;; evals) m=M7 ;; check-prompts) m=M9 ;; \
 	  memory-seed|memory-export|memory-import) m=M6 ;; export|import) m=M6 ;; \
 	  trace|observe) m=M5 ;; docs) m=M10 ;; esac; \
 	echo "make $@ is not built yet: it arrives in milestone $$m."; exit 1
