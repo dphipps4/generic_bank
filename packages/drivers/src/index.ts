@@ -6,6 +6,13 @@ export {
   readTile,
 } from './corelink/check-balance.js';
 export { GENERIC_BANK, PROFILES } from './corelink/profiles.js';
+export {
+  beside,
+  memoFor,
+  prepareTransfer,
+  type Review,
+  type TransferInput,
+} from './corelink/transfer.js';
 export { signatures } from './corelink/signatures.js';
 export {
   type Credentials,

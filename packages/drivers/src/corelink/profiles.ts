@@ -11,7 +11,23 @@ export const GENERIC_BANK: Omit<Profile, 'url'> = {
     memberSearch: ['Member Search'],
     memberNumber: ['Member number'],
     search: ['Search'],
+    transfer: ['Transfer Funds'],
+    continue: ['Continue'],
+    submitTransfer: ['Submit transfer'],
   },
+  refusals: [
+    { text: 'The amount is more than the available balance.', code: 'insufficient_funds' },
+    { text: 'Transfers from this account type are not permitted.', code: 'permission_denied' },
+    {
+      text: 'Your operator role cannot transfer more than $10,000 per day.',
+      code: 'limit_exceeded',
+    },
+    { text: 'Enter an amount between $0.01 and $25,000.00.', code: 'invalid_amount' },
+    {
+      text: 'This account is restricted. Refer the member to a branch.',
+      code: 'account_restricted',
+    },
+  ],
   accountWording: /Account ending in (\d{4})/,
   codeStyle: 'sent',
   pictures: [],

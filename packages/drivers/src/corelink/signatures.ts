@@ -56,6 +56,17 @@ export function signatures(p: Profile): Signature[] {
     { id: 'member.in_use', requires: ['record is in use by another operator'] },
     { id: 'member.permission', requires: ['You do not have permission'] },
     { id: 'member.summary', requires: ['Available balance'], controls: [{ name: 'Activity' }] },
+    {
+      id: 'transfer.form',
+      requires: [w.transfer, 'Amount', 'Memo'],
+      controls: [{ name: w.continue }],
+      forbids: ['Review transfer'],
+    },
+    {
+      id: 'transfer.review',
+      requires: ['Review transfer', 'Amount'],
+      controls: [{ name: w.submitTransfer }],
+    },
     { id: 'error.unavailable', requires: ['Service Unavailable'] },
     { id: 'error.fatal', requires: ['An unexpected error has occurred'] },
   ];
