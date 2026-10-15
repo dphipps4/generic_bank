@@ -110,7 +110,7 @@ without a tour.
 | Element | Choice | Why |
 |---|---|---|
 | Test runner | **vitest** | Fast, TypeScript-native |
-| Browser tests | vitest and Playwright against the real bank in compose | The Runner's own browser |
+| Browser tests | vitest and our DevTools client against the real bank | The Runner's own browser |
 | Workflow tests | DBOS testing utilities, throwaway Postgres | Durable waits tested fast |
 | Lint and format | **ESLint** (typescript-eslint), **Prettier** | Ordinary |
 | Driver rules (E0) | Custom rules on the **TypeScript compiler API** | No CSS or id locators, page script, non-GET requests or model calls in drivers |
