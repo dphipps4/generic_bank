@@ -1,3 +1,4 @@
+import { buildAdmin } from './admin.js';
 import { connectPostgres, migrate } from './db.js';
 import { hazards, type Profile } from './hazards.js';
 import { seed } from './seed.js';
@@ -39,20 +40,21 @@ await seed(
   now(),
 );
 const forceable = process.env.HAZARDS_FORCEABLE === 'true';
-const app = await buildServer(
-  {
-    t: tenant,
-    db,
-    now,
-    uiVersion: Number(process.env.BANK_UI_VERSION ?? 1),
-    hazards: hazards({
-      profile,
-      seed: Number(process.env.HAZARD_SEED ?? 1),
-      forceable,
-      hmacKey: forceable ? need('HAZARD_HMAC_KEY', 32) : '',
-      log: hazardLog(db, now),
-    }),
-  },
-  true,
-);
+const bank = {
+  t: tenant,
+  db,
+  now,
+  uiVersion: Number(process.env.BANK_UI_VERSION ?? 1),
+  hazards: hazards({
+    profile,
+    seed: Number(process.env.HAZARD_SEED ?? 1),
+    forceable,
+    hmacKey: forceable ? need('HAZARD_HMAC_KEY', 32) : '',
+    log: hazardLog(db, now),
+  }),
+};
+const app = await buildServer(bank, true);
 await app.listen({ host: '0.0.0.0', port: Number(process.env.PORT ?? 8081) });
+// Ground truth for the test harness, on its own port.
+const admin = await buildAdmin(bank, need('BANK_ADMIN_TOKEN', 32));
+await admin.listen({ host: '0.0.0.0', port: Number(process.env.ADMIN_PORT ?? 9000) });
