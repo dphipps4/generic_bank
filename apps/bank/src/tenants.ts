@@ -12,6 +12,8 @@ export type CodeChannel = 'text' | 'email';
  * bar over an inline frame (bank 4).
  */
 export type Layout = 'nav' | 'tabs' | 'tabs-notices' | 'menubar';
+/** What a bank serves from its second origin (another port): bank 2's tab strip, bank 4's sign-in. */
+export type SecondOrigin = 'tabs' | 'signin';
 
 export interface Labels {
   operatorId: string;
@@ -34,6 +36,7 @@ export interface Tenant {
   branch: string;
   theme: Theme;
   layout: Layout;
+  secondOrigin?: SecondOrigin;
   labels: Labels;
   /** How an account is named on screen, from its full number. */
   accountWording: (number: string) => string;
@@ -83,6 +86,7 @@ export const TENANTS: Record<TenantId, Tenant> = {
     branch: 'Riverside Office',
     theme: 'teal',
     layout: 'tabs',
+    secondOrigin: 'tabs',
     labels: {
       operatorId: 'Username',
       password: 'Passcode',
@@ -135,6 +139,7 @@ export const TENANTS: Record<TenantId, Tenant> = {
     branch: 'Capitol Office',
     theme: 'flat',
     layout: 'menubar',
+    secondOrigin: 'signin',
     labels: {
       operatorId: 'User',
       password: 'Password',
