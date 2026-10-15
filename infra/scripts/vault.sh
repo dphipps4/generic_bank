@@ -3,7 +3,9 @@
 # root token and unseal key only in the operator-only SOPS file.
 #   vault.sh ensure | status
 source "$(dirname "$0")/lib.sh"
-COMPOSE=(docker compose -f infra/compose/compose.yaml --env-file config/app.env -p generic-bank)
+COMPOSE=(docker compose -f infra/compose/compose.yaml --env-file config/app.env)
+[[ -f config/local.env ]] && COMPOSE+=(--env-file config/local.env)
+COMPOSE+=(-p "${GB_PROJECT:-generic-bank}")
 v() { "${COMPOSE[@]}" exec -T vault vault "$@"; }
 
 status_json() { v status -format=json 2>/dev/null || true; }

@@ -28,13 +28,18 @@ export interface Bank {
 export function origins(bank: Bank, req: FastifyRequest) {
   const host = String(req.headers.host ?? 'localhost');
   const name = host.replace(/:\d+$/, '');
-  const port = Number(/:(\d+)$/.exec(host)?.[1] ?? 80);
-  const main = bank.ports?.main ?? port;
+  const hostPort = Number(/:(\d+)$/.exec(host)?.[1] ?? 0);
+  // Which of the bank's two servers answered: the port the request arrived on, inside the container.
+  const local = req.socket?.localPort ?? hostPort;
+  const main = bank.ports?.main ?? local;
   const second = bank.ports?.second ?? main + 10;
+  // A second copy of the stack publishes every port moved by the same amount (make fork-ports):
+  // links keep that shift, so a person's browser stays on the copy it is looking at.
+  const shift = hostPort && local ? hostPort - local : 0;
   return {
-    main: `http://${name}:${main}`,
-    second: `http://${name}:${second}`,
-    onSecond: port === second,
+    main: `http://${name}:${main + shift}`,
+    second: `http://${name}:${second + shift}`,
+    onSecond: local === second,
   };
 }
 

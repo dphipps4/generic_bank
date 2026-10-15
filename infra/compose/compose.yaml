@@ -4,9 +4,8 @@
 #   world    the banks, reached by the runner (and later the factory's browser)
 #   bankdb   the banks and their own database only (no route out)
 #   factory  box D, created with `make factory`
-# Ports are published on 127.0.0.1 only. Run everything through make.
-
-name: generic-bank
+# Ports are published on 127.0.0.1 only. Run everything through make, which names the project
+# after its folder (a second copy in another folder is a separate stack).
 
 x-node: &node
   image: ${GB_IMAGE}

@@ -20,12 +20,9 @@ need() { command -v "$1" >/dev/null 2>&1 || die "$1 is not installed. $2"; }
 # sops, age, jq and the plan renderer run from one pinned image (infra/docker/tools.Dockerfile),
 # so a Mac needs only Docker. The repository is mounted at /work and the age key's folder at /age.
 # Tagged by its Dockerfile's hash: a changed Dockerfile builds a new image, never a stale one.
-# (Only the Mac starts the image; inside it, there is nothing to tag.)
-if [[ -z "${GB_IN_TOOLS:-}" ]]; then
-  TOOLS_IMAGE="generic-bank/tools:$(shasum infra/docker/tools.Dockerfile | cut -c1-12)"
-fi
-
+# Worked out only when the image is needed, and only on the Mac, which is what starts it.
 tools_image() {
+  TOOLS_IMAGE="generic-bank/tools:$(shasum infra/docker/tools.Dockerfile | cut -c1-12)"
   docker image inspect "$TOOLS_IMAGE" >/dev/null 2>&1 && return
   info "Building the tools image (once): sops, age, jq, the plan renderer"
   docker build -q -f infra/docker/tools.Dockerfile -t "$TOOLS_IMAGE" infra/docker >/dev/null

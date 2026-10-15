@@ -73,7 +73,7 @@ fi
 
 info "Ports"
 busy=0
-set -a; source config/app.env; set +a
+set -a; source config/app.env; [[ -f config/local.env ]] && source config/local.env; set +a
 for p in $API_PORT $CONSOLE_PORT $BANK_GENERIC_PORT $BANK_EXAMPLE_PORT $BANK_INBOX_PORT; do
   if lsof -nP -iTCP:"$p" -sTCP:LISTEN >/dev/null 2>&1 && ! docker ps --format '{{.Ports}}' 2>/dev/null | grep -q ":$p->"; then
     warn "port $p is in use by something other than this stack"; busy=1
