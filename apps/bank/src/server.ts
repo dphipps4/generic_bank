@@ -4,6 +4,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { type Bank, COOKIE, rotateNonce } from './context.js';
 import { HEADER, type RequestHazards } from './hazards.js';
 import { buttonSvg, CORELINK_JS, NEW_SVG, SPACER_GIF } from './markup/html.js';
+import { consoleRoutes } from './routes/console.js';
 import { signInRoutes } from './routes/signin.js';
 
 export type { Bank } from './context.js';
@@ -55,5 +56,6 @@ export async function buildServer(bank: Bank, logger = false): Promise<FastifyIn
   if (base !== '/') app.get('/', async (_req, reply) => reply.redirect(base));
 
   signInRoutes(app, bank);
+  consoleRoutes(app, bank);
   return app;
 }
