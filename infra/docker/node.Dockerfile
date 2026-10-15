@@ -8,6 +8,7 @@ COPY package.json package-lock.json ./
 COPY packages/config/package.json packages/config/
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/db/package.json packages/db/
+COPY packages/drivers/package.json packages/drivers/
 COPY packages/evidence/package.json packages/evidence/
 COPY packages/oauth/package.json packages/oauth/
 COPY packages/screen/package.json packages/screen/

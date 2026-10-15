@@ -528,7 +528,8 @@ export async function readScreen(page: Page): Promise<ScreenModel> {
     controls,
     texts: out.texts,
     structureKey: structure,
-    screenshot: await page.screenshot(),
+    // A dialog freezes the page; a screenshot would only wait out its timeout.
+    screenshot: page.dialog ? Buffer.alloc(0) : await page.screenshot(),
     dropped: out.dropped + dropped,
     animated: out.animated,
   };

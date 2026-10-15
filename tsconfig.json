@@ -20,6 +20,9 @@
       "path": "packages/evidence"
     },
     {
+      "path": "packages/drivers"
+    },
+    {
       "path": "apps/api"
     },
     {

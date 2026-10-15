@@ -124,10 +124,18 @@ export class Browser {
     return new Browser(cdp, child, profile, { ...o, width, height });
   }
 
-  /** A new page, attached, with its frames from other origins attached too. */
+  /**
+   * A new page in a browser context of its own: its own cookies and storage, as a fresh browser
+   * would have, with its frames from other origins attached too.
+   */
   async newPage(): Promise<Page> {
+    const { browserContextId } = await this.cdp.call<{ browserContextId: string }>(
+      'Target.createBrowserContext',
+      { disposeOnDetach: true },
+    );
     const { targetId } = await this.cdp.call<{ targetId: string }>('Target.createTarget', {
       url: 'about:blank',
+      browserContextId,
     });
     const { sessionId } = await this.cdp.call<{ sessionId: string }>('Target.attachToTarget', {
       targetId,
@@ -168,6 +176,8 @@ export class Page {
   /** Whether each frame, in any session, has fired its load event since it last navigated. */
   private readonly loaded = new Map<string, boolean>();
   private lastNavigationRequest = 0;
+  /** A JavaScript dialog the page has open (it freezes the page until answered), or null. */
+  dialog: { type: string; message: string; session: string } | null = null;
   private offs: (() => void)[] = [];
 
   constructor(
@@ -225,6 +235,14 @@ export class Page {
             this.loaded.set(e.params.frameId as string, true);
           if (e.method === 'Page.frameDetached') this.loaded.delete(e.params.frameId as string);
         }
+        if (e.method === 'Page.javascriptDialogOpening') {
+          this.dialog = {
+            type: e.params.type as string,
+            message: e.params.message as string,
+            session: e.sessionId ?? this.sessionId,
+          };
+        }
+        if (e.method === 'Page.javascriptDialogClosed') this.dialog = null;
         if (e.method === 'Target.targetInfoChanged') {
           const info = e.params.targetInfo as { targetId: string; url: string };
           const f = this.frames.get(info.targetId);
@@ -280,6 +298,15 @@ export class Page {
       await new Promise((r) => setTimeout(r, 25));
     }
     return false;
+  }
+
+  /** Answers the open dialog: accept (OK) or dismiss (Cancel). */
+  async answerDialog(accept: boolean) {
+    const d = this.dialog;
+    if (!d) return;
+    await this.cdp.call('Page.handleJavaScriptDialog', { accept }, { sessionId: d.session });
+    this.dialog = null;
+    await this.settle();
   }
 
   /** True when the top document and every frame have fired their load event. */
