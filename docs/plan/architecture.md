@@ -1,56 +1,44 @@
 # Generic Bank Architecture
 
 > **The boxes named here:** box A runs the application (Task API, Console, workflows, the
-> Runner); box B holds every durable thing (Postgres, Vault, object storage, Memory); box D
-> is the software factory, created for a factory session and destroyed after. The four banks
-> are not ours: they stand in for the outside world.
+> Runner); box B holds every durable thing (Postgres, Vault, object storage, Memory); box D is
+> the software factory, created for a session and destroyed after. The four banks stand in for
+> the outside world.
 
 ---
 
 ## Overview
 
-This system lets an AI agent get work done inside a legacy bank application that has no API.
-
-The agent calls a typed task: check a balance, prepare a transfer, fetch statements. The
-system carries it out by operating the bank's website the way a person would, then returns a
-typed result. When it can't go on safely, it parks the work for a person, along with the
-evidence that person needs.
+This system lets an AI agent work inside a legacy bank application that has no API. The agent
+calls a typed task (check a balance, prepare a transfer, fetch statements), and the system does
+it by operating the bank's website the way a person would, then returns a typed result. When it
+can't go on safely, it parks the work for a person, with the evidence that person needs.
 
 **The boundary is the whole design: models build, runs stay deterministic, and people move
-money.**
+money.** No model runs inside a production task; a production task is reviewed TypeScript
+running a driver a person approved. The reasoning happens earlier, in the software factory,
+where a mistake costs a red evaluation instead of a member's money. And no automation presses a
+money-moving control without a single-use grant that a person issued for exactly that transfer.
 
-No model runs inside a production task. A production task is reviewed TypeScript running a
-driver a person approved. The reasoning happens earlier, in the software factory, where a
-mistake costs a red evaluation and not a member's money.
+Three structural choices follow:
 
-And no automation, deterministic or not, may press a money-moving control without a
-single-use grant. A person issues that grant for exactly that transfer.
-
-Three structural choices follow from that:
-
-- **The UI is read from what is drawn.** The Runner builds a screen model from the browser's
-  own layout, the accessibility tree, and fingerprints of the images the factory has named.
-  Drivers ask for "the field
-  labeled Amount" and "the button named Submit transfer". They never ask for a selector.
-  That's what makes a deliberately hostile legacy UI drivable at all. It's also what lets the
-  same drivers work on desktop or terminal surfaces later.
-- **One vendor, many tenants.** A driver is written once per vendor product, and each tenant
-  is just a profile. To onboard a new tenant of a known vendor, the factory writes a profile.
-  As evidence accumulates, Memory widens what it learns from one tenant to the whole vendor
-  family.
-- **Small on purpose.** One Postgres, a workflow library instead of a workflow server,
-  AdminJS instead of a hand-built console. The whole stack fits on an 8 GB laptop.
+- **The UI is read from what is drawn.** Drivers ask for "the field labeled Amount" or "the
+  button named Submit transfer", never a selector. That makes a deliberately hostile legacy UI
+  drivable, and lets the same drivers reach desktop or terminal surfaces.
+- **One vendor, many tenants.** A driver is written once per vendor product, and a new tenant
+  of a known vendor needs only a profile. Memory widens what it learns from one tenant to the
+  whole vendor family.
+- **Small on purpose.** One Postgres, a workflow library instead of a workflow server, AdminJS
+  instead of a hand-built console. The whole stack fits on an 8 GB laptop.
 
 ### The failure mode this architecture is built against
 
 > **A wrong click costs money. A stopped run costs a minute.**
 
-Every automation that drives a UI eventually meets a screen it didn't expect. A system that
-guesses will one day guess on a money page.
-
-So when in doubt, the system stops. An unrecognized screen escalates. An unclear submit is
-checked against the bank's own history and never pressed twice. A frame that can't be proven
-clean of personal data is withheld, not stored.
+Every UI automation meets a screen it didn't expect, and a system that guesses will one day
+guess on a money page. So when in doubt, this one stops: an unknown screen escalates, an
+unclear submit is checked against the bank's history and never pressed twice, and a frame not
+provably clean of personal data is withheld.
 
 ---
 
@@ -101,13 +89,10 @@ The same system in text, for diffs and terminals:
                                                                 └──────────────────────────────┘
 ```
 
-Why split the boxes this way? Box A holds no durable data, so it can be rebuilt at any time.
-Box B holds everything and reaches nothing. Box D runs model-written code and live model
-calls, so it's created for a session and destroyed after, and its sandbox has no network
-route out at all.
-
-People and tests can reach the fake inbox. The Runner and the factory can't, so a one-time
-code is always a human step.
+Box A holds no durable data, so it can be rebuilt at any time. Box B holds everything and
+reaches nothing. Box D runs model-written code and live model calls, so it lives for one
+session, and its sandbox has no network route out. People and tests can reach the fake inbox;
+the Runner and the factory can't, so a one-time code is always a human step.
 
 ### Who may reach whom
 
@@ -129,21 +114,16 @@ code is always a human step.
 
 ### Responsibilities
 
-Generic Bank plays the part of a legacy **staff console**: **CoreLink Branch Console**, from
-the fictional Acme Core Systems. Member-services employees use it to look up a member and act
-for them.
+Generic Bank plays a legacy **staff console**, **CoreLink Branch Console** from the fictional
+Acme Core Systems, which member-services staff use to look up a member and act for them. It
+runs as the four banks in the table below: **Generic Bank** and **Example Credit Union** are
+driven; **Sample Savings Bank** and **Placeholder Federal Credit Union** are held for the
+factory to crawl. Our system acts as an employee, through one staff service account per bank,
+never as a member.
 
-It is deployed as four banks on slightly different URLs. **Generic Bank** (CoreLink 4.2) and
-**Example Credit Union** (CoreLink 4.3) are driven in the submission. **Sample Savings Bank**
-(a customized 4.3) and **Placeholder Federal Credit Union** (CoreLink 4.4) are kept for the
-factory to crawl later.
-
-Our system acts as an employee, through one staff service account per bank. It never acts as
-a member.
-
-The bank owns a real double-entry ledger, operators with roles and one-time codes, members
-and their accounts, and statements generated from the ledger. It also has a hazard engine
-that produces the same runtime trouble real enterprise apps produce.
+The bank has a real double-entry ledger, operators with roles and one-time codes, members and
+accounts, statements built from the ledger, and a hazard engine that produces the runtime
+trouble real enterprise apps produce.
 
 ### Interfaces
 
@@ -166,20 +146,19 @@ that produces the same runtime trouble real enterprise apps produce.
 |---|---|---|---|---|---|
 | Generic Bank (4.2) | `localhost:8081/corelink/` | Operator ID, Member Search, Transfer Funds, Submit transfer | nav frame on the left; styled like 2003: bevelled grey buttons, tiny Verdana, a marquee | "Account ending in 7890" | $2,500 |
 | Example Credit Union (4.3) | `localhost:8082/` | Username, Find Member, Move Money, Confirm (an image) | tab frame across the top, from another origin | "Share ****3456-S01" | $1,000 |
-| Sample Savings Bank (4.3, customized; later) | `localhost:8083/online/branch/` | Staff number, Member Inquiry, Internal Transfer, Post | as bank 2, plus a notices frame; section headings drawn as images | "Acct 1234-5678-90" | $500 |
-| Placeholder FCU (4.4; later) | `127.0.0.1:8084/cu/ib/` | User, Search (popup results), Authorize | menu bar, no frameset; sign-in in a cross-origin iframe; transfer split over two pages | "··· 7890 (Checking)" | $2,000 |
+| Sample Savings Bank (4.3, customized) | `localhost:8083/online/branch/` | Staff number, Member Inquiry, Internal Transfer, Post | as bank 2, plus a notices frame; section headings drawn as images | "Acct 1234-5678-90" | $500 |
+| Placeholder FCU (4.4) | `127.0.0.1:8084/cu/ib/` | User, Search (popup results), Authorize | menu bar, no frameset; sign-in in a cross-origin iframe; transfer split over two pages | "··· 7890 (Checking)" | $2,000 |
 
 ### Config and State
 
 - **Tenant config** decides everything that differs: labels, theme, layout variant, account
-  format, thresholds, code delivery, and each page's **markup dialect** (how a button, a
-  label or a field is spelled in HTML on that page).
-- **Markup is stable per build** (seeded), just as enterprise UIs are. `BANK_UI_VERSION`
-  simulates a slow vendor upgrade for the repair loop.
-- **Data** lives in the bank's own Postgres (`bank_generic`, `bank_example`), seeded from a
-  fixed seed. That gives about six members per tenant, covering every business case, with
-  twelve months of history. Statements are generated from the ledger on request with
-  pdf-lib, then cached.
+  format, thresholds, code delivery, and each page's **markup dialect** (how that page spells a
+  button, a label or a field in HTML).
+- **Markup is stable per build** (seeded), as enterprise UIs are. `BANK_UI_VERSION` simulates
+  a slow vendor upgrade for the repair loop.
+- **Data** lives in the bank's own Postgres (`bank_generic`, `bank_example`) from a fixed seed:
+  about six members per tenant, covering every business case, with twelve months of history.
+  Statements are generated from the ledger on request with pdf-lib, then cached.
 
 ### Error Handling
 
@@ -196,11 +175,10 @@ The hazard engine runs in two modes:
           every draw written to hazard_events  (ground truth for tests; never shown)
 ```
 
-Some hazards only happen when forced: swallowed submit, swallowed click, late rows, injected
-instruction, unknown screen, and on-demand permission, not-found and validation errors.
-
-Every test uses the same oracle: a state-change counter and the ledger, read through a
-test-only admin port.
+Some hazards happen only when forced: swallowed submit, swallowed click, late rows, injected
+instruction, unknown screen, and on-demand permission, not-found and validation errors. Every
+test uses one oracle: a state-change counter and the ledger, read through a test-only admin
+port.
 
 ---
 
@@ -260,33 +238,17 @@ A task run's life:
 
 ### Config and State
 
-We use **DBOS** as the task runner. Each task runs as a workflow, and its state is kept in
-Postgres.
-
-Workflow code calls a small interface of our own rather than DBOS directly, and every side
-effect happens in a step.
-
-A few details:
-
-- When a task waits for a person, the workflow waits for a message with a deadline.
-- Long waits (days for a review, weeks for probation) are durable timers.
-- The workflow id is the task's idempotency key, so calling the same task twice returns the
-  same run.
+**DBOS** runs each task as a workflow, state in Postgres. Workflow code calls a small interface
+of ours, not DBOS directly, and every side effect is a step. Waiting for a person means waiting
+for a message with a deadline; long waits (days for a review, weeks for probation) are durable
+timers. The workflow id is the idempotency key, so the same task twice returns the same run.
 
 ### Error Handling
 
-- **Bad input** is refused by the schema with the field that failed (HTTP 400). Nothing starts.
-- **No promoted driver** for the bank and task is refused before a browser opens
-  (`failed: no_driver`).
-- **A repeated idempotency key** returns the existing run, never a second one.
-- **Postgres down** means HTTP 503 on new calls. Running workflows pause and pick up where
-  they stopped.
-- **Messages to the caller are ours**, fixed per code. If a message carries a selector, a
-  stack trace, an internal host or a query string, a filter swaps it for one of three canned
-  sentences and logs the original.
-
-Every other failure, and what the caller sees for it, is in
-[How failures are handled](#how-failures-are-handled).
+Bad input, a missing driver, a repeated key and a Postgres outage are refused or answered as
+[How failures are handled](#how-failures-are-handled) lists. **Messages to the caller are
+ours**, fixed per code: if one would carry a selector, a stack trace, an internal host or a
+query string, a filter swaps it for one of three canned sentences and logs the original.
 
 ---
 
@@ -294,18 +256,17 @@ Every other failure, and what the caller sees for it, is in
 
 ### Responsibilities
 
-The Runner executes one task at a time in one headless Chromium. It works through a promoted
-driver, under the guardrails, and writes the trail as it goes. It's the only component that
-touches a bank in production.
+The Runner executes one task at a time in one headless Chromium, through a promoted driver and
+under the guardrails, writing the trail as it goes. It is the only component that touches a
+bank in production.
 
 ### The screen model
 
-The bank's pages are shells until their own JavaScript draws them. So the reader has to be a
-real Chromium that executes every script the bank sends.
-
-The Runner reads the drawn result from outside the page. It never injects script of its own.
-A cross-origin frame is read through its own DevTools session. And when the layout can't be
-read on a page that is visibly drawn, the Runner finds targets on the screenshot instead.
+The bank's pages are shells until their own JavaScript draws them, so the reader is a real
+Chromium that runs every script the bank sends. The Runner reads the drawn result from outside
+the page and never injects script. A cross-origin frame is read through its own DevTools
+session. When the layout can't be read on a visibly drawn page, targets come from the
+screenshot.
 
 ```text
   after every action, wait until FULLY RENDERED:
@@ -350,12 +311,11 @@ Drivers are state machines over named screens, written against a small SDK:
 
 ### Config and State
 
-A **driver** is per vendor (`packages/drivers/corelink`). A **profile** is per tenant:
-labels, synonyms, signature overrides, account format, thresholds. The catalog maps tenant
-and task to the promoted driver version.
-
-Step limits are 2 minutes for sign-in, 45 seconds for a page and 60 seconds for a document.
-The stall watchdog fires after 3 minutes with no step and no navigation.
+A **driver** is per vendor (`packages/drivers/corelink`); a **profile** is per tenant: labels,
+synonyms, signature overrides, account format, thresholds. The catalog maps tenant and task to
+the promoted driver version. Step limits are 2 minutes for sign-in, 45 seconds for a page and
+60 seconds for a document; the stall watchdog fires after 3 minutes with no step and no
+navigation.
 
 ### Error Handling
 
@@ -376,8 +336,8 @@ The stall watchdog fires after 3 minutes with no step and no navigation.
 
 ### Responsibilities
 
-Money moves only when a person has approved exactly this transfer. An unclear submit can
-never become two transfers.
+Money moves only when a person has approved exactly this transfer, and an unclear submit never
+becomes two transfers.
 
 ### Interfaces
 
@@ -410,14 +370,14 @@ never become two transfers.
 ### Config and State
 
 `approval_grant` rows are single-use and bound to values, not to a browser. If the browser is
-lost while the run is parked, approval resumes it with a fresh sign-in. The run re-fills the
+lost while the run is parked, approval resumes it with a fresh sign-in: the run re-fills the
 form, re-reads the review page and checks it against the grant before the click.
 
 ### Error Handling
 
-If the grant and the screen disagree (the amount changed, the accounts differ), the click is
-refused and the run escalates. We generate the memo token and type it into the bank's memo
-field. That makes the bank's own history the idempotency record.
+If the grant and the screen disagree (a changed amount, different accounts), the click is
+refused and the run escalates. The memo token is ours, typed into the bank's memo field, which
+makes the bank's own history the idempotency record.
 
 ---
 
@@ -425,9 +385,8 @@ field. That makes the bank's own history the idempotency record.
 
 ### Responsibilities
 
-Every rule that keeps the system safe lives in `packages/guardrails`, which imports nothing
-from the drivers, the Runner or the factory. Every layer is enforced in code. Prompts only
-repeat the rules.
+Every safety rule lives in `packages/guardrails`, which imports nothing from the drivers, the
+Runner or the factory. Every layer is enforced in code; prompts only repeat the rules.
 
 ```text
                   a click or key press the driver asks for
@@ -449,29 +408,23 @@ repeat the rules.
                                                    tenant frozen, notification
 ```
 
-Around those layers sit a few more protections:
-
-- Credentials are typed from Vault and never returned. Plain typing of anything resembling a
-  secret is refused.
-- Sign-ins are paced and capped by a ledger that fails closed.
-- Injected page text is ignored structurally, because guards judge controls, not
-  instructions.
-- The factory has model caps and the tool allowlist.
-- Compose networks limit reach.
+Around the layers: credentials are typed from Vault, never returned, and plain typing of
+anything resembling a secret is refused. A sign-in ledger paces and caps sign-ins and fails
+closed. Injected page text is ignored structurally, since guards judge controls, not
+instructions. The factory has its caps and tool allowlist; compose networks limit reach.
 
 ### Error Handling
 
-A guard error always propagates. An E0 lint rule forbids catching it.
-
-The trap matrix test runs every money trap and injected instruction with each layer removed
-in turn, and records which layers each trap depends on. For every read task, the bank's
-state-change counter must stay at zero.
+A guard error always propagates; an E0 lint rule forbids catching it. The trap matrix test runs
+every money trap and injected instruction with each layer removed in turn and records which
+layers each trap depends on. For every read task, the bank's state-change counter stays at
+zero.
 
 ---
 
 ## How failures are handled
 
-Every failure lands in one of four places, and each has one rule.
+Every failure lands in one of four places, each with one rule.
 
 | Kind | Rule | The caller sees |
 |---|---|---|
@@ -482,12 +435,12 @@ Every failure lands in one of four places, and each has one rule.
 
 Four principles hold throughout:
 
-- **Only reads are retried**, and never more than twice. Anything that could change state is
-  never retried; it is checked.
-- **Every run that ends badly ends with a picture**: a final masked frame and the trail
-  before it.
-- **Infrastructure fails closed.** If a guard, a secret store or the spend meter cannot be
-  consulted, the action does not happen.
+- **Only reads are retried**, at most twice. Anything that could change state is checked, not
+  retried.
+- **Every run that ends badly ends with a picture**: a final masked frame and the trail before
+  it.
+- **Infrastructure fails closed.** If a guard, a secret store or the spend meter can't be
+  consulted, the action doesn't happen.
 - **The caller gets our words.** Raw page text, stack traces, selectors and internal hosts
   never leave the system.
 
@@ -518,12 +471,12 @@ Four principles hold throughout:
 
 | Failure | The system | The caller sees |
 |---|---|---|
-| Worker or browser crash mid-run | the workflow resumes at its last completed step; a lost browser means a fresh sign-in and a return to the same screen. If the crash came between a submit's journaled intent and its result, the run goes straight to the history check and never clicks again | nothing, or `escalated: ambiguous_outcome` |
+| Worker or browser crash mid-run | resumes at the last completed step; a lost browser means a fresh sign-in and a return to the same screen. A crash between a submit's journaled intent and its result goes straight to the history check, never a second click | nothing, or `escalated: ambiguous_outcome` |
 | Stall (no step, no navigation for 3 minutes) | the watchdog saves a final frame and ends the run | `escalated: stuck` |
 | Nobody answers a human task | the deadline ends the run | `expired` |
 | Postgres down | the API answers 503; running workflows pause and resume when it returns | HTTP 503 on new calls |
 | Vault down | no secret can be typed, so the run stops before sign-in | `failed: unavailable`, retryable |
-| MinIO down | frames are held on the runner's disk (at most 60 a run) and uploaded when it returns; if they cannot be kept, they are withheld with the reason | nothing |
+| MinIO down | frames wait on the runner's disk (at most 60 a run) and upload when it returns; any that can't be kept are withheld with the reason | nothing |
 | Memory down | runs continue; their episodes wait in an outbox and are sent later. The factory will not start a run without its knowledge pack | nothing for tasks |
 | Masking cannot prove a frame clean | the frame is withheld; the run continues | nothing |
 | No promoted driver for the bank and task | refused before any browser opens | `failed: no_driver`, not retryable |
@@ -549,7 +502,7 @@ Four principles hold throughout:
 
 ### Responsibilities
 
-Every run leaves a trail from its first step, however it ends. Nothing personal is ever
+Every run leaves a trail from its first step, however it ends, and nothing personal is ever
 stored unmasked.
 
 ```text
@@ -563,31 +516,25 @@ stored unmasked.
         no query strings) · run-folder manifest (path, size, sha256, written last)
 ```
 
-Masking works from two sources. The first is known values: the member's credentials, codes,
-name, account numbers and email, all known before the run starts. The second is patterns:
-four or more digits, currency amounts, emails, phones, street lines.
-
-The screen model already knows where every piece of text is, so each
-input, each matching text run, and each image or canvas the crawler cannot read is covered
-with a white box filled with asterisks. A frame whose screen model could not be read, or that
-shows a known value outside a covered box, is withheld.
-
-Logs pass through pino's key redaction and then a final scrubbing pass. A run keeps at most
-60 frames. A capture failure is logged and never breaks the run.
+Masking works from known values (the member's credentials, codes, name, account numbers and
+email, all known before the run) and from patterns (four or more digits, currency amounts,
+emails, phones, street lines). The screen model knows where all text sits, so every input,
+matching text run, and image or canvas the crawler can't read gets a white box of asterisks. A
+frame whose screen model couldn't be read, or that shows a known value outside a box, is
+withheld. Logs go through pino's key redaction and a final scrub. A run keeps at most 60
+frames, and a capture failure is logged, never fatal.
 
 ### Error Handling
 
-The PII suite runs every task on banks 1 and 2. Then it scans every database row, object and
-log line those runs produced, looking for every seeded secret and personal value. Any hit
-fails the suite.
+The PII suite runs every task on banks 1 and 2, then scans every database row, object and log
+line those runs produced for every seeded secret and personal value. Any hit fails the suite.
 
 ---
 
 ## Observability
 
-Two questions come up every day: **what did the crawler do**, and **what did the agent do**.
-Both have the same answer. It is in the database, you see it in the Console, and the logs
-and traces say the same thing with the same ids.
+Two questions come up daily: **what did the crawler do**, and **what did the agent do**. Both
+answers live in the database and show on the Console; logs and traces agree under the same ids.
 
 ### Three signals, one id
 
@@ -604,9 +551,9 @@ and traces say the same thing with the same ids.
                                                        └─▶ Grafana     make observe
 ```
 
-Every task run and every factory run gets a `runId`, and that run is one OpenTelemetry trace.
-The `runId`, the trace id and the current step travel on every database row, every log line
-and every span. So any one of them leads to the other two.
+Every task run and factory run gets a `runId` and is one OpenTelemetry trace. The `runId`, the
+trace id and the current step travel on every row, log line and span, so any one leads to the
+other two.
 
 | Signal | Where it lives | What it is for |
 |---|---|---|
@@ -618,74 +565,70 @@ and every span. So any one of them leads to the other two.
 
 For a task run, the Console shows (and the records hold):
 
-- every **step**: the screen it recognized, the action it took, the outcome, how long it took
-- every **frame**: a masked screenshot and the masked screen model, with the step that took it
-- every **recovery**: the dialog dismissed, the re-sign-in, the retry, and which hazard caused it
+- every **step**: the screen recognized, the action taken, the outcome, the duration
+- every **frame**: a masked screenshot and masked screen model, with its step
+- every **recovery**: the dialog dismissed, the re-sign-in, the retry, and the hazard behind it
 - every **guard decision**: allowed or refused, by which layer, on which control
 - every **network event**: method, host, path, status, duration (no bodies, no query strings)
 - the **journal**: intent before each action, result after, hash-chained
 - the **human tasks**: who answered, when, and what they saw
 
-The trace for the same run has one span per step, with child spans for the fully-rendered
-wait, screen recognition, targeting, the action and each guard check. A slow sign-in shows up
-as a long span; a recovery shows up as a retried span with the hazard as an attribute.
+The trace has one span per step, with child spans for the fully-rendered wait, screen
+recognition, targeting, the action and each guard check. A slow sign-in is a long span; a
+recovery is a retried span with the hazard as an attribute.
 
 ### What the agent did
 
 For a factory run, the Console shows (and the records hold):
 
 - every **model call**: role (Operator or Supervisor), model, prompt id and version, input,
-  output and cached tokens, cost, and the latency
-- every **tool call**: the tool, its arguments (masked), a compact result, and whether the
-  veto refused it and why
+  output and cached tokens, cost, latency
+- every **tool call**: the tool, its masked arguments, a compact result, and whether the veto
+  refused it and why
 - every **Supervisor verdict**: continue, wait or stop, with the reason and the frame it judged
 - every **eval rung**: passed, failed or could not run, with its JSON
 - the **lessons**: served, relied on, contradicted and proposed
 - the **spend**: per call, per run and per week, against the caps
 
 The trace has one span per phase (intake, scout, build, evals, live verify, lessons, review,
-probation), with model calls and tool calls as child spans. Model-call spans follow the
+probation), with model and tool calls as child spans. Model-call spans follow the
 OpenTelemetry **GenAI semantic conventions** (`gen_ai.request.model`,
 `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, and the rest), so any tool that
-understands those conventions can read them.
+understands them can read them.
 
 ### Why not LangSmith
 
-LangSmith is the usual answer for watching agents, and it is good. We do not use it here,
-for two reasons. It is a hosted service, and our prompts and frames, even masked, should not
-leave the machine by default. And it would be a second, separate record of what the agent
-did, when the database already holds the authoritative one.
-
-OpenTelemetry keeps the door open. Because spans use the GenAI conventions and leave over
-OTLP, pointing them at LangSmith, Langfuse or Phoenix later is a configuration change, not a
-rewrite.
+LangSmith is good, but it's hosted, and prompts and frames, even masked, stay on the machine by
+default. It would also be a second record of what the agent did, beside the authoritative one
+in the database. Since spans use the GenAI conventions and leave over OTLP, pointing them at
+LangSmith, Langfuse or Phoenix is a configuration change, not a rewrite.
 
 ### Locally, and later
 
-**Locally (default).** No extra containers. Logs go to stdout and to rotating JSON files;
-traces go to JSON files through a small file exporter. `make logs`, `make <group>-logs` and
+**Locally (default).** No extra containers. Logs go to stdout and rotating JSON files, traces to
+JSON files through a small exporter; `make logs`, `make <group>-logs` and
 `make trace RUN=<runId>` read them. The Console is the main window.
 
 **Locally, when wanted.** `make observe` starts an OpenTelemetry Collector, **Grafana Tempo**
-for traces, **Loki** for logs and **Grafana**, about 600 MB together, so it stays off by
-default on an 8 GB laptop. The Console then links each run to its trace in Grafana.
+(traces), **Loki** (logs) and **Grafana**: about 600 MB, so off by default on an 8 GB laptop.
+The Console then links each run to its trace in Grafana.
 
-**With more time (plan 2).** The same collector, Tempo, Loki and Grafana run always-on, with
-dashboards for outcomes by code, recoveries by hazard, driver states and model spend, and
-alerts through ntfy.
+**With more time (Part 2).** The same collector, Tempo, Loki and Grafana run always-on, with
+dashboards for outcomes by code, recoveries by hazard, driver states and model spend, and alerts
+through ntfy.
 
 ### Masking applies to telemetry too
 
-Logs and spans go through the same masking as everything else. Span attributes never carry a
-value from a field, a credential, a code, an account number, an amount or a name. Frames are
-referred to by key, never embedded. A test runs a task under every hazard and scans the log
-and trace files for every seeded secret and personal value, exactly as it scans the database.
+Logs and spans get the same masking. Span attributes never carry a field value, credential,
+code, account number, amount or name, and frames are referenced by key, never embedded. A test
+runs a task under every hazard and scans log and trace files for every seeded secret and
+personal value, as it scans the database.
 
 ### Metrics
 
-Counts and rates come from SQL views over the records (shown on the Console's Home, Health and
-Cost pages) and, when the collector runs, from OpenTelemetry metrics: task duration, outcomes
-by code, recoveries by hazard, guard refusals by layer, human-task wait time, model tokens and
+Counts and rates come from SQL views over the records (on the Console's Home, Health and Cost
+pages) and, when the collector runs, from OpenTelemetry metrics: task duration, outcomes by
+code, recoveries by hazard, guard refusals by layer, human-task wait time, model tokens and
 spend by role.
 
 ---
@@ -694,8 +637,8 @@ spend by role.
 
 ### Responsibilities
 
-The Console is the operator's window into everything. It's built on **AdminJS** over the
-Prisma models.
+The Console is the operator's window into everything, built on **AdminJS** over the Prisma
+models.
 
 ```text
  ┌─ AdminJS on Fastify ─────────────────────────────────────────────────────────────┐
@@ -715,11 +658,10 @@ Prisma models.
 
 ### Interfaces
 
-There are three roles: `viewer`, `approver`, `admin`.
-
-Images are served only through an allow-listed proxy, and only for frames that passed
-masking. A withheld frame shows its reason instead. URLs appear as host and path only.
-Memory pages read the Memory service's API. The Console never opens Memory's tables.
+Three roles: `viewer`, `approver`, `admin`. Images come only through an allow-listed proxy,
+and only for frames that passed masking; a withheld frame shows its reason instead. URLs appear
+as host and path only. Memory pages read the Memory service's API; the Console never opens
+Memory's tables.
 
 ### Config and State
 
@@ -741,9 +683,9 @@ Driver states and their badges:
 ### Error Handling
 
 - **Two people answer the same human task:** the first answer wins (compare and set); the
-  second sees "already answered", with who answered and when.
+  second sees "already answered", with who and when.
 - **An approval arrives after its deadline:** refused; the run has already ended `expired`.
-- **A grant expires before the click:** the Runner refuses to use it and the run asks again.
+- **A grant expires before the click:** the Runner won't use it, and the run asks again.
 - **A missing or withheld image** shows a placeholder with the reason, never an error page.
 - **A reasoned action without a reason** (promote, roll back, freeze, unfreeze) is refused.
 
@@ -868,17 +810,15 @@ person looks.
 
 ### Responsibilities
 
-Give the factory a tenant and a task, and it produces a driver version. That version is
-proven offline, verified live and reviewed by a person. Then it has to earn promotion on
-probation.
+Given a tenant and a task, the factory produces a driver version that is proven offline,
+verified live and reviewed by a person, and then has to earn promotion on probation. Build mode
+starts from the vendor's driver and the knowledge pack; repair mode starts from a repair case
+and the failing runs' trails.
 
-In build mode the factory starts from the vendor's driver and the knowledge pack. In repair
-mode it starts from a repair case and the failing runs' trails.
-
-The agents run on **pi** ([pi.dev](https://pi.dev)), an open-source agent harness. Each role
-is its own pi session; the session file is the checkpoint and the record of what the agent
-did. pi reaches the model only through our metering gateway, and pi's tool-call hook asks our
-registry before any tool runs, so spend, caps and the tool allowlist stay in our code.
+The agents run on **pi** ([pi.dev](https://pi.dev)), an open-source agent harness. Each role is
+its own pi session, and the session file is both checkpoint and record. pi reaches the model
+only through our metering gateway, and its tool-call hook asks our registry before any tool
+runs, so spend, caps and the tool allowlist stay in our code.
 
 ```text
   ┌─ FactoryRun: one durable workflow ─────────────────────────────────────────┐
@@ -917,40 +857,27 @@ registry before any tool runs, so spend, caps and the tool allowlist stay in our
 | Operator | `claude-opus-5-5` | the driver bundle and its tests | masked screens, tool results, the knowledge pack |
 | Supervisor | `claude-sonnet-5-5` | step verdicts; lessons at the end | the screenshot and the step, never the Operator's reasoning |
 
-The tools are a closed set:
-
-- browser look, click, type, press, scroll and wait, by control reference
-- typing a credential, by field name only
-- entering a code a person supplied
-- reading and writing the bundle
-- lint, tests, evals and live verification
-- Memory and catalog reads
-- recording a lesson
-- reading this run's frames
-
-No tool moves money, runs script in a page, makes its own non-GET request, or reaches a host
-outside the allowlist. On the transfer task, factory work stops at the review page.
+The tools are a closed set: browser look, click, type, press, scroll and wait, by control
+reference; typing a credential, by field name only; entering a code a person supplied; reading
+and writing the bundle; lint, tests, evals and live verification; Memory and catalog reads;
+recording a lesson; reading this run's frames. No tool moves money, runs script in a page, makes
+its own non-GET request, or reaches a host outside the allowlist. On the transfer task, factory
+work stops at the review page.
 
 ### Config and State
 
-Caps live in one file with no imports: $25 a run, $150 a rolling week, 6 Operator turns, 6
-live sign-ins, 4 active hours, 3 failed-check turns, 2 live verifications, and $1 reserved
-for lessons. A run's input can lower a cap but never raise it. The spend meter checks before
-every model call and fails closed.
-
-Prompts are reviewed files, loaded only through the prompt loader. Mock mode replays
-recorded model responses, so you can watch the loop without an API key.
+Caps live in one file with no imports: $25 a run, $150 a rolling week, 6 Operator turns, 6 live
+sign-ins, 4 active hours, 3 failed-check turns, 2 live verifications, and $1 reserved for
+lessons. A run's input can lower a cap, never raise it, and the spend meter checks before every
+model call and fails closed. Prompts are reviewed files, loaded only through the prompt loader.
+Mock mode replays recorded model responses, so the loop runs without an API key.
 
 ### Error Handling
 
 A failed check goes back to BUILD as a typed failure, with its evidence and the one file the
-fix may touch.
-
-Candidate code runs only in the sandbox until a person approves it. Before it runs anywhere,
-its sha256 must match and E0 runs again inside the worker. It then loads in its own module
-scope, importing only the driver SDK.
-
-A rung that could not run is never a pass.
+fix may touch. Candidate code runs only in the sandbox until a person approves it. Before it
+runs anywhere, its sha256 must match and E0 runs again inside the worker; it then loads in its
+own module scope, importing only the driver SDK. A rung that could not run is never a pass.
 
 ---
 
@@ -972,10 +899,9 @@ A rung that could not run is never a pass.
 ```
 
 The eval CLI prints exactly one JSON object and exits 0 (passed), 1 (failed) or 2 (could not
-run). If the exit code and the JSON disagree, that's not a pass.
-
-The hazard list for E2 is read from the bank, never kept by hand. Prompts have their own
-eval cases, run on demand under their own cap.
+run); if the exit code and the JSON disagree, it isn't a pass. E2's hazard list is read from
+the bank, never kept by hand. Prompts have their own eval cases, run on demand under their own
+cap.
 
 ---
 
@@ -1003,14 +929,12 @@ eval cases, run on demand under their own cap.
 
 ## Known Limitations
 
-- **The web is the surface this system drives.** Desktop and terminal capture sources plug
-  into the same screen-model seam. The next additions are the E6 stability report and a
-  bounded assisted fallback at runtime.
-- **One browser at a time** by default, to fit in 8 GB. Concurrency is a setting.
-- **Banks 3 and 4 have no drivers yet.** They're kept for the factory to crawl after the
-  submission.
-- **Hazards are ours.** The bank produces the failure modes we chose. Real vendors will find
-  others. When a new one shows up, the answer is an escalation, then a scenario, then a
-  lesson.
+- **The web is the surface this system drives.** Desktop and terminal capture sources plug into
+  the same screen-model seam. The E6 stability report and a bounded assisted fallback at
+  runtime come next.
+- **One browser at a time** by default, to fit in 8 GB; concurrency is a setting.
+- **Banks 3 and 4 have no drivers.** They're held for the factory to crawl.
+- **Hazards are ours.** The bank produces the failure modes we chose, and real vendors will
+  find others. A new one becomes an escalation, then a scenario, then a lesson.
 - **Production hardening** (multi-machine deployment, private networking, credential rotation,
   intrusion detection, paging) is in Part 2 of `GENERIC_BANK_PLAN.md`.
