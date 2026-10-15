@@ -9,7 +9,7 @@ how="$(awk -v f="$FILE" -v k="$KEY" '$1==f && $2==k {print $3}' infra/secrets/se
 [[ -n "$how" ]] || die "$KEY is not a $FILE secret in infra/secrets/secrets.spec"
 case "$how" in
   hex) value="$(random_hex)" ;; password) value="$(random_password)" ;;
-  *) die "$KEY is not generated (it is $how); set it with make secret-set" ;;
+  *) die "$KEY is not generated (it is $how); enter it with make secrets-edit FILE=$FILE" ;;
 esac
 printf '%s' "$value" | json_string \
   | sops set --value-stdin "$(secret_path "$FILE")" "[\"$KEY\"]"

@@ -38,6 +38,10 @@ make up                         # the data box, the API, the Console, the crawle
 make help                       # every target
 ```
 
+`make setup` generates every secret it can. A value someone else issues (today only the Claude
+API key, which may stay blank: the factory then runs in mock mode) is explained by `make setup`
+and entered with `make secrets-edit FILE=…`, which opens the encrypted file in sops.
+
 Then open the Console at http://localhost:8080 (sign in as `admin@generic-bank.local`; the
 password is printed by `make console-password`).
 
