@@ -683,8 +683,8 @@ allowlist stay in our code.
 
 | Role | Model | Writes | Sees |
 |---|---|---|---|
-| Scout | `claude-sonnet-5-5` | browser steps, as the Supervisor directs | masked screens, tool results, the knowledge pack |
-| Supervisor | `claude-opus-5-5` | the next step; the profile, each claim citing frames, seen or guess; lessons | every frame (screenshot and visible-page JSON), never the Scout's reasoning |
+| Scout | `claude-opus-5-5`, low effort | browser steps, as the Supervisor directs | masked screens, tool results, the knowledge pack |
+| Supervisor | `claude-opus-5-5`, high effort | the next step; the profile, each claim citing frames, seen or guess; lessons | every frame (screenshot and visible-page JSON), never the Scout's reasoning |
 
 The tools are a closed set: browser actions by control reference, a credential by field name, a
 person's code, the bundle, lint, tests, evals, live verification, Memory and catalog reads,

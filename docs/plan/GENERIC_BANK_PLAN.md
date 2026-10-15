@@ -1751,7 +1751,7 @@ turn. Our code, not pi, owns:
   the role's list is vetoed, recorded, and the agent told why.
 - **The prompts:** reviewed files rendered by our loader ([Appendix O](#appendix-o-the-prompt-library)).
 
-Default models, set per role: Supervisor `claude-opus-5-5` (it reasons), Scout `claude-sonnet-5-5` (it navigates), small
+Default models, set per role: Supervisor `claude-opus-5-5` at high effort (it reasons), Scout `claude-opus-5-5` at low effort (it navigates), small
 judgments `claude-haiku-4-5-20251001`. **Mock mode** replays recorded model responses through the
 same gateway.
 
