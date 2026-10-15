@@ -23,6 +23,9 @@ import { apiOperator, mainFrame, onSignedOut } from './frame.js';
 // Statements: an account picker, a table drawn by script, and a Statement button per row that
 // opens a new window, which receives the PDF by a plain GET.
 
+/** What the page says about the months it does not list: the bank's own wording for "not available". */
+export const KEPT_ONLINE = 'Only the last 12 months of statements are available online.';
+
 /** Bank 4's per-window statement tokens: token to the session, account and month it opened. */
 const windowTokens = new Map<
   string,
@@ -100,6 +103,7 @@ setTimeout(function () {
               c,
               d,
               `${heading(c, d, L.statements)}${form(c, d, `${base}members/${n}/statements`, picker, submit(c, d, 'Show'))}<DIV CLASS="${box}"></DIV>
+<P>${font(c, esc(KEPT_ONLINE))}</P>
 <P>${linkButton(c, `${base}members/${n}/estatements`, 'Enroll in eStatements')} &nbsp; ${font(c, '|')} &nbsp; ${linkButton(c, `${base}members/${n}`, 'Back to member summary')}</P>`,
             ),
             script,
