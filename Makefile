@@ -19,7 +19,7 @@ DATA      := postgres vault minio memory
 BACKEND   := api
 CONSOLE   := console
 CRAWLERS  := runner
-BANK      := bank-db bank-generic bank-example
+BANK      := bank-db bank-generic bank-example bank-inbox
 BANK_MORE := bank-sample bank-placeholder
 FACTORY   := factory
 ALL       := $(DATA) $(BACKEND) $(CONSOLE) $(CRAWLERS) $(BANK)
@@ -76,14 +76,21 @@ console-password: ## Show the Console's first admin password
 
 ##@ Build
 
+# A hash of everything that goes into the image. The image carries it as a label, so a stale
+# image is noticed and rebuilt instead of quietly running yesterday's code.
+SOURCE_STAMP = $(shell find apps packages infra/docker package.json package-lock.json tsconfig*.json \
+  -type f -not -path '*/node_modules/*' -not -path '*/dist/*' -not -name '*.tsbuildinfo' 2>/dev/null \
+  | LC_ALL=C sort | xargs shasum | shasum | cut -c1-16)
+
 build: ## Build the one Node image every service runs
-	@docker build -f infra/docker/node.Dockerfile -t $(GB_IMAGE) .
+	@docker build -f infra/docker/node.Dockerfile --label gb.source=$(SOURCE_STAMP) -t $(GB_IMAGE) .
 
 build-nc: ## Build the image from scratch (no cache)
-	@docker build --no-cache -f infra/docker/node.Dockerfile -t $(GB_IMAGE) .
+	@docker build --no-cache -f infra/docker/node.Dockerfile --label gb.source=$(SOURCE_STAMP) -t $(GB_IMAGE) .
 
-image: ## Build the image only if it is missing
-	@docker image inspect $(GB_IMAGE) >/dev/null 2>&1 || $(MAKE) build
+image: ## Build the image if it is missing or older than the source
+	@have="$$(docker image inspect -f '{{ index .Config.Labels "gb.source" }}' $(GB_IMAGE) 2>/dev/null)"; \
+	if [ "$$have" != "$(SOURCE_STAMP)" ]; then echo "==> The image is out of date with the source; building"; $(MAKE) --no-print-directory build; fi
 
 ##@ Run
 
@@ -106,6 +113,7 @@ urls: ## Print where everything is
 	@echo "  Task API       http://localhost:$(API_PORT)/healthz"
 	@echo "  Generic Bank   http://localhost:$(BANK_GENERIC_PORT)/corelink/"
 	@echo "  Example CU     http://localhost:$(BANK_EXAMPLE_PORT)/"
+	@echo "  Staff inbox    http://localhost:$(BANK_INBOX_PORT)  (sign-in and approval codes)"
 	@echo
 
 data: env image ## Box B: Postgres, Vault, MinIO, Memory
