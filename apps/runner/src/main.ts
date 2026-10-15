@@ -20,6 +20,8 @@ const cfg = loadConfig(
     MINIO_ROOT_USER: z.string().min(3),
     MINIO_ROOT_PASSWORD: secret(),
     BANK_SERVICE_PASSWORD: z.string().min(16),
+    HAZARDS_FORCEABLE: z.enum(['true', 'false']).default('false'),
+    HAZARD_HMAC_KEY: secret().optional(),
   },
   process.env,
   ['RUN_SEAL_KEY', 'ANSWER_SEAL_KEY', 'MINIO_ROOT_PASSWORD'],
@@ -38,14 +40,20 @@ DBOS.setConfig({
   systemDatabaseUrl: cfg.CONTROL_DATABASE_URL,
   systemDatabaseSchemaName: 'dbos',
 });
-registerTaskWorkflow({
-  sql: sql(cfg.CONTROL_DATABASE_URL),
-  store,
-  sealKey: cfg.RUN_SEAL_KEY,
-  answerKey: cfg.ANSWER_SEAL_KEY,
-  // The staff service account: the same operator at every bank here; from Vault in the plan.
-  credentials: async () => ({ operatorId: '0412', password: cfg.BANK_SERVICE_PASSWORD }),
-});
+// The banks obey a forced hazard only when they too are forceable; the key never leaves the Runner.
+const forceable = cfg.HAZARDS_FORCEABLE === 'true';
+if (forceable && !cfg.HAZARD_HMAC_KEY) throw new Error('HAZARDS_FORCEABLE needs HAZARD_HMAC_KEY');
+registerTaskWorkflow(
+  {
+    sql: sql(cfg.CONTROL_DATABASE_URL),
+    store,
+    sealKey: cfg.RUN_SEAL_KEY,
+    answerKey: cfg.ANSWER_SEAL_KEY,
+    // The staff service account: the same operator at every bank here; from Vault in the plan.
+    credentials: async () => ({ operatorId: '0412', password: cfg.BANK_SERVICE_PASSWORD }),
+  },
+  forceable ? cfg.HAZARD_HMAC_KEY : undefined,
+);
 await DBOS.launch();
 await DBOS.registerQueue(WORKFLOW.queue, { workerConcurrency: cfg.RUNNER_CONCURRENCY });
 
