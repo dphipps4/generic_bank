@@ -106,7 +106,7 @@ describe('the API describes itself, and the descriptions agree', () => {
 });
 
 describe('the registry decides which banks can do what', () => {
-  it('lists the four banks; only Generic Bank’s Check Balance is promoted from the start', async () => {
+  it('lists the four banks; only Generic Bank’s Check Balance and Transfer are promoted from the start', async () => {
     const banks = (await get('/banks')).json();
     expect(banks.map((b: { id: string }) => b.id)).toEqual([
       'generic',
@@ -114,7 +114,10 @@ describe('the registry decides which banks can do what', () => {
       'sample',
       'placeholder',
     ]);
-    expect(banks[0].tasks).toEqual([{ task: 'check-balance', crawlerVersion: 'v1' }]);
+    expect(banks[0].tasks).toEqual([
+      { task: 'check-balance', crawlerVersion: 'v1' },
+      { task: 'transfer', crawlerVersion: 'v1' },
+    ]);
     expect(banks.slice(1).every((b: { tasks: unknown[] }) => b.tasks.length === 0)).toBe(true);
   });
 

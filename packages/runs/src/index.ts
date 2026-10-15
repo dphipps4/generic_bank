@@ -2,7 +2,7 @@
 // only the API and the Runner hold; what anyone else can read is masked. A run ends in exactly one
 // of the contract's results. Human tasks carry what a person was asked, and a person's answer (a
 // staff code) is sealed and cleared once used; a person's approval issues the run's one grant.
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from 'node:crypto';
 import {
   HUMAN_BODIES,
   type HumanAction,
@@ -60,6 +60,39 @@ export function maskInputs(inputs: Record<string, unknown>): Record<string, unkn
   return out;
 }
 
+/** A second request for something already open: the run it would duplicate. */
+export class DuplicateRun extends Error {
+  constructor(readonly runId: string) {
+    super(`run ${runId} is already open for the same request`);
+  }
+}
+
+/** The statuses in which a run is open: it may still act, or a person may let it act again. */
+export const OPEN = ['running', 'needs_human', 'escalated'] as const;
+
+/** A keyed hash, so the stored value says nothing about the member, the accounts or the amount. */
+const dedupeKey = (parts: readonly unknown[], secret: string) =>
+  createHmac('sha256', createHash('sha256').update(`dedupe:${secret}`).digest())
+    .update(JSON.stringify(parts))
+    .digest('base64url');
+
+const MEMO_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+
+/**
+ * Our marker for one transfer inside the bank's own data (plan, §F.2), such as `GBX 7Q4M`. It is
+ * minted once, with the run, so every retry, resume and history read looks for the same one.
+ */
+export const newMemoToken = () =>
+  `GBX ${[...randomBytes(4)].map((b) => MEMO_ALPHABET[b % 32]).join('')}`;
+
+const isUniqueViolation = (e: unknown) => (e as { code?: string } | null)?.code === '23505';
+
+/**
+ * Starts a run, or finds the one this request already started. The same idempotency key from the
+ * same client is the same run. With `dedupeOn`, a second run with the same parts is refused with
+ * `DuplicateRun` while the first is open; the database's partial unique index is the judge, so
+ * two requests at the same moment cannot both get through.
+ */
 export async function createRun(
   sql: Sql,
   o: {
@@ -68,30 +101,60 @@ export async function createRun(
     clientId: string | null;
     inputs: Record<string, unknown>;
     idempotencyKey?: string;
+    /** What makes two runs the same request, such as a transfer's member, accounts and amount. */
+    dedupeOn?: readonly unknown[];
   },
   secret: string,
 ): Promise<{ runId: string; existing: boolean }> {
-  if (o.idempotencyKey) {
-    const r = await sql.query<{ id: string }>(
-      'SELECT id FROM "TaskRun" WHERE "idempotencyKey" = $1',
-      [o.idempotencyKey],
-    );
-    if (r.rows[0]) return { runId: r.rows[0].id, existing: true };
-  }
+  const byKey = async () =>
+    o.idempotencyKey
+      ? (
+          await sql.query<{ id: string }>(
+            'SELECT id FROM "TaskRun" WHERE "idempotencyKey" = $1 AND "clientId" IS NOT DISTINCT FROM $2',
+            [o.idempotencyKey, o.clientId],
+          )
+        ).rows[0]?.id
+      : undefined;
+  const dedupe = o.dedupeOn ? dedupeKey([o.task, o.bank, ...o.dedupeOn], secret) : null;
+  const byDedupe = async () =>
+    dedupe
+      ? (
+          await sql.query<{ id: string }>(
+            `SELECT id FROM "TaskRun" WHERE "dedupeKey" = $1 AND status::text = ANY($2)`,
+            [dedupe, OPEN],
+          )
+        ).rows[0]?.id
+      : undefined;
+
+  const same = await byKey();
+  if (same) return { runId: same, existing: true };
+  const open = await byDedupe();
+  if (open) throw new DuplicateRun(open);
   const runId = id('r');
-  await sql.query(
-    `INSERT INTO "TaskRun" (id, task, bank, "clientId", "inputsMasked", "inputsSealed", "idempotencyKey", status)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, 'running')`,
-    [
-      runId,
-      o.task,
-      o.bank,
-      o.clientId,
-      JSON.stringify(maskInputs(o.inputs)),
-      seal(o.inputs, secret),
-      o.idempotencyKey ?? null,
-    ],
-  );
+  try {
+    await sql.query(
+      `INSERT INTO "TaskRun" (id, task, bank, "clientId", "inputsMasked", "inputsSealed", "idempotencyKey", "dedupeKey", status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'running')`,
+      [
+        runId,
+        o.task,
+        o.bank,
+        o.clientId,
+        JSON.stringify(maskInputs(o.inputs)),
+        seal(o.inputs, secret),
+        o.idempotencyKey ?? null,
+        dedupe,
+      ],
+    );
+  } catch (e) {
+    // Another request got there first, between our look and our insert.
+    if (!isUniqueViolation(e)) throw e;
+    const first = await byKey();
+    if (first) return { runId: first, existing: true };
+    const other = await byDedupe();
+    if (other) throw new DuplicateRun(other);
+    throw e;
+  }
   return { runId, existing: false };
 }
 

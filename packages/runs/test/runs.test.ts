@@ -6,9 +6,11 @@ import {
   awaitAnswer,
   awaitDecision,
   createRun,
+  DuplicateRun,
   inputsOf,
   loadRun,
   maskInputs,
+  newMemoToken,
   noteAsk,
   openHumanTask,
   resultOf,
@@ -86,6 +88,92 @@ describe('runs', () => {
       KEY,
     );
     expect(b).toEqual({ runId: a.runId, existing: true });
+  });
+
+  it('treat another client’s idempotency key as a new key, never as a way into its run', async () => {
+    const start = (clientId: string) =>
+      createRun(
+        db,
+        {
+          task: 'transfer',
+          bank: 'generic',
+          clientId,
+          inputs: input,
+          idempotencyKey: 'key-shared',
+        },
+        KEY,
+      );
+    const mine = await start('gbc_mine');
+    const theirs = await start('gbc_theirs');
+    expect(theirs.existing).toBe(false);
+    expect(theirs.runId).not.toBe(mine.runId);
+    expect(await start('gbc_mine')).toEqual({ runId: mine.runId, existing: true });
+  });
+
+  it('refuse a second open run for the same transfer, and allow it once the first has ended', async () => {
+    const same = ['40017732', '7890', '1234', 12_500];
+    const start = (key: string, dedupeOn = same) =>
+      createRun(
+        db,
+        {
+          task: 'transfer',
+          bank: 'generic',
+          clientId: 'gbc_dup',
+          inputs: input,
+          idempotencyKey: key,
+          dedupeOn,
+        },
+        KEY,
+      );
+    const first = await start('dup-key-1');
+    const refused = await start('dup-key-2').catch((e: unknown) => e);
+    expect(refused).toBeInstanceOf(DuplicateRun);
+    expect((refused as DuplicateRun).runId).toBe(first.runId);
+    // The same key is still the same run, not a duplicate of itself.
+    expect(await start('dup-key-1')).toEqual({ runId: first.runId, existing: true });
+    // A different amount is a different transfer.
+    expect((await start('dup-key-3', ['40017732', '7890', '1234', 12_501])).existing).toBe(false);
+    for (const status of ['needs_human', 'escalated'] as const) {
+      await db.query('UPDATE "TaskRun" SET status = $2 WHERE id = $1', [first.runId, status]);
+      expect(await start('dup-key-2').catch((e: unknown) => e)).toBeInstanceOf(DuplicateRun);
+    }
+    await settleRun(db, first.runId, { status: 'business_outcome', code: 'approval_rejected' });
+    expect((await start('dup-key-2')).existing).toBe(false);
+    const stored = JSON.stringify(
+      (await db.query('SELECT "dedupeKey" FROM "TaskRun" WHERE id = $1', [first.runId])).rows,
+    );
+    expect(stored).not.toContain('40017732');
+  });
+
+  it('let only one of two simultaneous requests for the same transfer through', async () => {
+    const start = (key: string) =>
+      createRun(
+        db,
+        {
+          task: 'transfer',
+          bank: 'generic',
+          clientId: 'gbc_race',
+          inputs: input,
+          idempotencyKey: key,
+          dedupeOn: ['40017732', '7890', '1234', 9_900],
+        },
+        KEY,
+      ).catch((e: unknown) => e);
+    const [a, b, c] = await Promise.all([start('race-1'), start('race-2'), start('race-1')]);
+    const made = [a, b, c].filter((r) => !(r instanceof DuplicateRun)) as { runId: string }[];
+    const refused = [a, b, c].filter((r) => r instanceof DuplicateRun) as DuplicateRun[];
+    expect(new Set(made.map((r) => r.runId)).size).toBe(1);
+    expect(refused.every((r) => r.runId === made[0]!.runId)).toBe(true);
+    const n = await db.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM "TaskRun" WHERE "clientId" = 'gbc_race'`,
+    );
+    expect(n.rows[0]!.n).toBe(1);
+  });
+
+  it('mint a memo token the bank’s memo field accepts', () => {
+    const tokens = new Set(Array.from({ length: 200 }, newMemoToken));
+    expect(tokens.size).toBeGreaterThan(190);
+    for (const t of tokens) expect(t).toMatch(/^GBX [0-9A-Z]{4}$/);
   });
 
   it('end in exactly one result, in our words, and drop the sealed inputs', async () => {

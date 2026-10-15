@@ -81,8 +81,11 @@ model TaskRun {
   inputsMasked    Json
   /// The real inputs, sealed (AES-GCM) with a key only the API and the Runner hold.
   inputsSealed    String?
-  /// Transfers carry one; the same key always returns the same run.
-  idempotencyKey  String?      @unique
+  /// Transfers carry one; the same key from the same client always returns the same run.
+  idempotencyKey  String?
+  /// A keyed hash of a transfer's bank, member, accounts and amount. Two open runs never share one:
+  /// a partial unique index in migration 0006, which Prisma cannot express.
+  dedupeKey       String?
   status          TaskStatus   @default(running)
   resultCode      String?
   retryable       Boolean?
@@ -95,6 +98,7 @@ model TaskRun {
   humanTasks      HumanTask[]
   journal         JournalEntry[]
 
+  @@unique([clientId, idempotencyKey])
   @@index([bank, task, startedAt])
 }
 
