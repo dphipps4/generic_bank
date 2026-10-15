@@ -144,6 +144,16 @@ export async function lastCode(db: Db, address: string): Promise<string> {
   return /(\d{6})/.exec(r.rows[0]?.body ?? '')?.[1] ?? '';
 }
 
+/** The newest code sent to an operator, by text or by email. */
+export async function lastCodeFor(db: Db, operatorId: string): Promise<string> {
+  const r = await db.query<{ body: string }>(
+    `SELECT m.body FROM messages m JOIN operators o ON m.address IN (o.phone, o.email)
+      WHERE o.operator_id = $1 ORDER BY m.id DESC LIMIT 1`,
+    [operatorId],
+  );
+  return /(\d{6})/.exec(r.rows[0]?.body ?? '')?.[1] ?? '';
+}
+
 export async function phoneOf(db: Db, operatorId: string): Promise<string> {
   const r = await db.query<{ phone: string }>(
     'SELECT phone FROM operators WHERE operator_id = $1',
@@ -160,8 +170,9 @@ export async function signIn(
 ): Promise<Client> {
   await c.get('signin');
   await c.post('signin', { operator: OPERATORS.service.id, password: PASSWORDS.service });
+  await c.get('code'); // a bank with one channel sends the code from here
   await c.post('code', { channel: 'text' });
-  const code = await lastCode(b.db, await phoneOf(b.db, OPERATORS.service.id));
+  const code = await lastCodeFor(b.db, OPERATORS.service.id);
   const r = await c.post('code/enter', { code, ...(o.trust ? { trust: '1' } : {}) });
   const handoff = new URL(r.location, 'http://x').searchParams.get('code') ?? '';
   await c.get(`auth/complete?code=${encodeURIComponent(handoff)}`);
