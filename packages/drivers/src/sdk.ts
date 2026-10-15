@@ -30,9 +30,14 @@ export interface Profile {
     transfer: string[];
     continue: string[];
     submitTransfer: string[];
+    /** An account tile's way to its statements, and a statement row's button. */
+    statements: string[];
+    statement: string[];
   };
   /** The bank's own words when it refuses a transfer, and the business outcome each one is. */
   refusals: { text: string; code: ResultCode }[];
+  /** The bank's own words, on its statements page, for the months it does not list. */
+  statementsKept: string;
   /** An account's wording on screen, with its last four digits as the first group. */
   accountWording: RegExp;
   /** How codes arrive: sent (with or without a chooser), or from an authenticator app. */

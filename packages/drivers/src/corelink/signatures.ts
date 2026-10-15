@@ -73,6 +73,12 @@ export function signatures(p: Profile): Signature[] {
       controls: [{ name: 'Approve' }],
     },
     { id: 'transfer.posted', requires: ['Transfer posted', 'Confirmation number'] },
+    {
+      id: 'statements',
+      requires: ['Statement Date', 'Document Type'],
+      controls: [{ name: w.statement }],
+      forbids: ['Available balance'],
+    },
     { id: 'error.unavailable', requires: ['Service Unavailable'] },
     { id: 'error.fatal', requires: ['An unexpected error has occurred'] },
   ];
