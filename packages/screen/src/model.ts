@@ -38,8 +38,9 @@ export interface Control {
   checked?: boolean;
   /** Whether a value is present; the value itself is never read. */
   hasValue?: boolean;
-  /** For selects: the options' text, which is what an operator reads. */
+  /** For selects: the options' text, which is what an operator reads, and the one selected. */
   options?: string[];
+  selected?: string;
   frame: string;
   /** For the browser, not for drivers: where to find this node again. */
   backendNodeId: number;
@@ -92,6 +93,7 @@ interface SnapDoc {
     attributes: number[][];
     inputValue?: { index: number[]; value: number[] };
     inputChecked?: { index: number[] };
+    optionSelected?: { index: number[] };
     isClickable?: { index: number[] };
     contentDocumentIndex?: { index: number[]; value: number[] };
   };
@@ -183,6 +185,7 @@ async function readSession(
     const values = new Map<number, string>();
     n.inputValue?.index.forEach((ni, k) => values.set(ni, S(n.inputValue!.value[k])));
     const checked = new Set(n.inputChecked?.index ?? []);
+    const optionSelected = new Set(n.optionSelected?.index ?? []);
     const children = new Map<number, number>();
     n.contentDocumentIndex?.index.forEach((ni, k) =>
       children.set(ni, n.contentDocumentIndex!.value[k]!),
@@ -306,21 +309,26 @@ async function readSession(
             : role === 'link' || role === 'button' || role === 'clickable'
               ? textInside() || axName.get(backendNodeId) || ''
               : (axName.get(backendNodeId) ?? '');
-      const options =
-        role === 'select'
-          ? (() => {
-              const out2: string[] = [];
-              for (let k = ni + 1; k < n.nodeName.length && n.parentIndex[k]! >= ni; k++) {
-                if (S(n.nodeName[k]) === 'OPTION') {
-                  const t = n.nodeName.findIndex(
-                    (_, j) => j > k && n.parentIndex[j] === k && S(n.nodeName[j]) === '#text',
-                  );
-                  out2.push(t > 0 ? S(n.nodeValue[t]).trim() : '');
-                }
-              }
-              return out2;
-            })()
-          : undefined;
+      // A list's options, in order, and which one is selected (read from the layout, not the value).
+      let options: string[] | undefined;
+      let selected: string | undefined;
+      if (role === 'select') {
+        options = [];
+        const isInside = (k: number) => {
+          for (let p = n.parentIndex[k]!; p >= 0; p = n.parentIndex[p]!) if (p === ni) return true;
+          return false;
+        };
+        for (let k = ni + 1; k < n.nodeName.length && isInside(k); k++) {
+          if (S(n.nodeName[k]) !== 'OPTION') continue;
+          const t = n.nodeName.findIndex(
+            (_, j) => j > k && n.parentIndex[j] === k && S(n.nodeName[j]) === '#text',
+          );
+          const label = t > 0 ? S(n.nodeValue[t]).trim() : '';
+          options.push(label);
+          if (optionSelected.has(k)) selected = label;
+        }
+        selected ??= options[0];
+      }
       const enabled = a.disabled === undefined;
       const usable =
         visible && box.w >= 2 && box.h >= 2 && inside(box, o.clip) && S(styles[2]) !== 'none';
@@ -337,7 +345,7 @@ async function readSession(
         ...(role === 'textbox' || role === 'password'
           ? { hasValue: (values.get(ni) ?? '').length > 0 }
           : {}),
-        ...(options ? { options } : {}),
+        ...(options ? { options, selected } : {}),
         frame: label,
         backendNodeId,
         session,
@@ -368,7 +376,7 @@ async function onTop(
       const hit = await page.cdp.call<{ backendNodeId: number }>(
         'DOM.getNodeForLocation',
         { x, y, includeUserAgentShadowDOM: false, ignorePointerEventsNone: true },
-        { sessionId: c.session, timeoutMs: 3000 },
+        { sessionId: c.session, timeoutMs: 1500 },
       );
       if (await isSelfOrDescendant(page, c, hit.backendNodeId, descendants)) kept.push(c);
       else dropped++;
@@ -395,7 +403,7 @@ async function isSelfOrDescendant(
       const r = await page.cdp.call<{ node: Node }>(
         'DOM.describeNode',
         { backendNodeId: c.backendNodeId, depth: -1 },
-        { sessionId: c.session, timeoutMs: 3000 },
+        { sessionId: c.session, timeoutMs: 1500 },
       );
       const walk = (nd: Node) => {
         tree!.set(nd.backendNodeId, 1);

@@ -158,6 +158,7 @@ export class Page {
   readonly frames = new Map<string, FrameSession>();
   /** Whether each frame, in any session, has fired its load event since it last navigated. */
   private readonly loaded = new Map<string, boolean>();
+  private lastNavigationRequest = 0;
   private offs: (() => void)[] = [];
 
   constructor(
@@ -201,6 +202,14 @@ export class Page {
             this.loaded.set((e.params.frame as { id: string }).id, false);
           if (e.method === 'Page.frameStartedLoading')
             this.loaded.set(e.params.frameId as string, false);
+          // A navigation is "not loaded" from the moment it is requested, before it has started.
+          if (
+            e.method === 'Page.frameRequestedNavigation' ||
+            e.method === 'Page.frameScheduledNavigation'
+          ) {
+            this.loaded.set(e.params.frameId as string, false);
+            this.lastNavigationRequest = Date.now();
+          }
           if (e.method === 'Page.lifecycleEvent' && e.params.name === 'load')
             this.loaded.set(e.params.frameId as string, true);
           if (e.method === 'Page.frameStoppedLoading')
@@ -249,6 +258,19 @@ export class Page {
     const r = await this.call<{ errorText?: string }>('Page.navigate', { url }, timeoutMs);
     if (r.errorText) throw new Error(`navigation failed: ${r.errorText}`);
     await loaded;
+  }
+
+  /**
+   * After an action: gives any navigation it caused a moment to announce itself, so the next
+   * reading is not taken from a page that is about to go away.
+   */
+  async settle(ms = 250): Promise<boolean> {
+    const since = Date.now();
+    while (Date.now() - since < ms) {
+      if (this.lastNavigationRequest >= since) return true;
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    return false;
   }
 
   /** True when the top document and every frame have fired their load event. */
