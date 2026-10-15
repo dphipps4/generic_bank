@@ -135,6 +135,8 @@ bank: env image ## Banks 1 and 2 and their database
 
 bank-more: env image ## Banks 3 and 4, kept for the factory to crawl later
 	@$(COMPOSE) --profile more-banks up -d --wait $(BANK_MORE)
+	@echo "  Sample Savings Bank   http://localhost:$(BANK_SAMPLE_PORT)/online/branch/"
+	@echo "  Placeholder FCU       http://127.0.0.1:$(BANK_PLACEHOLDER_PORT)/cu/ib/"
 
 factory: env image ## Box D: the software factory (mock mode until ANTHROPIC_API_KEY is set)
 	@$(COMPOSE) --profile factory up -d --wait $(FACTORY)
