@@ -12,6 +12,7 @@ let db: Awaited<ReturnType<typeof controlDb>>;
 let app: Awaited<ReturnType<typeof buildServer>>;
 let o: ReturnType<typeof oauth>;
 const store = memoryStore();
+const enqueued: string[] = [];
 // Bytes no text decoding would keep intact.
 const PDF = Buffer.from('%PDF-1.7\n\xff\x00\x80 statement\n%%EOF\n', 'latin1');
 
@@ -22,7 +23,7 @@ beforeAll(async () => {
     oauth: o,
     sql: db,
     sealKey: SEAL,
-    enqueue: async () => undefined,
+    enqueue: async (id) => void enqueued.push(id),
     documents: store,
   });
 });
@@ -69,6 +70,35 @@ const fetchStatement = (token: string, ref: string) =>
     url: `/statements/${ref}`,
     headers: { authorization: `Bearer ${token}` },
   });
+
+describe('Download Statements through the API', () => {
+  it('is promoted for Generic Bank: a request is accepted and handed to the Runner', async () => {
+    const a = await client(['tasks:read', 'tasks:statements']);
+    const r = await app.inject({
+      method: 'POST',
+      url: '/tasks/download-statements',
+      headers: { authorization: `Bearer ${a.token}` },
+      payload: { bank: 'generic', memberId: '40017732', account: '7890', months: ['2026-05'] },
+    });
+    expect([r.statusCode, r.json().task, r.json().status]).toEqual([
+      202,
+      'download-statements',
+      'running',
+    ]);
+    expect(enqueued).toContain(r.json().runId);
+  });
+
+  it('needs tasks:statements to start', async () => {
+    const balance = await client(['tasks:read', 'tasks:balance']);
+    const r = await app.inject({
+      method: 'POST',
+      url: '/tasks/download-statements',
+      headers: { authorization: `Bearer ${balance.token}` },
+      payload: { bank: 'generic', memberId: '40017732', account: '7890', months: ['2026-05'] },
+    });
+    expect([r.statusCode, r.json().code]).toEqual([403, 'insufficient_scope']);
+  });
+});
 
 describe('a statement, by its reference', () => {
   it('is the stored PDF, byte for byte, for the client that started the run', async () => {
