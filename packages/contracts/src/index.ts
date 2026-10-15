@@ -168,8 +168,88 @@ export const TaskResult = z.object({
   data: z.union([BalanceData, TransferData, StatementsData]).optional(),
   escalationId: z.string().optional(),
   resolvable: z.boolean().optional(),
+  pending: z
+    .object({
+      kind: z.enum(['staff_code', 'approval', 'supervisor_code']),
+      deadline: z.iso.datetime(),
+    })
+    .optional()
+    .describe('While waiting on a person: what kind of answer is pending, and until when.'),
+  resolvedBy: z.string().optional().describe('Who finished the task by hand.'),
+  resolvedAt: z.iso.datetime().optional(),
 });
 export type TaskResult = z.infer<typeof TaskResult>;
+
+// ── Human steps ──────────────────────────────────────────────────────────────
+
+/**
+ * What a person is asked for (plan, §F.3, §D.8). A staff code or a supervisor code is something only
+ * a person can read; an approval is the only key to a money-moving click; an escalation is a run
+ * that stopped because it could not safely go on.
+ */
+export const HumanTaskKind = z.enum(['staff_code', 'approval', 'supervisor_code', 'escalation']);
+export type HumanTaskKind = z.infer<typeof HumanTaskKind>;
+
+export const HumanAction = z.enum([
+  'answer',
+  'approve',
+  'reject',
+  'take_over',
+  'resume',
+  'finish',
+  'cancel',
+]);
+export type HumanAction = z.infer<typeof HumanAction>;
+
+/** The actions each kind of task offers. Nothing else can be done to it. */
+export const ACTIONS: Record<HumanTaskKind, readonly HumanAction[]> = {
+  staff_code: ['answer', 'cancel'],
+  supervisor_code: ['answer', 'cancel'],
+  approval: ['approve', 'reject', 'take_over', 'cancel'],
+  escalation: ['resume', 'finish', 'cancel'],
+};
+
+/** Every state-changing action but typing a code carries a written reason (plan, §G.1). */
+const Reason = z.string().trim().min(10, 'a reason of at least ten characters');
+
+export const HUMAN_BODIES = {
+  answer: z.object({ code: z.string().regex(/^\d{4,8}$/, 'the code as the bank sent it') }),
+  approve: z.object({
+    reason: Reason,
+    supervisorCode: z
+      .string()
+      .regex(/^\d{4,8}$/)
+      .optional()
+      .describe("Over the bank's threshold: the code the bank sent the supervisor."),
+  }),
+  reject: z.object({ reason: Reason }),
+  take_over: z.object({ reason: Reason }),
+  resume: z.object({ reason: Reason }),
+  finish: z.object({
+    reason: Reason,
+    data: z
+      .union([BalanceData, TransferData, StatementsData])
+      .optional()
+      .describe('What the person did, in the same shape as an automatic result.'),
+  }),
+  cancel: z.object({ reason: Reason }),
+} as const satisfies Record<HumanAction, z.ZodType>;
+
+/**
+ * Why an action cannot be taken now, or null if it can. Only an open task can be acted on, only with
+ * one of its own actions, and an escalation that cannot resume (a guard trip) offers no Resume.
+ */
+export function refusal(
+  task: { kind: HumanTaskKind; status: string; resolvable?: boolean },
+  action: HumanAction,
+): string | null {
+  if (task.status !== 'open') return `the task is ${task.status}`;
+  if (!ACTIONS[task.kind].includes(action))
+    return `a ${task.kind.replace('_', ' ')} task cannot be answered with ${action.replace('_', ' ')}`;
+  if (action === 'resume' && task.resolvable === false)
+    return 'this run cannot resume; a person must clear the freeze and the agent start again';
+  return null;
+}
 
 // ── HTTP ─────────────────────────────────────────────────────────────────────
 

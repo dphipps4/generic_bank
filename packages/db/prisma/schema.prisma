@@ -31,7 +31,8 @@ enum TaskStatus {
 enum HumanTaskKind {
   staff_code
   approval
-  take_over
+  supervisor_code
+  escalation
 }
 
 enum HumanTaskStatus {
@@ -137,11 +138,23 @@ model HumanTask {
   contextMasked Json
   /// A person's answer (a staff code), sealed, and cleared once the run has used it.
   answerSealed  String?
+  /// What the person did (answer, approve, reject, take_over, resume, finish, cancel), and why.
+  action        String?
+  reason        String?
+  /// Finish by hand: the result the person recorded, in the same shape as an automatic one.
+  resolution    Json?
+  /// An escalation after a guard trip cannot resume.
+  resolvable    Boolean         @default(true)
+  /// How many times the agent has asked about this task, and when it last did.
+  asks          Int             @default(0)
+  lastAskedAt   DateTime?
   openedAt      DateTime        @default(now())
   answeredAt    DateTime?
   answeredBy    String?
   deadline      DateTime
   grant         ApprovalGrant?
+
+  @@index([status, deadline])
 }
 
 model ApprovalGrant {
