@@ -57,7 +57,16 @@ export async function waitFullyRendered(
       await sleep(150);
       continue;
     }
-    const model = await readScreen(page);
+    let model: ScreenModel;
+    try {
+      model = await readScreen(page);
+    } catch {
+      // The page changed under the reading (a navigation, a frame going away): read again.
+      reason = 'the page changed while it was being read';
+      prev = null;
+      await sleep(200);
+      continue;
+    }
     const image = decodePng(model.screenshot);
     const signals = loadingSignals(model);
     const actionable = model.controls.some((c) => c.enabled);
