@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Generic Bank: Mac identity",
+  "version": "1.0.0",
+  "description": "Sets, before any page script runs, the parts of the Mac identity the browser's own controls cannot: the graphics renderer, the display's depth and working area, the device memory and Web Share.",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["mac.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    }
+  ]
+}

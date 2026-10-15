@@ -260,18 +260,21 @@ have on their desk.
 - **Consistency, not disguise.** Every field agrees with every other field and with a
   reference captured from a real Mac. A browser that is right in nine places and wrong in the
   tenth stands out more than one that is plainly a crawler.
-- **Set at launch, never patched.** The Runner's Chromium is told its identity before any page
-  script runs: the user agent and its client hints (platform macOS), the request headers in
-  Chrome's order, the screen (1512 × 982 at pixel ratio 2), eight cores and 8 GB, the language
-  and the timezone. A value changed after a page's scripts have read it is worse than a wrong
-  one, so nothing changes within a session.
-- **Nothing is injected.** The identity is set through the browser's own controls, from
-  outside the page. Two things therefore stay those of the Linux container, the graphics
-  renderer and the installed fonts, because faking them would mean running our script inside
-  the bank's pages. [Part 2](#23-browser-identity-real-chrome-on-real-macs) runs real Chrome
-  on real Macs, which makes them true.
+- **Set before any page script runs, never patched.** The Runner runs full Chromium (Debian's
+  own package; nothing is built by us). It is told its identity at launch and on every page
+  before the page's own scripts run: the user agent and its client hints (platform macOS), the
+  language, the screen (1440 × 900 at pixel ratio 2), eight cores, and the timezone, through
+  the browser's own controls; and, for what those cannot reach (the graphics renderer, a 30-bit
+  display, the working area below the menu bar, 8 GB of device memory, Web Share), through a
+  small extension of ours that answers in the browser's own shape. A value changed after a
+  page's scripts have read it is worse than a wrong one, so nothing changes within a session.
+- **Reading stays outside the page.** The extension only answers what a page asks the browser;
+  it never reads the page. The crawler still reads what was drawn from outside, through the
+  browser's layout, accessibility tree and screenshot.
 - **A test holds it.** A reference capture from a real Mac is a test fixture; a test compares
-  the Runner's browser to it, field by field, and fails on any difference in what Part 1 sets.
+  the Runner's browser to it, field by field, and fails on any difference. Everything a page's
+  scripts can see matches; the one known difference is where Chrome puts Accept-Language when
+  its user agent is overridden (after the client hints rather than last, with the exact value).
 - **The banks enforce it.** Banks 2, 3 and 4 refuse anything not shaped like a browser: curl
   (whose whole request is a `Host`, a `User-Agent: curl/…` and `Accept: */*`), a request
   missing what every browser sends, a headless user agent, or client hints that contradict the
@@ -807,12 +810,11 @@ its shape:
 ## 23. Browser identity: real Chrome on real Macs
 
 Part 1 already presents Chrome on a Mac ([§5.1](#51-the-browsers-fingerprint-chrome-on-a-mac)),
-set at launch in a Linux container. Two fields stay Linux there, the graphics renderer and the
-fonts, because only script inside the page could change them. Part 2 makes every field true
-instead of set:
+set before any page script runs in a Linux container. Part 2 makes every field true instead of
+set:
 
-- **Real Chrome, not the headless shell,** run headed, so the browser itself produces its
-  headers, client hints and brand list.
+- **Real Chrome, run headed,** so the browser itself produces its headers, client hints and
+  brand list, with no user-agent override.
 - **Real Macs in the runner pool** (rented Apple-silicon hosts), so the graphics, fonts,
   screen and timezone are genuine.
 - **The timezone and language match the network exit** the runner uses.
@@ -1722,23 +1724,34 @@ produced no step and no navigation for 3 minutes, saves a final frame, and repor
 
 ### E.8 Browser identity, set at launch
 
-Each new browser is given its identity ([§5.1](#51-the-browsers-fingerprint-chrome-on-a-mac),
-[Appendix W](#appendix-w-browser-identity-reference)) over the DevTools Protocol before its
-first navigation, so no page script ever sees anything else:
+The Runner's browser is full Chromium in its modern headless mode: Debian's `chromium` in the
+Runner image, Chrome for Testing on a developer's Mac and in CI. Each browser gets its identity
+([§5.1](#51-the-browsers-fingerprint-chrome-on-a-mac), [Appendix W](#appendix-w-browser-identity-reference))
+before its first page:
 
-- **User agent and client hints:** the Mac user agent of [§W.1](#w1-user-agent), with its
-  client-hint metadata (platform "macOS", platform version, architecture "arm", 64-bit, not
-  mobile). The brand list is the one Chrome's own algorithm produces for the pinned major
-  version, never a list we choose.
-- **Headers:** `Accept-Language: en-US,en;q=0.9`; everything else is the browser's own, in
-  its own order.
-- **Screen and hardware:** 1512 × 982 with the menu bar's height taken from the available
-  area, pixel ratio 2, colour depth 30, eight cores, 8 GB of device memory.
-- **Locale and timezone:** `en-US` and the timezone of the machine the stack runs on.
+- **Launch switches:** the language (`--lang=en-US`), no automation marker
+  (`--disable-blink-features=AutomationControlled`), a wide-gamut, high-dynamic-range display
+  (`--force-color-profile=scrgb-linear`), Web Bluetooth (`--enable-blink-features=WebBluetooth`),
+  software WebGL where the container has no GPU, and the banks' origins treated as secure
+  (`--unsafely-treat-insecure-origin-as-secure`), because Chrome sends its Sec-Fetch headers and
+  client hints only to secure origins and Part 1 serves the banks over plain HTTP.
+- **The DevTools Protocol, on every page and every frame before its first request:** the user
+  agent with its client hints (platform "macOS", platform version, architecture "arm", 64-bit,
+  not mobile) and the languages `en-US,en` (Chrome adds the weights itself); the brand list
+  Chrome's own algorithm produces for the engine's version; eight cores; the screen
+  (1440 × 900, pixel ratio 2); locale `en-US`; the machine's timezone. A frame from another
+  origin is held paused until it has its identity, so its first request carries it.
+- **The identity extension** (`packages/screen/extension`), loaded over the DevTools Protocol
+  (`Extensions.loadUnpacked`, allowed in each page's private browser context) because Chrome
+  ignores `--load-extension`. Its script runs in each page's own world before the page's
+  scripts and sets what nothing else can: the WebGL vendor, renderer and largest texture of an
+  Apple M1, colour and pixel depth 30, the working area below the menu bar and the Dock, 8 GB
+  of device memory, and Web Share. Each replaced function prints as native code.
 
-The identity is the same for every run and never changes within one. A browser test reads the
-headers a bank receives and the values a page's scripts see, and compares them with the
-reference capture in `tests/fixtures/browser/mac-chrome.json`.
+Screenshots are taken at the pixel ratio's inverse, so a picture still has one pixel per CSS
+pixel and the screen model's coordinates, fingerprints and masks are unchanged. A browser test
+compares the headers a bank receives and the values a page's scripts see with the reference
+capture in `tests/fixtures/browser/mac-chrome.json`.
 
 ---
 
@@ -2826,7 +2839,7 @@ beside it.
 The target is a laptop with 8 GB of RAM running Docker Desktop with 5 GB given to its VM.
 Every container has a memory limit. One browser runs at a time by default
 (`RUNNER_CONCURRENCY=1`). Browsers start on demand and close when the task settles. Chromium
-runs as the headless shell, with no virtual display.
+runs as full Chromium in its modern headless mode, with no virtual display.
 
 | Service | Box | Limit |
 |---|---|---|
@@ -3154,7 +3167,7 @@ Each entry gives the choice, the reason, and what else was considered.
 
 | Element | Choice | Why | Considered |
 |---|---|---|---|
-| Browser automation | **Playwright** driving **Chromium headless shell** | Reliable frames, popups and downloads; real mouse and keyboard input; the smallest Chromium build | Puppeteer (similar, smaller ecosystem), Selenium |
+| Browser automation | **Our own DevTools Protocol client** driving **full Chromium** (Debian's package in the Runner; Chrome for Testing to develop) in its modern headless mode | Reliable frames, popups and downloads; real mouse and keyboard input; the identity extension needs full Chromium (§E.8) | Playwright or Puppeteer (they inject scripts into pages and add their own automation tells) |
 | Page JavaScript | **Enabled and executed** by Chromium | The bank's content is drawn by its own scripts; a reader that does not execute them sees an empty shell | An HTML-only fetcher (sees nothing) |
 | Perception | The **Chrome DevTools Protocol** through Playwright's CDP session (cross-origin frames through their own sessions): `DOMSnapshot` for layout and text across every frame, the `Accessibility` tree, and screenshots | Read from outside the page, so page code cannot see or fake it; no script is ever injected | Running JavaScript in the page (rejected: the page could tamper with it, and it violates the read-only rule) |
 | Pictures of text | **Image fingerprints** (a perceptual hash computed with `sharp`), named once by the factory's vision model and stored in the bank's profile | Lets the crawler name image-only buttons without reading pixels | A vision-model call on every run (rejected: cost and latency on every screen) |
@@ -3226,7 +3239,7 @@ Each entry gives the choice, the reason, and what else was considered.
 |---|---|---|
 | Containers | **Docker** with **docker compose** profiles (`default`, `factory`) | One command locally; every service has a memory limit |
 | Entry point | **make** | `make up`, `make demo`, `make factory`, `make try`, `make requirements`, `make down` |
-| Images | Node 22 slim; Playwright's Chromium headless shell only in the Runner, Operator browser and sandbox images | Keeps every other image small |
+| Images | Node 22 slim; Debian's Chromium only in the Runner, Operator browser and sandbox images | Keeps every other image small |
 
 ---
 
@@ -3293,16 +3306,15 @@ navigator.languages             ["en-US", "en"]
 navigator.hardwareConcurrency   8
 navigator.deviceMemory          8
 navigator.webdriver             false
-screen                          1512 x 982, availHeight smaller by the menu bar, colorDepth 30
+screen                          1440 x 900, availHeight 780 (menu bar and Dock), colorDepth 30
 window.devicePixelRatio         2
 WebGL vendor / renderer         Google Inc. (Apple) / ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)
 Intl timezone                   the timezone of the network exit
 fonts                           the standard macOS set (Helvetica Neue, SF Pro, Menlo, ...)
 ```
 
-Part 1 sets every row above except two, which stay those of the Linux container because they
-cannot be set without running script inside the page: the WebGL renderer and the fonts. Part
-2's real Macs make those true as well.
+Part 1 presents every row above (§E.8). The reference capture is a MacBook Air (M1): its
+screen is 1440 × 900 with 780 available below the menu bar and the Dock.
 
 ### W.4 The usual mistakes, each a failing test
 

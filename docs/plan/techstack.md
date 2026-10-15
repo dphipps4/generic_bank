@@ -61,7 +61,7 @@ Each entry gives the choice, the reason, and what else was considered.
 
 | Element | Choice | Why | Considered |
 |---|---|---|---|
-| Browser automation | **Playwright** driving **Chromium headless shell** | Reliable frames, popups and downloads; real mouse and keyboard input; the smallest Chromium build | Puppeteer (similar, smaller ecosystem), Selenium |
+| Browser automation | **Our own DevTools Protocol client** driving **full Chromium** (Debian's package in the Runner; Chrome for Testing to develop) in its modern headless mode | Reliable frames, popups and downloads; real mouse and keyboard input; the identity extension needs full Chromium (plan §E.8) | Playwright or Puppeteer (they inject scripts into pages and add their own automation tells) |
 | Page JavaScript | **Enabled and executed** by Chromium | The bank's content is drawn by its own scripts; a reader that does not execute them sees an empty shell | An HTML-only fetcher (sees nothing) |
 | Perception | The **Chrome DevTools Protocol** through Playwright's CDP session (cross-origin frames through their own sessions): `DOMSnapshot` for layout and text across every frame, the `Accessibility` tree, and screenshots | Read from outside the page, so page code cannot see or fake it; no script is ever injected | Running JavaScript in the page (rejected: the page could tamper with it, and it violates the read-only rule) |
 | Pictures of text | **Image fingerprints** (a perceptual hash computed with `sharp`), named once by the factory's vision model and stored in the bank's profile | Lets the crawler name image-only buttons without reading pixels | A vision-model call on every run (rejected: cost and latency on every screen) |
@@ -133,7 +133,7 @@ Each entry gives the choice, the reason, and what else was considered.
 |---|---|---|
 | Containers | **Docker** with **docker compose** profiles (`default`, `factory`) | One command locally; every service has a memory limit |
 | Entry point | **make** | `make up`, `make demo`, `make factory`, `make try`, `make requirements`, `make down` |
-| Images | Node 22 slim; Playwright's Chromium headless shell only in the Runner, Operator browser and sandbox images | Keeps every other image small |
+| Images | Node 22 slim; Debian's Chromium only in the Runner, Operator browser and sandbox images | Keeps every other image small |
 
 ---
 
