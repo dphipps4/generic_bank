@@ -210,6 +210,9 @@ test: ## The whole suite (what CI runs on every merge to master)
 test-changed: ## Only the tests your uncommitted and unmerged changes touch
 	@npx vitest run --changed origin/master --passWithNoTests
 
+test-pii: ## The PII suite: every task on banks 1 and 2, then everything they wrote searched for seeded values
+	@npx vitest run tests/pii
+
 test-long: ## The long suite: runs that sit through the banks' real hazards for minutes
 	@npx vitest run --config vitest.long.config.ts
 
@@ -248,7 +251,7 @@ clean: ## Remove build output (dist, tsbuildinfo, .run)
 
 .PHONY: help requirements requirements-dev plan plan-html setup dev-setup fork-ports tools doctor install secrets-init env secrets-edit secret-set secret-rotate secrets-keys \
   console-password build build-nc image up down restart ps urls data backend console crawlers bank \
-  bank-more factory migrate logs vault-status db-shell check test test-changed test-long typecheck lint format boundaries secrets-scan \
+  bank-more factory migrate logs vault-status db-shell check test test-changed test-pii test-long typecheck lint format boundaries secrets-scan \
   demo try evals check-prompts memory-seed memory-export memory-import export import trace observe \
   docs reset clean
 
