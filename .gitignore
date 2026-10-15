@@ -187,9 +187,8 @@ blob-report/
 .adminjs/
 apps/control/.adminjs/
 
-# Model and OCR caches baked into images, not the repo
+# Model caches baked into images, not the repo
 .models/
-*.traineddata
 
 # Rendered plan pages and private planning notes
 plan/html/

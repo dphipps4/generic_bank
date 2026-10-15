@@ -359,9 +359,7 @@ An operator sees exactly where a stuck run stopped. A reviewer watches the facto
 explore a bank, step by step, and never sees a member's data. The same trail sits behind
 every task run, every factory run, every eval and every probation run.
 
-No OCR is needed for any of this; masking works from the screen model. [Part 2](#part-2-with-more-time) adds a second
-check, where OCR reads each masked screenshot again and withholds it if anything sensitive
-still shows. Details: [Appendix I](#appendix-i-evidence-redaction-and-observability).
+Details: [Appendix I](#appendix-i-evidence-redaction-and-observability).
 
 ---
 
@@ -701,14 +699,31 @@ ends.
 ## 21. OCR: a second check on every screenshot
 
 [Part 1](#part-1-what-we-build) masks screenshots from the screen model alone: it knows where every piece of text is,
-so it covers what it must and withholds what it cannot prove. Here a second, independent
-check runs after that. OCR reads each masked screenshot again; if a known value or a sensitive
-pattern still shows, the spot is covered and checked once more, and a frame that still is not
-clean is withheld. A weekly audit runs the same check across all stored frames and pages
-someone on any leak.
+so it covers what it must and withholds what it cannot prove, and it names pictures of text by
+the fingerprints the factory learned. Nothing in [Part 1](#part-1-what-we-build) reads pixels as text. OCR arrives here,
+as an independent second opinion, never as the first line.
 
-The same OCR also lets the crawler read text drawn as pictures directly, as a fallback when a
-bank shows an image the factory has not fingerprinted yet.
+- **A second masking check.** After masking, and before a frame is stored, OCR reads the
+  masked screenshot again. If a known value or a sensitive pattern still shows, the spot is
+  covered and the frame checked once more; a frame that still is not clean is withheld with
+  the reason. It lives in `packages/evidence`, after the mask and before the store, so no
+  unchecked frame is ever written.
+- **A weekly audit.** The same check runs across every stored frame and pages someone on any
+  hit.
+- **The PII suite reads pixels too.** Today it checks that every place the bank drew a seeded
+  value is covered; with OCR it also reads each stored frame and fails on any seeded value it
+  finds anywhere.
+- **Pictures the factory has not named.** When a bank shows an image of text with no learned
+  fingerprint, OCR proposes its words as a fallback. The proposal is a candidate for the
+  factory to confirm, never something a run acts on alone.
+- **Screenshot-only surfaces.** For a target with no layout or accessibility tree (a remote
+  desktop, a scanned form), OCR supplies the text and positions the screen model needs, so
+  recognition, targeting, masking and the trail work as they do on the web.
+
+**Engine.** `tesseract.js` with its language data baked into the Runner image, never fetched at
+run time. Its memory and CPU per frame are why it waits for the larger box of
+[§18](#18-shape): on the 8 GB laptop it would compete with the browsers. Every OCR read carries
+its confidence; a low-confidence read never clears a frame, it only withholds one.
 
 ---
 
@@ -1626,7 +1641,7 @@ bank and task.
 ### E.6 Visual analysis, three layers
 
 1. **Deterministic, every run:** layout text, accessible names and learned image
-   fingerprints, as above. No model and no OCR.
+   fingerprints, as above. No model.
 2. **Assisted fallback (Part 2):** when a label cannot be found, one bounded
    vision-model call may propose the control from the masked screenshot and the screen
    model. It is a single step, never a loop, with caps set in code. It is never allowed on a
@@ -1858,10 +1873,10 @@ run's workflow is in [§M.3](#m3-phases).
   piece of text is. Every input, every text run that matches a known value or a pattern,
   and every image or canvas the crawler cannot read (unless the bank's profile marks it
   safe, like a learned "Confirm" button) is covered with a **white box filled with
-  asterisks**, the way a redacted form looks. No OCR is involved.
+  asterisks**, the way a redacted form looks.
 - **Withheld frames:** if the screen model could not be read for a frame, or a known value
   appears outside a covered box, the frame is **withheld**: stored as a placeholder with the
-  reason, never as an image. OCR re-checking of every masked frame is [Part 2](#part-2-with-more-time).
+  reason, never as an image.
 - **Text and logs:** structured JSON logs (`pino`) with redaction of known keys, then a
   final scrubbing pass with the known values and patterns before anything leaves the
   process.
@@ -1869,8 +1884,7 @@ run's workflow is in [§M.3](#m3-phases).
 
 A test (`tests/pii`) runs every task against banks 1 and 2, then scans everything the runs
 wrote (database rows, MinIO objects, logs) for every seeded secret and personal value, and
-fails on any hit. For screenshots it needs no OCR: the bank knows where it drew every seeded
-value, so the test checks that each of those places is covered in the stored frame.
+fails on any hit. For screenshots, the bank knows where it drew every seeded value, so the test checks that each of those places is covered in the stored frame.
 
 ### I.3 Observability
 
@@ -2863,7 +2877,7 @@ plug-in:
 | Windows desktop apps | UI Automation tree |
 | macOS desktop apps | Accessibility (AX) tree |
 | Terminal and mainframe screens | the screen's character grid as text with positions |
-| Anything else | screenshot only: OCR ([Part 2](#part-2-with-more-time)) and the vision model at factory time |
+| Anything else | screenshot only: learned image fingerprints and the vision model at factory time |
 
 Recognition, targeting, guardrails, masking and the trail work unchanged on every row,
 because none of them reads markup. The README makes this argument with the code that shows
@@ -3054,7 +3068,7 @@ Each entry gives the choice, the reason, and what else was considered.
 | Browser automation | **Playwright** driving **Chromium headless shell** | Reliable frames, popups and downloads; real mouse and keyboard input; the smallest Chromium build | Puppeteer (similar, smaller ecosystem), Selenium |
 | Page JavaScript | **Enabled and executed** by Chromium | The bank's content is drawn by its own scripts; a reader that does not execute them sees an empty shell | An HTML-only fetcher (sees nothing) |
 | Perception | The **Chrome DevTools Protocol** through Playwright's CDP session (cross-origin frames through their own sessions): `DOMSnapshot` for layout and text across every frame, the `Accessibility` tree, and screenshots | Read from outside the page, so page code cannot see or fake it; no script is ever injected | Running JavaScript in the page (rejected: the page could tamper with it, and it violates the read-only rule) |
-| Pictures of text | **Image fingerprints** (a perceptual hash computed with `sharp`), named once by the factory's vision model and stored in the bank's profile | Lets the crawler name image-only buttons without reading pixels; no OCR at runtime | OCR with tesseract.js ([Part 2](#part-2-with-more-time), as a second masking check) |
+| Pictures of text | **Image fingerprints** (a perceptual hash computed with `sharp`), named once by the factory's vision model and stored in the bank's profile | Lets the crawler name image-only buttons without reading pixels | A vision-model call on every run (rejected: cost and latency on every screen) |
 | Image work | **sharp** | Paints the white masking boxes, computes image fingerprints, compares frames for the "fully rendered" check | Jimp (slower) |
 | Vision model | Claude, through the model gateway, **factory time only** (and, in Part 2, a bounded assisted fallback) | Judges each Operator step from the screenshot; never inside a production task | |
 

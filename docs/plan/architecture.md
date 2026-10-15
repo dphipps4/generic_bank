@@ -567,7 +567,7 @@ Masking works from two sources. The first is known values: the member's credenti
 name, account numbers and email, all known before the run starts. The second is patterns:
 four or more digits, currency amounts, emails, phones, street lines.
 
-Masking needs no OCR. The screen model already knows where every piece of text is, so each
+The screen model already knows where every piece of text is, so each
 input, each matching text run, and each image or canvas the crawler cannot read is covered
 with a white box filled with asterisks. A frame whose screen model could not be read, or that
 shows a known value outside a covered box, is withheld.

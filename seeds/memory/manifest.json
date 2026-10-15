@@ -17,13 +17,13 @@
     },
     "lessons": {
       "path": "lessons.json",
-      "entries": 276,
-      "sha256": "40631ea53134b19c151d53a683f32061665471714bfb0a39d5b2ef6658c98661"
+      "entries": 268,
+      "sha256": "8a5ade17f564c5a107eff35373a456fd9814b5d725078af1dede76325368b903"
     },
     "scenarios": {
       "path": "scenarios.json",
       "entries": 49,
-      "sha256": "2fe024779cb09fdb5770697452846b85acb408b7a5fc686434f4f7b057f4eee3"
+      "sha256": "488c2c9e73f46c05d438cf89621db15c82425ea1f6220ef1dccd326a2e8c08c7"
     },
     "approaches": {
       "path": "approaches.json",
