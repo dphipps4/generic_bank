@@ -1,25 +1,145 @@
-// The four banks: one product, four configurations. The bank shares no code with the
-// automation that drives it.
+// The four banks: one product, four configurations. Every difference between them lives here:
+// brand, labels, theme, URL base path, account wording, thresholds, code style and the seed
+// that fixes each page's markup dialect. The bank shares no code with the automation that
+// drives it.
+
+export type TenantId = 'generic' | 'example' | 'sample' | 'placeholder';
+export type Theme = 'y2003' | 'teal' | 'maroon' | 'flat';
+export type CodeChannel = 'text' | 'email';
+
+export interface Labels {
+  operatorId: string;
+  password: string;
+  signIn: string;
+  memberSearch: string;
+  memberNumber: string;
+  search: string;
+  transferFunds: string;
+  continue: string;
+  submitTransfer: string;
+  statements: string;
+}
+
 export interface Tenant {
-  id: 'generic' | 'example' | 'sample' | 'placeholder';
+  id: TenantId;
   brand: string;
   version: string;
   basePath: string;
+  branch: string;
+  theme: Theme;
+  labels: Labels;
+  /** How an account is named on screen, from its full number. */
+  accountWording: (number: string) => string;
+  /** Transfers above this many cents need a supervisor's approval code. */
+  supervisorThresholdCents: number;
+  codeChannels: CodeChannel[];
+  /** Fixes every page's markup dialect, so a tenant's UI is the same from run to run. */
+  markupSeed: number;
+  /** The database the bank keeps its ledger in. */
+  database: string;
 }
 
-export const TENANTS: Record<Tenant['id'], Tenant> = {
-  generic: { id: 'generic', brand: 'Generic Bank', version: '4.2', basePath: '/corelink/' },
-  example: { id: 'example', brand: 'Example Credit Union', version: '4.3', basePath: '/' },
+const last4 = (n: string) => n.slice(-4);
+
+export const TENANTS: Record<TenantId, Tenant> = {
+  generic: {
+    id: 'generic',
+    brand: 'Generic Bank',
+    version: '4.2',
+    basePath: '/corelink/',
+    branch: 'Main Street Branch',
+    theme: 'y2003',
+    labels: {
+      operatorId: 'Operator ID',
+      password: 'Password',
+      signIn: 'Sign In',
+      memberSearch: 'Member Search',
+      memberNumber: 'Member number',
+      search: 'Search',
+      transferFunds: 'Transfer Funds',
+      continue: 'Continue',
+      submitTransfer: 'Submit transfer',
+      statements: 'Statements',
+    },
+    accountWording: (n) => `Account ending in ${last4(n)}`,
+    supervisorThresholdCents: 250_000,
+    codeChannels: ['text', 'email'],
+    markupSeed: 2003,
+    database: 'bank_generic',
+  },
+  example: {
+    id: 'example',
+    brand: 'Example Credit Union',
+    version: '4.3',
+    basePath: '/',
+    branch: 'Riverside Office',
+    theme: 'teal',
+    labels: {
+      operatorId: 'Username',
+      password: 'Passcode',
+      signIn: 'Log In',
+      memberSearch: 'Find Member',
+      memberNumber: 'Member number',
+      search: 'Find',
+      transferFunds: 'Move Money',
+      continue: 'Next',
+      submitTransfer: 'Confirm',
+      statements: 'Statements',
+    },
+    accountWording: (n) => `Share ****${last4(n)}-S01`,
+    supervisorThresholdCents: 100_000,
+    codeChannels: ['email'],
+    markupSeed: 4301,
+    database: 'bank_example',
+  },
   sample: {
     id: 'sample',
     brand: 'Sample Savings Bank',
     version: '4.3',
     basePath: '/online/branch/',
+    branch: 'Harbor Branch',
+    theme: 'maroon',
+    labels: {
+      operatorId: 'Staff number',
+      password: 'PIN',
+      signIn: 'Enter',
+      memberSearch: 'Member Inquiry',
+      memberNumber: 'Member number',
+      search: 'Inquire',
+      transferFunds: 'Internal Transfer',
+      continue: 'Proceed',
+      submitTransfer: 'Post',
+      statements: 'Statements',
+    },
+    accountWording: (n) => `Acct ${n.slice(0, 4)}-${n.slice(4, 8)}-${n.slice(8)}`,
+    supervisorThresholdCents: 50_000,
+    codeChannels: ['text'],
+    markupSeed: 4302,
+    database: 'bank_sample',
   },
   placeholder: {
     id: 'placeholder',
     brand: 'Placeholder Federal Credit Union',
     version: '4.4',
     basePath: '/cu/ib/',
+    branch: 'Capitol Office',
+    theme: 'flat',
+    labels: {
+      operatorId: 'User',
+      password: 'Password',
+      signIn: 'Continue',
+      memberSearch: 'Search',
+      memberNumber: 'Member',
+      search: 'Search',
+      transferFunds: 'Transfer',
+      continue: 'Accounts',
+      submitTransfer: 'Authorize',
+      statements: 'Documents',
+    },
+    accountWording: (n) => `··· ${last4(n)}`,
+    supervisorThresholdCents: 200_000,
+    codeChannels: ['text'],
+    markupSeed: 4400,
+    database: 'bank_placeholder',
   },
 };
