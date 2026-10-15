@@ -83,8 +83,8 @@ export async function checkBalance(
     reloads: 0,
     sessionRestarts: 0,
     steps: 0,
+    searches: 0,
   };
-  let searched = false;
   let lastUrl = ctx.profile.url;
   const record = async (
     name: string,
@@ -122,7 +122,6 @@ export async function checkBalance(
             // Signed out under us: sign in once more, then go back to the member.
             if (counts.sessionRestarts++ >= 1)
               stop('failed', 'unavailable', 'the session ended twice', true);
-            searched = false;
           }
           if (counts.signIns++ >= 3)
             stop('failed', 'bad_credentials', 'signed in three times without getting in');
@@ -184,17 +183,12 @@ export async function checkBalance(
           await record('console', s.screen, s.model, 'opened member search');
           break;
         case 'member.search': {
-          if (searched && counts.inUse === 0) {
-            // Back on the search form after a search: the result screen did not come.
-            return stop(
-              'escalated',
-              'unknown_screen',
-              'the search returned to the form without a result',
-            );
-          }
+          // A retry or a reload goes back through the search; three searches without a result is not
+          // progress.
+          if (counts.searches++ >= 3)
+            return stop('escalated', 'stuck', 'searched three times without a result');
           await type(page, field(s.model, w.memberNumber), input.memberId);
           await click(page, button(s.model, w.search));
-          searched = true;
           await record('member search', s.screen, s.model, 'searched by member number');
           // The result is drawn by script into the same page.
           const r = await see(ctx, sigs, {

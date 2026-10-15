@@ -8,7 +8,13 @@
     "start": "node dist/main.js"
   },
   "dependencies": {
+    "@dbos-inc/dbos-sdk": "^5.2.11",
     "@gb/config": "*",
+    "@gb/db": "*",
+    "@gb/drivers": "*",
+    "@gb/evidence": "*",
+    "@gb/runs": "*",
+    "@gb/screen": "*",
     "fastify": "^5.6.0",
     "zod": "^4.1.0"
   }
