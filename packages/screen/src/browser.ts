@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Readable, Writable } from 'node:stream';
-import { Cdp, type Transport } from './cdp.js';
+import { Cdp, CdpError, CdpTimeout, type Transport } from './cdp.js';
 import { type Identity, identityCommands, MAC, macChrome } from './identity.js';
 
 /** Where Chrome is: CHROME_PATH, `make browser`'s install, or the Runner image's Debian chromium. */
@@ -231,6 +231,14 @@ export interface FrameSession {
   url: string;
 }
 
+/** A document a new window received, exactly as the server sent it. */
+export interface OpenedDocument {
+  url: string;
+  status: number;
+  contentType: string;
+  body: Buffer;
+}
+
 export class Page {
   /** Sessions of frames from other origins, by their target id. */
   readonly frames = new Map<string, FrameSession>();
@@ -323,16 +331,20 @@ export class Page {
   }
 
   /** What every session needs: page events, the layout domains, auto-attach, extra headers. */
-  private async prepare(sessionId: string, kind: 'page' | 'frame') {
+  private async prepare(sessionId: string, kind: 'page' | 'frame' | 'window') {
     const c = (m: string, p: Record<string, unknown> = {}) => this.cdp.call(m, p, { sessionId });
     // The identity first, before anything this session loads (plan, §E.8). Screen metrics belong to
-    // the page; a frame takes the rest.
+    // the page; a frame takes the rest. A window this page opened already has the page's locale.
     for (const [method, params] of identityCommands(this.identity, {
       width: this.options.width ?? 1280,
       height: this.options.height ?? 900,
     })) {
       if (kind === 'frame' && method === 'Emulation.setDeviceMetricsOverride') continue;
-      await c(method, params as Record<string, unknown>);
+      await c(method, params as Record<string, unknown>).catch((e: unknown) => {
+        if (kind === 'window' && e instanceof CdpError && /already in effect/.test(e.message))
+          return;
+        throw e;
+      });
     }
     await c('Page.enable');
     await c('Page.setLifecycleEventsEnabled', { enabled: true });
@@ -370,6 +382,118 @@ export class Page {
       await new Promise((r) => setTimeout(r, 25));
     }
     return false;
+  }
+
+  /**
+   * The document an action opens in a new window (a statement's PDF), as the server sent it. The
+   * window is caught before its first request, given this page's identity, and read at the network
+   * layer when its response arrives; then it is closed. Nothing runs in it, and it is never asked
+   * for the document a second time.
+   */
+  async openedDocument(
+    action: () => Promise<unknown>,
+    timeoutMs = 30_000,
+  ): Promise<OpenedDocument> {
+    const cdp = this.cdp;
+    let popup: { sessionId: string; targetId: string } | null = null;
+    let off = () => {};
+    const caught = new Promise<OpenedDocument>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new CdpTimeout('a document in a new window', timeoutMs)),
+        timeoutMs,
+      );
+      const done = (f: () => void) => {
+        clearTimeout(timer);
+        f();
+      };
+      off = cdp.on((e) => {
+        if (e.method === 'Target.attachedToTarget' && !e.sessionId) {
+          const info = e.params.targetInfo as { targetId: string; openerId?: string };
+          const sessionId = e.params.sessionId as string;
+          const go = (s: string) =>
+            cdp.call('Runtime.runIfWaitingForDebugger', {}, { sessionId: s });
+          if (info.openerId !== this.targetId || popup) {
+            // Any other page, this one included: let it go on, and let go of it.
+            void go(sessionId)
+              .catch(() => undefined)
+              .then(() => cdp.call('Target.detachFromTarget', { sessionId }))
+              .catch(() => undefined);
+            return;
+          }
+          popup = { sessionId, targetId: info.targetId };
+          void (async () => {
+            await this.prepare(sessionId, 'window');
+            await cdp.call(
+              'Fetch.enable',
+              {
+                patterns: [{ urlPattern: '*', resourceType: 'Document', requestStage: 'Response' }],
+              },
+              { sessionId },
+            );
+            await go(sessionId);
+          })().catch((err: Error) => done(() => reject(err)));
+          return;
+        }
+        if (e.method !== 'Fetch.requestPaused' || !popup || e.sessionId !== popup.sessionId) return;
+        const p = e.params as {
+          requestId: string;
+          request: { url: string };
+          responseStatusCode?: number;
+          responseHeaders?: { name: string; value: string }[];
+          responseErrorReason?: string;
+        };
+        const sessionId = popup.sessionId;
+        const status = p.responseStatusCode ?? 0;
+        if (status >= 300 && status < 400) {
+          void cdp
+            .call('Fetch.continueRequest', { requestId: p.requestId }, { sessionId })
+            .catch(() => undefined);
+          return;
+        }
+        void (async () => {
+          if (p.responseErrorReason || !status)
+            throw new Error(`the new window's request failed: ${p.responseErrorReason ?? ''}`);
+          const r = await cdp.call<{ body: string; base64Encoded: boolean }>(
+            'Fetch.getResponseBody',
+            { requestId: p.requestId },
+            { sessionId, timeoutMs },
+          );
+          const contentType =
+            p.responseHeaders?.find((h) => h.name.toLowerCase() === 'content-type')?.value ?? '';
+          done(() =>
+            resolve({
+              url: p.request.url,
+              status,
+              contentType,
+              body: Buffer.from(r.body, r.base64Encoded ? 'base64' : 'utf8'),
+            }),
+          );
+        })().catch((err: Error) => done(() => reject(err)));
+      });
+    });
+    caught.catch(() => undefined);
+    // Pages are caught paused only while the action runs.
+    await cdp.call('Target.setAutoAttach', {
+      autoAttach: true,
+      waitForDebuggerOnStart: true,
+      flatten: true,
+      filter: [{ type: 'page' }],
+    });
+    try {
+      await action();
+      return await caught;
+    } finally {
+      off();
+      await cdp
+        .call('Target.setAutoAttach', {
+          autoAttach: false,
+          waitForDebuggerOnStart: false,
+          flatten: true,
+        })
+        .catch(() => undefined);
+      const p = popup as { targetId: string } | null;
+      if (p) await cdp.call('Target.closeTarget', { targetId: p.targetId }).catch(() => undefined);
+    }
   }
 
   /** Answers the open dialog: accept (OK) or dismiss (Cancel). */
