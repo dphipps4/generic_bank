@@ -20,6 +20,9 @@ const AccountRef = z
   .max(40)
   .describe("The account's last four digits, or its nickname as the bank shows it.");
 
+/** The longest memo a caller may send: the bank's 32 characters, less our memo token and a space. */
+export const MEMO_MAX = 23;
+
 export const CheckBalanceInput = z.object({
   bank: BankId,
   memberId: MemberId,
@@ -32,12 +35,23 @@ export const TransferInput = z.object({
   from: AccountRef,
   to: AccountRef,
   amountCents: z.number().int().positive().max(2_500_000).describe('The amount in cents.'),
-  memo: z.string().max(32).optional(),
+  // The bank's memo holds 32 letters, digits, spaces and hyphens; our memo token and a space take
+  // the first nine (plan, §F.2), so the member's words are never cut short.
+  memo: z
+    .string()
+    .max(MEMO_MAX)
+    .regex(/^[A-Za-z0-9 -]*$/, 'letters, digits, spaces and hyphens only')
+    .optional()
+    .describe(
+      `What the member wants the transfer to say, up to ${MEMO_MAX} characters. The bank sees it after our own marker.`,
+    ),
   idempotencyKey: z
     .string()
     .min(8)
     .max(80)
-    .describe('The same key always returns the same run, so a retry never moves money twice.'),
+    .describe(
+      'The same key from the same client always returns the same run, so a retry never moves money twice.',
+    ),
 });
 
 export const DownloadStatementsInput = z.object({

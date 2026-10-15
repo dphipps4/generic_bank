@@ -5,10 +5,17 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { httpStatus, problem, TASKS, type TaskName, type TaskResult } from '@gb/contracts';
-import { createRun, noteAsk, resultOf, waitForResult } from '@gb/runs';
+import {
+  httpStatus,
+  problem,
+  TASKS,
+  type TaskName,
+  type TaskResult,
+  type TransferInput,
+} from '@gb/contracts';
+import { createRun, DuplicateRun, newMemoToken, noteAsk, resultOf, waitForResult } from '@gb/runs';
 import { allows, type Caller, type OAuth, OAuthError, type Sql, type TaskScope } from '@gb/oauth';
-import { banks, openapi, tools } from './catalog.js';
+import { banks, openapi, TASK_SCOPE, tools } from './catalog.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -16,11 +23,25 @@ declare module 'fastify' {
   }
 }
 
-export const TASK_SCOPE: Record<TaskName, TaskScope> = {
-  'check-balance': 'tasks:balance',
-  transfer: 'tasks:transfer',
-  'download-statements': 'tasks:statements',
-};
+export { TASK_SCOPE };
+
+/** An account as the caller named it, so `Checking` and `checking ` are the same account. */
+const sameRef = (ref: string) => ref.trim().toLowerCase();
+
+/**
+ * What a run is sealed with. A transfer gets its memo token here, once, so the Runner, every resume
+ * and every history read look for the same one; a retry with the same key reuses the run and so the
+ * token. What makes two transfers the same request is the member, the accounts and the amount.
+ */
+function prepare(name: TaskName, data: Record<string, unknown>) {
+  if (name !== 'transfer') return { inputs: data };
+  const t = data as z.infer<typeof TransferInput>;
+  return {
+    inputs: { ...t, memoToken: newMemoToken() },
+    idempotencyKey: t.idempotencyKey,
+    dedupeOn: [t.memberId, sameRef(t.from), sameRef(t.to), t.amountCents],
+  };
+}
 
 const PUBLIC = new Set(['/healthz', '/oauth/token', '/oauth/revoke', '/openapi.json']);
 /** Swagger UI and its assets are public; the calls it makes carry the token you paste in. */
@@ -226,22 +247,39 @@ export async function buildServer(opts: {
           banksThatSupportIt: serving,
         });
     }
-    const { runId } = await createRun(
-      opts.sql,
-      {
-        task: name,
-        bank: parsed.data.bank,
-        clientId: req.caller!.clientId,
-        inputs: parsed.data as Record<string, unknown>,
-        idempotencyKey: (parsed.data as { idempotencyKey?: string }).idempotencyKey,
-      },
-      opts.sealKey,
-    ).then(async (r) => {
-      // The same request again is the agent asking again.
-      if (r.existing) await noteAsk(opts.sql, r.runId);
-      else await opts.enqueue(r.runId);
-      return r;
-    });
+    let runId: string;
+    try {
+      ({ runId } = await createRun(
+        opts.sql,
+        {
+          task: name,
+          bank: parsed.data.bank,
+          clientId: req.caller!.clientId,
+          ...prepare(name, parsed.data as Record<string, unknown>),
+        },
+        opts.sealKey,
+      ).then(async (r) => {
+        // The same request again is the agent asking again.
+        if (r.existing) await noteAsk(opts.sql, r.runId);
+        else await opts.enqueue(r.runId);
+        return r;
+      }));
+    } catch (e) {
+      // Plan, §D.8: while a transfer is open, the same transfer again is refused and points to it.
+      if (!(e instanceof DuplicateRun)) throw e;
+      return reply
+        .code(409)
+        .header('location', `/tasks/${e.runId}`)
+        .type('application/problem+json')
+        .send(
+          problem(
+            409,
+            'duplicate_transfer',
+            'A transfer for the same member, accounts and amount is already open; runId names it.',
+            { runId: e.runId },
+          ),
+        );
+    }
     const result = await resultOf(opts.sql, runId);
     return answer(reply, result!);
   });

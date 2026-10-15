@@ -398,7 +398,14 @@
         },
         "responses": {
           "202": {
-            "description": "Accepted: running, or waiting on a person. Location names the run."
+            "description": "Accepted: running, or waiting on a person (`pending` names the kind of answer and its deadline). Location names the run.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResult"
+                }
+              }
+            }
           },
           "400": {
             "description": "The input did not match the schema; the field that failed is named.",
@@ -421,7 +428,7 @@
             }
           },
           "403": {
-            "description": "The client may not use this task, or this bank.",
+            "description": "insufficient_scope: the client lacks tasks:balance, or may not use this bank.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -456,7 +463,7 @@
     "/tasks/transfer": {
       "post": {
         "operationId": "transfer",
-        "summary": "Requests a transfer between a member's own accounts. No money moves until a person approves it in the Console; until then the result is needs_human.",
+        "summary": "Requests a transfer between a member's own accounts. No money moves until a person approves it in the Console; until then the result is needs_human. To ask again, send the same idempotencyKey: it returns the same run, never a second transfer.",
         "tags": [
           "tasks"
         ],
@@ -501,14 +508,16 @@
                     "description": "The amount in cents."
                   },
                   "memo": {
+                    "description": "What the member wants the transfer to say, up to 23 characters. The bank sees it after our own marker.",
                     "type": "string",
-                    "maxLength": 32
+                    "maxLength": 23,
+                    "pattern": "^[A-Za-z0-9 -]*$"
                   },
                   "idempotencyKey": {
                     "type": "string",
                     "minLength": 8,
                     "maxLength": 80,
-                    "description": "The same key always returns the same run, so a retry never moves money twice."
+                    "description": "The same key from the same client always returns the same run, so a retry never moves money twice."
                   }
                 },
                 "required": [
@@ -525,8 +534,25 @@
           }
         },
         "responses": {
+          "200": {
+            "description": "Asked again with the same key: succeeded or handed_off.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResult"
+                }
+              }
+            }
+          },
           "202": {
-            "description": "Accepted: running, or waiting on a person. Location names the run."
+            "description": "Accepted: running, or waiting on a person (`pending` names the kind of answer and its deadline). Location names the run.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResult"
+                }
+              }
+            }
           },
           "400": {
             "description": "The input did not match the schema; the field that failed is named.",
@@ -549,7 +575,7 @@
             }
           },
           "403": {
-            "description": "The client may not use this task, or this bank.",
+            "description": "insufficient_scope: the client lacks tasks:transfer, or may not use this bank.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -568,8 +594,58 @@
               }
             }
           },
+          "409": {
+            "description": "duplicate_transfer: the same member, accounts and amount are already in an open transfer, which runId and Location name. Or, asked again with the same key: escalated (unknown_screen, stuck, ambiguous_outcome, guard_tripped).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Asked again with the same key: expired or cancelled.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Asked again with the same key: business_outcome (no_such_member, member_closed, no_such_account, insufficient_funds, permission_denied, account_restricted, limit_exceeded, invalid_amount, approval_rejected).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "429": {
             "description": "Too many requests; see Retry-After.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Asked again with the same key: failed, and a retry will not help.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Asked again with the same key: failed, and a retry may help; see Retry-After.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -640,7 +716,14 @@
         },
         "responses": {
           "202": {
-            "description": "Accepted: running, or waiting on a person. Location names the run."
+            "description": "Accepted: running, or waiting on a person (`pending` names the kind of answer and its deadline). Location names the run.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResult"
+                }
+              }
+            }
           },
           "400": {
             "description": "The input did not match the schema; the field that failed is named.",
@@ -663,7 +746,7 @@
             }
           },
           "403": {
-            "description": "The client may not use this task, or this bank.",
+            "description": "insufficient_scope: the client lacks tasks:statements, or may not use this bank.",
             "content": {
               "application/problem+json": {
                 "schema": {
