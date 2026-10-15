@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { checkCode, operatorById, sendCode, setSession } from '../auth.js';
 import type { Bank } from '../context.js';
+import { has } from '../tenants.js';
 import {
   accountsOf,
   checkTransfer,
@@ -85,10 +86,7 @@ export function transferRoutes(app: FastifyInstance, bank: Bank) {
         c,
         d,
         'Amount',
-        input(c, 'amount', {
-          size: 12,
-          value: v.amount ?? (v.amountCents ? (v.amountCents / 100).toFixed(2) : ''),
-        }),
+        amountControl(c, v.amount ?? (v.amountCents ? (v.amountCents / 100).toFixed(2) : '')),
       ) +
       row(c, d, 'Memo', input(c, 'memo', { size: 24, value: v.memo ?? '' }));
     // The account options exist only after this script has run.
@@ -105,14 +103,61 @@ export function transferRoutes(app: FastifyInstance, bank: Bank) {
   }
 });`;
     return {
+      script: script + keypressScript(c) + coveringBar(),
       body: nest(
         c,
         d,
         `${heading(c, d, L.transferFunds)}${o.error ? message(c, o.error) : ''}${form(c, d, at(n), rows, submit(c, d, L.continue))}
 <P>${linkButton(c, `${base}members/${n}`, 'Back to member summary')}</P>`,
       ),
-      script,
     };
+  }
+
+  /**
+   * The amount field. Bank 3's reads its value only from key presses: a value set any other way
+   * (pasted, or assigned by a script) shows in the box but is never sent.
+   */
+  function amountControl(c: Ctx, value: string) {
+    if (!has(bank.t, 'keypress-only')) return input(c, 'amount', { size: 12, value });
+    return `${input(c, 'amount-typed', { size: 12 })}${input(c, 'amount', { type: 'hidden' })}`;
+  }
+
+  function keypressScript(c: Ctx) {
+    if (!has(bank.t, 'keypress-only')) return '';
+    return `
+(function () {
+  var f = document.forms[document.forms.length - 1], buf = '';
+  var shown = f.elements[${js(fieldName(c.nonce, 'amount-typed'))}], real = f.elements[${js(fieldName(c.nonce, 'amount'))}];
+  shown.onkeydown = function (e) {
+    e = e || window.event;
+    var k = e.key;
+    if (k === 'Tab' || k === 'Enter') { return true; }
+    if (k === 'Backspace') { buf = buf.slice(0, -1); }
+    else if (k && k.length === 1 && /[0-9.,$]/.test(k)) { buf += k; }
+    shown.value = buf;
+    return false;
+  };
+  f.onsubmit = function () { real.value = buf; return true; };
+})();`;
+  }
+
+  /** Bank 3: a notice bar drawn over the submit control, until someone dismisses it. */
+  function coveringBar() {
+    if (!has(bank.t, 'covering-bar')) return '';
+    return `
+setTimeout(function () {
+  var f = document.forms[document.forms.length - 1], all = f.getElementsByTagName('*'), t = null;
+  for (var i = 0; i < all.length && !t; i++) {
+    var e = all[i], ty = (e.getAttribute('type') || '').toLowerCase();
+    if (e.nodeName === 'BUTTON' || ty === 'image' || ty === 'submit' || (e.getAttribute('onclick') || '').indexOf('CL.go') >= 0) { t = e; }
+  }
+  if (!t) { return; }
+  var r = t.getBoundingClientRect(), bar = document.createElement('div');
+  bar.style.cssText = 'position:fixed;left:0;right:0;top:' + (r.top - 8) + 'px;height:' + (r.height + 16) + 'px;background:#FFF5CC;border-top:2px solid #C9A400;border-bottom:2px solid #C9A400;font:12px Arial;padding:4px 10px;z-index:8';
+  bar.innerHTML = '<b>Notice:</b> the wire cut-off today is 3:00 PM. &nbsp; <a href="javascript:void(0)">Dismiss</a>';
+  bar.getElementsByTagName('a')[0].onclick = function () { bar.parentNode.removeChild(bar); return false; };
+  document.body.appendChild(bar);
+}, 300);`;
   }
 
   async function describe(p: Pending) {
@@ -277,6 +322,7 @@ ${form(c, dd, at(p.member, '/approve'), rows, submit(c, dd, 'Approve'))}<P>${lin
 ${form(a.c, a.d, at(p.member, '/submit'), '', submit(a.c, a.d, L.submitTransfer))}
 <P>${linkButton(a.c, at(p.member, '?edit=1'), 'Edit')} &nbsp; ${linkButton(a.c, at(p.member, '/cancel'), 'Cancel')}</P>`,
           ),
+          script: coveringBar(),
         };
       },
     ),

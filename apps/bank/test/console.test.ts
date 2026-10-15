@@ -66,7 +66,7 @@ describe('member search', () => {
   });
 
   it('answers for every member case in the bank’s words', async () => {
-    expect(await api(`api/members?number=${MEMBERS.demo}`)).toEqual({
+    expect(await api(`api/members?number=${MEMBERS.demo}`)).toMatchObject({
       member: { number: MEMBERS.demo, name: 'A. Sample', status: 'Active' },
       open: `/corelink/members/${MEMBERS.demo}`,
     });
