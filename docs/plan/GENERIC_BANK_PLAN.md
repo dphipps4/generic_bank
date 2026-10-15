@@ -2726,20 +2726,21 @@ runs as the headless shell, with no virtual display.
 | Service | Box | Limit |
 |---|---|---|
 | `postgres` (pgvector; databases `control`, `memory`, and the workflow engine's tables) | B | 384 MB |
-| `vault` (file storage on a volume) | B | 96 MB |
+| `vault` (file storage on a volume) | B | 128 MB |
 | `minio` | B | 128 MB |
 | `memory` (with the in-process embedder) | B | 384 MB |
 | `api` (Task API and workflows) | A | 192 MB |
-| `console` (AdminJS, bundled at build time) | A | 192 MB |
+| `console` (AdminJS, bundled at build time) | A | 256 MB |
 | `runner` (plus one headless Chromium) | A | 768 MB |
-| `bank-generic`, `bank-example`, `bank-inbox` | world | 96 MB each |
+| `bank-generic`, `bank-example` | world | 128 MB each |
+| `bank-inbox` | world | 96 MB |
 | `bank-db` (small Postgres, `shared_buffers` 32 MB) | world | 128 MB |
-| **Base stack (`make up`)** | | **about 2.5 GB** |
-| `bank-sample`, `bank-placeholder` (`make bank-more`, later) | world | 96 MB each |
+| **Base stack (`make up`)** | | **about 2.7 GB** |
+| `bank-sample`, `bank-placeholder` (`make bank-more`, later) | world | 128 MB each |
 | `factory` (agent and model gateway) | D | 256 MB |
 | `operator-browser` | D | 768 MB |
 | `sandbox` (eval runner with its own Chromium), `bank-sandbox`, `sandbox-db` | D | 768 MB |
-| **With the factory running** | | **about 4.3 GB** |
+| **With the factory running** | | **about 4.5 GB** |
 
 `make doctor` checks Docker's memory allowance before starting and says what to change if it
 is too small.

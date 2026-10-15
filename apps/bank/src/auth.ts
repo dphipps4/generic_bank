@@ -159,7 +159,10 @@ export async function setSession(
   db: Db,
   t: string,
   fields: Partial<
-    Record<'state' | 'handoff' | 'pending' | 'promo_shown' | 'expires_early_at', unknown>
+    Record<
+      'state' | 'handoff' | 'pending' | 'promo_shown' | 'last_seen' | 'expires_early_at',
+      unknown
+    >
   >,
 ) {
   const keys = Object.keys(fields);
