@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 600" width="1240" height="600" role="img" font-family='-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif'><title>A transfer: prepared by automation, approved by a person, one click</title><desc>Swim lanes for the caller, the runner, the person and the bank. The runner prepares the transfer and parks; a person approves and a single-use grant is issued; the guard lets exactly one click through; an unclear result is settled from the bank history, never by clicking again.</desc><defs><marker id="a-grey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7b7b7b"/></marker><marker id="a-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f4d7a"/></marker><marker id="a-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c0484f"/></marker><marker id="a-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6f5fb0"/></marker><marker id="a-rose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c0707a"/></marker><marker id="a-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3f8f8f"/></marker><style>.zone{font-size:11px;font-weight:700;letter-spacing:.11em}.ttl{font-size:13.5px;font-weight:650;fill:#15304a}.sub{font-size:11px;fill:#45586b}.fl{font-size:10.5px}.badge{font-size:11px;font-weight:700;fill:#ffffff}.lane{font-size:10.5px;font-weight:700;letter-spacing:.12em;fill:#8a8a8a}.note{font-size:11px;fill:#6e6e6e;font-style:italic}.chip{font-size:10.5px;fill:#45586b}.tag{font-size:10.5px;font-family:ui-monospace,Menlo,monospace;fill:#8a8a8a}</style></defs><rect width="1240" height="600" fill="#ffffff"/><rect x="20" y="20" width="1200" height="100" rx="10" fill="#fafbfc" stroke="#e3e6ea"/>
+<text class="lane" x="36" y="42" text-anchor="start">CALLER</text>
+<rect x="20" y="128" width="1200" height="230" rx="10" fill="#fafbfc" stroke="#e3e6ea"/>
+<text class="lane" x="36" y="150" text-anchor="start">RUNNER</text>
+<rect x="20" y="366" width="1200" height="112" rx="10" fill="#fafbfc" stroke="#e3e6ea"/>
+<text class="lane" x="36" y="388" text-anchor="start">PERSON · CONSOLE</text>
+<rect x="20" y="486" width="1200" height="96" rx="10" fill="#fafbfc" stroke="#e3e6ea"/>
+<text class="lane" x="36" y="508" text-anchor="start">BANK</text>
+<rect x="150" y="40" width="170" height="60" rx="9" fill="#eef3f8" stroke="#9db8d0" stroke-width="1.5"/>
+<text class="ttl" x="164" y="66">POST transfer</text>
+<text class="sub" x="164" y="85">idempotency key</text>
+<rect x="150" y="170" width="176" height="78" rx="9" fill="#e9f2ec" stroke="#8fb79c" stroke-width="1.5"/>
+<circle cx="170" cy="191" r="10" fill="#8fb79c"/><text class="badge" x="170" y="195" text-anchor="middle">1</text>
+<text class="ttl" x="188" y="196">Prepare</text>
+<text class="sub" x="164" y="215">sign in · find the member</text>
+<text class="sub" x="164" y="231">fill the form · Continue</text>
+<rect x="350" y="170" width="160" height="78" rx="9" fill="#e9f2ec" stroke="#8fb79c" stroke-width="1.5"/>
+<circle cx="370" cy="191" r="10" fill="#8fb79c"/><text class="badge" x="370" y="195" text-anchor="middle">2</text>
+<text class="ttl" x="388" y="196">Read back</text>
+<text class="sub" x="364" y="215">from · to · amount</text>
+<text class="sub" x="364" y="231">off the screen</text>
+<rect x="534" y="170" width="170" height="78" rx="9" fill="#e9f2ec" stroke="#8fb79c" stroke-width="1.5"/>
+<circle cx="554" cy="191" r="10" fill="#8fb79c"/><text class="badge" x="554" y="195" text-anchor="middle">3</text>
+<text class="ttl" x="572" y="196">Park</text>
+<text class="sub" x="548" y="215">awaiting_approval</text>
+<text class="sub" x="548" y="231">browser held 15 min</text>
+<rect x="534" y="388" width="190" height="74" rx="9" fill="#eef3f8" stroke="#9db8d0" stroke-width="1.5"/>
+<circle cx="554" cy="409" r="10" fill="#9db8d0"/><text class="badge" x="554" y="413" text-anchor="middle">4</text>
+<text class="ttl" x="572" y="414">Approve</text>
+<text class="sub" x="548" y="433">masked review frame</text>
+<text class="sub" x="548" y="449">+ supervisor code if large</text>
+<rect x="748" y="388" width="160" height="74" rx="9" fill="#fdecec" stroke="#d99b9b" stroke-width="1.5"/>
+<text class="ttl" x="762" y="414">Single-use grant</text>
+<text class="sub" x="762" y="433">from · to · amount · memo</text>
+<text class="sub" x="762" y="449">one use · five minutes</text>
+<rect x="752" y="162" width="200" height="96" rx="9" fill="#fdecec" stroke="#cf7f7f" stroke-width="2.2"/>
+<circle cx="772" cy="183" r="10" fill="#cf7f7f"/><text class="badge" x="772" y="187" text-anchor="middle">5</text>
+<text class="ttl" x="790" y="188">The one click</text>
+<text class="sub" x="766" y="207">grant unused, unexpired</text>
+<text class="sub" x="766" y="223">screen equals the grant</text>
+<text class="sub" x="766" y="239">journal intent · Submit</text>
+<rect x="350" y="504" width="160" height="60" rx="9" fill="#f2f2f2" stroke="#b5b5b5" stroke-width="1.5"/>
+<text class="ttl" x="364" y="530">Review page</text>
+<text class="sub" x="364" y="549">drawn by its script</text>
+<rect x="752" y="504" width="200" height="60" rx="9" fill="#f2f2f2" stroke="#b5b5b5" stroke-width="1.5"/>
+<text class="ttl" x="766" y="530">Commits</text>
+<text class="sub" x="766" y="549">maybe silently</text>
+<path d="M1012,170 L1056,210 L1012,250 L968,210 Z" fill="#ffffff" stroke="#9aa5b1" stroke-width="1.5"/>
+<text class="chip" x="1012" y="206" text-anchor="middle">confirmation</text>
+<text class="chip" x="1012" y="220" text-anchor="middle">shown?</text>
+<rect x="1074" y="140" width="136" height="60" rx="9" fill="#e9f2ec" stroke="#8fb79c" stroke-width="1.5"/>
+<text class="ttl" x="1088" y="166">Read number</text>
+<text class="sub" x="1088" y="185">then find the memo</text>
+<rect x="1074" y="238" width="136" height="78" rx="9" fill="#e9f2ec" stroke="#8fb79c" stroke-width="1.5"/>
+<circle cx="1094" cy="259" r="10" fill="#8fb79c"/><text class="badge" x="1094" y="263" text-anchor="middle">6</text>
+<text class="ttl" x="1112" y="264">Open history</text>
+<text class="sub" x="1088" y="283">find the memo token</text>
+<text class="sub" x="1088" y="299">never click again</text>
+<rect x="1074" y="40" width="136" height="60" rx="9" fill="#e9f2ec" stroke="#8fb79c" stroke-width="1.5"/>
+<text class="ttl" x="1088" y="66">succeeded</text>
+<text class="sub" x="1088" y="85">found exactly once</text>
+<rect x="1036" y="388" width="174" height="74" rx="9" fill="#fdecec" stroke="#d99b9b" stroke-width="1.5"/>
+<text class="ttl" x="1050" y="414">escalated</text>
+<text class="sub" x="1050" y="433">ambiguous_outcome:</text>
+<text class="sub" x="1050" y="449">found twice, or not at all</text>
+<path d="M235,100 V166" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M235,100 V166" fill="none" stroke="#1f4d7a" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-blue)"/>
+<path d="M326,209 H346" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M326,209 H346" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<path d="M238,248 V500 H346" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M238,248 V500 H346" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<text class="fl" x="244" y="492" text-anchor="start" fill="#7b7b7b">Continue</text>
+<path d="M430,504 V252" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M430,504 V252" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<text class="fl" x="436" y="300" text-anchor="start" fill="#7b7b7b">drawn</text>
+<path d="M510,209 H530" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M510,209 H530" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<path d="M619,248 V384" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M619,248 V384" fill="none" stroke="#1f4d7a" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-blue)"/>
+<text class="fl" x="626" y="322" text-anchor="start" fill="#1f4d7a">inbox</text>
+<path d="M724,425 H744" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M724,425 H744" fill="none" stroke="#c0707a" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-rose)"/>
+<path d="M812,388 V262" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M812,388 V262" fill="none" stroke="#c0707a" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-rose)"/>
+<text class="fl" x="818" y="330" text-anchor="start" fill="#c0707a">grant</text>
+<path d="M932,258 V500" fill="none" stroke="#ffffff" stroke-width="7.2" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M932,258 V500" fill="none" stroke="#c0484f" stroke-width="2.2" stroke-linejoin="round" marker-end="url(#a-red)"/>
+<text class="fl" x="938" y="330" text-anchor="start" fill="#c0484f">one click</text>
+<path d="M952,210 H966" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M952,210 H966" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<path d="M1056,196 Q1064,170 1070,170" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M1056,196 Q1064,170 1070,170" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<text class="fl" x="1052" y="162" text-anchor="end" fill="#7b7b7b">yes</text>
+<path d="M1056,224 Q1064,262 1070,268" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M1056,224 Q1064,262 1070,268" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<text class="fl" x="1046" y="262" text-anchor="end" fill="#7b7b7b">no or unclear</text>
+<path d="M1142,140 V104" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M1142,140 V104" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<path d="M1142,238 V204" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M1142,238 V204" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<path d="M1142,316 V384" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M1142,316 V384" fill="none" stroke="#c0484f" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-red)"/>
+<text class="fl" x="1148" y="354" text-anchor="start" fill="#c0484f">twice or none</text>
+<path d="M1074,70 H324" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M1074,70 H324" fill="none" stroke="#1f4d7a" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round" marker-end="url(#a-blue)"/>
+<text class="fl" x="700" y="62" text-anchor="middle" fill="#1f4d7a">result: succeeded, with the confirmation number from history</text>
+<text class="note" x="150" y="590" text-anchor="start">The guard is never switched off: the grant is the only key it accepts, and it opens exactly one click.</text></svg>

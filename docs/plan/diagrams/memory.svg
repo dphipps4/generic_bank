@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 430" width="960" height="430" role="img" font-family='-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif'><title>Memory: who reads and writes, through one door</title><desc>The factory, box A and a person reach the Memory service on box B. It is the only process that opens the memory database; it checks roles, screens writes, keeps versions and the change log, and stores facts as bi-temporal rows.</desc><defs><marker id="a-grey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7b7b7b"/></marker><marker id="a-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f4d7a"/></marker><marker id="a-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c0484f"/></marker><marker id="a-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6f5fb0"/></marker><marker id="a-rose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c0707a"/></marker><marker id="a-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3f8f8f"/></marker><style>.zone{font-size:11px;font-weight:700;letter-spacing:.11em}.ttl{font-size:13.5px;font-weight:650;fill:#15304a}.sub{font-size:11px;fill:#45586b}.fl{font-size:10.5px}.badge{font-size:11px;font-weight:700;fill:#ffffff}.lane{font-size:10.5px;font-weight:700;letter-spacing:.12em;fill:#8a8a8a}.note{font-size:11px;fill:#6e6e6e;font-style:italic}.chip{font-size:10.5px;fill:#45586b}.tag{font-size:10.5px;font-family:ui-monospace,Menlo,monospace;fill:#8a8a8a}</style></defs><rect width="960" height="430" fill="#ffffff"/><rect x="30" y="40" width="250" height="86" rx="9" fill="#f0eef6" stroke="#a9a0c4" stroke-width="1.5"/>
+<text class="ttl" x="44" y="66">The factory</text>
+<text class="sub" x="44" y="85">Operator and Supervisor, on pi</text>
+<text class="sub" x="44" y="101">on demand; holds no data</text>
+<rect x="30" y="162" width="250" height="86" rx="9" fill="#e9f2ec" stroke="#8fb79c" stroke-width="1.5"/>
+<text class="ttl" x="44" y="188">Box A</text>
+<text class="sub" x="44" y="207">task runs and promotions</text>
+<text class="sub" x="44" y="223">promotes and demotes crawlers</text>
+<rect x="30" y="284" width="250" height="86" rx="9" fill="#eef3f8" stroke="#9db8d0" stroke-width="1.5"/>
+<text class="ttl" x="44" y="310">The curator</text>
+<text class="sub" x="44" y="329">a person, in the Console</text>
+<text class="sub" x="44" y="345">approves patterns and curated changes</text>
+<rect x="520" y="24" width="420" height="390" rx="14" fill="none" stroke="#c9c4b8" stroke-width="1.3" stroke-dasharray="5 4"/>
+<text class="zone" x="538" y="48" fill="#6e6e6e">BOX B · DATA</text>
+<rect x="546" y="64" width="368" height="124" rx="9" fill="#e8f3f3" stroke="#86b8b8" stroke-width="1.5"/>
+<text class="ttl" x="560" y="90">Memory service</text>
+<text class="sub" x="560" y="109">the one door: roles, signed writes,</text>
+<text class="sub" x="560" y="125">privacy screen, versions, change log</text>
+<text class="sub" x="560" y="141">facts as bi-temporal rows</text>
+<text class="sub" x="560" y="157">rules: confirm, dispute, retire, widen</text>
+<rect x="546" y="252" width="176" height="86" rx="9" fill="#fdf6e3" stroke="#d8c07a" stroke-width="1.5"/>
+<text class="ttl" x="560" y="278">Postgres</text>
+<text class="sub" x="560" y="297">memory database</text>
+<text class="sub" x="560" y="313">only this service opens it</text>
+<rect x="738" y="252" width="176" height="86" rx="9" fill="#ffffff" stroke="#c8ced6" stroke-width="1.5"/>
+<text class="ttl" x="752" y="278">Embedder</text>
+<text class="sub" x="752" y="297">local model</text>
+<text class="sub" x="752" y="313">no outside API</text>
+<text class="note" x="546" y="372" text-anchor="start">make memory-export · make memory-import move it between machines</text>
+<path d="M280,72 H420 Q430,72 430,82 V96 Q430,106 440,106 H542" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M280,72 H420 Q430,72 430,82 V96 Q430,106 440,106 H542" fill="none" stroke="#6f5fb0" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-violet)"/>
+<text class="fl" x="300" y="64" text-anchor="start" fill="#6f5fb0">reads: knowledge pack, memory_query</text>
+<path d="M280,206 H420 Q430,206 430,196 V160 Q430,150 440,150 H542" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M280,206 H420 Q430,206 430,196 V160 Q430,150 440,150 H542" fill="none" stroke="#7b7b7b" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-grey)"/>
+<text class="fl" x="300" y="226" text-anchor="start" fill="#7b7b7b">writes: episodes, lessons,</text>
+<text class="fl" x="300" y="240" text-anchor="start" fill="#7b7b7b">promotion marks</text>
+<path d="M280,326 H440 Q450,326 450,316 V182 Q450,172 460,172 H542" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M280,326 H440 Q450,326 450,316 V182 Q450,172 460,172 H542" fill="none" stroke="#1f4d7a" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round" marker-end="url(#a-blue)"/>
+<text class="fl" x="300" y="346" text-anchor="start" fill="#1f4d7a">approves</text>
+<path d="M634,188 V248" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M634,188 V248" fill="none" stroke="#3f8f8f" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-teal)"/>
+<path d="M826,188 V248" fill="none" stroke="#ffffff" stroke-width="6.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M826,188 V248" fill="none" stroke="#3f8f8f" stroke-width="1.6" stroke-linejoin="round" marker-end="url(#a-teal)"/></svg>

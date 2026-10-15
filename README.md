@@ -16,4 +16,7 @@ make help      # every target
 Then open the Console at http://localhost:8080 (sign in as `admin@generic-bank.local`; the
 password is printed by `make console-password`).
 
-The full documentation arrives with the system; this README grows with each milestone.
+**The plan:** [docs/plan/GENERIC_BANK_PLAN.md](docs/plan/GENERIC_BANK_PLAN.md), with the
+[requirements report](docs/plan/REQUIREMENTS.md) (every point of the brief, how we meet it,
+and what proves it), the [architecture](docs/plan/architecture.md) and the
+[technology choices](docs/plan/techstack.md). This README grows with each milestone.
