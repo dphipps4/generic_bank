@@ -6,9 +6,11 @@ import { fieldName } from '../src/markup/dialect.js';
 import { OPERATORS, seed } from '../src/seed.js';
 import { buildServer } from '../src/server.js';
 import { TENANTS, type TenantId } from '../src/tenants.js';
+import { MAC_CHROME } from './browser.js';
 
 // A bank on an in-process Postgres, a movable clock, and a client that keeps cookies the way a
-// browser does and fills forms by field meaning, the way only the server can.
+// browser does, sends Chrome-on-a-Mac's headers so banks 2 to 4 let it in, and fills forms by
+// field meaning, the way only the server can.
 
 export const PASSWORDS = {
   service: 'service-password-for-tests',
@@ -96,6 +98,7 @@ export class Client {
 
   private headers() {
     const h: Record<string, string> = {
+      ...MAC_CHROME,
       cookie: [...this.cookies].map(([k, v]) => `${k}=${v}`).join('; '),
     };
     if (this.hazards) h['x-hazards'] = signHazards(this.hazards, HMAC);

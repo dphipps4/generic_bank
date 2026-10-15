@@ -63,7 +63,7 @@ export async function buildAdmin(bank: Bank, token: string): Promise<FastifyInst
   app.get<{ Querystring: { limit?: string } }>('/hazards', async (req) => {
     const limit = Math.min(500, Math.max(1, Number(req.query.limit ?? 100) || 100));
     const r = await bank.db.query(
-      'SELECT hazard, path, forced, at FROM hazard_events ORDER BY id DESC LIMIT $1',
+      'SELECT hazard, path, forced, detail, at FROM hazard_events ORDER BY id DESC LIMIT $1',
       [limit],
     );
     return r.rows;

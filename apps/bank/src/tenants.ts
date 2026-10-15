@@ -82,6 +82,8 @@ export interface Tenant {
   searchPopup?: boolean;
   /** Bank 4: the transfer is split over pages: Amount, then Accounts, then Authorize. */
   splitTransfer?: boolean;
+  /** Turns away anything not shaped like a browser with "403 Access denied" (banks 2 to 4). */
+  botScreen?: boolean;
   /** Fixes every page's markup dialect, so a tenant's UI is the same from run to run. */
   markupSeed: number;
   /** The database the bank keeps its ledger in. */
@@ -145,6 +147,7 @@ export const TENANTS: Record<TenantId, Tenant> = {
       labels: ['Username', 'Passcode', 'Member number', 'Amount'],
       buttons: ['Confirm'],
     },
+    botScreen: true,
     markupSeed: 4301,
     database: 'bank_example',
   },
@@ -182,6 +185,7 @@ export const TENANTS: Record<TenantId, Tenant> = {
       'detached-menu',
       'covering-bar',
     ],
+    botScreen: true,
     markupSeed: 4302,
     database: 'bank_sample',
   },
@@ -220,6 +224,7 @@ export const TENANTS: Record<TenantId, Tenant> = {
       'shuffled-tiles',
       'false-notice',
     ],
+    botScreen: true,
     markupSeed: 4400,
     database: 'bank_placeholder',
   },
