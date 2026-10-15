@@ -10,3 +10,5 @@ export function db(): PrismaClient {
   client ??= new PrismaClient();
   return client;
 }
+
+export { sql, type Sql } from './sql.js';
