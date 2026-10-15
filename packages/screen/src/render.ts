@@ -13,6 +13,8 @@ export interface Rendered {
   waitedMs: number;
   /** Why it is not rendered, when it is not. */
   reason?: string;
+  /** A JavaScript dialog is open: the page is frozen until someone answers it. */
+  dialog?: { type: string; message: string };
 }
 
 const LOADING = /^(loading|processing|please wait|one moment|signing in)\b/i;
@@ -31,6 +33,18 @@ export function loadingSignals(m: ScreenModel): string[] {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const emptyModel = (): ScreenModel => ({
+  url: '',
+  title: '',
+  frames: [],
+  controls: [],
+  texts: [],
+  structureKey: '',
+  screenshot: Buffer.alloc(0),
+  dropped: 0,
+  animated: [],
+});
 
 export async function waitFullyRendered(
   page: Page,
@@ -52,6 +66,16 @@ export async function waitFullyRendered(
   let last: ScreenModel | null = null;
   let reason = 'not read yet';
   while (Date.now() - start < limit) {
+    // A dialog freezes the page, screenshots included: hand it back to the caller to answer.
+    if (page.dialog) {
+      return {
+        model: last ?? emptyModel(),
+        rendered: false,
+        waitedMs: Date.now() - start,
+        reason: 'a dialog is open',
+        dialog: { type: page.dialog.type, message: page.dialog.message },
+      };
+    }
     if (!page.allLoaded()) {
       reason = 'a frame is still loading';
       await sleep(150);
@@ -69,12 +93,14 @@ export async function waitFullyRendered(
     }
     const image = decodePng(model.screenshot);
     const signals = loadingSignals(model);
-    const actionable = model.controls.some((c) => c.enabled);
+    const complete = !o.until || o.until(model);
+    // Something to act on: a usable control, or a screen the caller recognizes (an error page may
+    // have no controls at all, and is still an answer).
+    const actionable = model.controls.some((c) => c.enabled) || (o.until !== undefined && complete);
     const still =
       prev !== null &&
       prev.key === model.structureKey &&
       sameOutside(prev.image, image, model.animated);
-    const complete = !o.until || o.until(model);
     if (still && signals.length === 0 && actionable && complete)
       return { model, rendered: true, waitedMs: Date.now() - start };
     reason =
