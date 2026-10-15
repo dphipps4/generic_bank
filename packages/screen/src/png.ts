@@ -1,6 +1,6 @@
 // A PNG decoder for screenshots: RGBA, 8 bits per channel, the five standard filters. Enough for
 // what Chromium's screenshots are, with no dependency.
-import { inflateSync } from 'node:zlib';
+import { deflateSync, inflateSync } from 'node:zlib';
 
 export interface Image {
   width: number;
@@ -110,4 +110,46 @@ export function sameOutside(a: Image, b: Image, ignore: Rect[] = []): boolean {
     }
   }
   return true;
+}
+
+const CRC = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+function chunk(type: string, data: Buffer): Buffer {
+  const td = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+  let c = 0xffffffff;
+  for (const x of td) c = CRC[(c ^ x) & 0xff]! ^ (c >>> 8);
+  const out = Buffer.alloc(12 + data.length);
+  out.writeUInt32BE(data.length, 0);
+  td.copy(out, 4);
+  out.writeUInt32BE((c ^ 0xffffffff) >>> 0, 8 + data.length);
+  return out;
+}
+
+/** Encodes RGBA pixels as a PNG (no filters; deflate does the work). */
+export function encodePng(img: Image): Buffer {
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(img.width, 0);
+  ihdr.writeUInt32BE(img.height, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 6;
+  const raw = Buffer.alloc((img.width * 4 + 1) * img.height);
+  for (let y = 0; y < img.height; y++)
+    Buffer.from(img.data.buffer, img.data.byteOffset + y * img.width * 4, img.width * 4).copy(
+      raw,
+      y * (img.width * 4 + 1) + 1,
+    );
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
 }

@@ -17,6 +17,9 @@
       "path": "packages/screen"
     },
     {
+      "path": "packages/evidence"
+    },
+    {
       "path": "apps/api"
     },
     {
