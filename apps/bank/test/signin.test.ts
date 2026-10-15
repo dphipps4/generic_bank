@@ -34,6 +34,19 @@ describe('the way in', () => {
     expect(await names()).not.toEqual(await names());
   });
 
+  it('keeps the form’s field names when the browser asks for something outside the bank’s pages', async () => {
+    // A browser asks for /favicon.ico on every site, without the form cookie, which reaches only
+    // the bank's own pages. Answering it with a fresh form cookie would orphan the form on screen.
+    const fresh = b.client();
+    await fresh.get('/favicon.ico');
+    expect(fresh.cookies.has('CLFORM')).toBe(false);
+    const c = b.client();
+    await c.get('signin');
+    const before = c.cookies.get('CLFORM');
+    await c.get('/favicon.ico');
+    expect(c.cookies.get('CLFORM')).toBe(before);
+  });
+
   it('refuses a wrong password, and a locked operator, in the bank’s words', async () => {
     const c = b.client();
     await c.get('signin');
