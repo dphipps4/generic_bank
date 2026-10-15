@@ -13,7 +13,16 @@ import {
   type TaskResult,
   type TransferInput,
 } from '@gb/contracts';
-import { createRun, DuplicateRun, newMemoToken, noteAsk, resultOf, waitForResult } from '@gb/runs';
+import {
+  createRun,
+  DuplicateRun,
+  newMemoToken,
+  noteAsk,
+  resultOf,
+  statementKey,
+  statementOf,
+  waitForResult,
+} from '@gb/runs';
 import { allows, type Caller, type OAuth, OAuthError, type Sql, type TaskScope } from '@gb/oauth';
 import { banks, openapi, TASK_SCOPE, tools } from './catalog.js';
 
@@ -72,6 +81,8 @@ export async function buildServer(opts: {
   sealKey: string;
   /** Hands a new run to the Runner (the workflow queue). */
   enqueue: (runId: string) => Promise<void>;
+  /** Where the Runner keeps the statements it downloaded (MinIO). */
+  documents?: { get(key: string): Promise<Buffer | null> };
   logger?: boolean;
   now?: () => number;
 }): Promise<FastifyInstance> {
@@ -305,6 +316,39 @@ export async function buildServer(opts: {
       return answer(reply, result!);
     },
   );
+
+  // A statement a run kept, by the reference in its result: only to the client that started the
+  // run, and only with tasks:statements for that run's bank.
+  app.get<{ Params: { ref: string } }>('/statements/:ref', async (req, reply) => {
+    if (!requireScope(req, reply, 'tasks:statements')) return;
+    const none = () =>
+      problemJson(
+        reply,
+        problem(404, 'no_such_statement', 'There is no statement by that reference.'),
+      );
+    const ref = statementOf(req.params.ref);
+    if (!ref) return none();
+    const run = (
+      await opts.sql.query<{
+        clientId: string | null;
+        bank: string;
+        task: string;
+        result: unknown;
+      }>('SELECT "clientId", bank, task, result FROM "TaskRun" WHERE id = $1', [ref.runId])
+    ).rows[0];
+    if (!run || run.clientId !== req.caller!.clientId || run.task !== 'download-statements')
+      return none();
+    if (!requireScope(req, reply, 'tasks:statements', run.bank)) return;
+    const months = (run.result as { months?: { statement: string | null }[] } | null)?.months;
+    if (!months?.some((m) => m.statement === req.params.ref)) return none();
+    const pdf = await opts.documents?.get(statementKey(ref.runId, ref.month));
+    if (!pdf) return none();
+    return reply
+      .type('application/pdf')
+      .header('content-disposition', `inline; filename="statement-${ref.month}.pdf"`)
+      .header('cache-control', 'no-store')
+      .send(pdf);
+  });
 
   /** A result as HTTP (plan, §D.7): the status code says what to do next. */
   function answer(reply: FastifyReply, r: TaskResult) {

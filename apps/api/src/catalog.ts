@@ -72,7 +72,8 @@ export const TASK_TOOLS: Record<Task, { tool: string; description: string }> = {
   },
   'download-statements': {
     tool: 'download_statements',
-    description: 'Fetches monthly statements for one account. Changes nothing.',
+    description:
+      "Fetches an account's monthly statements: one entry per month, either a reference to the stored PDF (GET /statements/{ref}) or the bank's own words for why it has none. Changes nothing.",
   },
 };
 
@@ -271,6 +272,34 @@ export function openapi(): Record<string, unknown> {
             '422': problemResponse('business_outcome: ' + example('business_outcome') + '.'),
             '502': problemResponse('failed, and a retry will not help.'),
             '503': problemResponse('failed, and a retry may help; see Retry-After.'),
+          },
+        },
+      },
+      '/statements/{ref}': {
+        get: {
+          operationId: 'get_statement',
+          tags: ['tasks'],
+          security: [{ bearer: [] }],
+          summary:
+            'A statement a download_statements run kept, by the reference in its result: the PDF exactly as the bank sent it. Needs tasks:statements.',
+          parameters: [
+            {
+              name: 'ref',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', pattern: '^st_[0-9a-f]{16}_\\d{4}-\\d{2}$' },
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'The statement.',
+              content: { 'application/pdf': { schema: { type: 'string', format: 'binary' } } },
+            },
+            '401': problemResponse('A valid bearer access token is required.'),
+            '403': problemResponse('The client may not use tasks:statements, or this bank.'),
+            '404': problemResponse(
+              'No statement by that reference for this client: no_such_statement.',
+            ),
           },
         },
       },

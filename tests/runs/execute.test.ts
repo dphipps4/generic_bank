@@ -3,11 +3,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { inboxPages } from '../../apps/console/src/pages/inbox.js';
 import { executeRun } from '../../apps/runner/src/execute.js';
 import { memoryStore } from '../../packages/evidence/src/index.js';
-import { createRun, resultOf } from '../../packages/runs/src/index.js';
+import { createRun, resultOf, statementKey } from '../../packages/runs/src/index.js';
 import { controlDb } from '../../packages/oauth/test/control.js';
 import { accountsOf } from '../../apps/bank/src/ledger.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
-import { type LiveBank, liveBank, PASSWORDS } from '../support/banks.js';
+import { type LiveBank, liveBank, PASSWORDS, signedInCookies } from '../support/banks.js';
 
 // A task run, carried out by the Runner against the real Generic Bank, with the control database's
 // real migrations. A small loop plays the person who reads the staff code from the bank's inbox and
@@ -151,6 +151,53 @@ describe('the Runner carries out a run', () => {
     });
     expect(launched.n).toBe(0);
   });
+
+  it('downloads statements: each month stored as the bank serves it, or not available in its words', async () => {
+    const acct = (await accountsOf(bank.db, MEMBERS.demo)).find((a) => a.type === 'checking')!;
+    const now = new Date();
+    const month = (back: number) =>
+      new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1))
+        .toISOString()
+        .slice(0, 7);
+    const { runId } = await createRun(
+      db,
+      {
+        task: 'download-statements',
+        bank: 'generic',
+        clientId: 'gbc_t',
+        inputs: {
+          bank: 'generic',
+          memberId: MEMBERS.demo,
+          account: acct.number.slice(-4),
+          months: [month(1), month(24)],
+        },
+      },
+      KEY,
+    );
+    const store = memoryStore();
+    await executeRun(runId, deps(store));
+    const result = await resultOf(db, runId);
+    expect(result).toMatchObject({
+      status: 'succeeded',
+      data: {
+        months: [
+          { month: month(1), statement: `st_${runId.slice(2)}_${month(1)}` },
+          {
+            month: month(24),
+            statement: null,
+            note: 'Only the last 12 months of statements are available online.',
+          },
+        ],
+      },
+    });
+    const kept = await store.get(statementKey(runId, month(1)));
+    const cookie = (await signedInCookies(bank)).map((c) => `${c.name}=${c.value}`).join('; ');
+    const served = await fetch(
+      `${bank.url}statement?member=${MEMBERS.demo}&account=${acct.id}&month=${month(1)}`,
+      { headers: { cookie } },
+    );
+    expect(kept?.equals(Buffer.from(await served.arrayBuffer()))).toBe(true);
+  }, 180_000);
 
   it('reports a business outcome from the bank’s own screen', async () => {
     const { runId } = await createRun(

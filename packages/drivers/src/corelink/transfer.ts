@@ -47,7 +47,7 @@ export function beside(m: ScreenModel, label: string): string | null {
 }
 
 /** Does this option of the bank's account list name the account the caller meant? */
-function isAccount(option: string, ref: string, wording: RegExp): boolean {
+export function isAccount(option: string, ref: string, wording: RegExp): boolean {
   const digits = wording.exec(option)?.[1];
   if (/^\d{4}$/.test(ref)) return digits === ref;
   return option.toLowerCase().startsWith(`${ref.toLowerCase()},`);

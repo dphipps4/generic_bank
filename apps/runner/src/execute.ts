@@ -1,6 +1,12 @@
 // One task run, carried out: a fresh browser, the bank's driver, every step recorded and every frame
 // masked before it is stored, a person asked when only a person can answer, and exactly one result.
-import { checkBalance, type DriverContext, PROFILES, type StepRecord } from '@gb/drivers';
+import {
+  checkBalance,
+  type DriverContext,
+  downloadStatements,
+  PROFILES,
+  type StepRecord,
+} from '@gb/drivers';
 import { type FrameStore, frameOf } from '@gb/evidence';
 import {
   addFrame,
@@ -14,6 +20,7 @@ import {
   type Sql,
 } from '@gb/runs';
 import { ActError, Browser, CdpTimeout, type ScreenModel, TargetError } from '@gb/screen';
+import { keepStatements } from './statements.js';
 
 export interface RunDeps {
   sql: Sql;
@@ -50,13 +57,18 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
     )
   ).rows[0];
   const profile = PROFILES[run.bank];
-  if (!bank || !promoted || !profile || run.task !== 'check-balance') {
+  if (
+    !bank ||
+    !promoted ||
+    !profile ||
+    !['check-balance', 'download-statements'].includes(run.task)
+  ) {
     const e: Ending = { status: 'failed', code: 'no_driver', retryable: false };
     await settleRun(deps.sql, runId, e);
     return e;
   }
 
-  const input = await inputsOf<{ memberId: string; account: string }>(
+  const input = await inputsOf<{ memberId: string; account: string; months?: string[] }>(
     deps.sql,
     runId,
     deps.sealKey,
@@ -132,18 +144,23 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
       step: record,
       now,
     };
-    const out = await checkBalance(ctx, input);
-    ending =
-      out.status === 'succeeded'
-        ? {
-            status: 'succeeded',
-            data: { ...out.data, accountLabel: out.data.accountLabel.replace(/\d/g, '*') },
-          }
-        : {
-            status: out.status,
-            code: out.code,
-            ...(out.retryable !== undefined ? { retryable: out.retryable } : {}),
-          };
+    if (run.task === 'download-statements') {
+      const out = await downloadStatements(ctx, { ...input, months: input.months ?? [] });
+      ending = await keepStatements(runId, out, deps.store);
+    } else {
+      const out = await checkBalance(ctx, input);
+      ending =
+        out.status === 'succeeded'
+          ? {
+              status: 'succeeded',
+              data: { ...out.data, accountLabel: out.data.accountLabel.replace(/\d/g, '*') },
+            }
+          : {
+              status: out.status,
+              code: out.code,
+              ...(out.retryable !== undefined ? { retryable: out.retryable } : {}),
+            };
+    }
   } catch (e) {
     // Our own failures are ours to say: the bank too slow, a screen we could not act on, or
     // something we did not expect, which a person should look at.

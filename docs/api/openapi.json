@@ -660,7 +660,7 @@
     "/tasks/download-statements": {
       "post": {
         "operationId": "download_statements",
-        "summary": "Fetches monthly statements for one account. Changes nothing.",
+        "summary": "Fetches an account's monthly statements: one entry per month, either a reference to the stored PDF (GET /statements/{ref}) or the bank's own words for why it has none. Changes nothing.",
         "tags": [
           "tasks"
         ],
@@ -866,6 +866,74 @@
           },
           "503": {
             "description": "failed, and a retry may help; see Retry-After.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/statements/{ref}": {
+      "get": {
+        "operationId": "get_statement",
+        "tags": [
+          "tasks"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A statement a download_statements run kept, by the reference in its result: the PDF exactly as the bank sent it. Needs tasks:statements.",
+        "parameters": [
+          {
+            "name": "ref",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^st_[0-9a-f]{16}_\\d{4}-\\d{2}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The statement.",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid bearer access token is required.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client may not use tasks:statements, or this bank.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No statement by that reference for this client: no_such_statement.",
             "content": {
               "application/problem+json": {
                 "schema": {

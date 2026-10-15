@@ -17,6 +17,8 @@ describe('the statements page', () => {
     const r = await c.get(`members/${MEMBERS.demo}/statements`);
     expect(r.body).toContain('Everyday Checking, Account ending in');
     expect(r.body).toContain('Enroll in eStatements');
+    // The months it does not list, in its own words.
+    expect(r.body).toContain('Only the last 12 months of statements are available online.');
     expect(r.body).not.toContain('2026-05-31');
     expect(r.body).toContain('window.open(');
     for (const m of r.body.matchAll(/<script>([\s\S]*?)<\/script>/gi))

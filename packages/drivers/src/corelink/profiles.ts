@@ -14,6 +14,8 @@ export const GENERIC_BANK: Omit<Profile, 'url'> = {
     transfer: ['Transfer Funds'],
     continue: ['Continue'],
     submitTransfer: ['Submit transfer'],
+    statements: ['Statements'],
+    statement: ['Statement'],
   },
   refusals: [
     { text: 'The amount is more than the available balance.', code: 'insufficient_funds' },
@@ -28,6 +30,7 @@ export const GENERIC_BANK: Omit<Profile, 'url'> = {
       code: 'account_restricted',
     },
   ],
+  statementsKept: 'Only the last 12 months of statements are available online.',
   accountWording: /Account ending in (\d{4})/,
   codeStyle: 'sent',
   pictures: [],

@@ -1,7 +1,10 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { click } from '../src/act.js';
 import { Browser } from '../src/browser.js';
+import { readScreen } from '../src/model.js';
+import { button } from '../src/target.js';
 
 // A real headless Chromium against two small servers on two ports: two origins.
 let browser: Browser;
@@ -73,6 +76,71 @@ describe('a browser, driven from outside', () => {
     await page.close();
   });
 }, 60_000);
+
+describe('a document a button opens in a new window', () => {
+  // Bytes no text decoding would keep intact.
+  const pdf = Buffer.from('%PDF-1.7\n\xff\x00\x80\n%%EOF\n', 'latin1');
+  const seen: { url: string; header: string }[] = [];
+  let port: number;
+  beforeAll(async () => {
+    const s = createServer((req, res) => {
+      if (req.url!.startsWith('/doc.pdf')) {
+        seen.push({ url: req.url!, header: String(req.headers['x-test'] ?? '') });
+        res.writeHead(200, { 'content-type': 'application/pdf' });
+        return res.end(pdf);
+      }
+      if (req.url === '/moved') {
+        res.writeHead(302, { location: '/doc.pdf?moved=1' });
+        return res.end();
+      }
+      res.setHeader('content-type', 'text/html');
+      res.end(
+        `<html><body><input type="button" value="Statement" onclick="window.open('/doc.pdf?m=1', 'statement', 'width=700,height=800')"> <input type="button" value="Moved" onclick="window.open('/moved', 'statement')"></body></html>`,
+      );
+    });
+    servers.push(s);
+    port = await new Promise<number>((done) =>
+      s.listen(0, '127.0.0.1', () => done((s.address() as AddressInfo).port)),
+    );
+  });
+
+  it('is read as the server sent it, asked for once, and the window is closed', async () => {
+    const page = await browser.newPage();
+    await page.goto(`http://localhost:${port}/`);
+    const m = await readScreen(page);
+    const doc = await page.openedDocument(() => click(page, button(m, 'Statement')));
+    expect(doc.body.equals(pdf)).toBe(true);
+    expect([doc.status, doc.contentType]).toEqual([200, 'application/pdf']);
+    // The window carried the page's own headers, and asked once.
+    expect(seen).toEqual([{ url: '/doc.pdf?m=1', header: 'signed' }]);
+    for (let i = 0; i < 20; i++) {
+      const { targetInfos } = await browser.cdp.call<{ targetInfos: { openerId?: string }[] }>(
+        'Target.getTargets',
+      );
+      if (!targetInfos.some((t) => t.openerId === page.targetId)) break;
+      expect(i).toBeLessThan(19);
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    await page.close();
+  });
+
+  it('follows a redirect, opens the same window name again, and the page goes on working', async () => {
+    const page = await browser.newPage();
+    await page.goto(`http://localhost:${port}/`);
+    const doc = await page.openedDocument(async () =>
+      click(page, button(await readScreen(page), 'Moved')),
+    );
+    expect([doc.url.endsWith('/doc.pdf?moved=1'), doc.body.equals(pdf)]).toEqual([true, true]);
+    // Both buttons open a window named "statement": the second is a new window, caught too.
+    const again = await page.openedDocument(async () =>
+      click(page, button(await readScreen(page), 'Statement')),
+    );
+    expect(again.body.equals(pdf)).toBe(true);
+    await page.goto(`http://localhost:${port}/`);
+    expect((await readScreen(page)).controls.map((c) => c.name)).toContain('Statement');
+    await page.close();
+  });
+});
 
 describe('closing the browser', () => {
   it('ends every process it started, and removes its profile', async () => {
