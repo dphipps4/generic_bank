@@ -45,22 +45,6 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
   const L = bank.t.labels;
   const p = palette(bank.t);
 
-  app.get(`${base}console`, async (req, reply) => {
-    if (!(await current(bank, req))) return reply.redirect(`${base}signin`);
-    return html(
-      reply,
-      `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Frameset//EN">
-<HTML><HEAD><TITLE>CoreLink Branch Console - ${esc(bank.t.brand)}</TITLE></HEAD>
-<FRAMESET ROWS="64,*" BORDER="1" FRAMEBORDER="1">
-  <FRAME SRC="${base}frame/banner" NAME="banner" SCROLLING="no" NORESIZE>
-  <FRAMESET COLS="170,*">
-    <FRAME SRC="${base}frame/nav" NAME="nav">
-    <FRAME SRC="${base}home" NAME="main">
-  </FRAMESET>
-</FRAMESET></HTML>`,
-    );
-  });
-
   // The banner is an older page: it writes itself with document.write.
   app.get(`${base}frame/banner`, async (req, reply) => {
     const cur = await current(bank, req);
@@ -80,35 +64,6 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
         body: '',
         footer: false,
         script: `document.write(${js(line + marquee)});`,
-      }),
-    );
-  });
-
-  app.get(`${base}frame/nav`, async (req, reply) => {
-    const c = ctxOf(bank, req);
-    const d = dialect(bank.t, bank.uiVersion, 'nav');
-    const link = (href: string, text: string, target = 'main') =>
-      `<TR><TD NOWRAP>${linkButton(c, href, text, target)}</TD></TR>`;
-    const nav = [
-      link(`${base}members/search`, L.memberSearch),
-      link(`${base}members/search?next=transfer`, L.transferFunds),
-      `<TR><TD NOWRAP>${linkButton(c, `${base}members/search?next=statements`, L.statements, 'main')} <IMG SRC="${base}img/new.svg" WIDTH="34" HEIGHT="14" ALT="NEW!"></TD></TR>`,
-      `<TR><TD><IMG SRC="${base}img/spacer.gif" WIDTH="1" HEIGHT="12" ALT=""></TD></TR>`,
-      link(`${base}area/reports`, 'Reports'),
-      link(`${base}area/admin`, 'Admin'),
-      link(`${base}members/search?next=waive-fee`, 'Fee Waivers'),
-      link(`${base}members/search?next=change-address`, 'Address Change'),
-      `<TR><TD><IMG SRC="${base}img/spacer.gif" WIDTH="1" HEIGHT="12" ALT=""></TD></TR>`,
-      link(`${base}signout`, 'Sign Out', '_top'),
-    ].join('');
-    const table = `<TABLE CELLPADDING="3" CELLSPACING="0" BORDER="0" CLASS="${d.cls('nav')}">${nav}</TABLE>`;
-    return html(
-      reply,
-      doc(c, d, {
-        title: 'Navigation',
-        body: '',
-        footer: false,
-        script: `document.write(${js(table)});`,
       }),
     );
   });

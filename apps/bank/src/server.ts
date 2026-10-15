@@ -5,6 +5,7 @@ import { type Bank, COOKIE, rotateNonce } from './context.js';
 import { HEADER, type RequestHazards } from './hazards.js';
 import { buttonSvg, CORELINK_JS, NEW_SVG, SPACER_GIF } from './markup/html.js';
 import { consoleRoutes } from './routes/console.js';
+import { layoutRoutes } from './routes/layout.js';
 import { signInRoutes } from './routes/signin.js';
 import { statementRoutes } from './routes/statements.js';
 import { transferRoutes } from './routes/transfer.js';
@@ -58,6 +59,7 @@ export async function buildServer(bank: Bank, logger = false): Promise<FastifyIn
   if (base !== '/') app.get('/', async (_req, reply) => reply.redirect(base));
 
   signInRoutes(app, bank);
+  layoutRoutes(app, bank);
   consoleRoutes(app, bank);
   statementRoutes(app, bank);
   transferRoutes(app, bank);
