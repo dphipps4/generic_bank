@@ -112,7 +112,8 @@ describe.each(['example', 'sample', 'placeholder'] as TenantId[])('CoreLink on %
         account: account.number.slice(-4),
         months: [month],
       });
-      expect(outcome.status).toBe('succeeded');
+      // The whole outcome, so a failure shows the driver's reason.
+      if (outcome.status !== 'succeeded') expect(outcome).toEqual({ status: 'succeeded' });
       if (outcome.status !== 'succeeded') return;
       const [got] = outcome.data.months;
       expect(got && 'pdf' in got && Buffer.compare(got.pdf, Buffer.from(own!))).toBe(0);
