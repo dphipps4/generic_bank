@@ -111,7 +111,7 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Driver rules (E0) | Custom rules on the **TypeScript compiler API** | Keeps CSS or id locators, page script, non-GET requests and model calls out of drivers |
 | Import boundaries | **dependency-cruiser** | Guardrails, evals and lint never import the Runner or factory; nothing imports the bank |
 | Spelling and prose | **cspell**, **markdownlint** | Clean prompts and docs |
-| Secret scanning | **gitleaks**, pinned image | Scans history, uncommitted changes and every built image |
+| Secret scanning | **gitleaks**, pinned image | Scans history and uncommitted changes |
 | Code quality (Part 2 of `GENERIC_BANK_PLAN.md`) | **SonarQube** (SonarQube Cloud, free for public repositories) | A quality gate on new code (coverage, duplication, hotspots, vulnerabilities) before merge |
 | CI | **GitHub Actions** | Typecheck, lint, unit, `check-prompts`, then the compose suites (browser, outcome, escalation, transfer, guard, PII) |
 

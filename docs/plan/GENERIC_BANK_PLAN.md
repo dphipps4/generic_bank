@@ -316,12 +316,12 @@ row tied to one run id, shown in the Console. Logs are JSON with the same id. De
 - Each job has an allowlist of *screen, verb, control*; anything else is refused and recorded.
   The bank's money and account-change controls are on no list. *[See the allowlist.](#j1-the-allowlist-written-down)*
 - No money moves without a person's single-use grant.
-- The crawler acts only on screens showing the member the job named.
+- The crawler acts only on screens showing the member the job named (Part 2).
 - Passwords and codes are typed by the system, never shown, logged or stored in the clear.
 - Everything personal is masked before it is written; a screenshot that can't be proven clean
   is withheld.
 - Page text is never an instruction.
-- `gitleaks` runs in `just check`, in CI over the whole history, and over every built image.
+- `gitleaks` runs in `just check`, and in CI over the whole history.
 
 Each is enforced in code and proven by tests: [Appendix J](#appendix-j-guardrails), [Appendix U](#appendix-u-why-each-rule-exists).
 
@@ -332,13 +332,13 @@ Each is enforced in code and proven by tests: [Appendix J](#appendix-j-guardrail
 ```
 just setup     # once, after git clone
 just up        # the banks, the crawler, the Console, the back end, the data
-just demo      # Check Balance and Transfer Funds on banks 1 and 2
+just api-token # a token for the Task API; ACCESS.md ends with curl for every task
 just factory   # the factory; mock mode until you set ANTHROPIC_API_KEY
 just down
 ```
 
-Configuration is `.env` (from `.env.example`) plus SOPS-encrypted files; the model key ships
-blank. It fits on an 8 GB laptop. Details: [Appendix S](#appendix-s-running-it).
+Configuration is `config/app.env`, committed and not secret, plus the SOPS-encrypted secrets
+files `just setup` makes; the model key starts blank. It fits on an 8 GB laptop. Details: [Appendix S](#appendix-s-running-it).
 
 ---
 
@@ -349,9 +349,9 @@ blank. It fits on an 8 GB laptop. Details: [Appendix S](#appendix-s-running-it).
 | System design | a typed REST task API, loaded as tools, over a crawler that reads screens, not markup | [Appendix T](#appendix-t-how-this-answers-the-review) |
 | Robustness | every failure named, detected and reported one way | [§D.4](#d4-how-failures-are-handled) |
 | Human in the loop | a real inbox for codes, approvals and stuck runs | [§8](#8-the-console-where-people-step-in), [Appendix F](#appendix-f-transfers-a-human-approved-activity) |
-| From 80% to 100% | each first-draft mistake replaced and covered by a test | [§T.4](#t4-from-80-to-100) |
+| From 80% to 100% | each first-draft mistake replaced | [§T.4](#t4-from-80-to-100), [80-to-100.md](80-to-100.md) |
 | Generalization | one crawler per product, a profile per bank, a factory that learns new banks | [§T.5](#t5-generalization-to-the-real-environment) |
-| Safety | approval grants, masking, guard layers, a trap matrix, a PII scan | [Appendix J](#appendix-j-guardrails) |
+| Safety | approval grants, masking, the guard on every action, a PII scan; the trap matrix in Part 2 | [Appendix J](#appendix-j-guardrails) |
 
 ---
 
@@ -701,23 +701,24 @@ dialect:
 The brief wants "stable UIs, but real runtime errors". Two modes:
 
 **Ambient mode** (default). Every response draws from a seeded random source (`HAZARD_SEED`),
-logged to the bank's hazard log:
+logged to the bank's hazard log. The rates are per page, and nothing fires on the transfer pages.
+A run loads about 20 pages, so the hazards that could stop one reach about 1 run in 240:
 
 | Hazard | Default | Effect |
 |---|---|---|
 | Latency | every response | uniform 0 to 150 ms before the server answers; frames load independently, so the main frame may arrive last |
-| Injected JavaScript error, harmless | 10% of pages | uncaught `TypeError` in the console; page still works |
-| Injected JavaScript error, widget | 5% | one widget fails to draw (a balance shows "--", a dropdown stays empty) |
-| Injected JavaScript error, fatal | 2% | the main frame shows "An unexpected error has occurred. Reference ERR-…" |
-| Service unavailable | 3% | HTTP 503 page from the "gateway" |
-| Confirmation dialog | 10% of member summaries | `window.confirm("This member has 2 unread alerts. View them now?")` |
-| Promotional interstitial | 10% of first loads after sign-in | full-page "New in CoreLink" notice with "Not now" and "Learn more" |
-| Record in use | 3% of member lookups | "This member's record is in use by another operator." (retry later) |
-| Session warning and expiry | idle 10 min, plus 2% random early expiry | warning modal, then the sign-in page appears inside the main frame |
-| Slow hand-off | 5% of sign-ins | the callback page holds for 2 to 3 seconds |
+| Injected JavaScript error, harmless | 2% of pages | uncaught `TypeError` in the console; page still works |
+| Injected JavaScript error, widget | 0.005% | one widget fails to draw (a balance shows "--", a dropdown stays empty) |
+| Injected JavaScript error, fatal | 0.002% | the main frame shows "An unexpected error has occurred. Reference ERR-…" |
+| Service unavailable | 0.01% | HTTP 503 page from the "gateway" |
+| Confirmation dialog | 1% of member summaries | `window.confirm("This member has 2 unread alerts. View them now?")` |
+| Promotional interstitial | 1% of first loads after sign-in | full-page "New in CoreLink" notice with "Not now" and "Learn more" |
+| Record in use | 0.002% of member lookups | "This member's record is in use by another operator." (retry later) |
+| Session warning and expiry | idle 10 min, plus 0.002% random early expiry | warning modal, then the sign-in page appears inside the main frame |
+| Slow hand-off | 2% of sign-ins | the callback page holds for 2 to 3 seconds |
 
 **Profiles:** `HAZARDS=default` (the rates above), `HAZARDS=gentle` (a quarter of every rate,
-fixed seed; used by `just demo`), `HAZARDS=harsh` (double).
+fixed seed), `HAZARDS=harsh` (double).
 
 **Forced mode** (tests and evals). A request with a signed `X-Hazards` header gets exactly the
 named hazards. It needs `HAZARDS_FORCEABLE=true` on the bank and a valid HMAC. Forced-only
@@ -1348,8 +1349,9 @@ No extra containers: logs go to stdout and rotating JSON files, read with `just 
 
 ### I.9 Masking applies to telemetry too
 
-Logs are masked like everything else, and frames are referenced by key. A test runs a task under
-every hazard and scans the log files for every seeded value.
+Logs are masked like everything else, and frames are referenced by key. The PII suite runs a
+balance and a transfer on bank 1 and scans the logs for every seeded value; running it under every
+hazard is Part 2.
 
 ### I.10 Metrics
 
@@ -1399,23 +1401,24 @@ them.
 | Layer | What it does |
 |---|---|
 | **Task allowlist** | Each task declares its capabilities. `checkBalance`: read. `downloadStatements`: read plus document GETs. `transfer`: read, fill the transfer form, press "Continue", and the one granted submit. Anything else is refused before it reaches the browser. |
-| **Session guard: network** | Only the tenant's own host is reachable. After sign-in, state-changing requests are refused unless the task allowlist names them (the transfer form's "Continue" and the granted submit). |
+| **Session guard: network** | The Scout's browser reaches only the bank's own host. After sign-in, state-changing requests are refused unless the task allowlist names them (the transfer form's "Continue" and the granted submit) (Part 2). |
 | **Session guard: element** | Every click and key press is classified from the control's visible name against money and account-change vocabularies ("Pay", "Transfer", "Submit", "Add payee", "Enroll", "Update", "Go paperless"). A generic "Continue" on a money page counts as money. Refused unless allowed. |
-| **Session guard: page** | Pages are classified as read-only, money-moving, account-change or unknown. On a money or account-change page the session may read and leave, but not type or click, except as the task allowlist and a grant permit. |
-| **Session guard: outcome** | After any click, watch for confirmation wording that should not appear. Seeing it trips the guard. |
-| **Member scope** | The staff service account can reach every member, so every screen the Runner acts on must show the member number the task named. An action on a screen showing a different member, or no member where one is expected, is refused and trips the guard. |
+| **Session guard: page** (Part 2) | Pages are classified as read-only, money-moving, account-change or unknown. On a money or account-change page the session may read and leave, but not type or click, except as the task allowlist and a grant permit. |
+| **Session guard: outcome** (Part 2) | After any click, watch for confirmation wording that should not appear. Seeing it trips the guard. |
+| **Member scope** (Part 2) | The staff service account can reach every member, so every screen the Runner acts on must show the member number the task named. An action on a screen showing a different member, or no member where one is expected, is refused and trips the guard. |
 | **Approval grant** | The single-use key for the one money-moving click ([Appendix F](#appendix-f-transfers-a-human-approved-activity)). |
 | **Guard trip** | Ends the run `escalated: guard_tripped`, writes a journal row, freezes the tenant and notifies. Guard errors always propagate: a lint rule forbids catching them. |
-| **Secret typing** | The Runner types credentials from its secrets and never returns them. Plain typing of any text that equals or contains a stored secret is refused. |
-| **Injected instructions** | Handled structurally: guards judge controls and pages, never what page text asks for. A test checks that every guard verdict is identical with and without injected text. |
-| **Sign-in pacing** | A ledger caps sign-ins per member per day and paces them. It fails closed if unreadable. |
-| **Caps for models** | Spend per run and per week, turns, live sign-ins, active hours, failed checks, in one file with no imports. A run's input can lower a cap, never raise it. The meter checks before every model call and fails closed on an unreadable ledger or an unknown price. |
+| **Secret typing** | The Runner types credentials from its secrets and never returns them. Plain typing of any text that equals or contains the stored password is refused; a username is not a secret. |
+| **Injected instructions** | Handled structurally: guards judge controls and pages, never what page text asks for. The trap matrix checks that every guard verdict is identical with and without injected text (Part 2). |
+| **Sign-in pacing** (Part 2) | A ledger caps sign-ins per member per day and paces them. It fails closed if unreadable. |
+| **Caps for models** | Spend per run and per week, turns, live sign-ins, active hours, failed checks, in one file with no imports. A run's input can lower a cap, never raise it. The meter checks before every model call and fails closed on an unreadable ledger; a model with no price counts as free. |
 | **Tool allowlist** | A closed set of capabilities per role ([§M.4](#m4-tools)). No money capability exists. No tool runs script in a page. |
-| **Code rules** | Lint rules on driver code ([Appendix N](#appendix-n-evaluations), E0). |
+| **Code rules** | Lint rules: a guard error is never caught, and a catch around an action rethrows what it does not handle. |
 | **Network** | Compose networks enforce who can reach whom. The sandbox has no route out. |
 
-**Proof:** the trap matrix runs every money trap and injected instruction on both tenants with
-one guard layer removed at a time. A clean read task leaves the bank's state-change counter
+**Proof:** the guard's decision and grant tests (`packages/guardrails/test`), and the PII suite.
+In Part 2, the trap matrix runs every money trap and injected instruction on both tenants with
+one guard layer removed at a time, and a clean read task leaves the bank's state-change counter
 unchanged.
 
 A page's own background requests (analytics, feature flags, keep-alives) are refused quietly and
@@ -1910,7 +1913,7 @@ npm workspaces, TypeScript project references, ESM, Node 26.
 - `factory` reaches `evals` only through its CLI.
 - Generated driver code may import only the driver SDK.
 
-### Q.2 Documentation: a short README and seventeen documents
+### Q.2 Documentation: a short README and the documents it links
 
 The README says what the system is in one paragraph, shows the picture, and links to the
 documents.
@@ -1918,50 +1921,42 @@ documents.
 | Document | What it covers |
 |---|---|
 | `README.md` | the one-paragraph framing, the picture, the reading order, links to everything below |
-| `docs/00-requirements.md` | the brief, point by point: every requirement, how we meet it, where, and the test or demo that proves it |
-| `docs/01-setup.md` | prerequisites, `git clone`, `just setup`, filling in `.env` values, SOPS and age keys, first `just up` |
-| `docs/02-running.md` | every just recipe, what each group starts, URLs and ports, `just demo`, `just try`, `just down` |
-| `docs/03-architecture.md` | the boxes, the diagrams, the data models, where the risky parts live |
-| `docs/04-tech-stack.md` | every technology choice and why |
-| `docs/05-the-bank.md` | CoreLink, the four banks, their differences, the hazards, the hazard lab |
-| `docs/06-task-api.md` | tasks, inputs, the result, outcome codes, `GET /banks`, OAuth2 clients and tokens, trying it in Swagger UI at `/docs` |
-| `docs/07-runner-and-perception.md` | the screen model, the fully-rendered wait, recognition, targeting, drivers and profiles (the crawlers) |
-| `docs/08-transfers-and-approvals.md` | the approval grant, the one click, the swallowed-submit protocol |
-| `docs/09-console.md` | every Console page, roles, state markers, the inbox |
-| `docs/10-observability.md` | records and logs; what the crawler did and what the agent did |
-| `docs/11-guardrails-and-safety.md` | every guard layer, masking, the trap matrix, the PII scan |
-| `docs/12-memory.md` | what memory keeps, the learning rules, the knowledge pack, autocrawl, export and import |
-| `docs/13-factory.md` | roles, phases, tools, caps, mock mode, probation, the repair loop |
-| `docs/14-evals-and-tests.md` | the eval ladder, every test suite, CI |
-| `docs/15-prompts.md` | the prompt library, composition, checks and the writing standard |
-| `docs/16-from-80-to-100.md` | what AI produced, what changed and why, what was cut, what is still needed; with more time ([Part 2](#part-2-with-more-time)) |
+| `ACCESS.md` | every URL and sign-in, and trying the Task API with curl and Swagger UI |
+| `docs/plan/REQUIREMENTS.md` | the brief, point by point: every requirement, how we meet it, where, and the test that proves it |
+| `docs/plan/GENERIC_BANK_PLAN.md` | this plan: Part 1, and [Part 2](#part-2-with-more-time) with more time |
+| `docs/plan/architecture.md` | the boxes, the diagrams, the data models, where the risky parts live |
+| `docs/plan/techstack.md` | every technology choice and why |
+| `docs/plan/manual_test.md` | the redesign and repair demo, step by step |
+| `docs/plan/80-to-100.md` | what AI produced, what changed and why, what was cut, what is still needed |
+| `docs/build/M1` to `M7` | the build sheets: each pull request, what it adds and what proves it |
+| `docs/api/` | the OpenAPI document, written by `just api-docs`, and the API reference page |
 
-The Markdown is the source; `just docs` renders it as a website, published to **GitHub Pages** at
-`https://dphipps4.github.io/generic_bank/` on every merge to `master`. Rendered HTML is never
-committed. The repository is the product: catalog, memory seed and prompts live in it, and
-nothing is hosted elsewhere.
+The Markdown is the source; `just plan` renders `docs/plan` as HTML pages locally. The
+repository is the product: catalog, memory seed and prompts live in it, and nothing is hosted
+elsewhere.
 
 ### Q.3 Branches
 
-- **`master`** is the default branch and always releasable (`just up` and `just demo` work on
+- **`master`** is the default branch and always releasable (`just setup` and `just up` work on
   every commit).
 - Every change goes through a short-lived branch (`feat/…`, `fix/…`, `docs/…`, `chore/…`) and a
   pull request, where CI runs.
 - A **GitHub ruleset on `master`:** pull request and CI checks required, linear history (squash
   merges), no force pushes, no deletion, zero required approvals.
-- **Tags** mark milestones (`m3-check-balance`, `m7-factory`, `submission`).
 - Conventional Commits; each pull request says what it proves and how.
 
 ---
 
 ## Appendix R. Secrets and configuration
 
-- **`.env`** carries configuration into containers. `.env.example` is committed and documents
-  every variable; `just setup` copies it to `.env`, which is never committed.
-- **SOPS** (with `age`) encrypts the committed secret files (`infra/secrets/local.sops.env` and
-  friends). `just setup` generates a local age key and random dev secrets; no key is committed.
-- **`ANTHROPIC_API_KEY=`** ships blank, which means mock mode. Only the factory agent gets the
-  key, never the Runner, the sandbox, the Console or the bank.
+- **`config/app.env`** carries configuration into containers. It is committed and holds nothing
+  secret; `just fork-ports` writes `config/local.env` for a second copy, which is never committed.
+- **SOPS** (with `age`) encrypts the secrets files (`config/local.secrets.enc.env` and
+  `config/factory.secrets.enc.env`). `just setup` generates a local age key and random dev
+  secrets; neither the key nor the files are committed.
+- **`ANTHROPIC_API_KEY`** (or `OPENAI_API_KEY`) starts blank, which means mock mode; `just
+  secret-set factory ANTHROPIC_API_KEY` sets it. Only the factory gets a model key, never the
+  Runner, the sandbox, the Console or the bank.
 - **Settings fail closed:** every required variable present, secrets at least 32 characters, no
   two tokens equal.
 - **SOPS** holds every secret, the staff service account included; each service receives only
@@ -1990,21 +1985,19 @@ nothing is hosted elsewhere.
 | `just bank-more` | banks 3 and 4, for crawling later (not part of `just up`, to save memory) |
 | `just factory` | box D: the factory agent, Scout browser and sandbox; live with a key, mock without |
 | `just down <group>`, `just logs <group>`, `just rebuild <group>` | the same for one or more groups |
-| `just demo` | check balance and transfer on banks 1 and 2, printing each typed result |
 | `just try <hazard> [task]` | any task under any forced hazard |
-| `just test`, `just test-browser`, `just test-pii`, `just evals` | the suites in [Appendix P](#appendix-p-tests) and the eval ladder |
-| `just check-prompts` | the prompt checker |
+| `just test`, `just test-changed`, `just test-pii` | every test, only the tests a change touches, and the PII suite ([Appendix P](#appendix-p-tests)) |
+| `just check-prompts` | the prompt checker (Part 2) |
 | `just api-token` | prints an access token from the local API client that `just setup` makes (OAuth2 client credentials) |
 | `just api-docs` | writes `openapi.json` and the static API reference page from the contracts |
-| `just prompts-export` | writes the prompt versions activated in the Console back to `packages/prompts/` for a pull request |
-| `just docs` | renders `README.md` and `docs/` as the white-template website into `site/`; the same build publishes to GitHub Pages |
+| `just prompts-export` (Part 2) | writes the prompt versions activated in the Console back to `packages/prompts/` for a pull request |
 | `just logs` | read the JSON logs from `.data/` |
 | `just memory-seed` | imports `seeds/memory/` into an empty Memory (part of the first `just up`) |
 | `just reset` | deletes volumes and starts again from the seed (asks first) |
 
 The Console is at `http://localhost:8080`, the banks at their URLs ([§C.1](#c1-one-product-four-banks)), the inbox at
-`:8089`. `just demo` pauses at the transfer approval and prints the Console link;
-`AUTO_APPROVE=1 just demo` approves through the Console API.
+`:8089`. To try the Task API, follow the curl and Swagger UI steps at the end of `ACCESS.md`; a
+transfer waits for a person to approve it in the Console.
 
 **Mock mode** replays only the model responses of a recorded factory run; the browser, bank,
 evals and Console are live, with hazards off and the recording's seed.
@@ -2081,9 +2074,9 @@ rate-limited, and every container has disk and memory limits.
 
 ### T.4 From 80% to 100%
 
-What a first draft gets wrong, and what this plan does instead, each covered by a test:
+What a first draft gets wrong, and what this plan does instead:
 
-- clicks by CSS selector; here E0 lint forbids it
+- clicks by CSS selector; here drivers target by label, geometry and visible name
 - waits for network idle; here pixels must settle
 - retries a failed submit; here the history is read and the run escalates
 - lets the agent move money; here a person grants one click
@@ -2105,7 +2098,7 @@ targeting, guardrails, masking or the trail.
 - **Transfers:** a person's grant, one click, values checked, no blind retry, duplicates found by
   memo token ([Appendix F](#appendix-f-transfers-a-human-approved-activity)).
 - **Redaction** before any write; unprovable frames withheld ([Appendix I](#appendix-i-evidence-redaction-and-observability)).
-- **Proof:** the trap matrix and PII scan ([Appendix P](#appendix-p-tests)).
+- **Proof:** the guard's tests and the PII scan; the trap matrix in Part 2 ([Appendix P](#appendix-p-tests)).
 
 ### T.7 Communication
 
@@ -2263,12 +2256,12 @@ linking each point of the brief it touches to the code and test that prove it.
 | M0 | Skeleton: workspaces, compose with memory limits, auto-bootstrap of secrets, Prisma schema and first migration, AdminJS shell, CI, import boundaries | `just up` starts every service on an 8 GB laptop; CI green |
 | M1 | Bank 1: ledger, seed, staff sign-in, codes, inbox, member lookup, member summary, activity, statements, transfer, supervisor approval, framesets, nested tables, markup dialects, forced hazards | bank tests green |
 | M2 | Banks 2, 3 and 4, and ambient hazards: themes, labels, layout variants, URL bases, image text, account formats, bank 3's extra frame, bank 4's split transfer and popup results | all four banks seeded and browsable |
-| M3 | Screen package and the first driver: capture, fully-rendered wait, recognition, targeting, image fingerprints, the CoreLink driver with bank 1's profile written by hand, Task API with OAuth2 (clients, tokens, refresh) and its HTTP status codes, trail, masking, AdminJS run pages and the API clients page | `checkBalance` succeeds on bank 1 under ambient hazards; outcome tests green |
-| M4 | The browser's fingerprint (Chrome on a Mac, set at launch; banks 2 to 4 refuse anything not a browser), then human steps: inbox, codes, transfer preparation, approval grant, submit, swallowed-submit protocol, the tool definitions, `downloadStatements`, hazard lab | escalation and transfer-safety suites green |
-| M5 | The guard on every action and the PII scan (the rest of the guardrails in Part 2) | guards and PII suites green |
-| M6 | Memory service | memory suite green |
-| M7 | **Factory:** workflow, model gateway, tools, caps, scout (autocrawl), evals E0 to E4, review gate, probation, driver states in the Console, mock mode | **the factory onboards bank 2 as a profile, end to end, and it is promoted after probation** |
+| M3 | Screen package and the first driver: capture, fully-rendered wait, recognition, targeting, image fingerprints, the CoreLink driver with bank 1's profile written by hand, Task API with OAuth2 (clients, tokens, refresh) and its HTTP status codes, trail, masking, AdminJS run pages and the API clients page | `checkBalance` succeeds on bank 1 end to end; outcome tests green |
+| M4 | The browser's fingerprint (Chrome on a Mac, set at launch; banks 2 to 4 refuse anything not a browser), then human steps: inbox, codes, transfer preparation, approval grant, submit, swallowed-submit protocol, the tool definitions, `downloadStatements`, hazard lab | escalation suite and transfer tests green; the transfer-safety suite in Part 2 |
+| M5 | The guard on every action and the PII scan (the rest of the guardrails in Part 2) | the guard's tests and the PII suite green |
+| M6 | Memory service | memory's own tests green; the memory suite in Part 2 |
+| M7 | **Factory:** workflow, model gateway, tools, caps, scout (autocrawl), evals E0 to E4, review gate, probation, driver states in the Console, mock mode | **a profile passes the hazard check and is promoted after two clean probation runs; onboarding bank 2 end to end is Part 2** |
 | M8 | **Repair loop:** turn on bank 1's redesign (`BANK_REDESIGN`); runs fail; the driver is demoted; a repair case opens; a factory repair run fixes it | the repair is visible end to end in the Console |
 | M9 (Part 2) | Prompt library, `check-prompts`, prompt eval runner; Console complete ([Appendix G](#appendix-g-the-console)) | `check-prompts` green; every Console page exists |
-| M10 | README, diagram, the requirements report (every point of the brief, how we meet it, and links to the code and tests that prove it), the 80%-to-100% notes, a recorded factory run for mock mode | a reviewer can clone, `just up`, `just demo`, `just factory` in minutes |
+| M10 | README, diagram, the requirements report (every point of the brief, how we meet it, and links to the code and tests that prove it), the 80%-to-100% notes, a recorded factory run for mock mode | a reviewer can clone, `just setup`, `just up` and try the Task API from `ACCESS.md` in minutes |
 | **Submission** | | |
