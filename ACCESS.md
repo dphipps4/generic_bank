@@ -44,7 +44,7 @@ the inbox shows that app's current code as well.
 |---|---|---|
 | Task API | http://localhost:8000 | `Authorization: Bearer $(just api-token)` |
 | Task API, OpenAPI document | http://localhost:8000/openapi.json | none |
-| Task API, agent tools | http://localhost:8000/tools | none |
+| Task API, agent tools | http://localhost:8000/tools | `Authorization: Bearer $(just api-token)` |
 | Bank admin API, banks 1 to 4 | http://localhost:9081 to 9084 | `Authorization: Bearer` the bank admin token |
 | Memory | http://localhost:8470 | `Authorization: Bearer` a memory role token |
 | Factory gateway | http://localhost:8200 | `Authorization: Bearer` the factory gateway token |
@@ -116,7 +116,7 @@ so a bare curl only reaches the ones at the front door. The crawler is the bette
 the rest.
 
 The hazards: `confirm-dialog`, `early-expiry`, `injected-instruction`, `js-error-fatal`,
-`js-error-harmless`, `js-error-widget`, `late-rows`, `latency`, `permission-denial`,
+`js-error-harmless`, `js-error-widget`, `late-rows`, `latency`, `permission-denial`, `promo`,
 `record-in-use`, `record-not-found`, `service-unavailable`, `slow-handoff`, `swallowed-click`,
 `swallowed-submit`, `unknown-screen`, `validation-error`. Several can go in one header,
 separated by commas.
@@ -194,9 +194,9 @@ curl -s -X POST http://localhost:8000/tasks/check-balance \
   -d '{"bank":"example","memberId":"40017732","account":"<last four>"}'
 ```
 
-A transfer stops on the bank's review page until a person approves it in the Console inbox; then
-read its result as above. Send the same `idempotencyKey` again and you get the same run back,
-never a second transfer:
+A transfer stops on the bank's review page until a person approves it in the Console inbox, with a
+reason of at least ten characters; then read its result as above. Send the same `idempotencyKey`
+again and you get the same run back, never a second transfer:
 
 ```sh
 curl -s -X POST http://localhost:8000/tasks/transfer \

@@ -72,8 +72,8 @@ every result a run can end in.
 
 ## The Runner
 
-The Runner is the crawler. It runs one task at a time in one Chromium browser, through a promoted
-driver and the guardrails. In production, nothing else touches a bank.
+The Runner is the crawler. It runs two tasks at a time, each in its own Chromium browser, through a
+promoted driver and the guardrails. In production, nothing else touches a bank.
 
 The browser runs the bank's own scripts. After every action the Runner waits for the page to be
 ready: the expected screen is there, something on it can be pressed, nothing says it's still
@@ -89,7 +89,7 @@ Evidence and PII removal).
 
 A **driver** is written once per vendor product, as a small state machine over named screens. A
 **profile** fills in one bank's words, account format and limits. Steps have time limits, and a
-watchdog ends any run that goes quiet for three minutes.
+run that takes too many steps without finishing stops as stuck.
 
 ---
 
@@ -106,7 +106,8 @@ for five minutes. The Runner checks that the screen still matches the grant, wri
 about to press, and presses once. That uses up the grant.
 
 If the bank shows a confirmation number, that's the answer. If it doesn't within 10 seconds, the
-Runner never presses again. It searches the account's history for the transfer's memo marker.
+Runner never presses again. It searches the account's history for the transfer's memo marker,
+reading it again, up to three times, if the bank gets in the way.
 Found once, the transfer succeeded; found twice or not at all, a person looks. If a run loses its
 browser while waiting, it signs in again and checks the review page against the grant before it
 presses.
@@ -118,22 +119,25 @@ presses.
 Every safety rule is code in `packages/guardrails`, which imports nothing from the drivers, the
 Runner or the factory. Prompts only repeat the rules.
 
-Before any click or key press, six checks run in order:
+Before any click or key press, four checks run in order:
 
-1. Is this action part of the task at all?
-2. Is the request going to the bank's own site?
-3. Does the control's visible name mean moving money or changing an account?
-4. Is this a money or account page?
-5. For the one money click, is there a valid grant?
-6. Afterward, did a confirmation appear that shouldn't have?
+1. Is this control one that is never allowed, on any screen?
+2. Is this action (the screen, the verb, the control) on the task's list? An unlisted control whose
+   name means moving money or changing an account is refused as such.
+3. Is a secret typed only into a field the list marks secret, and does plain text never hold the
+   stored password?
+4. For the one money click, is there a valid grant?
+
+Checking that each request goes to the bank's own site, classing each page as read-only or money,
+and catching a confirmation that shouldn't have appeared are Part 2.
 
 Any refusal stops the run, gets written down, freezes that bank until a person clears it, and tells
 someone.
 
-Credentials are SOPS secrets that only the Runner receives. They're typed, and they never come back
-out. Sign-ins are capped per day. The guards judge the controls themselves, so instructions planted
-in a page's text change nothing. A guard error always stops the run, and a lint rule forbids
-catching one.
+Credentials are SOPS secrets, given only to the Runner, the factory and the banks that check them.
+They're typed, and they never come back out. Sign-in pacing is Part 2. The guards judge the controls
+themselves, so instructions planted in a page's text change nothing. A guard error always stops the
+run, and a lint rule forbids catching one.
 
 ---
 
@@ -195,14 +199,14 @@ page record, and every claim it makes about a bank must point at pictures from i
 repair starts from the pictures of the run that failed.
 
 **PII removal.** Nothing personal is saved. Before a picture is stored, every piece of personal
-information on it is covered with a white box: names, account numbers, amounts, codes,
-passwords, emails, phone numbers and addresses, along with anything typed into a field and any
-image the system can't read. The page record gets the same treatment. The system knows the
-member's details before the run starts, so it covers them wherever they show up. It also covers
-anything that looks like an account number, an amount, an email or a phone number. If it can't be
-sure a picture is clean, it keeps only a note saying why, not the picture. Logs are scrubbed the
-same way. A test suite, the PII scan, runs every task and then searches everything saved (every
-database row, file and log line) for the seeded personal details. One hit fails it.
+information on it is covered with a white box: names, account numbers, amounts, codes, passwords,
+emails, phone numbers and addresses, along with anything typed into a field and any image the system
+can't read. The page record gets the same treatment. The system knows the member's details before
+the run starts, so it covers them wherever they show up. It also covers anything that looks like an
+account number, an amount, an email or a phone number. If it can't be sure a picture is clean, it
+keeps only a note saying why, not the picture. Logs are scrubbed the same way. A test suite, the PII
+scan, runs a balance and a transfer on bank 1, then searches everything saved (every database row,
+file and log line) for the seeded personal details. One hit fails it.
 
 ---
 
@@ -211,12 +215,12 @@ database row, file and log line) for the seeded personal details. One hit fails 
 What gets saved, all of it in Postgres and on this machine:
 
 - **For every task run:** each step (screen, action, outcome, how long), each picture and page
-  record, every recovery and the hazard behind it, every guard decision, every network request
-  (host and path only, no bodies or query strings), the journal, and every answer a person gave.
+  record, every recovery and the hazard behind it, every guard decision, the journal, and every
+  answer a person gave.
 - **For every factory run:** every model call (role, model, prompt version, tokens, cost, how
   long), every tool call and refusal, the Supervisor's decisions, the evaluation results, the
   lessons and the spend.
-- **Logs:** JSON lines on stdout and in `.data/logs/`, read with `just logs`. A log line never
+- **Logs:** JSON lines on each container's stdout, read with `just logs`. A log line never
   holds a field value, credential, code, account number, amount or name, and the PII scan checks
   the logs too.
 
@@ -231,8 +235,8 @@ The Console is where people step in. It's built on AdminJS over the database mod
 runs, steps, human tasks, drivers and their versions, factory runs and model calls, repair cases,
 freezes and the journal, newest first, with filters and search. Its own pages add the inbox
 (answer a code, approve, reject, take over), each run's frames, the hazard lab, the factory's
-recommendations and freezes. There are buttons to promote, roll back, freeze and unfreeze, and
-each one needs a written reason.
+recommendations and freezes. Clearing a freeze and acting on a task in the inbox each need a
+written reason. Buttons to promote, roll back and freeze by hand are Part 2.
 
 There are three roles: viewer, approver and admin. A picture shows only if it passed PII removal;
 a withheld one shows its reason instead. If two people answer the same task, the first wins and
@@ -333,7 +337,8 @@ Every package and why it was chosen: [techstack.md](techstack.md).
 ## Known Limitations
 
 - **Web only.** Desktop and terminal capture would plug into the same screen-model seam.
-- **One browser at a time** by default, to fit in 8 GB. Concurrency is a setting.
+- **Two browsers at a time,** so a transfer waiting for approval never holds up other tasks. That
+  still fits an 8 GB laptop with Docker at 5 GB; concurrency is a setting.
 - **Hazards are ours.** Real vendors will have others.
 
 ---
@@ -373,7 +378,10 @@ an injected instruction, an unknown screen, and permission, not-found and valida
 | `POST /tasks/transfer` | bank, member reference, from, to, amount in cents, memo, idempotency key |
 | `POST /tasks/download-statements` | bank, member reference, account, months |
 | `GET /tasks/:id?wait=30` | long-poll for the result |
-| `POST /human-tasks/:id/{answer,approve,reject,take-over,cancel}` | every Console action, as an API |
+| `GET /statements/:id` | a statement's PDF, by the id a run returned |
+| `POST /oauth/token` | a token: client credentials, a one-time code or a refresh token |
+| `GET /banks`, `GET /tools` | each bank and the tasks it serves; the tasks as agent tools |
+| `POST /human-tasks/:id/{answer,approve,reject,take_over,resume,finish,cancel}` | every inbox action, on the Console (port 8080) |
 
 | Result | Codes |
 |---|---|
@@ -411,7 +419,7 @@ an injected instruction, an unknown screen, and permission, not-found and valida
 | Failure | The system | The caller sees |
 |---|---|---|
 | Worker or browser crash | resumes at the last finished step; a lost browser signs in fresh; a crash after the decision to submit goes to the history check | nothing, or `escalated: ambiguous_outcome` |
-| Stall: no step for 3 minutes | saves a final picture and ends the run | `escalated: stuck` |
+| Stall: too many steps without finishing | saves a final picture and ends the run | `escalated: stuck` |
 | Nobody answers a human task | the deadline ends the run | `expired` |
 | Postgres down | new calls refused; running workflows pause and resume | HTTP 503 |
 | Object storage down | pictures wait on disk and upload later | nothing |
@@ -427,7 +435,7 @@ an injected instruction, an unknown screen, and permission, not-found and valida
 |---|---|
 | Model error or timeout | retries within the caps, then hands back |
 | A cap reached | stops and hands back |
-| The spend ledger unreadable, or a model with no price | refuses the call |
+| The spend ledger unreadable | refuses the call (a model with no price counts as free) |
 | The same failure twice, or three turns without progress | stops and hands back |
 | A tool outside the role's list | refused, recorded, and the model told why |
 | A review not answered | a reminder at 24 hours; expires at 7 days |
@@ -460,18 +468,19 @@ A change log that fails verification puts Memory into read-only mode until a per
 
 | Role | Default model (configurable) | Writes | Sees |
 |---|---|---|---|
-| Scout | `claude-opus-5-5`, low effort | browser steps, as the Supervisor directs | the pages it reaches, tool results, the knowledge pack |
+| Scout | `claude-sonnet-5-5`, low effort | browser steps, as the Supervisor directs | the pages it reaches, tool results, the knowledge pack |
 | Supervisor | `claude-opus-5-5`, high effort | the next step; the profile, each claim citing pictures, seen or guess; lessons | every picture and page record, never the Scout's reasoning |
 
 | Rung | Proves | Where |
 |---|---|---|
-| E0 lint | the code follows the rules | sandbox |
-| E1 contract | typed outcomes on recorded screen models | sandbox |
+| E0 lint | the code follows the rules | Part 2 |
+| E1 contract | typed outcomes on recorded screen models | Part 2 |
 | E2 hazard matrix | a clean run, then each forced hazard alone, each with its expected result | sandbox, throwaway bank |
-| E3 replay | behavior matches recorded runs | sandbox |
-| E4 live verify | fresh and remembered sign-in, ambient hazards on | the real bank |
-| E5 probation | two clean production runs in 30 days | production |
-| E6 stability | success rate, recoveries used, typical and slow durations over many runs | production-like |
+| E3 replay | behavior matches recorded runs | Part 2 |
+| E4 live verify | fresh and remembered sign-in, ambient hazards on | Part 2 |
+| E5 probation | two clean probation runs in a row, at most four | production |
+| E6 stability | success rate, recoveries used, typical and slow durations over many runs | Part 2 |
 
-The eval tool prints one JSON object and exits 0 (passed), 1 (failed) or 2 (couldn't run).
-"Couldn't run" never counts as a pass.
+The hazard check (E2) and probation (E5) are built. The eval tool, which prints one JSON object
+and exits 0 (passed), 1 (failed) or 2 (couldn't run), is Part 2; "couldn't run" never counts as a
+pass.

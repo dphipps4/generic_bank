@@ -36,8 +36,8 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 |---|---|---|
 | Database | **PostgreSQL 16** with **pgvector** | One engine for control data, workflow state, and Memory's episodes, lessons and embeddings |
 | ORM and migrations | **Prisma** | SQL migrations, generated types, the models AdminJS reads; vectors via `$queryRaw` |
-| Schemas | `control`, `memory`, workflow tables; the two bank tenants in a separate `bank-db` | One schema per owner; the bank shares nothing |
-| Object storage | **MinIO** via the AWS S3 SDK | Masked screenshots, screen models, run folders; the same code talks to S3 |
+| Schemas | `control`, `memory`, workflow tables; the four banks' databases in a separate `bank-db` | One schema per owner; the bank shares nothing |
+| Object storage | **MinIO**, through our own small S3 client (AWS Signature Version 4) | Masked screenshots, screen models, run folders; the same code talks to S3 |
 
 ---
 
@@ -46,7 +46,7 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Element | Choice | Why |
 |---|---|---|
 | Durable workflows | **DBOS Transact** | A library on our Postgres, not a server: durable sleep, `send`/`recv` with timeouts for human answers, idempotent ids |
-| Scheduling | DBOS scheduled workflows | Probation checks, stuck-run sweeps, gate reminders |
+| Scheduling (Part 2) | DBOS scheduled workflows | Probation checks, stuck-run sweeps, gate reminders |
 
 ---
 
@@ -58,8 +58,8 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Page JavaScript | **Enabled and executed** | The bank draws its content with script |
 | Perception | **Chrome DevTools Protocol** through our client's sessions: `DOMSnapshot`, the `Accessibility` tree, screenshots, across every frame | Read from outside, so the page can't see or fake it; nothing is injected |
 | Pictures of text | **Image fingerprints** (perceptual hashes), named once by the factory's vision model, kept in the bank's profile | Image-only buttons get names without reading pixels |
-| Image work | **sharp** | Masking boxes, fingerprints, the "fully rendered" frame check |
-| Vision model | Claude via the model gateway, **factory time only** (and the optional bounded assisted fallback) | Judges each Scout step from the frame |
+| Image work | **Our own PNG code** in `packages/screen`, no image library | Masking boxes, fingerprints, the "fully rendered" frame check |
+| Vision model | Claude via the model gateway, **factory time only** | Judges each Scout step from the frame |
 
 ---
 
@@ -69,12 +69,11 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 |---|---|---|
 | Agent harness | **pi** ([pi.dev](https://pi.dev)), one session per role | Switches model providers by configuration; gives us a prompt loop, a tool-call hook that can veto, and a session file as a checkpoint |
 | Model gateway | Our metering endpoint, per configured provider (Anthropic by default, OpenAI possible) | The spend meter and caps sit where the model can't touch them |
-| Scout model (default; configurable) | `claude-opus-5-5`, low effort | Navigates as the Supervisor directs; the cheapest Opus |
+| Scout model (default; configurable) | `claude-sonnet-5-5`, low effort | Navigates as the Supervisor directs; cheaper than Opus |
 | Supervisor model (default; configurable) | `claude-opus-5-5`, high effort | Reasons over every frame and drafts the profile |
-| Small judgments | `claude-haiku-4-5-20251001` | Honesty checks on summaries, short classifications |
 | Mock mode | Recorded responses replayed by the gateway | A whole factory run without an API key |
 | Embeddings | **@huggingface/transformers** with **bge-small-en-v1.5** (384 dimensions, CPU) | Runs in the Memory process: about 130 MB, no API cost |
-| Prompt files | Markdown with YAML frontmatter; answers in **JSON Schema**, checked by **ajv** | Prompts are reviewed and versioned like code |
+| Prompt files (Part 2) | Markdown with YAML frontmatter; answers in **JSON Schema**, checked by **ajv** | Prompts are reviewed and versioned like code |
 
 ---
 
@@ -82,9 +81,9 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 
 | Element | Choice | Why |
 |---|---|---|
-| Encrypted config in git | **SOPS** with **age** keys | Encrypted secrets reviewed like code; `just up` makes a local key |
+| Encrypted config in git | **SOPS** with **age** keys | Encrypted secrets reviewed like code; `just setup` makes a local key |
 | Runtime config | **Environment variables** through a zod schema that fails closed | All values present, secrets 32+ characters, no duplicate tokens |
-| Credentials | **SOPS** secrets, rendered only to the Runner | Typed, never returned or logged; Vault in Part 2 |
+| Credentials | **SOPS** secrets, rendered only to the Runner, the factory and the banks | Typed, never returned or logged; Vault in Part 2 |
 
 ---
 
@@ -93,10 +92,10 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Element | Choice | Why |
 |---|---|---|
 | Source of truth | **Postgres records** | Every step, frame, guard decision and call is a row |
-| Logs | **pino** JSON, redacted and scrubbed, to stdout and `.data/logs/` | Redaction is configuration, not discipline |
+| Logs | **pino** JSON (Fastify's logger), redacted and scrubbed, to stdout | Redaction is configuration, not discipline |
 | Traces (Part 2 of `GENERIC_BANK_PLAN.md`) | **OpenTelemetry**, one trace per run, **GenAI semantic conventions**; `just trace` and `just observe` (**Collector**, **Grafana Tempo**, **Loki**, **Grafana**) | Vendor-neutral; Tempo, LangSmith, Langfuse or Phoenix by configuration |
-| Metrics and cost | SQL views on the AdminJS dashboard | No metrics stack by default |
-| Notifications | Console banner, log, optional webhook | ntfy and paging are Part 2 |
+| Metrics and cost | Postgres rows, such as each model call's cost, in the Console | No metrics stack |
+| Notifications | Console banner, log | A webhook, ntfy and paging are Part 2 |
 
 ---
 
@@ -106,14 +105,13 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 |---|---|---|
 | Test runner | **vitest** | Fast, TypeScript-native |
 | Browser tests | vitest and our DevTools client against the real bank | The Runner's own browser |
-| Workflow tests | DBOS testing utilities, throwaway Postgres | Durable waits tested fast |
+| Workflow tests | The Runner's own run code against in-process Postgres (PGlite) | DBOS is someone else's product; we test our code |
 | Lint and format | **ESLint** (typescript-eslint), **Prettier** | Ordinary |
-| Driver rules (E0) | Custom rules on the **TypeScript compiler API** | Keeps CSS or id locators, page script, non-GET requests and model calls out of drivers |
+| Driver rules (E0, Part 2) | Custom rules on the **TypeScript compiler API** | Keeps CSS or id locators, page script, non-GET requests and model calls out of drivers; today ESLint only forbids catching a guard error |
 | Import boundaries | **dependency-cruiser** | Guardrails, evals and lint never import the Runner or factory; nothing imports the bank |
-| Spelling and prose | **cspell**, **markdownlint** | Clean prompts and docs |
 | Secret scanning | **gitleaks**, pinned image | Scans history and uncommitted changes |
 | Code quality (Part 2 of `GENERIC_BANK_PLAN.md`) | **SonarQube** (SonarQube Cloud, free for public repositories) | A quality gate on new code (coverage, duplication, hotspots, vulnerabilities) before merge |
-| CI | **GitHub Actions** | Typecheck, lint, unit, `check-prompts`, then the compose suites (browser, outcome, escalation, transfer, guard, PII) |
+| CI | **GitHub Actions** | A first job reads what a pull request changed, and a docs-only change runs nothing else. Then typecheck, lint and import boundaries; the tests the change touches (every test on master); the factory's repair when it could break; a secrets scan; and setup and up on a fresh clone |
 
 ---
 
@@ -121,6 +119,6 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 
 | Element | Choice | Why |
 |---|---|---|
-| Containers | **Docker** compose profiles (`default`, `factory`) | One command; a memory limit on every service |
-| Entry point | **just** | `up`, `demo`, `factory`, `try`, `requirements`, `down` |
+| Containers | **Docker** compose profiles (the default stack, `more-banks`, `factory`, `factory-run`, `seed`) | One command; a memory limit on every service |
+| Entry point | **just** | `setup`, `up`, `try`, `onboard`, `repair`, `requirements`, `down` |
 | Images | Node 26 slim; Debian's Chromium only where a browser runs | Small images |
