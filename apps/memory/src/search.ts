@@ -1,0 +1,83 @@
+// Hybrid search (plan §K.3): Postgres full-text ranking and pgvector similarity, each a ranked
+// list, fused by reciprocal rank. It searches what memory serves a bank, and nothing else.
+import type { Query } from './db.js';
+import { asVector, type Embed } from './embed.js';
+
+/** Reciprocal rank fusion's constant: a place in either list counts 1 / (K + place). */
+export const RRF_K = 60;
+
+/** Ranked lists of ids as one ranking, best first. */
+export function fuse(...rankings: string[][]): string[] {
+  const score = new Map<string, number>();
+  for (const ranking of rankings)
+    ranking.forEach((id, i) => score.set(id, (score.get(id) ?? 0) + 1 / (RRF_K + i + 1)));
+  return [...score.keys()].sort((a, b) => score.get(b)! - score.get(a)! || (a < b ? -1 : 1));
+}
+
+/** A question as a full-text query matching any of its words. Stop words drop out. */
+export const anyWord = (q: string) => (q.toLowerCase().match(/[a-z0-9]+/g) ?? []).join(' | ');
+
+/** How far down each list is read before fusing. */
+const DEPTH = 100;
+
+/** The lessons memory serves a bank ($1) of a vendor ($2): each at its current version, never
+ *  retired there, and a pattern only once confirmed. A version waiting for approval is not served. */
+export const SERVED = `FROM "Lesson" l JOIN "LessonVersion" v ON v."lessonId" = l.id AND v.version = l.current
+  WHERE v.state <> 'retired' AND NOT ($1 = ANY(COALESCE(v."retiredAtBanks", '{}')))
+    AND CASE v.scope WHEN 'pattern' THEN v.state <> 'proposed'
+                     WHEN 'vendor' THEN v.vendor = $2
+                     ELSE v.bank = $1 END`;
+
+const LESSON_TEXT = `to_tsvector('english', v.text || ' ' || COALESCE(v.why, '') || ' ' ||
+  COALESCE(array_to_string(v.signals, ' '), ''))`;
+
+/** The served lessons for a question, best first, by full-text rank and similarity fused. */
+export async function searchLessons(
+  db: Query,
+  embed: Embed,
+  at: { bank: string; vendor: string | null },
+  q: string,
+): Promise<string[]> {
+  const ids = async (sql: string, extra: unknown) =>
+    (await db.query<{ id: string }>(sql, [at.bank, at.vendor, extra])).rows.map((r) => r.id);
+  const [byText, byVector] = await Promise.all([
+    ids(
+      `SELECT l.id ${SERVED} AND ${LESSON_TEXT} @@ to_tsquery('english', $3)
+       ORDER BY ts_rank_cd(${LESSON_TEXT}, to_tsquery('english', $3)) DESC, l.id LIMIT ${DEPTH}`,
+      anyWord(q),
+    ),
+    ids(
+      `SELECT l.id ${SERVED} AND v.embedding IS NOT NULL
+       ORDER BY v.embedding <=> $3::vector, l.id LIMIT ${DEPTH}`,
+      asVector(await embed(q)),
+    ),
+  ]);
+  return fuse(byText, byVector);
+}
+
+/** Failure signatures as vectors, embedded once each. */
+export function failureSearch(embed: Embed) {
+  const vectors = new Map<string, Promise<number[]>>();
+  const vectorOf = (failure: string) => {
+    let v = vectors.get(failure);
+    if (!v) vectors.set(failure, (v = embed(failure.replace(/[_-]+/g, ' '))));
+    return v;
+  };
+  /** The failures most like a question, best first, by full-text rank and similarity fused. */
+  return async <R extends { failure: string; rank: number }>(rows: R[], q: string) => {
+    const query = await embed(q);
+    const similarity = await Promise.all(
+      rows.map(async (r) => (await vectorOf(r.failure)).reduce((s, x, i) => s + x * query[i]!, 0)),
+    );
+    const byText = rows.filter((r) => r.rank > 0).sort((a, b) => b.rank - a.rank);
+    const byVector = rows
+      .map((r, i) => [r, similarity[i]!] as const)
+      .sort((a, b) => b[1] - a[1])
+      .map(([r]) => r);
+    const order = fuse(
+      byText.map((r) => r.failure),
+      byVector.map((r) => r.failure),
+    );
+    return order.map((f) => rows.find((r) => r.failure === f)!);
+  };
+}
