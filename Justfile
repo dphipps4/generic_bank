@@ -13,6 +13,7 @@ set lists
 set dotenv-path := ["config/app.env", "config/local.env"]
 
 alias doctor := requirements
+alias help := default
 
 # The compose project, and the image tags, are named after this folder, so a second copy has its
 # own containers, volumes and images. This folder, generic_bank, is the project generic-bank.
@@ -95,8 +96,7 @@ tools:
 secrets-init:
     @{{scripts}}/secrets-init.sh
 
-# Render one env file per service into .run/env/ (least privilege), after adding any secret the
-# spec has gained since the files were made (never changing a value that exists)
+# Write each service's env file into .run/env/ (only the secrets it needs); adds new secrets, never changes one
 [group('Secrets (SOPS + age)')]
 env: secrets-init
     @{{scripts}}/render-env.sh
@@ -342,8 +342,7 @@ secrets-scan:
 browser:
     @{{scripts}}/browser.sh
 
-# Back to a fresh clone's state: build output and every volume deleted, the images rebuilt with no
-# cache. Then just up, as after just setup. Asks first.
+# Start again from nothing: deletes every volume, rebuilds the images with no cache; asks first
 [group('Housekeeping')]
 [confirm('This deletes every database and object store volume, and rebuilds every image. Continue?')]
 all:

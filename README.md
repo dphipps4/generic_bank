@@ -41,7 +41,7 @@ set up.
 just setup                      # once, after git clone: checks the Mac, creates secrets, builds the images
 just up                         # everything: data, memory, API, Console, crawler, all four banks, factory
 just down                       # stop everything; the data stays
-just                            # every recipe
+just help                       # every recipe, grouped, with what each does
 ```
 
 `just setup` generates every secret it can. The only ones it can't are the Claude and OpenAI API
