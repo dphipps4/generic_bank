@@ -201,21 +201,34 @@ export type Ending =
       guard?: { layer: string; rule: string };
     };
 
+/**
+ * A settlement's UPDATE (ending `WHERE id = $1`) as one statement with its attempt in the
+ * recorder's outbox (plan §K.4): the run's next attempt number, its status, and its code when the
+ * run failed or stopped. Nothing else of the run goes in, so nothing personal waits for memory.
+ */
+const recorded = (update: string) =>
+  `WITH s AS (${update} RETURNING id, bank, status::text AS status, "resultCode"),
+        e AS (INSERT INTO "EpisodeOutbox" ("runId", n, outcome, failure)
+              SELECT id, COALESCE((SELECT max(n) FROM "EpisodeOutbox" o WHERE o."runId" = s.id), 0) + 1,
+                     status, CASE WHEN status IN ('failed', 'escalated') THEN "resultCode" END
+              FROM s)
+   SELECT bank FROM s`;
+
 /** How long an escalation waits in the inbox before it shows as due. */
 const ESCALATION_DEADLINE_MS = 24 * 60 * 60_000;
 
 /**
  * Ends a run with exactly one result. Its sealed inputs are no longer needed, so they go, except
- * while a person may still let an escalated run resume.
+ * while a person may still let an escalated run resume. Its episode waits in the outbox.
  */
 export async function settleRun(sql: Sql, runId: string, e: Ending) {
   const code = e.status === 'succeeded' ? null : e.code;
   const retryable = e.status === 'failed' ? (e.retryable ?? RETRYABLE.has(e.code)) : null;
   const resumable = e.status === 'escalated' && e.code !== 'guard_tripped';
   const r = await sql.query<{ bank: string }>(
-    `UPDATE "TaskRun" SET status = $2, "resultCode" = $3, retryable = $4, result = $5, "settledAt" = now(),
+    recorded(`UPDATE "TaskRun" SET status = $2, "resultCode" = $3, retryable = $4, result = $5, "settledAt" = now(),
             "inputsSealed" = CASE WHEN $6 THEN "inputsSealed" END
-      WHERE id = $1 RETURNING bank`,
+      WHERE id = $1`),
     [
       runId,
       e.status,
@@ -554,9 +567,9 @@ async function finish(
   const json = data === undefined ? null : JSON.stringify(data);
   await sql.query('UPDATE "HumanTask" SET resolution = $2 WHERE id = $1', [taskId, json]);
   await sql.query(
-    `UPDATE "TaskRun" SET status = 'handed_off', "resultCode" = 'taken_over', retryable = NULL, result = $2,
+    recorded(`UPDATE "TaskRun" SET status = 'handed_off', "resultCode" = 'taken_over', retryable = NULL, result = $2,
             "settledAt" = now(), "inputsSealed" = NULL
-      WHERE id = $1`,
+      WHERE id = $1`),
     [runId, json],
   );
   return true;

@@ -189,6 +189,8 @@ services:
     command: ['node', 'apps/runner/dist/main.js']
     mem_limit: 768m
     env_file: [../../config/app.env, ../../.run/env/runner.env]
+    # Not a dependency: runs never wait on memory; their episodes wait in the outbox instead.
+    environment: { MEMORY_URL: 'http://memory:${MEMORY_PORT}' }
     networks: [app, world]
     depends_on: { postgres: { condition: service_healthy } }
     healthcheck:

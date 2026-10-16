@@ -7,6 +7,7 @@ import { loadConfig, port, secret } from '@gb/config';
 import { sql } from '@gb/db';
 import { s3Store } from '@gb/evidence';
 import { WORKFLOW } from '@gb/runs';
+import { startRecorder } from './recorder.js';
 import { registerTaskWorkflow } from './workflow.js';
 
 const cfg = loadConfig(
@@ -22,9 +23,18 @@ const cfg = loadConfig(
     BANK_SERVICE_PASSWORD: z.string().min(16),
     HAZARDS_FORCEABLE: z.enum(['true', 'false']).default('false'),
     HAZARD_HMAC_KEY: secret().optional(),
+    MEMORY_URL: z.url(),
+    MEMORY_TOKEN_RUNNER: secret(),
+    MEMORY_SIGNING_KEY: secret(),
   },
   process.env,
-  ['RUN_SEAL_KEY', 'ANSWER_SEAL_KEY', 'MINIO_ROOT_PASSWORD'],
+  [
+    'RUN_SEAL_KEY',
+    'ANSWER_SEAL_KEY',
+    'MINIO_ROOT_PASSWORD',
+    'MEMORY_TOKEN_RUNNER',
+    'MEMORY_SIGNING_KEY',
+  ],
 );
 
 const store = s3Store({
@@ -43,9 +53,10 @@ DBOS.setConfig({
 // The banks obey a forced hazard only when they too are forceable; the key never leaves the Runner.
 const forceable = cfg.HAZARDS_FORCEABLE === 'true';
 if (forceable && !cfg.HAZARD_HMAC_KEY) throw new Error('HAZARDS_FORCEABLE needs HAZARD_HMAC_KEY');
+const control = sql(cfg.CONTROL_DATABASE_URL);
 registerTaskWorkflow(
   {
-    sql: sql(cfg.CONTROL_DATABASE_URL),
+    sql: control,
     store,
     sealKey: cfg.RUN_SEAL_KEY,
     answerKey: cfg.ANSWER_SEAL_KEY,
@@ -63,6 +74,12 @@ await DBOS.launch();
 await DBOS.registerQueue(WORKFLOW.queue, { workerConcurrency: cfg.RUNNER_CONCURRENCY });
 
 const app = Fastify({ logger: true });
+// The recorder: settled runs' episodes, from the outbox to memory, whenever memory answers.
+startRecorder(
+  control,
+  { url: cfg.MEMORY_URL, token: cfg.MEMORY_TOKEN_RUNNER, signingKey: cfg.MEMORY_SIGNING_KEY },
+  { onError: (e) => app.log.warn(e, 'the recorder could not read the outbox') },
+);
 app.get('/healthz', async () => ({
   ok: true,
   service: 'runner',
