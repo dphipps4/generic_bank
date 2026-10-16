@@ -295,13 +295,14 @@ describe('a bank redesigns, the crawl breaks, the factory repairs it', () => {
       payload: { reason: 'the new words are on the frames' },
     });
     expect(approved.json()).toEqual({ ok: true, status: 'approved' });
-    // One hazard of each kind of result is enough here; the factory's real gate runs them all.
+    // One hazard is enough here, the cheapest (the gateway answers 503 at once); the factory's
+    // real gate runs them all.
     const v = await gate(
       {
         sql: db,
         sandbox: sandbox(),
         memory: memoryClient(memory.factory),
-        hazards: ['promo', 'permission-denial', 'service-unavailable'],
+        hazards: ['service-unavailable'],
       },
       recommendationId!,
     );
@@ -334,5 +335,5 @@ describe('a bank redesigns, the crawl breaks, the factory repairs it', () => {
     expect(back.version).toBe(v.id);
     expect(back.steps).toEqual(expect.arrayContaining(['notice', 'console', 'balance']));
     expect((await db.query(`SELECT count(*)::int AS n FROM "ModelCall"`)).rows[0]).toEqual(calls);
-  }, 480_000);
+  }, 300_000);
 });

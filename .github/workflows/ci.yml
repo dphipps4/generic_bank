@@ -62,12 +62,19 @@ jobs:
           key: chrome-${{ runner.os }}-${{ hashFiles('infra/scripts/browser.sh') }}
       - name: Headless Chromium for the browser tests
         run: '[ -d .run/browser/chrome ] || infra/scripts/browser.sh'
+      # The factory's repair drives the bank end to end, so it runs alone after the rest.
       - name: The tests this change touches
         if: github.event_name == 'pull_request'
-        run: npx vitest run --changed origin/${{ github.base_ref }} --passWithNoTests --bail=1
+        run: npx vitest run --changed origin/${{ github.base_ref }} --passWithNoTests --bail=1 --exclude tests/browser/repair.test.ts
+      - name: The factory's repair, if this change touches it
+        if: github.event_name == 'pull_request'
+        run: npx vitest run tests/browser/repair.test.ts --changed origin/${{ github.base_ref }} --passWithNoTests
       - name: The whole suite
         if: github.event_name != 'pull_request'
-        run: npx vitest run --bail=1
+        run: npx vitest run --bail=1 --exclude tests/browser/repair.test.ts
+      - name: The factory's repair
+        if: github.event_name != 'pull_request'
+        run: npx vitest run tests/browser/repair.test.ts
 
   secrets:
     name: no secrets in history
