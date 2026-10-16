@@ -34,7 +34,8 @@ Console: the admin UI
   email           admin@generic-bank.local
   password        $(get CONSOLE_ADMIN_PASSWORD "$local_env")
 
-The four banks' staff sites: the same two logins work at each; each names the login field its own way
+The four banks' staff sites. Sign in to any of them as ${BANK_OPERATOR_ID} or ${BANK_SUPERVISOR_ID} (passwords below);
+each bank names the username field its own way:
   Generic Bank (bank 1)            "Operator ID"   http://localhost:${BANK_GENERIC_PORT:-8081}/corelink/
   Example Credit Union (bank 2)    "Username"      http://localhost:${BANK_EXAMPLE_PORT:-8082}/
   Sample Savings Bank (bank 3)     "Staff number"  http://localhost:${BANK_SAMPLE_PORT:-8083}/online/branch/
