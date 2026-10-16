@@ -15,10 +15,12 @@ export {
 export { GENERIC_BANK, PROFILES } from './corelink/profiles.js';
 export {
   beside,
+  countInHistory,
   inHistory,
   memoFor,
   type Posted,
   prepareTransfer,
+  pressIntent,
   type Review,
   type SubmitHooks,
   submitTransfer,

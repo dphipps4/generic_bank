@@ -94,6 +94,15 @@ export async function journal(
   }
 }
 
+/** Whether a run's journal holds this intent: what a resumed run reads before it acts again. */
+export async function journaled(sql: Sql, runId: string, intent: string): Promise<boolean> {
+  const r = await sql.query(
+    'SELECT 1 FROM "JournalEntry" WHERE "runId" = $1 AND intent = $2 LIMIT 1',
+    [runId, intent],
+  );
+  return r.rows.length > 0;
+}
+
 export type Verdict =
   | { ok: true; runs: number; entries: number }
   | { ok: false; runId: string; seq: number; reason: string };

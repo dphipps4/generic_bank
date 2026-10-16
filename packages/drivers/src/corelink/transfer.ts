@@ -5,7 +5,7 @@
 // of its own. A refusal in the bank's own words ends the run as the business outcome it is, with
 // nothing submitted.
 import { button, choose, click, field, type ScreenModel, type, withText } from '@gb/screen';
-import { type DriverContext, type Outcome, see, stop, Stop } from '../sdk.js';
+import { type DriverContext, type Outcome, type Profile, see, stop, Stop } from '../sdk.js';
 import { readTile } from './check-balance.js';
 import { next, onTheWay, type Session, startSession, unknown } from './session.js';
 
@@ -154,6 +154,13 @@ export interface SubmitHooks {
   supervisorId: string;
 }
 
+/**
+ * The journal's line for the submit, written before the click. A run that finds it in its journal
+ * has pressed, or may have: it reads the history and never presses again (plan, §F.2).
+ */
+export const pressIntent = (profile: Pick<Profile, 'words'>, memoToken: string) =>
+  `press ${profile.words.submitTransfer[0]} for ${memoToken}`;
+
 export interface Posted {
   confirmation: string;
   seenInHistory: boolean;
@@ -203,13 +210,11 @@ export async function submitTransfer(
             return stop('escalated', 'guard_tripped', grant.reason);
           }
           // The intent is written before the click, so a crash between the two is known.
-          await hooks.journal({ intent: `press ${w.submitTransfer[0]} for ${input.memoToken}` });
+          const intent = pressIntent(ctx.profile, input.memoToken);
+          await hooks.journal({ intent });
           pressed = true;
           await click(page, button(s.model, w.submitTransfer));
-          await hooks.journal({
-            intent: `press ${w.submitTransfer[0]} for ${input.memoToken}`,
-            action: 'pressed',
-          });
+          await hooks.journal({ intent, action: 'pressed' });
           await sess.record('submit', s.screen, s.model, 'pressed submit, under the grant');
           break;
         }
@@ -285,6 +290,10 @@ export async function submitTransfer(
     throw e;
   }
 }
+
+/** The history check alone, in a session of its own: for a run that resumes after its press. */
+export const countInHistory = (ctx: DriverContext, input: TransferInput) =>
+  inHistory(startSession(ctx), input);
 
 /**
  * How many entries in the from-account's activity carry the memo token: 1 is the transfer, 0 or 2

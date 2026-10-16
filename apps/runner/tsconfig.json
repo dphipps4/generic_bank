@@ -19,6 +19,9 @@
       "path": "../../packages/evidence"
     },
     {
+      "path": "../../packages/guardrails"
+    },
+    {
       "path": "../../packages/runs"
     },
     {

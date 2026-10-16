@@ -194,7 +194,7 @@ export async function inputsOf<T>(sql: Sql, runId: string, secret: string): Prom
 export type Ending =
   | { status: 'succeeded'; data: unknown }
   | {
-      status: 'business_outcome' | 'failed' | 'escalated' | 'expired' | 'cancelled';
+      status: 'business_outcome' | 'handed_off' | 'failed' | 'escalated' | 'expired' | 'cancelled';
       code: ResultCode;
       retryable?: boolean;
       /** A guard trip: the layer that refused and its rule, kept with the freeze. */
@@ -752,6 +752,30 @@ export async function awaitDecision(
   }
 }
 
+/**
+ * The approval a run has already asked for, in whatever state it is now: a run that resumes waits
+ * on it again rather than asking twice.
+ */
+export async function approvalOf(
+  sql: Sql,
+  runId: string,
+): Promise<{ id: string; deadline: Date } | null> {
+  const r = await sql.query<{ id: string; deadline: Date }>(
+    `SELECT id, deadline FROM "HumanTask" WHERE "runId" = $1 AND kind = 'approval'
+      ORDER BY "openedAt" DESC LIMIT 1`,
+    [runId],
+  );
+  const t = r.rows[0];
+  return t ? { id: t.id, deadline: new Date(t.deadline) } : null;
+}
+
 export { forcedHazardsOf, HAZARD_HEADER, hazardHeader } from './hazards.js';
-export { hashOf, journal, type JournalLine, type Verdict, verifyJournal } from './journal.js';
+export {
+  hashOf,
+  journal,
+  journaled,
+  type JournalLine,
+  type Verdict,
+  verifyJournal,
+} from './journal.js';
 export { statementKey, statementOf, statementRef } from './statements.js';
