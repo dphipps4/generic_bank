@@ -137,6 +137,9 @@ export class Browser {
         '--disable-component-update',
         '--disable-sync',
         '--mute-audio',
+        // A branch workstation lets its console open windows: some consoles show search results
+        // in a window a page opens as it loads, which a pop-up blocker would stop.
+        '--disable-popup-blocking',
         '--hide-scrollbars',
         // Frames from another origin run in their own process and are attached as their own sessions.
         '--site-per-process',
@@ -272,7 +275,11 @@ export class Page {
     return this.cdp.call<R>(method, params, { sessionId: this.sessionId, timeoutMs });
   }
 
-  async init() {
+  /**
+   * Starts watching this page's events and gives it its identity: `window` for a window a page
+   * opened, caught paused, which `resume` lets go once everything it needs has been sent.
+   */
+  async init(kind: 'page' | 'window' = 'page', resume?: () => Promise<unknown>) {
     // Child frames from other origins attach automatically; each gets the same headers.
     this.offs.push(
       this.cdp.on((e) => {
@@ -360,12 +367,96 @@ export class Page {
         }
       }),
     );
-    await this.prepare(this.sessionId, 'page');
+    // A window's requests pass the same host guard as its opener's.
+    const guard: [string, Record<string, unknown>][] =
+      kind === 'window' && this.options.hosts
+        ? [['Fetch.enable', { patterns: [{ urlPattern: '*', requestStage: 'Request' }] }]]
+        : [];
+    await this.prepare(this.sessionId, kind, { extra: guard, resume });
+  }
+
+  /**
+   * The window an action opens (a page of search results), as a page of its own to read and act
+   * on. The window is caught before its first request and given this page's identity, so it is
+   * the same browser to the bank. The caller closes it when done, if the window has not closed
+   * itself.
+   */
+  async openedWindow(action: () => Promise<unknown>, timeoutMs = 30_000): Promise<Page> {
+    const cdp = this.cdp;
+    let off = () => {};
+    const caught = new Promise<Page>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new CdpTimeout('a new window', timeoutMs)), timeoutMs);
+      let taken: string | null = null;
+      off = cdp.on((e) => {
+        if (e.method !== 'Target.attachedToTarget' || e.sessionId) return;
+        const info = e.params.targetInfo as { targetId: string; openerId?: string };
+        const sessionId = e.params.sessionId as string;
+        const go = (s: string) => cdp.call('Runtime.runIfWaitingForDebugger', {}, { sessionId: s });
+        // The window's own session, attached below, is announced too: it is kept.
+        if (taken === info.targetId) return;
+        const ours =
+          info.openerId === this.targetId || (!!info.openerId && this.frames.has(info.openerId));
+        if (!ours || taken || e.params.waitingForDebugger !== true) {
+          // Any other page, this one included: let it go on, and let go of it.
+          void go(sessionId)
+            .catch(() => undefined)
+            .then(() => cdp.call('Target.detachFromTarget', { sessionId }))
+            .catch(() => undefined);
+          return;
+        }
+        taken = info.targetId;
+        // A session of its own: the one it was caught by ends when catching stops.
+        void cdp
+          .call<{ sessionId: string }>('Target.attachToTarget', {
+            targetId: info.targetId,
+            flatten: true,
+          })
+          .then(async ({ sessionId: own }) => {
+            const w = new Page(cdp, info.targetId, own, this.options, this.identity);
+            await w.init('window', () => go(sessionId));
+            return w;
+          })
+          .then(
+            (w) => {
+              clearTimeout(timer);
+              resolve(w);
+            },
+            (err: Error) => {
+              clearTimeout(timer);
+              reject(err);
+            },
+          );
+      });
+    });
+    caught.catch(() => undefined);
+    await cdp.call('Target.setAutoAttach', {
+      autoAttach: true,
+      waitForDebuggerOnStart: true,
+      flatten: true,
+      filter: [{ type: 'page' }],
+    });
+    try {
+      await action();
+      return await caught;
+    } finally {
+      off();
+      await cdp
+        .call('Target.setAutoAttach', {
+          autoAttach: false,
+          waitForDebuggerOnStart: false,
+          flatten: true,
+        })
+        .catch(() => undefined);
+    }
   }
 
   /** What every session needs: page events, the layout domains, auto-attach, extra headers. */
-  private async prepare(sessionId: string, kind: 'page' | 'frame' | 'window') {
-    const c = (m: string, p: Record<string, unknown> = {}) => this.cdp.call(m, p, { sessionId });
+  private async prepare(
+    sessionId: string,
+    kind: 'page' | 'frame' | 'window',
+    o: { extra?: [string, Record<string, unknown>][]; resume?: () => Promise<unknown> } = {},
+  ) {
+    const commands: [string, Record<string, unknown>][] = [];
     // The identity first, before anything this session loads (plan, §E.8). Screen metrics belong to
     // the page; a frame takes the rest. A window this page opened already has the page's locale.
     for (const [method, params] of identityCommands(this.identity, {
@@ -373,26 +464,40 @@ export class Page {
       height: this.options.height ?? 900,
     })) {
       if (kind === 'frame' && method === 'Emulation.setDeviceMetricsOverride') continue;
-      await c(method, params as Record<string, unknown>).catch((e: unknown) => {
+      commands.push([method, params as Record<string, unknown>]);
+    }
+    // A window this page opened has its own interception (openedDocument).
+    if (this.options.hosts && kind !== 'window')
+      commands.push(['Fetch.enable', { patterns: [{ urlPattern: '*', requestStage: 'Request' }] }]);
+    commands.push(
+      ['Page.enable', {}],
+      ['Page.setLifecycleEventsEnabled', { enabled: true }],
+      ['DOM.enable', {}],
+      ['Network.enable', {}],
+    );
+    if (this.options.headers)
+      commands.push(['Network.setExtraHTTPHeaders', { headers: this.options.headers }]);
+    commands.push(
+      ['Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true }],
+      ...(o.extra ?? []),
+    );
+    const send = ([method, params]: [string, Record<string, unknown>]) =>
+      this.cdp.call(method, params, { sessionId }).catch((e: unknown) => {
         if (kind === 'window' && e instanceof CdpError && /already in effect/.test(e.message))
           return;
         throw e;
       });
+    if (kind !== 'window') {
+      for (const command of commands) await send(command);
+      return;
     }
-    // A window this page opened has its own interception (openedDocument).
-    if (this.options.hosts && kind !== 'window')
-      await c('Fetch.enable', { patterns: [{ urlPattern: '*', requestStage: 'Request' }] });
-    await c('Page.enable');
-    await c('Page.setLifecycleEventsEnabled', { enabled: true });
-    await c('DOM.enable');
-    await c('Network.enable');
-    if (this.options.headers)
-      await c('Network.setExtraHTTPHeaders', { headers: this.options.headers });
-    await c('Target.setAutoAttach', {
-      autoAttach: true,
-      waitForDebuggerOnStart: true,
-      flatten: true,
-    });
+    // A window opened without its opener has no renderer until it is let go, and some answers wait
+    // for one. Every command is sent, and so takes effect, before the window goes on; the answers
+    // are awaited after.
+    const answers = commands.map(send);
+    answers.forEach((a) => a.catch(() => undefined));
+    await o.resume?.();
+    await Promise.all(answers);
   }
 
   /** Navigates, and waits for the top document's load event. */
@@ -424,17 +529,26 @@ export class Page {
    * The document an action opens in a new window (a statement's PDF), as the server sent it. The
    * window is caught before its first request, given this page's identity, and read at the network
    * layer when its response arrives; then it is closed. Nothing runs in it, and it is never asked
-   * for the document a second time.
+   * for the document a second time. With `orNavigation`, an action that navigates this page
+   * instead, and opens no window, answers null: the document is then on its way to this page.
    */
+  async openedDocument(action: () => Promise<unknown>, timeoutMs?: number): Promise<OpenedDocument>;
+  async openedDocument(
+    action: () => Promise<unknown>,
+    timeoutMs: number,
+    o: { orNavigation: true },
+  ): Promise<OpenedDocument | null>;
   async openedDocument(
     action: () => Promise<unknown>,
     timeoutMs = 30_000,
-  ): Promise<OpenedDocument> {
+    o: { orNavigation?: boolean } = {},
+  ): Promise<OpenedDocument | null> {
     const cdp = this.cdp;
     let popup: { sessionId: string; targetId: string } | null = null;
     let off = () => {};
+    let timer: NodeJS.Timeout | undefined;
     const caught = new Promise<OpenedDocument>((resolve, reject) => {
-      const timer = setTimeout(
+      timer = setTimeout(
         () => reject(new CdpTimeout('a document in a new window', timeoutMs)),
         timeoutMs,
       );
@@ -458,17 +572,13 @@ export class Page {
             return;
           }
           popup = { sessionId, targetId: info.targetId };
-          void (async () => {
-            await this.prepare(sessionId, 'window');
-            await cdp.call(
-              'Fetch.enable',
-              {
-                patterns: [{ urlPattern: '*', resourceType: 'Document', requestStage: 'Response' }],
-              },
-              { sessionId },
-            );
-            await go(sessionId);
-          })().catch((err: Error) => done(() => reject(err)));
+          const caughtAt = [
+            { urlPattern: '*', resourceType: 'Document', requestStage: 'Response' },
+          ];
+          void this.prepare(sessionId, 'window', {
+            extra: [['Fetch.enable', { patterns: caughtAt }]],
+            resume: () => go(sessionId),
+          }).catch((err: Error) => done(() => reject(err)));
           return;
         }
         if (e.method !== 'Fetch.requestPaused' || !popup || e.sessionId !== popup.sessionId) return;
@@ -524,10 +634,27 @@ export class Page {
       flatten: true,
       filter: [{ type: 'page' }],
     });
+    const since = Date.now();
+    let over = false;
     try {
       await action();
-      return await caught;
+      if (!o.orNavigation) return await caught;
+      // A window is announced as the action opens it; a page that navigates instead, with no window
+      // a moment later, has its document coming to it.
+      const navigated = (async () => {
+        while (!over) {
+          if (popup) return caught;
+          const at = this.lastNavigationRequest;
+          if (at >= since && Date.now() - at > 1500) return null;
+          if (Date.now() - since > timeoutMs) return caught;
+          await new Promise((r) => setTimeout(r, 50));
+        }
+        return null;
+      })();
+      return await Promise.race([caught, navigated]);
     } finally {
+      over = true;
+      clearTimeout(timer);
       off();
       await cdp
         .call('Target.setAutoAttach', {
