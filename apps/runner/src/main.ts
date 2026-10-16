@@ -50,7 +50,12 @@ registerTaskWorkflow(
     sealKey: cfg.RUN_SEAL_KEY,
     answerKey: cfg.ANSWER_SEAL_KEY,
     // The staff service account: the same operator at every bank here; from Vault in the plan.
-    credentials: async () => ({ operatorId: '0412', password: cfg.BANK_SERVICE_PASSWORD }),
+    // The supervisor is the one whose approval code a person reads over a transfer's threshold.
+    credentials: async () => ({
+      operatorId: '0412',
+      password: cfg.BANK_SERVICE_PASSWORD,
+      supervisorId: '0901',
+    }),
   },
   forceable ? cfg.HAZARD_HMAC_KEY : undefined,
 );
