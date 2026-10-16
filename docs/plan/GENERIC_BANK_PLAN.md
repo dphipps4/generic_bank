@@ -397,6 +397,10 @@ ground under it does:
   calls in the GenAI semantic conventions. `just trace …` reads one. `just observe` adds the
   Collector, Grafana Tempo, Loki and Grafana, with OpenTelemetry metrics beside the SQL views.
 - **CI:** signed, scanned images pinned by digest; SonarQube quality gate.
+- **Guardrails, the rest:** each page classified, member scope, the network after sign-in,
+  sign-in pacing, customer-safe messages, the trap matrix.
+- **The factory, live:** onboarding banks 3 and 4 end to end with a real model and budget.
+- **The prompt library** with its checker, and **the Console complete.**
 - **Tests:** Part 2 adds the full hazard matrix, transfer safety under failure, every human path, a trap matrix, soak runs, and the factory and memory in depth.
 
 ---
@@ -2261,10 +2265,10 @@ linking each point of the brief it touches to the code and test that prove it.
 | M2 | Banks 2, 3 and 4, and ambient hazards: themes, labels, layout variants, URL bases, image text, account formats, bank 3's extra frame, bank 4's split transfer and popup results | all four banks seeded and browsable |
 | M3 | Screen package and the first driver: capture, fully-rendered wait, recognition, targeting, image fingerprints, the CoreLink driver with bank 1's profile written by hand, Task API with OAuth2 (clients, tokens, refresh) and its HTTP status codes, trail, masking, AdminJS run pages and the API clients page | `checkBalance` succeeds on bank 1 under ambient hazards; outcome tests green |
 | M4 | The browser's fingerprint (Chrome on a Mac, set at launch; banks 2 to 4 refuse anything not a browser), then human steps: inbox, codes, transfer preparation, approval grant, submit, swallowed-submit protocol, the tool definitions, `downloadStatements`, hazard lab | escalation and transfer-safety suites green |
-| M5 | Guardrails complete, trap matrix, PII scan, customer-safe messages | guards and PII suites green |
+| M5 | The guard on every action and the PII scan (the rest of the guardrails in Part 2) | guards and PII suites green |
 | M6 | Memory service | memory suite green |
 | M7 | **Factory:** workflow, model gateway, tools, caps, scout (autocrawl), evals E0 to E4, review gate, probation, driver states in the Console, mock mode | **the factory onboards bank 2 as a profile, end to end, and it is promoted after probation** |
 | M8 | **Repair loop:** turn on bank 1's redesign (`BANK_REDESIGN`); runs fail; the driver is demoted; a repair case opens; a factory repair run fixes it | the repair is visible end to end in the Console |
-| M9 | Prompt library, `check-prompts`, prompt eval runner; Console complete ([Appendix G](#appendix-g-the-console)) | `check-prompts` green; every Console page exists |
+| M9 (Part 2) | Prompt library, `check-prompts`, prompt eval runner; Console complete ([Appendix G](#appendix-g-the-console)) | `check-prompts` green; every Console page exists |
 | M10 | README, diagram, the requirements report (every point of the brief, how we meet it, and links to the code and tests that prove it), the 80%-to-100% notes, a recorded factory run for mock mode | a reviewer can clone, `just up`, `just demo`, `just factory` in minutes |
 | **Submission** | | |
