@@ -1841,6 +1841,7 @@ files for a pull request.
 | PII | `tests/pii` | scans everything runs wrote (database rows, objects and log files) for seeded secrets and personal values. |
 | Factory | `apps/factory/test` | workflow phases with a fake browser and mock model, caps, the meter, the tool veto, doneness, probation. |
 | Memory | `apps/memory/test` | screens, merge, confirm, dispute, retire, widen, return, demote, pack budget, chain verification. |
+| Memory suite | `tests/memory` | the role matrix, the privacy screen, the seed, every rule, the pack, a tampered change log and the outbox, all through the Memory service's API. |
 | Prompts | `packages/prompts/test` | the checker, the loader, schemas. |
 
 **CI** (GitHub Actions): typecheck and lint (with E0 and the import boundaries). A pull request
