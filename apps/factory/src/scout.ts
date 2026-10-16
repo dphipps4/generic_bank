@@ -2,7 +2,9 @@
 // every page it reaches is a frame. Its tools (§M.4) work over our own browser: they open only the
 // run's hosts, act by control reference from the screen model, press keys from a fixed set, never
 // type a secret as text, and never run script in a page. The server types a credential and a
-// person's code; the model never sees either. It never presses the bank's submit for a transfer.
+// person's code; the model never sees either. It never presses the bank's submit for a transfer
+// (on the transfer path, no control named with a money word at all), and never clicks a picture no
+// one has named (§E.1).
 import { maskText } from '@gb/evidence';
 import {
   ActError,
@@ -10,6 +12,8 @@ import {
   choose,
   click,
   type Control,
+  type KnownPicture,
+  namePictures,
   normalize,
   type Page,
   press,
@@ -37,8 +41,10 @@ export interface ScoutDeps {
   credentials: { operatorId: string; password: string };
   /** A person's code, once the bank has sent one. */
   code(): Promise<string>;
-  /** The bank's submit for a transfer, in the profile's words. The Scout never presses it. */
+  /** The bank's submit for a transfer, in the profile's words, if there is a profile. */
   never: string[];
+  /** The profile's named pictures of text; any other picture stays unnamed. */
+  pictures?: KnownPicture[];
 }
 
 /** The latest page as the Scout last read it, for the Supervisor. */
@@ -48,6 +54,9 @@ export interface Latest {
   /** The page as the model reads it. */
   view: ReturnType<typeof view>;
 }
+
+// Words that move money, for every bank, on the transfer path. "Continue" only reaches the review.
+const MONEY = /\b(confirm|submit|send|pay|authori[sz]e|approve|transfer now)\b/i;
 
 // The bank says it sent a code, or asks for one from the authenticator app.
 const CODE_SENT =
@@ -95,6 +104,7 @@ export function scout(deps: ScoutDeps) {
   let last: ScreenModel | null = null;
   let latest: Latest | null = null;
   let signIns = 0;
+  let transferPath = false;
   // Where the list of refused requests stood when the current call began.
   let mark = 0;
 
@@ -103,7 +113,10 @@ export function scout(deps: ScoutDeps) {
     if (!c) throw new ToolRefusal(`there is no control ${r} on the latest page; look again`);
     return c;
   };
-  const submits = (c: Control) => deps.never.some((w) => normalize(c.name).includes(normalize(w)));
+  const submits = (c: Control) =>
+    deps.never.some((w) => normalize(c.name).includes(normalize(w))) ||
+    (transferPath && MONEY.test(c.name));
+  const unnamed = (c: Control) => (c.role === 'image' || c.role === 'image-button') && !c.name;
 
   /** After an action: the page once it is drawn, recorded as a step with its frame. */
   async function see(name: string, action: string, picture = false): Promise<ToolResult> {
@@ -114,7 +127,8 @@ export function scout(deps: ScoutDeps) {
       did += `; a dialog opened and was answered with Cancel`;
       r = await waitFullyRendered(page, { limitMs: 60_000 });
     }
-    last = r.model;
+    const model = namePictures(r.model, deps.pictures ?? []);
+    last = model;
     const left = page.refused.slice(mark).filter((x) => x.document);
     for (const x of left)
       await trail.step(
@@ -123,8 +137,8 @@ export function scout(deps: ScoutDeps) {
       );
     if (left.length)
       did += `; the page tried to open ${left[0]!.host}, which is not on the allowlist, and was stopped`;
-    const f = (await trail.step({ name, action: did }, r.model))!;
-    const v = view(f, r.model, (s) => maskText(s, trail.policy));
+    const f = (await trail.step({ name, action: did }, model))!;
+    const v = view(f, model, (s) => maskText(s, trail.policy));
     latest = { ref: f.ref, image: f.image, view: v };
     const text = `${did}.\n${JSON.stringify(v)}`;
     return picture && f.image ? { text, image: f.image } : { text };
@@ -163,7 +177,11 @@ export function scout(deps: ScoutDeps) {
         const c = control(i.ref);
         if (submits(c))
           throw new ToolRefusal(
-            `${c.ref} is the bank's submit for a transfer; the factory stops at the review page`,
+            `${c.ref} could move money; the factory stops at the transfer's review page`,
+          );
+        if (unnamed(c))
+          throw new ToolRefusal(
+            `${c.ref} is a picture no one has named, and an unnamed picture is never clicked`,
           );
         await click(page, c);
         return see('click', `clicked the ${c.role} ${c.ref}`);
@@ -207,10 +225,17 @@ export function scout(deps: ScoutDeps) {
       description: 'Presses one key, from a fixed set, in whatever has the focus.',
       input: z.object({ key: z.enum(SPECIAL_KEYS) }),
       async run(i: { key: (typeof SPECIAL_KEYS)[number] }) {
-        // Enter on a page with the bank's submit could press it.
+        // Enter on a page with the bank's submit, or an unnamed picture button, could press it.
         if (i.key === 'Enter' && last?.controls.some(submits))
           throw new ToolRefusal(
-            "Enter is not pressed on a page with the bank's submit for a transfer; the factory stops at the review page",
+            "Enter is not pressed on a page with a control that could move money; the factory stops at the transfer's review page",
+          );
+        if (
+          i.key === 'Enter' &&
+          last?.controls.some((c) => c.role === 'image-button' && unnamed(c))
+        )
+          throw new ToolRefusal(
+            'Enter is not pressed on a page with a picture button no one has named; it could press it',
           );
         await press(page, i.key);
         await page.settle();
@@ -306,7 +331,15 @@ export function scout(deps: ScoutDeps) {
       }));
   }
 
-  return { call, tools: toolsFor, latest: () => latest };
+  return {
+    call,
+    tools: toolsFor,
+    latest: () => latest,
+    /** On the transfer path, every control named with a money word is refused. */
+    onTransferPath(on: boolean) {
+      transferPath = on;
+    },
+  };
 }
 
 export type Scout = ReturnType<typeof scout>;

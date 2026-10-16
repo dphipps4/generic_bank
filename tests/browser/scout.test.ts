@@ -23,7 +23,7 @@ import { GENERIC_BANK } from '../../packages/drivers/src/corelink/profiles.js';
 import { memoryStore } from '../../packages/evidence/src/index.js';
 import { controlDb } from '../../packages/oauth/test/control.js';
 import { answerHumanTask } from '../../packages/runs/src/index.js';
-import { Browser } from '../../packages/screen/src/index.js';
+import { Browser, encodePng } from '../../packages/screen/src/index.js';
 import { type LiveBank, liveBank, PASSWORDS } from '../support/banks.js';
 
 // The Scout against the real Generic Bank in Chrome: its tools, what they refuse, and a run guided
@@ -42,6 +42,9 @@ let store: ReturnType<typeof memoryStore>;
 let near: Server;
 let far: Server;
 let farHits = 0;
+let posts = 0;
+// A picture of text: a dark bar, as a button drawn as an image.
+const CONFIRM = encodePng({ width: 80, height: 24, data: new Uint8Array(80 * 24 * 4).fill(64) });
 let nearUrl: string;
 let farHost: string;
 
@@ -57,8 +60,27 @@ beforeAll(async () => {
     s.end('far away');
   });
   farHost = `127.0.0.1:${await listen(far)}`;
-  near = createServer((_q, s) => {
+  near = createServer((q, s) => {
+    if (q.url === '/confirm.png') {
+      s.setHeader('content-type', 'image/png');
+      return s.end(CONFIRM);
+    }
     s.setHeader('content-type', 'text/html');
+    if (q.method === 'POST') {
+      posts++;
+      return s.end('<title>Near</title><p>Posted.</p>');
+    }
+    // A review page whose submit is a picture of text with no name, as bank 2's is, and a named
+    // picture button beside it.
+    // A bank with no profile: its submit is a text button named Confirm.
+    if (q.url === '/confirm')
+      return s.end(
+        `<title>Near</title><p>Review transfer</p><form method="post" action="/submit"><input type="submit" value="Confirm"></form><form method="post" action="/continue"><input type="submit" value="Continue"></form>`,
+      );
+    if (q.url === '/review')
+      return s.end(
+        `<title>Near</title><p>Review transfer</p><form method="post" action="/submit"><input type="image" src="/confirm.png"></form><form method="post" action="/preview"><input type="image" src="/confirm.png" alt="Preview"></form>`,
+      );
     s.end(
       `<title>Near</title><p>A page with a way out.</p><img src="http://${farHost}/pixel.png" width="1" height="1"><a href="http://${farHost}/away">Elsewhere</a>`,
     );
@@ -83,7 +105,12 @@ const lastCode = async () => {
   return /(\d{6})/.exec(r.rows[0]!.body)![1]!;
 };
 
-async function newScout(runId: string, start = bank.url, code = lastCode) {
+async function newScout(
+  runId: string,
+  start = bank.url,
+  code = lastCode,
+  never: string[] = GENERIC_BANK.words.submitTransfer,
+) {
   const page = await browser.newPage();
   const trail = await openTrail({
     sql: db,
@@ -100,7 +127,7 @@ async function newScout(runId: string, start = bank.url, code = lastCode) {
     trail,
     credentials: CREDS,
     code,
-    never: GENERIC_BANK.words.submitTransfer,
+    never,
   });
   return { page, trail, s };
 }
@@ -223,6 +250,59 @@ describe('the Scout’s tools', () => {
       'scout-refusals',
     );
     expect(refused).toHaveLength(9);
+    await page.close();
+  }, 120_000);
+
+  it('on the transfer path, never presses a control named with a money word, profile or not', async () => {
+    const { page, s } = await newScout('scout-money', `${nearUrl}confirm`, lastCode, []);
+    const before = posts;
+    // Off the transfer path, Confirm is only a word; on it, Confirm moves money.
+    s.onTransferPath(true);
+    const p = read(await s.call('scout', 'browser_open', {})).page;
+    await expect(
+      s.call('scout', 'browser_click', { ref: refOf(p, 'button', 'Confirm') }),
+    ).rejects.toThrow(/could move money/);
+    await expect(s.call('scout', 'browser_press', { key: 'Enter' })).rejects.toThrow(
+      /could move money/,
+    );
+    expect(posts).toBe(before);
+    const refused = await rows<{ action: string }>(
+      `SELECT action FROM "Step" WHERE "runId" = $1 AND name = 'refused' ORDER BY seq`,
+      'scout-money',
+    );
+    expect(refused.map((r) => r.action)).toEqual(['browser_click', 'browser_press']);
+    // Continue only leads to the review page, and stays allowed.
+    expect(
+      read(await s.call('scout', 'browser_click', { ref: refOf(p, 'button', 'Continue') })).page
+        .texts,
+    ).toContain('Posted.');
+    expect(posts).toBe(before + 1);
+    await page.close();
+  }, 120_000);
+
+  it('never clicks a picture no one has named, nor presses Enter beside one', async () => {
+    const { page, s } = await newScout('scout-pictures', `${nearUrl}review`);
+    const before = posts;
+    const p = read(await s.call('scout', 'browser_open', {})).page;
+    const [unnamed, named] = p.controls.filter((c) => c.role === 'image-button');
+    expect([unnamed!.name, named!.name]).toEqual(['', 'Preview']);
+    await expect(s.call('scout', 'browser_click', { ref: unnamed!.ref })).rejects.toThrow(
+      /an unnamed picture is never clicked/,
+    );
+    await expect(s.call('scout', 'browser_press', { key: 'Enter' })).rejects.toThrow(
+      /picture button no one has named/,
+    );
+    expect(posts).toBe(before);
+    const refused = await rows<{ action: string }>(
+      `SELECT action FROM "Step" WHERE "runId" = $1 AND name = 'refused' ORDER BY seq`,
+      'scout-pictures',
+    );
+    expect(refused.map((r) => r.action)).toEqual(['browser_click', 'browser_press']);
+    // A named picture is clicked, and its form posts.
+    expect(read(await s.call('scout', 'browser_click', { ref: named!.ref })).page.texts).toContain(
+      'Posted.',
+    );
+    expect(posts).toBe(before + 1);
     await page.close();
   }, 120_000);
 
@@ -447,15 +527,17 @@ const ANSWER_KEY = 'a'.repeat(32);
 /** A person at the Console: answers each staff-code task with the code the bank sent. */
 function person(runId: string) {
   let on = true;
-  let answered = 0;
+  const answered: string[] = [];
   const done = (async () => {
     while (on) {
       const open = await db.query<{ id: string }>(
         `SELECT id FROM "HumanTask" WHERE "runId" = $1 AND status = 'open'`,
         [runId],
       );
-      for (const t of open.rows)
-        if (await answerHumanTask(db, t.id, await lastCode(), 'staff@test', ANSWER_KEY)) answered++;
+      for (const t of open.rows) {
+        const code = await lastCode();
+        if (await answerHumanTask(db, t.id, code, 'staff@test', ANSWER_KEY)) answered.push(code);
+      }
       await new Promise((r) => setTimeout(r, 200));
     }
   })();
@@ -500,7 +582,8 @@ async function runThrough(upstream: Upstream, runId: string) {
         supervisorAgent: agent('supervisor'),
         scout: s,
         trail,
-        goal: GOALS[goal](MEMBERS.demo),
+        goal,
+        member: MEMBERS.demo,
         conversation,
       });
       conversation = r.conversation;
@@ -562,17 +645,23 @@ describe('the Supervisor guiding the Scout', () => {
         'guided-mock',
       );
       expect(refused.map((r) => r.action)).toEqual(['browser_click', 'browser_press']);
-      for (const r of refused) expect(r.outcome).toMatch(/the factory stops at the review page/);
+      for (const r of refused)
+        expect(r.outcome).toMatch(/the factory stops at the transfer's review page/);
       expect((await bank.db.query('SELECT 1 FROM transfers')).rows).toHaveLength(0);
 
       // The code came from a person through the Console's inbox, and no model saw it.
-      expect(replayed.answered).toBe(1);
+      expect(replayed.answered).toHaveLength(1);
       expect(
         await rows(`SELECT kind, status FROM "HumanTask" WHERE "runId" = $1`, 'guided-mock'),
       ).toEqual([{ kind: 'staff_code', status: 'answered' }]);
-      const seen =
-        (await readFile(join(dir, 'guided-live.jsonl'), 'utf8')) + (await stored('guided-mock'));
-      for (const secret of [PASSWORDS.service, OPERATORS.service.id, await lastCode()])
+      // The masked screenshots are left out: base64 holds runs of digits that a code can match.
+      const recording = (await readFile(join(dir, 'guided-live.jsonl'), 'utf8')).replace(
+        /"data":"[A-Za-z0-9+/=]+"/g,
+        '"data":""',
+      );
+      const seen = recording + (await stored('guided-live')) + (await stored('guided-mock'));
+      const codes = [...recorded.answered, ...replayed.answered];
+      for (const secret of [PASSWORDS.service, OPERATORS.service.id, ...codes])
         expect(seen).not.toContain(secret);
 
       // Both roles went through the gateway, on their models, at no cost in mock mode.

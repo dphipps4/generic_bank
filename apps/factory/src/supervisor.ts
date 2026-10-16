@@ -2,10 +2,11 @@
 // picture and the page as JSON, reasons about where the Scout stands against the goal, and answers
 // in a fixed form: the next step, wait, or stop; why, in one line; and the frames of this run it
 // relied on. An unreadable answer counts as wait; three in a row stop the run, and so does the same
-// step asked three times in a row.
+// step asked three times in a row, and so does the run's hours cap.
 import { maskText } from '@gb/evidence';
 import { z } from 'zod';
 import { type Agent, type Conversation, turn } from './agent.js';
+import { CAPS } from './caps.js';
 import { runScout, type Scout, type Supervisor } from './scout.js';
 import type { Trail } from './trail.js';
 
@@ -85,7 +86,10 @@ export function supervisor(o: {
   scout: Scout;
   trail: Trail;
   goal: string;
+  /** When the run started; the run stops at CAPS.activeHoursPerRun after it. */
+  startedAt?: Date;
 }): Supervisor & { ended(): string | null } {
+  const until = (o.startedAt?.getTime() ?? Date.now()) + CAPS.activeHoursPerRun * 3_600_000;
   const steps: string[] = [];
   let asked: string | null = null;
   let repeats = 0;
@@ -97,6 +101,11 @@ export function supervisor(o: {
     async next(report) {
       let unreadable = 0;
       for (;;) {
+        if (Date.now() >= until) {
+          ended = `the run has been active ${CAPS.activeHoursPerRun} hours, its cap`;
+          await o.trail.step({ name: 'supervisor', action: 'stop', outcome: ended }, null);
+          return null;
+        }
         const f = o.scout.latest();
         if (!f) throw new Error('the Supervisor has no frame to look at');
         if (asked !== null)
@@ -163,11 +172,21 @@ export async function runGoal(o: {
   supervisorAgent: Agent;
   scout: Scout;
   trail: Trail;
-  goal: string;
+  goal: Goal;
+  /** The member whose accounts the goal is on. */
+  member: string;
   conversation?: Conversation;
+  startedAt?: Date;
 }): Promise<{ conversation: Conversation; ended: string | null }> {
+  o.scout.onTransferPath(o.goal === 'transfer');
   if (!o.scout.latest()) await o.scout.call('scout', 'browser_open', {});
-  const s = supervisor({ agent: o.supervisorAgent, scout: o.scout, trail: o.trail, goal: o.goal });
+  const s = supervisor({
+    agent: o.supervisorAgent,
+    scout: o.scout,
+    trail: o.trail,
+    goal: GOALS[o.goal](o.member),
+    startedAt: o.startedAt,
+  });
   const conversation = await runScout({
     agent: o.scoutAgent,
     scout: o.scout,

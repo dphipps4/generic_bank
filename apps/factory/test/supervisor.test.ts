@@ -89,7 +89,7 @@ const answer = (next: string, frames = ['f1'], reason = 'the sign-in form is on 
   JSON.stringify({ next, reason, frames });
 
 /** A Supervisor over a Scout that is always on frame f1, the only frame of the run. */
-function setUp() {
+function setUp(startedAt?: Date) {
   const steps: { name: string; action?: string; outcome?: string }[] = [];
   const trail: Trail = {
     policy: { known: [] },
@@ -114,6 +114,7 @@ function setUp() {
     scout,
     trail,
     goal: 'Reach the balance.',
+    startedAt,
   });
   return { s, steps, call };
 }
@@ -190,5 +191,16 @@ describe('the Supervisor’s answer', () => {
     expect(await s.next('Nothing happened.')).toBe('Sign in.');
     expect(await s.next('Nothing happened.')).toBeNull();
     expect(s.ended()).toBe('the same step 3 times in a row: no progress');
+  });
+
+  it('stops at the run’s hours cap without asking the model', async () => {
+    const { s, steps } = setUp(new Date(Date.now() - 4 * 3_600_000 - 1000));
+    answers = [answer('Sign in.')];
+    expect(await s.next(null)).toBeNull();
+    expect(s.ended()).toBe('the run has been active 4 hours, its cap');
+    expect(sent).toHaveLength(0);
+    expect(steps).toEqual([
+      { name: 'supervisor', action: 'stop', outcome: 'the run has been active 4 hours, its cap' },
+    ]);
   });
 });
