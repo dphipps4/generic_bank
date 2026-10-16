@@ -26,6 +26,7 @@ export {
   submitTransfer,
   type TransferInput,
 } from './corelink/transfer.js';
+export { controlNames } from './corelink/names.js';
 export { signatures } from './corelink/signatures.js';
 export {
   type Credentials,

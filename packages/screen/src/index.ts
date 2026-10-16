@@ -36,7 +36,19 @@ export {
   type Signature,
 } from './recognize.js';
 export { button, field, inRow, TargetError, withText } from './target.js';
-export { ActError, choose, click, press, SPECIAL_KEYS, type SpecialKey, type } from './act.js';
+export {
+  type Action,
+  ActError,
+  choose,
+  click,
+  type Guard,
+  guardActions,
+  press,
+  SPECIAL_KEYS,
+  type SpecialKey,
+  type,
+  typeSecret,
+} from './act.js';
 export {
   distance,
   fingerprint,

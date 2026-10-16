@@ -1368,12 +1368,15 @@ with the rule and layer.
 | Job | Screen | Allowed |
 |---|---|---|
 | every job | `sign_in` | type into "Operator ID" and "Password" (secret typing only), press "Sign In" |
-| | `staff_code` | choose a delivery channel once, type the code a person supplied, press "Verify" |
-| | `notice`, `promo`, `session_warning` | press the non-committal choice ("Not now", "Stay signed in") |
+| | `staff_code` | choose a delivery channel once, ask for a code or a new one, type the code a person supplied, press "Verify" |
+| | `notice`, `promo`, `session_warning` | press the non-committal choice ("Not now", "Stay signed in"), or "Acknowledge" for updated terms |
+| | `home` | open a menu |
 | | `member.search` | type into "Member number", press "Search", open the one matching result |
+| | any screen | open "Member Search", wherever the bank puts it (an open menu hides the page under it); press "Dismiss" on a notice drawn over the page |
 | `check_balance` | `member.summary` | read; nothing else |
-| `download_statements` | `member.summary`, `statements` | press "Statements", choose the account, press "Statement" on each requested row (document GET only) |
-| `transfer` | `transfer.form` | choose "From" and "To", type "Amount" and "Memo", press "Continue" |
+| `download_statements` | `member.summary`, `statements`, `statement.viewer` | press "Statements", choose the account, show more rows, open a row's menu, press "Statement" on each requested row; on a statement's own page, press "Download" and "Back to statements" (document GET only) |
+| `transfer` | `member.summary` | open "Transfer Funds", and "Activity" to confirm |
+| | `transfer.form` | choose "From" and "To", type "Amount" and "Memo", press "Continue" |
 | | `transfer.review` | press "Submit transfer" **only with an unused grant whose values match the screen** |
 | | `supervisor_approval` | type the supervisor code a person supplied, press "Approve" |
 | | `activity` | read, to confirm by memo token |
@@ -1381,6 +1384,10 @@ with the rule and layer.
 Never on any list: "Pay now", "Add payee", "Change address", "Waive fee", "Enroll in
 eStatements", "Close account", "Admin", "Reports". Widening a list is a reviewed code change,
 never a Console form.
+
+The lists name controls in the product's words. Each bank's reviewed profile gives its own, so
+"Log In" counts as "Sign In". The names never on a list are refused first, whatever a bank calls
+them.
 
 ### J.2 The layers
 

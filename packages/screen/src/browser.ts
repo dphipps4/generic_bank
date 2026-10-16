@@ -258,6 +258,8 @@ export class Page {
   /** Requests refused because their host is not allowed: host and path, never the query. */
   readonly refused: { host: string; path: string; document: boolean }[] = [];
   private offs: (() => void)[] = [];
+  /** The page that opened this window; null for a page of its own. */
+  opener: Page | null = null;
 
   constructor(
     readonly cdp: Cdp,
@@ -413,6 +415,7 @@ export class Page {
           })
           .then(async ({ sessionId: own }) => {
             const w = new Page(cdp, info.targetId, own, this.options, this.identity);
+            w.opener = this;
             await w.init('window', () => go(sessionId));
             return w;
           })

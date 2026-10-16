@@ -43,7 +43,7 @@ const STATEMENT = 'Statement';
 /** A drop-down menu's title, drawn with a downward arrow after it. */
 const MENU = /\s[▾▼]$/;
 /** The way to the rest of a list that shows its latest rows only. */
-const MORE = /^view more\b/i;
+export const MORE = /^view more\b/i;
 const mid = (b: { y: number; h: number }) => b.y + b.h / 2;
 const onRow = (row: Text, b: { y: number; h: number }) =>
   Math.abs(mid(b) - mid(row.box)) <= b.h / 2 + 4;
