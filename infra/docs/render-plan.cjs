@@ -119,13 +119,14 @@ function render(file, title) {
   main{padding:28px 0 120px;min-width:0;max-width:900px}
   h1{font-size:38px;line-height:1.15;letter-spacing:-.018em;margin:8px 0 18px;font-weight:600}
   h2{font-family:var(--sans);font-size:15px;font-weight:650;letter-spacing:.05em;
-     text-transform:uppercase;color:var(--accent);margin:64px 0 12px;padding-top:14px;
+     text-transform:uppercase;color:var(--accent);margin:32px 0 10px;padding-top:10px;
      border-top:1px solid var(--rule)}
   h3{font-size:21px;font-weight:600;margin:36px 0 8px;letter-spacing:-.005em}
   h4{font-family:var(--sans);font-size:15px;font-weight:650;margin:26px 0 6px}
   p,li{color:var(--ink)}
   a{color:var(--accent)}
-  hr{border:0;border-top:1px solid var(--rule);margin:40px 0}
+  hr{border:0;border-top:1px solid var(--rule);margin:20px 0}
+  hr:has(+ h2){display:none}
   code{font-family:var(--mono);font-size:.84em;background:var(--code-bg);padding:.12em .36em;border-radius:4px}
   a.doclink{text-decoration:none}
   a.doclink code{color:var(--accent);background:var(--accent-soft)}
