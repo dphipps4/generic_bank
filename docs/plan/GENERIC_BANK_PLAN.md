@@ -15,8 +15,8 @@
    JavaScript), and they misbehave: slow pages, script errors, outages, timeouts, pop-ups.
 2. **A crawler that does three jobs on them:** Check Balance, Transfer Funds and Download
    Statements. An AI agent asks for a job through a small typed REST API whose endpoints it loads
-   as tools. The crawler reads the screen and clicks and types like a person, never by CSS
-   selector. When it cannot go on safely, it hands the job to a person.
+   as tools. The crawler reads the screen, then clicks and types like a person. It never
+   uses a CSS selector. When it cannot go on safely, it hands the job to a person.
 3. **A rule about money.** The crawler fills in a transfer and stops on the review page. Only
    after a person approves in our Console may it press the one button that moves money.
 4. **A software factory** in which AI agents explore a new bank, write its crawler (usually a
@@ -63,8 +63,8 @@ agent-written code (sandbox only, until a person approves it).
 `business_outcome`, `needs_human` while a person approves or answers a code, `escalated`,
 `failed` (saying whether a retry could help), `expired` or `cancelled`.
 
-**One API for every bank.** `bank` is an input; the API runs the bank's promoted crawler for the
-task from the registry. Every crawler implements the same three functions, enforced by the
+**One API for every bank.** `bank` is an input; the API finds that bank's promoted crawler for the
+task in the registry and runs it. Every crawler implements the same three functions, enforced by the
 factory's contract test, so a newly promoted bank simply appears: no new endpoint, no redeploy.
 
 ```text
@@ -93,8 +93,8 @@ directly. OpenAPI and a Swagger page at `/docs` document it ([§D.1](#d1-tasks),
 ```
 
 The agent never gets a screen, selector, screenshot, page text or password. `transfer` answers
-`needs_human` until a person approves it, and requires an idempotency key, so a retry never makes
-a second transfer.
+`needs_human` until a person approves it. It also requires an idempotency key, so a retry never
+makes a second transfer.
 
 **OAuth2.** An admin creates an API client per agent in the Console. The agent trades a one-time
 code for an access token (15 minutes) and a refresh token (30 days) and keeps refreshing.
@@ -135,8 +135,8 @@ through one staff login per bank, never as a member.
 | Sample Savings Bank | `localhost:8083/online/branch/` | for the factory, later |
 | Placeholder Federal Credit Union | `127.0.0.1:8084/cu/ib/` | for the factory, later |
 
-Nothing shows without their JavaScript; nothing has an id; some labels and buttons are pictures
-of text; things go wrong at random; and each bank differs in labels, layout, account formats and
+Nothing shows without their JavaScript. Nothing has an id. Some labels and buttons are pictures
+of text, things go wrong at random, and each bank differs in labels, layout, account formats and
 supervisor threshold. Generic Bank looks like 2003. Each bank keeps its own ledger and generates
 statements from it. Details: [Appendix C](#appendix-c-generic-bank-the-target-product).
 
@@ -152,18 +152,18 @@ statements from it. Details: [Appendix C](#appendix-c-generic-bank-the-target-pr
   for a person (chapter 6); after approval, press once and confirm the transfer in the account's
   history.
 
-It runs a real Chrome, lets the page's JavaScript run, and reads what was drawn from outside the
+It drives a real Chrome, lets the page's JavaScript run, and reads what was drawn from outside the
 page. It finds controls by meaning (the box next to the word "Amount"), picks accounts by number,
 and checks which screen it is on after every action; on an unknown screen it stops and asks a
-person. A business no is reported, a recoverable glitch handled quietly, a hard failure reported
-with whether a retry could help, and anything unsafe handed to a person. No AI model runs inside
+person. A business no gets reported. A glitch it can recover from is handled quietly. A hard failure
+is reported along with whether a retry could help, and anything unsafe goes to a person. No AI model runs inside
 these jobs. Details: [Appendix D](#appendix-d-task-api), [Appendix E](#appendix-e-the-runner-driving-a-messy-ui), [§D.4](#d4-how-failures-are-handled).
 
 ### 5.1 The browser's fingerprint: Chrome on a Mac
 
-The crawler presents one consistent identity, **Chrome on an Apple-silicon Mac**, set before
-any page script runs and never changed within a session: through the browser's own controls,
-and, for what those cannot reach, a small extension of ours that never reads the page. A test compares the browser field by field with a capture from a real Mac. Banks 2, 3 and 4
+The crawler shows one consistent identity, **Chrome on an Apple-silicon Mac**. It is set before
+any page script runs and never changes within a session. The browser's own controls set most of
+it; a small extension of ours, which never reads the page, sets the rest. A test compares the browser field by field with a capture from a real Mac. Banks 2, 3 and 4
 answer anything not shaped like a browser with "403 Access denied"; bank 1 checks nothing.
 Values: [§E.8](#e8-browser-identity-set-at-launch), [Appendix W](#appendix-w-browser-identity-reference).
 
@@ -175,7 +175,7 @@ Values: [§E.8](#e8-browser-identity-set-at-launch), [Appendix W](#appendix-w-br
 
 The crawler prepares the transfer and parks. A person sees the masked review page in the Console
 and approves, rejects or takes over. Approval creates a single-use grant tied to that amount and
-those accounts; the guard lets one click through with it, only if the screen still matches. If
+those accounts; the guard lets one click through with it, and only if the screen still matches. If
 the result is unclear, the crawler never presses again: it looks for its memo code in the
 account's history, then confirms or hands it to a person. Details: [Appendix F](#appendix-f-transfers-a-human-approved-activity).
 
@@ -234,8 +234,7 @@ made it and why.
 only thing allowed to open it. There is no graph database. Each kind of memory is a table:
 episodes, hypotheses, facts, and the lessons with their versions. Every lesson and episode
 also carries an embedding (a vector from a small local model, stored with pgvector), so the
-service can find "things like this" as well as exact words, using Postgres's own full-text
-search. A last table, the change log, records every write.
+service can find "things like this". Exact words go through Postgres's own full-text search. A last table, the change log, records every write.
 
 **Why a model?** For a sample this size, Postgres alone would do. It can match lessons that
 are worded almost the same, and find them by keyword. What it can't do is see the same idea put
@@ -247,22 +246,22 @@ this costs one package and a 130 MB model, downloaded once and run locally.
 became true (`valid_at`) and, once something contradicts it, the moment it stopped
 (`invalid_at`). A fact is never deleted, only closed, so memory can always answer "what did we
 believe when that run happened?" Decisions work the same way. When a rule confirms, disputes
-or retires a lesson, nothing is edited in place: memory adds a new version of the lesson and
-one row to the change log that says who decided (a rule, a role or a person), which run's
-evidence it rested on, what the lesson said before and after, and a hash chained to the row
-before it, so any tampering shows.
+or retires a lesson, nothing is edited in place: memory adds a new version of the lesson, plus
+one row to the change log. That row says who decided (a rule, a role or a person), which run's
+evidence it rested on, and what the lesson said before and after. It also carries a hash
+chained to the row before it, so any tampering shows.
 
 **Who writes and who reads.** Runs write episodes as they happen, by code. The Supervisor
 writes proposed lessons at the end of a factory run. Memory itself writes confirmations and
 facts, and only when a promotion checks out against its own records. A person writes only
-approvals. On the other side, every factory run reads a **knowledge pack** at the start (the
-lessons and facts that matter for this bank, best first), agents may ask follow-up questions
-mid-run, and people read everything in the Console. The crawler that does real jobs reads
-nothing from memory: it runs the reviewed crawler, and only reports back what happened.
+approvals. As for reading: every factory run starts with a **knowledge pack** (the lessons and facts
+that matter for this bank, best first). Agents may ask follow-up questions mid-run, and people
+read everything in the Console. The crawler doing real jobs reads nothing from memory. It runs
+as reviewed and only reports back what happened.
 
 It starts with a cleaned set of rules, lessons and failure scenarios, so the first run is not
-a blank slate. In Part 2, memory moves onto a graph, Neo4j with Graphiti for the facts; the ideas stay the
-same. *[Read about memory on a graph.](#20-memory-on-a-graph-neo4j-and-graphiti)* Details: [Appendix K](#appendix-k-memory-how-the-agents-remember).
+a blank slate. In Part 2, memory moves onto a graph, Neo4j with Graphiti for the facts. The
+ideas stay the same. *[Read about memory on a graph.](#20-memory-on-a-graph-neo4j-and-graphiti)* Details: [Appendix K](#appendix-k-memory-how-the-agents-remember).
 
 ---
 
@@ -288,8 +287,8 @@ pass) and the memory. Details: [Appendix G](#appendix-g-the-console).
 Every run leaves a trail: a frame for every page it acts on, grabbed as soon as the page is ready
 (a masked screenshot and the visible page as JSON), with the screen, the action and the result.
 In the Console, a run's Frames button opens them in a popup, one at a time. Account numbers, amounts, names, emails,
-addresses and typed fields are covered with white boxes before a frame is stored; a frame that
-cannot be proven clean is withheld with the reason. Details: [Appendix I](#appendix-i-evidence-redaction-and-observability).
+addresses and typed fields are covered with white boxes before a frame is stored. A frame that
+cannot be proven clean is withheld, with the reason. Details: [Appendix I](#appendix-i-evidence-redaction-and-observability).
 
 ---
 
@@ -305,8 +304,8 @@ Each crawler, per bank and job, has one state, shown as a badge:
 - **frozen:** a guard tripped; nothing runs for that bank until a person clears it
 - **stuck:** a run has gone quiet too long
 
-Demotion is automatic: the first real fault if fewer than two clean runs since promotion,
-otherwise two faults in a row. Bank faults (slowness, 503) do not count. Details: [Appendix L](#appendix-l-driver-lifecycle-and-the-repair-loop).
+Demotion is automatic. A crawler with fewer than two clean runs since promotion is demoted
+on its first real fault; otherwise it takes two faults in a row. Bank faults (slowness, 503) do not count. Details: [Appendix L](#appendix-l-driver-lifecycle-and-the-repair-loop).
 
 ---
 
@@ -324,7 +323,8 @@ row tied to one run id, shown in the Console. Logs are JSON with the same id. De
 - No money moves without a person's single-use grant.
 - The crawler acts only on screens showing the member the job named.
 - Passwords and codes are typed by the system, never shown, logged or stored in the clear.
-- Everything personal is masked before it is written; an unprovable screenshot is withheld.
+- Everything personal is masked before it is written; a screenshot that can't be proven clean
+  is withheld.
 - Page text is never an instruction.
 - `gitleaks` runs in `just check`, in CI over the whole history, and over every built image.
 
@@ -375,8 +375,8 @@ ground under it does:
   and destroyed after.
 - **Access:** no public SSH; Tailscale only; people sign in with Google (Console roles from
   Google groups, four-eyes approvals).
-- **Secrets:** Vault in place of SOPS for the staff credentials and the trusted-workstation
-  cookies, read at the moment of typing, with dynamic, short-lived, rotated credentials.
+- **Secrets:** Vault replaces SOPS for the staff credentials and the trusted-workstation
+  cookies. They are read at the moment of typing, and they are dynamic, short-lived and rotated.
 - **Encryption** at rest and in flight everywhere, keys in Vault; banks 2 to 4 on real HTTPS.
 - **Workflows** move from DBOS to Temporal behind the same interface.
 - **Ids:** every object in the model hierarchy has a UUID as its id (runs, steps, frames, human
@@ -391,13 +391,13 @@ ground under it does:
   timeout, and answers 503 naming every check that failed.
 - **Uptime and a status page:** Better Stack checks every public URL every five minutes and
   publishes a status page. The list of monitors is a reviewed file in the repository, synced
-  through Better Stack's API, never clicks in its dashboard.
+  through Better Stack's API, not by clicking in its dashboard.
 - **Detection and alerting:** Falco, CrowdSec, Wazuh, Vector, and ntfy to a phone.
 - **Recovery:** encrypted, append-only backups, rebuild-and-restore, drilled.
 - **Export and import:** `just export` and `just import` move the whole system's state to a
   fresh machine; `just memory-export` and `just memory-import` move Memory alone.
-- **Traces:** every run is one OpenTelemetry trace, a span per step or phase, model calls in the
-  GenAI semantic conventions; `just trace …` reads one, and `just observe` adds the
+- **Traces:** every run is one OpenTelemetry trace, with a span per step or phase and model
+  calls in the GenAI semantic conventions. `just trace …` reads one. `just observe` adds the
   Collector, Grafana Tempo, Loki and Grafana, with OpenTelemetry metrics beside the SQL views.
 - **CI:** signed, scanned images pinned by digest; SonarQube quality gate.
 
@@ -427,7 +427,7 @@ two entities, such as `Example Credit Union GATED_BY staff code by email`. The e
 `valid_at`, `invalid_at` and `expired_at`: when the fact became true in the world, when it
 stopped being true, and when memory stopped believing it. A fact that stops being true is
 closed, never deleted, so memory can say what was believed at the time of any past run. The
-idea is the temporal knowledge graph for agent memory of the Zep paper (arXiv:2501.13956).
+idea comes from the Zep paper's temporal knowledge graph for agent memory (arXiv:2501.13956).
 
 - **Facts are built by code** from a run's records, in a fixed vocabulary, so no page text ever
   reaches a model through memory. Graphiti does ask a model one question: whether two entities
@@ -442,13 +442,13 @@ idea is the temporal knowledge graph for agent memory of the Zep paper (arXiv:25
 1. **The run's episode.** When a run ends, code writes one run node and its attempt nodes,
    linked to the bank, the screens it reached and the outcome. No model is involved, and the
    write is signed with a key only code holds. A production task writes its episode through an
-   outbox, so memory being slow or down never slows a task.
+   outbox, so if memory is slow or down, the task doesn't wait.
 2. **The screen.** Every incoming value passes the privacy screen. Anything shaped like a
    password, a code, an account number or a person is refused before it is stored.
 3. **New lessons.** The Supervisor's proposals are embedded locally and compared with the
    lessons already held in the same scope. A near duplicate adds its evidence to the existing
-   lesson; anything new becomes a lesson node with a first version, marked proposed. Which
-   served lessons the run relied on, and which it contradicted, become edges to those lessons.
+   lesson; anything new becomes a lesson node with a first version, marked proposed. The
+   served lessons the run relied on, and those it contradicted, are linked to it by edges.
 4. **Hypotheses.** What the factory saw while exploring (screens, labels, transitions) is
    stored as hypothesis nodes. They are kept, never served as truth.
 5. **On promotion, the facts.** Memory checks the promotion against its own records. If it
@@ -598,7 +598,7 @@ the factory to crawl later.
 | URL | `http://localhost:8081/corelink/` | `http://localhost:8082/` | `http://localhost:8083/online/branch/` | `http://127.0.0.1:8084/cu/ib/` |
 | Driver in the submission | yes, written by hand | yes, written by the factory as a profile | no: crawled later | no: crawled later |
 | Layout | banner, nav frame on the left, main frame | banner, tab strip frame across the top (from another origin), main frame | as bank 2, with an extra "notices" frame on the right | no frameset on the console: a drop-down menu bar, with the sign-in form inside an iframe from another origin |
-| Styling | **2003, and proud of it:** grey bevelled buttons, Verdana at 10px, blue underlined links, a scrolling marquee of notices, an animated "NEW!" GIF, spacer GIFs, outset table borders, and "Best viewed in Internet Explorer at 800×600" in the footer | teal and beige, sans-serif, larger type | maroon and cream, small dense type | flat grey, a "modernized" skin over the same tables |
+| Styling | **2003, and proud of it:** gray beveled buttons, Verdana at 10px, blue underlined links, a scrolling marquee of notices, an animated "NEW!" GIF, spacer GIFs, outset table borders, and "Best viewed in Internet Explorer at 800×600" in the footer | teal and beige, sans-serif, larger type | maroon and cream, small dense type | flat gray, a "modernized" skin over the same tables |
 | Sign-in labels | "Operator ID", "Password", "Sign In" | "Username", "Passcode", "Log In" | "Staff number", "PIN", "Enter" | "User", "Password", "Continue" |
 | Member lookup | "Member Search" by member number | "Find Member" by member number | "Member Inquiry", by number or last name | "Search", one box, results in a popup window |
 | Account wording | "Account ending in 7890" | "Share ****3456-S01" | "Acct 1234-5678-90" | "··· 7890 (Checking)" |
@@ -611,7 +611,7 @@ All four are the same code (`apps/bank`: Fastify, server-rendered templates, ES5
 `pdf-lib`, no client framework) started with a different tenant config: labels, theme, layout
 variant, URL base path, account format, thresholds, code style, and each page's markup dialect.
 Banks 3 and 4 differ in ways a profile alone may not cover (an extra frame, a split transfer, a
-popup result list), where a tenant degrades to an escalation until the driver learns the screen.
+popup result list). Where that happens, the tenant escalates until the driver learns the screen.
 
 ### C.2 The operator's journey
 
@@ -686,9 +686,10 @@ dialect:
   only then.
 - **Two sign-in pages:** a trusted workstation's "Welcome back" layout and a fresh browser's.
 - **Frames from another origin:** bank 2's tab strip and bank 4's sign-in form come from the same
-  host on another port (8092 and 8094), read through their own browser sessions. (A port, not a
-  `*.localhost` name, which inside the Runner's container resolves to the Runner itself.)
-- **Different URLs:** each bank its own port, base path and host form; drivers take every URL
+  host on another port (8092 and 8094), read through their own browser sessions. (It's a port and not a
+  `*.localhost` name because, inside the Runner's container, such a name resolves to the Runner
+  itself.)
+- **Different URLs:** each bank has its own port, base path and host form; drivers take every URL
   from the tenant profile or a link on screen.
 - **Stable over time:** markup comes from a build seed. A `BANK_UI_VERSION` knob simulates a
   vendor upgrade (relabeled fields, moved buttons) to exercise the repair loop.
@@ -756,8 +757,8 @@ Each refusal is logged with its reason. Health checks and the bank-admin API are
 Bank 1 screens nothing.
 
 **Ground truth.** A state-change counter and a transfer ledger, read by tests through a
-bank-admin API on a port only the test harness reaches. Tests never trust the automation's own
-account.
+bank-admin API on a port only the test harness reaches. Tests never take the automation's word for
+it.
 
 ### C.5 Data: where balances and statements come from
 
@@ -803,12 +804,12 @@ person uses.
 account** (its credentials are SOPS secrets); no member credentials exist anywhere. A task call returns `202`
 with a run id; `GET /tasks/:id?wait=30` long-polls. Every call carries an OAuth2 access token
 ([§D.6](#d6-oauth2-clients-tokens-and-refresh)). `bank` is checked against the registry on every
-call. `GET /banks` returns each bank's id, brand, product version, and supported tasks with the
-crawler version serving each; `GET /tasks` lists the tasks with their input schemas.
+call. `GET /banks` returns each bank's id, brand and product version, plus its supported tasks and the
+crawler version serving each. `GET /tasks` lists the tasks with their input schemas.
 
-Inputs and results are zod schemas in `packages/contracts`, from which the OpenAPI document
+Inputs and results are zod schemas in `packages/contracts`. The OpenAPI document
 (`GET /openapi.json`, with examples for every status code of [§D.7](#d7-http-status-codes)) and
-the tool definitions are generated. `/docs` serves Swagger UI with bearer authorization; `just
+the tool definitions are generated from them. `/docs` serves Swagger UI with bearer authorization; `just
 docs` publishes a static reference. A test fails if the OpenAPI document, the tool definitions and
 the endpoints disagree.
 
@@ -842,7 +843,7 @@ Handled inside the run, bounded, recorded in the trail, never shown to the calle
   only**
 - reload once when a needed widget failed to draw
 
-A used-up bound becomes a hard failure or an escalation.
+When a bound runs out, the run becomes a hard failure or an escalation.
 
 ### D.4 How failures are handled
 
@@ -926,9 +927,9 @@ endpoint itself with its own access token.
 
 **The demo agent** (`apps/agent`, `just agent`) is a pi session on Claude
 (`claude-haiku-4-5-20251001` by default) whose only tools are those of `GET /tools`. Its scripted
-conversation on banks 1 and 2 lists the banks, reads a balance, fetches a statement, requests a
-transfer that waits for approval and then confirms it, and explains a nonexistent account as a
-business outcome. Without a model key, a scripted mock plays the agent's side through the same
+conversation on banks 1 and 2 lists the banks, reads a balance and fetches a statement. Then it
+requests a transfer, waits for the approval and confirms it. It also explains a nonexistent
+account as a business outcome. Without a model key, a scripted mock plays the agent's side through the same
 tool calls.
 
 ### D.6 OAuth2: clients, tokens and refresh
@@ -1007,8 +1008,8 @@ Problem details follow RFC 9457 (`application/problem+json`) with `code`, `runId
 ```
 
 - **Resume:** the crawler reloads, recognizes the screen and checks the member before acting. An
-  unsubmitted transfer goes back through approval; an unclear one reads the history, never
-  resubmits ([§F.2](#f2-the-swallowed-submit-protocol)).
+  unsubmitted transfer goes back through approval. For an unclear one, it reads the history and
+  never resubmits ([§F.2](#f2-the-swallowed-submit-protocol)).
 - **Finish by hand** records the person's result in the typed shape, with who and when.
 - The same idempotency key always returns the same run. While a transfer is escalated, a new
   request for the same member, accounts and amount gets `409` pointing to the open run.
@@ -1032,7 +1033,7 @@ the page**. After every navigation or action it builds a **screen model**:
 1. **Capture** over the Chrome DevTools Protocol: the browser's layout (`DOMSnapshot`: every
    visible node with box, text, input type, paint order) for every frame, the accessibility
    tree, and a screenshot. No script is injected. A cross-origin frame is read through its own
-   DevTools session; one no session can reach is marked unreadable.
+   DevTools session; if no session can reach it, it is marked unreadable.
 2. **Flatten frames** into page coordinates.
 3. **Keep only what is visible and on top,** by a hit-test at each control's center, so a hidden
    twin of a button cannot be clicked.
@@ -1046,13 +1047,14 @@ the page**. After every navigation or action it builds a **screen model**:
 
 ### E.2 Fully rendered, not "network idle"
 
-Never network idle. A page is ready as soon as its frames have loaded, the screen the step
-expects is recognized, a control on it is visible and enabled, nothing says it is still loading
-(no `aria-busy`, spinner, skeleton or short "Loading…" text), and its layout holds for 300 ms.
+Never network idle. A page is ready once its frames have loaded, the screen the step expects
+is recognized, a control on it is visible and enabled, nothing says it is still loading (no
+`aria-busy`, spinner, skeleton or short "Loading…" text), and its layout has held for 300 ms.
 
-Otherwise it is ready when two screenshots 700 ms apart are identical with the same layout
-structure. A loaded, usable page that is no known screen is handed back
-after 10 seconds as an unknown screen, still or not. A page that is still loading is waited on for up to 3 minutes.
+Failing that, it is ready when two screenshots 700 ms apart match and so does the layout
+structure. A loaded, usable page that matches no known screen is handed back as an unknown
+screen after 10 seconds, whether it is still or not. A page that is still loading gets up to 3
+minutes.
 
 Signed in means a recognized signed-in screen, never a missing password field. Every browser
 call has its own timeout.
@@ -1089,8 +1091,8 @@ recoverable condition, a business outcome or an unknown screen.
 
 A **driver** is a state machine over screens for one task, written once per vendor product
 (`packages/drivers/corelink`). Each tenant is a **profile**: labels and synonyms, signature
-overrides, account-number format, thresholds, code-delivery style, layout variant. A tenant that
-behaves differently degrades to an escalation, never a wrong answer.
+overrides, account-number format, thresholds, code-delivery style, layout variant. When a tenant
+behaves differently, the result is an escalation, never a wrong answer.
 
 A **catalog** maps `(tenant, task)` to the promoted driver version (none means
 `failed: no_driver`). Catalog keys are unique, checked by a test.
@@ -1124,7 +1126,7 @@ before its first page:
   at pixel ratio 2, locale `en-US` and the machine's timezone. A frame from another origin is
   held paused until it has its identity.
 - **The identity extension** (`packages/screen/extension`), loaded over the DevTools Protocol:
-  the WebGL vendor and renderer of an Apple M1, colour depth 30, the working area below the menu
+  the WebGL vendor and renderer of an Apple M1, color depth 30, the working area below the menu
   bar and the Dock, 8 GB of device memory, and Web Share.
 
 Screenshots are taken at the pixel ratio's inverse, so a picture keeps one pixel per CSS pixel.
@@ -1147,19 +1149,19 @@ The automation prepares a transfer, a person approves it, and only then is it su
    from, to, amount and memo. A business outcome here ends the run.
 2. **Park** as `needs_human: awaiting_approval`, deadline 15 minutes by default, browser session
    held open.
-3. **Approve, in the Console,** seeing the masked inputs, the masked review screenshot, the
-   amounts as read, and the trail:
-   - **Approve:** issues a single-use **approval grant** bound to this run, the masked from/to
-     references, the exact amount, the memo token and a nonce, valid for 5 minutes. Over the
-     bank's threshold, the approver also supplies the supervisor approval code the bank's
+3. **Approve, in the Console,** where the person sees the masked inputs, the masked review
+   screenshot, the amounts as read, and the trail:
+   - **Approve:** issues a single-use **approval grant**, valid for 5 minutes. It is bound to
+     this run, the masked from/to references, the exact amount, the memo token and a nonce. Over
+     the bank's threshold, the approver also gives the supervisor approval code that the bank's
      "Supervisor approval required" page asks for.
    - **Reject:** the run ends `business_outcome: approval_rejected`.
    - **Take over:** the person finishes the transfer by hand; the run is recorded as
      `handed_off`.
    - **Cancel:** the run stops cleanly.
-4. **Submit, under the grant.** The guard blocks every money-moving control and lets one click
-   through only with an unused, unexpired grant, on the recognized review page, with from, to
-   and amount matching the grant. The click consumes the grant. The guard is never disabled.
+4. **Submit, under the grant.** The guard blocks every money-moving control. It lets one click
+   through only with an unused, unexpired grant, only on the recognized review page, and only if
+   from, to and amount match the grant. The click consumes the grant. The guard is never disabled.
 5. **Verify** ([§F.2](#f2-the-swallowed-submit-protocol)).
 
 One person may both start and approve a transfer; four-eyes approval is Part 2.
@@ -1167,8 +1169,8 @@ One person may both start and approve a transfer; four-eyes approval is Part 2.
 ### F.2 The swallowed-submit protocol
 
 - Before the click, the intent and grant id go to the hash-chained journal.
-- Every transfer carries a **memo token** we generate (for example `GBX 7Q4M`), our idempotency
-  marker in the bank's own data.
+- Every transfer carries a **memo token** we generate (for example `GBX 7Q4M`). It's our idempotency
+  marker, kept in the bank's own data.
 - On the confirmation screen, read the confirmation number, then find the transfer in the
   activity by its memo token: `succeeded`.
 - If the result is unclear (gateway error, spinner, timeout, unknown screen, session lost), **do
@@ -1177,8 +1179,8 @@ One person may both start and approve a transfer; four-eyes approval is Part 2.
   - found twice: `escalated: ambiguous_outcome` (a duplicate exists; a person must look)
   - not found: `escalated: ambiguous_outcome`. Never resubmit.
 
-A session lost while parked is rebuilt after approval with a fresh sign-in, re-filled and
-re-checked against the grant: the grant binds values, not a browser.
+If the session is lost while parked, it is rebuilt after approval: a fresh sign-in, the form
+filled again, and everything re-checked against the grant. The grant binds values, not a browser.
 
 ### F.3 Codes and other human steps
 
@@ -1195,9 +1197,9 @@ Every Console action is also an API call: `POST /human-tasks/:id/answer|approve|
 
 ## Appendix G. The Console
 
-**AdminJS** on the control app's Fastify server (`apps/control`), over the control database's
-**Prisma** models, giving every model lists, filters, search, detail pages, relations, actions
-and role-based access. Custom components: the **trail viewer** (masked thumbnails, step, screen
+The Console is **AdminJS** on the control app's Fastify server (`apps/control`), over the
+control database's **Prisma** models. That gives every model lists, filters, search, detail
+pages, relations, actions and role-based access. Custom components: the **trail viewer** (masked thumbnails, step, screen
 and outcome, an "only the interesting parts" toggle), the **state badge**
 ([§G.3](#g3-state-markers)), the **approval inbox** over `human_task`, **reasoned actions**
 (promote, roll back, freeze, unfreeze require a written reason), the **memory pages** (through the
@@ -1246,7 +1248,7 @@ Each driver version shows one state as a colored badge carrying the word:
 
 | State | Meaning | Badge |
 |---|---|---|
-| `draft` | being written by a factory run | grey |
+| `draft` | being written by a factory run | gray |
 | `candidate` | passed offline evals and live verification; waiting for review | blue |
 | `probation` | approved; must succeed on real runs before promotion | amber |
 | `promoted` | serving real tasks | green |
@@ -1270,8 +1272,8 @@ approval waiting more than five minutes notifies once.
 **DBOS** runs each task as a durable workflow whose state lives in our Postgres, so tasks survive
 restarts and wait for people (minutes for an approval, weeks for probation) without holding
 anything open. Workflow code calls our own interface (`startRun`, `waitForHuman`, `sleep`,
-`step`); side effects happen only in steps; a person's answer arrives as a message; every wait
-has a deadline. A task is: prepare, wait for a person if needed, act, verify, settle. A factory
+`step`). Side effects happen only in steps, a person's answer arrives as a message, and every
+wait has a deadline. A task is: prepare, wait for a person if needed, act, verify, settle. A factory
 run's workflow is in [§M.3](#m3-phases).
 
 ---
@@ -1298,9 +1300,9 @@ run's workflow is in [§M.3](#m3-phases).
 - **Patterns:** any run of four or more digits, any currency amount, emails, phone numbers,
   street lines.
 - **Screenshots:** mask boxes come from the screen model, which knows where every piece of text
-  is. Every input, every text run matching a known value or a pattern, and every image or canvas
-  the crawler cannot read (unless the bank's profile marks it safe, like a learned "Confirm"
-  button) is covered with a **white box filled with asterisks**, the way a redacted form looks.
+  is. These get a **white box filled with asterisks**, the way a redacted form looks: every input,
+  every text run matching a known value or a pattern, and every image or canvas the crawler
+  cannot read (unless the bank's profile marks it safe, like a learned "Confirm" button).
 - **Withheld frames:** if a frame's screen model could not be read, or a known value appears
   outside a covered box, the frame is **withheld**: stored as a placeholder with the reason,
   never as an image.
@@ -1416,11 +1418,11 @@ them.
 | **Network** | Compose networks enforce who can reach whom. The sandbox has no route out. |
 
 **Proof:** the trap matrix runs every money trap and injected instruction on both tenants with
-one guard layer removed at a time; a clean read task leaves the bank's state-change counter
+one guard layer removed at a time. A clean read task leaves the bank's state-change counter
 unchanged.
 
 A page's own background requests (analytics, feature flags, keep-alives) are refused quietly and
-logged, never a guard trip; tripping guards judge only controls a person can see.
+logged. They never trip a guard; the guards that trip judge only controls a person can see.
 
 ---
 
@@ -1502,7 +1504,7 @@ bank's **verified facts** in a fixed vocabulary: "A fresh sign-in at Example Cre
 for a staff code sent by email." The screens the factory mapped while exploring become facts
 here too (`Example Credit Union has_screen transfer.review`), and not before.
 
-**Forgetting by evidence.** Fixed rules, with no model, revise beliefs. A first contradiction
+**Forgetting by evidence.** Fixed rules revise beliefs, with no model involved. A first contradiction
 disputes a lesson; contradictions from two runs retire it. A demotion disputes what its
 promotion confirmed. A lesson wrong at one bank is retired there only. A lesson proven at two
 banks of the same product widens to the vendor, and across three vendors becomes a pattern
@@ -1566,8 +1568,8 @@ cannot forge one.
 **An agent** asks with `memory_query`: at most eight items, at most three facts per answer.
 Most of what a run needs arrives in the knowledge pack, so mid-run questions are the exception.
 
-**A person** reads memory in the Console: lessons with their state, scope, evidence and where
-they have been seen; facts with their valid and closed times; episodes; and the change log,
+**A person** reads memory in the Console. It shows lessons with their state, scope, evidence and
+where they have been seen; facts with their valid and closed times; episodes; the change log,
 with a button that verifies the chain; and a **knowledge-pack preview** for any bank, showing
 exactly what the factory's agents would be given. The Console reads and writes through the
 Memory service's API, so memory keeps one door.
@@ -1577,7 +1579,7 @@ Memory service's API, so memory keeps one door.
 - **Add or edit a lesson.** Each save is a new version, pending until approved (in Part 1 the
   same person may approve). It carries who wrote it and why, like any other entry.
 - **Retire a lesson** with a reason. Nothing is deleted; the history keeps it.
-- **Close a fact** that is no longer true, with a reason. A fact cannot be typed in by hand: a
+- **Close a fact** that is no longer true, with a reason. Nobody types in a fact by hand. A
   fact needs a promoted run as proof, so new facts come only from the factory.
 - **Approve or refuse** pattern candidates and pending curated changes.
 
@@ -1588,8 +1590,8 @@ in with a staff test login, explores read-only, and records every screen it reac
 masked frame, the screen model, the labels, the controls and the transition that led there.
 Those are episodes and hypotheses while the run is going. When the crawler built from them is
 promoted, they become verified facts about that bank. Over runs and banks, the facts and
-lessons build up a map of the vendor's product, which is what lets the next bank be onboarded
-as a profile rather than a rebuild.
+lessons build up a map of the vendor's product. That map is what lets the next bank arrive as a
+profile rather than a rebuild.
 
 ### K.10 The starting knowledge
 
@@ -1638,15 +1640,15 @@ arXiv:2501.13956.
 
 ## Appendix L. Driver lifecycle and the repair loop
 
-A bank and task are available exactly when a promoted crawler exists: promotion adds the bank to
-`GET /banks`; demotion falls back to the previous version; a freeze or no crawler means `404
-task_not_available` before any browser opens.
+A bank and task are available exactly when a promoted crawler exists. Promotion adds the bank to
+`GET /banks`, and demotion falls back to the previous version. A freeze, or no crawler at all,
+means `404 task_not_available` before any browser opens.
 
 - **Promotion** needs two clean probation runs within 30 days, one with a fresh sign-in and one
   on a trusted workstation, verified against the bank's own data. At most four probation
   attempts. Probation finds the candidate by version id, never by name.
-- **Demotion** is automatic: the first driver fault after promotion demotes if there were fewer
-  than two clean runs since promotion; otherwise two faults in a row. The previous version
+- **Demotion** is automatic: with fewer than two clean runs since promotion, the first driver
+  fault demotes; otherwise it takes two faults in a row. The previous version
   serves again.
 - **Faults:** an `app_error` or a 503 is the bank's; a driver fault is an unknown screen, a
   targeting failure, or a wrong result.
@@ -1803,8 +1805,8 @@ limits.
 ### O.2 Composition and checks
 
 Frontmatter: `id`, `version`, `role`, `purpose`, `inputs`, `output_schema`, `includes`, `evals`,
-and a one-line changelog per version. Includes render depth-first, once each; cycles, and missing
-or extra `{{name}}` variables, are errors. The loader returns a branded type, so the gateway
+and a one-line changelog per version. Includes render depth-first, once each. Cycles are errors, and so
+are missing or extra `{{name}}` variables. The loader returns a branded type, so the gateway
 never takes a raw string. `shared/invariants` comes first in every prompt.
 
 `npm run check-prompts` fails when:
@@ -1832,8 +1834,8 @@ never takes a raw string. `shared/invariants` comes first in every prompt.
 ### O.4 Prompts in the Console
 
 The files in `packages/prompts/` are the baseline. In the Console a person may edit or add a
-prompt: saving creates a **draft** (with author and reason) that no run uses; "Run evals" runs
-its cases under their own cap; "Activate" is offered only when they pass. Any version, or the git
+prompt. Saving creates a **draft** (with author and reason) that no run uses. "Run evals" runs
+its cases under their own cap, and "Activate" is offered only when they pass. Any version, or the git
 file, can be restored in one click. `just prompts-export` writes active versions back to the
 files for a pull request.
 
@@ -1856,16 +1858,16 @@ files for a pull request.
 | Memory suite | `tests/memory` | the role matrix, the privacy screen, the seed, every rule, the pack, a tampered change log and the outbox, all through the Memory service's API. |
 | Prompts | `packages/prompts/test` | the checker, the loader, schemas. |
 
-**CI** (GitHub Actions), three jobs: typecheck, lint, the import boundaries and the tests (a pull
-request runs the tests its change touches, a merge to master runs them all); a fresh clone, where
-`just setup` and `just up` run on a machine with nothing cached and every service must answer;
-and `gitleaks` over the history. `just check`
-runs `gitleaks` over the history and uncommitted changes.
+**CI** (GitHub Actions) has three jobs. The first runs typecheck, lint, the import boundaries
+and the tests (a pull request runs the tests its change touches; a merge to master runs them
+all). The second is a fresh clone, where `just setup` and `just up` run on a machine with
+nothing cached and every service must answer. The third runs `gitleaks` over the history.
+`just check` runs `gitleaks` over the history and uncommitted changes.
 
-**Rules:** fakes never return the answer under test; every guard has a test that it refuses;
-tests use real-shaped data judged by the bank's ground truth; CI builds the real images and
-compose files, and fails on any skipped or missing suite; deploy workflows have path filters;
-secret scanning catches secrets written as sentences, and CI checks every imported file is
+**Rules:** fakes never return the answer under test. Every guard has a test that it refuses.
+Tests use real-shaped data judged by the bank's ground truth. CI builds the real images and
+compose files, and fails on any skipped or missing suite. Deploy workflows have path filters.
+Secret scanning catches secrets written as sentences, and CI checks that every imported file is
 tracked by git.
 
 ---
@@ -2020,9 +2022,9 @@ expected typed result.
 
 ### S.3 Fitting in 8 GB
 
-Target: an 8 GB laptop, Docker Desktop with 5 GB. Every container has a memory limit. One browser
-at a time by default (`RUNNER_CONCURRENCY=1`), started on demand; full Chromium in modern headless mode, no
-virtual display.
+Target: an 8 GB laptop, Docker Desktop with 5 GB. Every container has a memory limit. By default
+there is one browser at a time (`RUNNER_CONCURRENCY=1`), started on demand. It's full Chromium in
+modern headless mode, with no virtual display.
 
 | Service | Box | Limit |
 |---|---|---|
@@ -2048,8 +2050,8 @@ Networks: `edge` (published ports), `app` (A to B), `data` (B internal), `world`
 reachable from the Runner and the Scout browser), `factory` (D to A and B), `sandbox`
 (`internal: true`, no route out).
 
-Images are pinned by digest, and a preflight in `just up` and `just factory` refuses to start on
-version skew between boxes or a database not at the expected migration. Repeated log lines are
+Images are pinned by digest, and a preflight in `just up` and `just factory` refuses to start if
+the boxes' versions disagree or the database isn't at the expected migration. Repeated log lines are
 rate-limited, and every container has disk and memory limits.
 
 ---
@@ -2095,8 +2097,8 @@ What a first draft gets wrong, and what this plan does instead, each covered by 
 
 ### T.5 Generalization to the real environment
 
-A driver per vendor, a profile per tenant ([§E.5](#e5-drivers-one-vendor-many-tenants)); memory scopes lessons to tenant, vendor and
-general pattern ([§K.4](#k4-how-memory-is-used)); the factory onboards bank 2 as a profile ([Appendix M](#appendix-m-the-software-factory)). Drivers see only
+A driver per vendor, a profile per tenant ([§E.5](#e5-drivers-one-vendor-many-tenants)). Memory scopes lessons to tenant, vendor and
+general pattern ([§K.4](#k4-how-memory-is-used)), and the factory learns bank 2 as a profile ([Appendix M](#appendix-m-the-software-factory)). Drivers see only
 the **screen model** ([§E.1](#e1-perception-what-the-operator-sees)), so another capture source (UI Automation, the macOS AX tree, a
 terminal's character grid, or screenshots alone) plugs in without changing recognition,
 targeting, guardrails, masking or the trail.
@@ -2121,8 +2123,8 @@ and every README claim linked to its code and test.
 > **Building the place where something is stored, leaving for later the step where it is
 > used, and reporting the stored half as done.**
 
-That is the commonest failure, so "done" here means a consumer uses it in the real flow, shown
-by a test, a log line on the receiving side, or behavior seen live. Rules the plan states
+That is the most common failure. So "done" here means something actually uses it in the real
+flow, shown by a test, a log line on the receiving side, or behavior seen live. Rules the plan states
 elsewhere are not repeated; these are the rest:
 
 | Rule | The failure it prevents |
