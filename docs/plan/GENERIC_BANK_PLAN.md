@@ -403,6 +403,8 @@ ground under it does:
 - **Real Chrome on real Macs,** so every fingerprint field is genuine.
 - **Detection and alerting:** Falco, CrowdSec, Wazuh, Vector, and ntfy to a phone.
 - **Recovery:** encrypted, append-only backups, rebuild-and-restore, drilled.
+- **Export and import:** `make export` and `make import` move the whole system's state to a
+  fresh machine; `make memory-export` and `make memory-import` move Memory alone.
 - **CI:** signed, scanned images pinned by digest; SonarQube quality gate.
 
 ---
@@ -1478,8 +1480,7 @@ strictly, and only a person can approve a new one.
 
 **Postgres is the store.** Memory has its own database (`memory`) on box B, with its own Prisma
 schema, and only the Memory service opens it. Episodes, hypotheses, lesson versions and the
-change log are written in plain SQL by code, with no model in the loop. Everything is kept in
-`make export` and moves between machines with `make memory-export` and `make memory-import`.
+change log are written in plain SQL by code, with no model in the loop.
 
 **Facts are bi-temporal rows.** Each fact carries `valid_at`, `invalid_at` and `expired_at`. A
 fact that stops being true is closed, never deleted, so memory can say what was believed at
@@ -2016,11 +2017,7 @@ nothing is hosted elsewhere.
 | `make docs` | renders `README.md` and `docs/` as the white-template website into `site/`; the same build publishes to GitHub Pages |
 | `make logs`, `make trace RUN=…` | read the JSON logs, or one run's trace, from `.data/` |
 | `make observe` | starts the OpenTelemetry Collector, Grafana Tempo, Loki and Grafana (about 600 MB; off by default) |
-| `make memory-export` | writes Memory's lessons, rules, checks, scenarios, approaches, facts and change log to a versioned bundle under `exports/` |
-| `make memory-import BUNDLE=…` | loads a memory bundle through Memory's own API, as the curator role, so every row passes the door's screens and lands in the change log |
 | `make memory-seed` | imports `seeds/memory/` into an empty Memory (part of the first `make up`) |
-| `make export` | the whole system's state: a Postgres dump of every schema, MinIO evidence, the Vault seed (encrypted with SOPS), and a memory bundle, with a manifest of sha256 sums, in one archive under `exports/` |
-| `make import BUNDLE=…` | brings the whole system up from an export on a fresh machine: checks the manifest, restores in order (data, then memory, then evidence), runs migrations, starts `make up` |
 | `make reset` | deletes volumes and starts again from the seed (asks first) |
 
 The Console is at `http://localhost:8080`, the banks at their URLs ([§C.1](#c1-one-product-four-banks)), the inbox at
