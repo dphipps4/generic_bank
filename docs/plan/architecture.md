@@ -205,9 +205,9 @@ can't read. The page record gets the same treatment. The system knows the member
 the run starts, so it covers them wherever they show up. It also covers anything that looks like an
 account number, an amount, an email or a phone number. If it can't be sure a picture is clean, it
 keeps only a note saying why, not the picture. Logs aren't scrubbed: they record requests, never
-member details, and the PII
-scan, runs a balance and a transfer on bank 1, then searches everything saved (every database row,
-file and log line) for the seeded personal details. One hit fails it.
+member details. A test suite, the PII scan, runs a balance and a transfer on bank 1, then searches
+everything saved (every database row, file and log line) for the seeded personal details. One hit
+fails it.
 
 ---
 
