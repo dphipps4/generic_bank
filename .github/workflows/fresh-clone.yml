@@ -6,14 +6,12 @@ name: fresh clone
 on:
   push:
     branches: [master]
+  # Every pull request that can change what is built; a change to the docs alone cannot.
   pull_request:
-    paths:
-      - 'Justfile'
-      - 'infra/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'config/app.env'
-      - '.github/workflows/fresh-clone.yml'
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'LICENSE'
   workflow_dispatch:
 
 permissions:

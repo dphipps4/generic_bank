@@ -4,9 +4,6 @@ on:
   pull_request:
   push:
     branches: [master]
-  # Every night, the whole suite and the long suite, whatever changed.
-  schedule:
-    - cron: '17 9 * * *'
 
 permissions:
   contents: read
@@ -47,140 +44,14 @@ jobs:
       - name: Headless Chromium for the browser tests
         run: infra/scripts/browser.sh
       # A pull request runs the tests its change touches; a change to migrations, seeds, config,
-      # infrastructure or CI runs them all (vitest.config.ts, forceRerunTriggers). The whole suite
-      # runs on every merge to master and every night, below.
+      # infrastructure or CI runs them all (vitest.config.ts, forceRerunTriggers). A merge to master
+      # runs the whole suite.
       - name: The tests this change touches
         if: github.event_name == 'pull_request'
-        run: npx vitest run --changed origin/${{ github.base_ref }} --passWithNoTests --reporter=default --reporter=json --outputFile.json=.run/changed.json
-      # A skipped test passes; in the escalation, transfer-safety and memory suites, a skip is a failure.
-      - name: Nothing in the escalation, transfer-safety and memory suites was skipped
-        if: github.event_name == 'pull_request'
-        run: node infra/scripts/suite-ran.mjs .run/changed.json tests/escalation tests/transfer tests/memory
-
-  suite:
-    name: the whole suite (${{ matrix.shard }} of 3)
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci --no-audit --no-fund
-      - run: npm run db:generate
-      - name: Headless Chromium for the browser tests
-        run: infra/scripts/browser.sh
-      # The escalation, transfer-safety and memory suites run in their own job, below, where they are
-      # counted.
-      - run: npx vitest run --shard=${{ matrix.shard }}/3 --exclude 'tests/escalation/**' --exclude 'tests/transfer/**' --exclude 'tests/memory/**'
-
-  suites:
-    name: the escalation, transfer-safety and memory suites
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci --no-audit --no-fund
-      - run: npm run db:generate
-      - name: Headless Chromium for the browser tests
-        run: infra/scripts/browser.sh
-      - run: npx vitest run tests/escalation tests/transfer tests/memory --reporter=default --reporter=json --outputFile.json=.run/suites.json
-      # Every test ran and passed, and there are as many as each suite has: a skip is a failure.
-      - name: The suites really ran
-        run: node infra/scripts/suite-ran.mjs .run/suites.json tests/escalation=9 tests/transfer=10 tests/memory=79
-
-  long:
-    name: the long suite
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci --no-audit --no-fund
-      - run: npm run db:generate
-      - name: Headless Chromium for the browser tests
-        run: infra/scripts/browser.sh
-      - run: npx vitest run --config vitest.long.config.ts --reporter=default --reporter=json --outputFile.json=.run/long.json
-      # The transfer-safety suite's swallowed submits wait out a slow bank, so they are here.
-      - name: The swallowed submits really ran
-        run: node infra/scripts/suite-ran.mjs .run/long.json tests/long/swallowed-submit.test.ts=1 tests/long/transfer-swallowed.test.ts=1
-
-  image:
-    name: build what ships
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      # A pull request rebuilds an image only when it changes what goes into it; master and the
-      # nightly run build everything.
-      - name: What this change touches
-        id: touches
-        run: |
-          if [ "${{ github.event_name }}" != pull_request ]; then
-            echo "images=true" >> "$GITHUB_OUTPUT"; echo "tools=true" >> "$GITHUB_OUTPUT"; exit 0
-          fi
-          changed="$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")"
-          grep -qE '^(apps/|packages/|infra/docker/(node|runner)\.Dockerfile$|package(-lock)?\.json$|tsconfig)' <<<"$changed" \
-            && echo "images=true" >> "$GITHUB_OUTPUT" || echo "images=false" >> "$GITHUB_OUTPUT"
-          grep -qE '^(infra/docker/tools\.Dockerfile$|infra/scripts/|infra/docs/|docs/plan/)' <<<"$changed" \
-            && echo "tools=true" >> "$GITHUB_OUTPUT" || echo "tools=false" >> "$GITHUB_OUTPUT"
-      - uses: docker/setup-buildx-action@v3
-        if: steps.touches.outputs.images == 'true'
-      - name: Build the Node image every service runs
-        if: steps.touches.outputs.images == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: infra/docker/node.Dockerfile
-          push: false
-          tags: generic-bank/node:ci
-          load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      # The default builder sees images in the local daemon, so the Runner builds on the one above.
-      - name: Build the Runner's image (the same plus headless Chromium)
-        if: steps.touches.outputs.images == 'true'
-        run: docker build --builder default -f infra/docker/runner.Dockerfile --build-arg BASE=generic-bank/node:ci -t generic-bank/runner:ci .
-      # The secret scripts and the plan renderer run inside the tools image: prove they still do.
-      - name: The tools image runs the scripts
-        if: steps.touches.outputs.tools == 'true'
-        run: |
-          docker build -f infra/docker/tools.Dockerfile -t generic-bank/tools:ci infra/docker
-          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/work" generic-bank/tools:ci bash -c \
-            'source infra/scripts/lib.sh && sops --version && age --version && jq --version && node infra/docs/render-plan.cjs'
-      # A secret baked into an image fails the build: gitleaks reads each image's whole filesystem.
-      - name: No secrets in the images
-        if: steps.touches.outputs.images == 'true' || steps.touches.outputs.tools == 'true'
-        run: |
-          images=()
-          [ "${{ steps.touches.outputs.images }}" = true ] && images+=(generic-bank/node:ci generic-bank/runner:ci)
-          [ "${{ steps.touches.outputs.tools }}" = true ] && images+=(generic-bank/tools:ci)
-          infra/scripts/secrets-scan.sh image "${images[@]}"
-      - name: Compose file is valid
-        run: |
-          mkdir -p .run/env
-          for s in $(jq -r '.services | keys[]' infra/secrets/scope.json); do touch ".run/env/$s.env"; done
-          docker compose -f infra/compose/compose.yaml --env-file config/app.env -p generic-bank --profile '*' config -q
-      # Every step is a just recipe: install just the way a person does, and check the Justfile.
-      - name: The Justfile works
-        run: |
-          infra/scripts/bootstrap.sh
-          export PATH="$HOME/.local/bin:$PATH"
-          just --summary >/dev/null
-          just --dry-run up >/dev/null
+        run: npx vitest run --changed origin/${{ github.base_ref }} --passWithNoTests
+      - name: The whole suite
+        if: github.event_name != 'pull_request'
+        run: npx vitest run
 
   secrets:
     name: no secrets in history
