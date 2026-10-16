@@ -16,7 +16,6 @@ import {
   type Request,
   unpictured,
   type Upstream,
-  upstreamFor,
 } from '../../apps/factory/src/upstream.js';
 import { memoryStore } from '../../packages/evidence/src/index.js';
 import { controlDb } from '../../packages/oauth/test/control.js';
@@ -29,12 +28,14 @@ import { scripted } from '../support/scripted.js';
 // The factory onboards bank 2 from memory, in mock mode: the run starts from the knowledge pack
 // memory serves for the bank (the seed, through memory's own door), which the Supervisor reads
 // before its first turn, and ends with what it taught proposed in memory, each lesson citing the
-// frames of the run that show it, beside the lesson it relied on. The Supervisor and the Scout
-// replay the recording kept for an onboarding at this bank, through the gateway; no key is used
-// and nothing reaches a model.
+// frames of the run that show it, beside the lesson it relied on; the run's recording carries the
+// lessons. The Supervisor and the Scout are the scripted models behind the gateway, which records
+// them; no key is used and nothing reaches a model.
 //
-// FACTORY_RECORD=1 records the scripted models through the gateway instead, and keeps the run's
-// recording in apps/factory/recordings, where `just onboard example` replays it with no key.
+// The scripted models, not a kept recording: bank 2 lists its sign-in page's controls in another
+// order on Linux than on a Mac, so a recording made on one does not replay on the other. With
+// FACTORY_RECORD=1 the run's recording is kept in apps/factory/recordings, where `just onboard
+// example` replays it with no key; make it where the stack runs, on Linux.
 
 const RECORDINGS = 'apps/factory/recordings';
 const RECORD = process.env.FACTORY_RECORD === '1';
@@ -64,9 +65,7 @@ beforeAll(async () => {
   const hosts = [bank.url, bank.secondOrigin!].map((u) => new URL(u).host);
   browser = await Browser.launch({ hosts });
   dir = await mkdtemp(join(tmpdir(), 'gb-onboard-'));
-  const upstream = RECORD
-    ? live(scripted('example', MEMBERS.demo), dir)
-    : upstreamFor({}, RECORDINGS);
+  const upstream = live(scripted('example', MEMBERS.demo), dir);
   const watched: Upstream = {
     spends: upstream.spends,
     answer: (runId, role, provider, request) => {
@@ -77,7 +76,7 @@ beforeAll(async () => {
   factory = buildServer({
     gateway: gateway({ ledger: sqlLedger(db), upstream: watched }),
     token: TOKEN,
-    mode: RECORD ? 'live' : 'mock',
+    mode: 'live',
   });
   await factory.listen({ host: '127.0.0.1', port: 0 });
   factoryUrl = `http://127.0.0.1:${(factory.server.address() as AddressInfo).port}`;
@@ -131,16 +130,21 @@ describe('the factory onboards bank 2 from memory', () => {
       },
       { bank: 'example', mode: 'build' },
     );
-    if (RECORD) {
-      // Kept as the replay reads it: the agents' own turns, and only the shape of what the bank showed.
-      const lines = (await readFile(join(dir, `${runId}.jsonl`), 'utf8'))
-        .split('\n')
-        .filter(Boolean)
-        .map((l) => JSON.parse(l) as Recorded)
-        .map((l) => JSON.stringify({ ...l, request: unpictured(l.request) as Request }));
-      await writeFile(join(RECORDINGS, 'build-example.jsonl'), `${lines.join('\n')}\n`);
-    }
+    // Kept as the replay reads it: the agents' own turns, and only the shape of what the bank showed.
+    const recorded = (await readFile(join(dir, `${runId}.jsonl`), 'utf8'))
+      .split('\n')
+      .filter(Boolean)
+      .map((l) => JSON.parse(l) as Recorded);
+    if (RECORD)
+      await writeFile(
+        join(RECORDINGS, 'build-example.jsonl'),
+        `${recorded.map((l) => JSON.stringify({ ...l, request: unpictured(l.request) as Request })).join('\n')}\n`,
+      );
     expect(recommendationId).not.toBeNull();
+    // The recording carries the lessons: the Supervisor's record_lesson calls, on the lessons budget.
+    expect(
+      recorded.filter((l) => l.role === 'lessons' && l.body.includes('"name":"record_lesson"')),
+    ).toHaveLength(2);
 
     // The pack: the seed's patterns, served for bank 2, and the Supervisor's first turn reads it.
     const pack = (await (
