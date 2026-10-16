@@ -48,8 +48,11 @@ curl -s -X POST http://localhost:8000/tasks/check-balance \
   -d '{"bank":"generic","memberId":"40017732","account":"Everyday Checking"}'
 ```
 
+Or in Swagger UI: [`POST /tasks/check-balance`](http://localhost:8000/docs#/tasks/check_balance). Press **Authorize** first and enter the client id and secret from `secrets/credentials.txt`.
+
 When it asks, answer the sign-in code in the Console inbox; the code is in the staff inbox. Then
-read the run with `curl -s http://localhost:8000/tasks/<runId> -H "Authorization: Bearer $TOKEN"`.
+read the run with `curl -s http://localhost:8000/tasks/<runId> -H "Authorization: Bearer $TOKEN"`,
+or in Swagger UI with [`GET /tasks/{runId}`](http://localhost:8000/docs#/tasks/get_task).
 You get `200` and the balance. No model ran: the driver is code, and the run's `driverVersionId`
 in the Console names the version that served it.
 
@@ -125,6 +128,8 @@ step, the repair case closes, and bank 1's check-balance is back in `GET /banks`
 curl -s http://localhost:8000/banks -H "Authorization: Bearer $TOKEN"
 ```
 
+Or in Swagger UI: [`GET /banks`](http://localhost:8000/docs#/catalog/list_banks).
+
 If you approve after the command has ended, `just gate <recommendation id>` runs the gate on
 its own.
 
@@ -141,23 +146,136 @@ and 4. `just repair generic` repairs it back.
 
 ## Onboarding a new bank
 
-This only works when the driver can handle the bank. The CoreLink driver can't read a balance at
-bank 3 (`sample`) or bank 4 (`placeholder`), so their hazard check fails at the control run.
+Here the factory meets a bank it has never seen and writes its crawler. Use bank 3, Sample
+Savings Bank (`sample`): nothing has ever crawled it. The Scout and the Supervisor work toward all
+three tasks; what the bank gets, once a person approves and the bank's own results agree, is Check
+Balance. Start with the stack up (`just up`) and a token (`TOKEN=$(just api-token)`).
+
+### 1. Give the factory a model key
+
+Copy your Anthropic key to the clipboard, then:
+
+```sh
+just secret-set factory ANTHROPIC_API_KEY
+```
+
+You should see `✓ ANTHROPIC_API_KEY set in …`, with the clipboard cleared. An OpenAI key works the
+same way, as `OPENAI_API_KEY`. A run stops before it spends $25, and all runs together before $150
+in a week. The Console's **Model calls** table shows what each call cost.
+
+With no key, use bank 2 instead: `just onboard example` replays a recorded onboarding of bank 2,
+for free. Every step below is the same, with `example` in place of `sample`, except that bank 2
+already serves Check Balance from a hand-written profile; the factory's version takes over once
+it is promoted.
+
+### 2. Check that bank 3 has no crawler
+
+```sh
+curl -s http://localhost:8000/banks -H "Authorization: Bearer $TOKEN"
+```
+
+Or in Swagger UI: [`GET /banks`](http://localhost:8000/docs#/catalog/list_banks).
+
+You should see `sample` with an empty `tasks` list.
+
+### 3. Start the onboarding
 
 ```sh
 just onboard sample
 ```
 
-The Scout signs in and works toward each of the three goals (a balance, the transfer's review
-page, the statements list), and the Supervisor looks at every page it reaches and tells it what to
-do next. Answer each sign-in code in the Console inbox. When it's done, the Supervisor's draft
-profile shows up under Recommendations: the bank's words for each thing, its screens and its
-refusals, each claim marked **seen** (it's on the frames it cites) or **guess**. Approve it as in
-Part 6, and the same gate runs. Anything the claims can't cover (how an account is worded, how
-codes arrive) comes from the bank's base profile in `packages/drivers`.
+Leave this terminal open. It restarts the factory with your key, runs the whole flow, and waits
+for you twice. It begins:
 
-Bank 4 is harder still. It signs in with an authenticator code, but the gate reads sign-in codes
-from the messages the bank sent, so its hazard check needs the authenticator as well.
+```text
+factory run build-sample-1a2b3c4d: build at sample
+goal: check-balance
+```
+
+### 4. Answer each sign-in code
+
+The Scout signs in to bank 3 as a member of staff would, and the bank sends a code. The code is in
+the staff inbox (http://localhost:8089) under **Sample Savings Bank**. Enter it in the Console
+Inbox, on the factory's **Staff code** task, as in the end-to-end test. A code left for 15
+minutes ends the run.
+
+### 5. Watch the three goals
+
+The Scout works toward a balance, then the statements list, then a transfer's review page; it
+never presses submit. The Supervisor reads every page the Scout reaches and tells it what to do
+next. For each goal the terminal prints a line as it starts and one as it ends:
+
+```text
+goal: download-statements
+  ended: …
+```
+
+### 6. Review the recommendation
+
+When the goals are done, the terminal prints:
+
+```text
+lessons: … recorded, … relied on, … contradicted
+recommendation rec_…: … claims, awaiting a person
+Approve or reject rec_… in the Console: http://localhost:8080/recommendations
+```
+
+Open **Recommendations** in the Console. The card lists each thing the Supervisor claims about
+bank 3: its words for each control, its screens and its refusals. Each claim is **seen** (it is
+on the frames it cites) or a **guess**.
+
+1. Press **Frames** beside a few claims and check them against the pictures.
+2. Tick **I accept this guess** beside each guess you accept. An unticked guess blocks approval.
+3. Type a reason of at least ten characters and press **Approve**.
+
+### 7. Watch the gate
+
+The terminal moves on the moment you approve. The profile becomes version 1 of bank 3's crawler
+and runs the hazard check: a run with nothing forced, then one run for each of the 18 hazards,
+each judged by the outcome table and by the bank's own ledger. The check reads sign-in codes from
+the bank itself, so nothing waits for you. Probation follows: runs until two in a row are clean.
+
+```text
+v1: the hazard check
+v1: a probation run: succeeded
+v1: a probation run: succeeded
+v1: promoted; it serves check-balance at sample
+  memory told
+version dv_… is promoted
+```
+
+### 8. Use it
+
+Ask for the bank list again ([`GET /banks`](http://localhost:8000/docs#/catalog/list_banks) in
+Swagger UI). `sample` now lists `check-balance`. Then a balance on bank 3:
+
+```sh
+curl -s -X POST http://localhost:8000/tasks/check-balance \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"bank":"sample","memberId":"40017732","account":"Everyday Checking"}'
+```
+
+Or in Swagger UI: [`POST /tasks/check-balance`](http://localhost:8000/docs#/tasks/check_balance).
+
+Answer its sign-in code as usual. The run ends `succeeded`, and no model ran: the crawler is the
+profile the factory wrote and you approved.
+
+### Bank 4
+
+Bank 4 (`placeholder`) onboards the same way up to the gate. Its staff read sign-in codes from an
+authenticator app (the panel in the staff inbox), while the hazard check reads the codes a bank
+sends. So its run with nothing forced fails, and bank 4's version stays a candidate.
+
+### If onboarding goes another way
+
+| You see | What it means | What to do |
+|---|---|---|
+| `no recording for run build-sample-…` | no model key, and bank 3 has no recording | set a key (step 1), or onboard `example` for free |
+| `the run has spent … of $24.00` or `the week has spent … of $150.00` | a spending cap stopped the run ($1 of each run is kept for its lessons) | nothing more is spent; start again once the week allows |
+| `Not approved: nothing changes.` | you pressed **Reject** | `just onboard sample` starts a fresh run |
+| `failed: control`, or `failed:` and hazard names | the profile gave another result than the outcome table | the version stays a candidate and nothing serves bank 3; the hazard lab shows what that hazard does |
+| `version dv_… is candidate` after the probation runs | four probation runs without two clean in a row | the version goes back to candidate; `just gate rec_…` runs the gate again |
+| you closed the terminal before approving | the run's recommendation still waits in the Console | approve it, then `just gate rec_…` runs the gate |
 
 ## If something goes wrong
 
