@@ -37,6 +37,7 @@ volumes:
   vault-data: {}
   minio-data: {}
   bank-db-data: {}
+  memory-models: {}
 
 services:
   # ── box B: data ──────────────────────────────────────────────────────────────
@@ -99,11 +100,15 @@ services:
     networks: [data]
     depends_on: { postgres: { condition: service_healthy } }
 
+  # The embedding model (about 130 MB) is fetched into its own volume the first time memory
+  # starts, and loaded before memory reports healthy; held in memory it is most of this limit.
   memory:
     <<: *node
     command: ['node', 'apps/memory/dist/main.js']
-    mem_limit: 384m
+    mem_limit: 512m
     env_file: [../../config/app.env, ../../.run/env/memory.env]
+    environment: { MEMORY_MODEL_DIR: /models }
+    volumes: [memory-models:/models]
     networks: [app, data]
     depends_on:
       postgres: { condition: service_healthy }

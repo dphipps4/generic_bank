@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+# Memory's embedding runtime runs on CPU: npm ci fetches no GPU libraries for it.
+env:
+  ONNXRUNTIME_NODE_INSTALL: skip
+
 jobs:
   check:
     name: typecheck, lint, test, boundaries

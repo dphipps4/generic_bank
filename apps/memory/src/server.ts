@@ -4,7 +4,7 @@ import Fastify from 'fastify';
 import { z } from 'zod';
 import type { Db } from './db.js';
 import { SIGNATURE, type Door, type Write } from './door.js';
-import { ReadOnly, type Memory, type Role } from './memory.js';
+import { ReadOnly, Refused, type Memory, type Role } from './memory.js';
 import { screen } from './screen.js';
 
 declare module 'fastify' {
@@ -14,7 +14,8 @@ declare module 'fastify' {
   }
 }
 
-/** A write's own work, once the door has let it through. Its result is the response. */
+/** A write's own work, once the door has let it through. Its result is the response: 201, or 200
+ *  when it says `written: false`. */
 export type WriteHandler = (body: unknown, role: Role) => Promise<unknown>;
 
 const History = z.object({
@@ -54,6 +55,10 @@ export function buildServer(opts: {
 
   app.setErrorHandler((err, _req, reply) => {
     if (err instanceof ReadOnly) return reply.code(503).send({ error: 'read_only' });
+    if (err instanceof Refused)
+      return reply.code(err.status).send({ error: err.code, message: err.message });
+    if (err instanceof z.ZodError)
+      return reply.code(400).send({ error: 'bad_body', issues: err.issues });
     return reply.send(err);
   });
 
@@ -86,7 +91,9 @@ export function buildServer(opts: {
         return reply
           .code(422)
           .send({ error: 'privacy_screen', reason: screened.reason, path: screened.path });
-      return reply.code(201).send(await handler(req.body, role));
+      const out = await handler(req.body, role);
+      const written = (out as { written?: boolean } | null)?.written !== false;
+      return reply.code(written ? 201 : 200).send(out);
     });
   }
 
