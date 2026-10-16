@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
 import { vector } from '@electric-sql/pglite-pgvector';
 import type { Db, Query } from '../src/db.js';
+import { door } from '../src/door.js';
 
 export const MIGRATIONS = join(import.meta.dirname, '../prisma/migrations');
 
@@ -31,3 +32,13 @@ export async function memoryDb(): Promise<Db & { pg: PGlite }> {
     close: () => pg.close(),
   };
 }
+
+export const TOKENS = {
+  runner: 'r'.repeat(40),
+  factory: 'f'.repeat(40),
+  curator: 'c'.repeat(40),
+  system: 'y'.repeat(40),
+} as const;
+export const SIGNING_KEY = 'm'.repeat(40);
+
+export const testDoor = () => door({ tokens: TOKENS, signingKey: SIGNING_KEY });
