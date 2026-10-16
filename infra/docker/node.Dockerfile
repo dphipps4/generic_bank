@@ -14,6 +14,7 @@ COPY packages/guardrails/package.json packages/guardrails/
 COPY packages/oauth/package.json packages/oauth/
 COPY packages/runs/package.json packages/runs/
 COPY packages/screen/package.json packages/screen/
+COPY apps/agent/package.json apps/agent/
 COPY apps/api/package.json apps/api/
 COPY apps/bank/package.json apps/bank/
 COPY apps/console/package.json apps/console/
