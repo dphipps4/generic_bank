@@ -1,9 +1,11 @@
 # Generic Bank
 
-A typed API that an AI agent calls to check balances, download statements and request
-transfers at legacy banks that have no API. The system does the work by operating each bank's
-website the way a person would, hands the work to a person when it cannot proceed safely, and
-never moves money without a person's approval. A software factory learns each new bank.
+This is a take-home implementation of an API for bank websites that have no API of their own: an
+AI agent calls it to check a balance, transfer money (only once a person approves) or download
+statements, and a crawler does the work by operating the bank's staff screens the way a person
+would. Behind it is a software factory where AI agents study a bank they haven't seen, like banks
+3 and 4, and write the crawler for it as plain deterministic code, so no model runs when a
+customer's task does.
 
 Everything runs locally with docker compose, and every step is a make target.
 
