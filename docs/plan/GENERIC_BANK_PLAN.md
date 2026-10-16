@@ -237,6 +237,12 @@ also carries an embedding (a vector from a small local model, stored with pgvect
 service can find "things like this" as well as exact words, using Postgres's own full-text
 search. A last table, the change log, records every write.
 
+**Why a model?** For a sample this size, Postgres alone would do. It can match lessons that
+are worded almost the same, and find them by keyword. What it can't do is see the same idea put
+differently, like "member search is behind a menu" and "the search sits under Menu". That's how
+lessons from different banks tend to come out. Graphiti, in Part 2, searches by meaning too. All
+this costs one package and a 130 MB model, downloaded once and run locally.
+
 **How facts and decisions are written down.** A fact has a lifespan. It carries the moment it
 became true (`valid_at`) and, once something contradicts it, the moment it stopped
 (`invalid_at`). A fact is never deleted, only closed, so memory can always answer "what did we
