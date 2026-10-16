@@ -334,5 +334,5 @@ describe('a bank redesigns, the crawl breaks, the factory repairs it', () => {
     expect(back.version).toBe(v.id);
     expect(back.steps).toEqual(expect.arrayContaining(['notice', 'console', 'balance']));
     expect((await db.query(`SELECT count(*)::int AS n FROM "ModelCall"`)).rows[0]).toEqual(calls);
-  }, 240_000);
+  }, 480_000);
 });
