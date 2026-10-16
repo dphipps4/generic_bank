@@ -1,4 +1,4 @@
-// The Supervisor (plan, §M.2): after every Scout step it looks at the latest frame, the masked
+// The Supervisor (plan, §7): after every Scout step it looks at the latest frame, the masked
 // picture and the page as JSON, reasons about where the Scout stands against the goal, and answers
 // in a fixed form: the next step, wait, or stop; why, in one line; and the frames of this run it
 // relied on. An unreadable answer counts as wait; three in a row stop the run, and so does the same
@@ -24,7 +24,7 @@ export const GOALS = {
 export type Goal = keyof typeof GOALS;
 
 const UNREADABLE_IN_A_ROW = 3;
-// The stall rule (§M.3): no progress for three turns ends the run.
+// The stall rule (§7): no progress for three turns ends the run.
 const STALL = 3;
 // The most questions to memory in one step, before the answer.
 const QUERIES = 2;

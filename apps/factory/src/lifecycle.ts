@@ -1,4 +1,4 @@
-// The driver's states (plan, §10, Appendix L). An approved recommendation becomes a candidate
+// The driver's states (plan, §7). An approved recommendation becomes a candidate
 // version of the bank's driver. It goes on probation only once it passes the hazard check; one that
 // fails stays a candidate, and its registry event names each hazard it failed. Two clean probation
 // runs in a row promote it, which is what puts the task on the bank in GET /banks; at most four

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { brief, outcomeBank, RUN, run } from './support.js';
 
-// The error taxonomy (plan, §D.2 to §D.4), one row of each kind from the outcome table, each its
+// The error taxonomy (plan, §A.1 to §A.2), one row of each kind from the outcome table, each its
 // distinct typed result: the bank's own answer about the member, a session that ends early and is
 // signed in again inside the run, and a gateway that answers 503.
 const env = outcomeBank();

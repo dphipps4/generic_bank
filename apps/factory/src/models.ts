@@ -1,5 +1,5 @@
 // Each role's provider, model and effort, read from the factory's settings, and the prices the
-// meter charges (plan §M.6). The models themselves are set in config/app.env, nowhere else.
+// meter charges (plan §7). The models themselves are set in config/app.env, nowhere else.
 import { z } from 'zod';
 
 export const ROLE_NAMES = ['scout', 'supervisor', 'lessons'] as const;

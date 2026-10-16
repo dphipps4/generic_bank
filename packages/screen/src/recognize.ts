@@ -1,4 +1,4 @@
-// Screen recognition (plan, §E.3). Every screen a product can show is a named signature: phrases it
+// Screen recognition (plan, §5). Every screen a product can show is a named signature: phrases it
 // must show, phrases it must not, controls it must have, and an optional path hint that is only
 // weak evidence. Exactly one signature must match; none, or two, is an unknown screen, and the run
 // escalates instead of guessing. Error and outcome screens are signatures too, which is how

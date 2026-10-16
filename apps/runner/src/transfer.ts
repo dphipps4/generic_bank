@@ -1,7 +1,7 @@
-// A transfer run (plan, Appendix F): prepared up to the bank's review page, parked for a person's
+// A transfer run (plan, §6): prepared up to the bank's review page, parked for a person's
 // approval while the Runner holds the browser, submitted once under the grant the approval issued,
 // and confirmed in the account's history. Where a run resumes is decided by what it wrote down: a
-// journaled press goes to the history and never to the button (§F.2, §D.4), and an approval
+// journaled press goes to the history and never to the button (§6, §A.2), and an approval
 // already asked for is waited on again, never asked twice.
 import {
   countInHistory,
@@ -143,7 +143,7 @@ async function prepareAndSubmit(r: TransferRun, input: TransferInput): Promise<E
   const { ctx, fresh } = await r.hold();
   if (fresh) {
     // The grant binds values, not a browser: sign in again, prepare again, and the click checks
-    // the screen against the grant (plan, §F.2).
+    // the screen against the grant (plan, §6).
     await r.note('resume', 'no browser holds the review page; signing in again to prepare it');
     const again = await prepareTransfer(ctx, input);
     if (again.status !== 'succeeded') return endingOf(again);

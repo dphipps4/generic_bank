@@ -1,4 +1,4 @@
-// The seed (plan §K.10): the starting knowledge through memory's own door, as the curator, with one
+// The seed (plan §8): the starting knowledge through memory's own door, as the curator, with one
 // approval for the whole set; the catalog and the lessons read at any version.
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';

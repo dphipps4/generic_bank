@@ -5,7 +5,7 @@ import type { Tenant } from './tenants.js';
 
 // Banks 2, 3 and 4 judge the browser before the password, the way a real bank's bot manager
 // does: anything not shaped like a person's browser is answered "403 Access denied" before any
-// page. The screen reads only the request's headers (plan, §5.1, Appendix C.4 and Appendix W).
+// page. The screen reads only the request's headers (plan, §5 and §A.3).
 
 /** Headers Node's own connection handling may add; they say nothing about the client. */
 const CONNECTION = new Set(['connection', 'keep-alive', 'proxy-connection']);
@@ -17,7 +17,7 @@ const EVERY_BROWSER = ['accept-language', 'sec-fetch-mode', 'sec-fetch-dest'] as
 export function botReason(h: IncomingHttpHeaders): string | null {
   const ua = String(h['user-agent'] ?? '');
   if (/^curl\//i.test(ua)) return 'curl user agent';
-  // curl's whole request: Host, User-Agent and Accept: */*, and nothing else (Appendix W.5).
+  // curl's whole request: Host, User-Agent and Accept: */*, and nothing else (§5).
   const names = Object.keys(h).filter((n) => !CONNECTION.has(n));
   const curlShape = ['accept', 'host', 'user-agent'];
   if (

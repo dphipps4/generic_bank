@@ -82,7 +82,7 @@ const dedupeKey = (parts: readonly unknown[], secret: string) =>
 const MEMO_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
 /**
- * Our marker for one transfer inside the bank's own data (plan, §F.2), such as `GBX 7Q4M`. It is
+ * Our marker for one transfer inside the bank's own data (plan, §6), such as `GBX 7Q4M`. It is
  * minted once, with the run, so every retry, resume and history read looks for the same one.
  */
 export const newMemoToken = () =>
@@ -203,7 +203,7 @@ export type Ending =
 
 /**
  * A settlement's UPDATE (ending `WHERE id = $1`) as one statement with its attempt in the
- * recorder's outbox (plan §K.4): the run's next attempt number, its status, and its code when the
+ * recorder's outbox (plan §A.6): the run's next attempt number, its status, and its code when the
  * run failed or stopped. Nothing else of the run goes in, so nothing personal waits for memory.
  */
 const recorded = (update: string) =>
@@ -242,8 +242,8 @@ export async function settleRun(sql: Sql, runId: string, e: Ending) {
 }
 
 /**
- * A stopped run goes to a person (plan, §D.8): an escalation task in the inbox. A guard trip also
- * freezes the bank (plan, §J.2), and its escalation cannot resume.
+ * A stopped run goes to a person (plan, §3): an escalation task in the inbox. A guard trip also
+ * freezes the bank (plan, §9), and its escalation cannot resume.
  */
 async function escalate(
   sql: Sql,
@@ -482,7 +482,7 @@ async function decide(
 }
 
 /**
- * Approve (plan, §F.1 step 3): the task is decided and the run's single-use grant issued, bound to
+ * Approve (plan, §6 step 3): the task is decided and the run's single-use grant issued, bound to
  * the review as read. If the grant cannot be issued, the task is opened again: an approval without
  * a grant would leave the run waiting on a key that does not exist.
  */
@@ -517,7 +517,7 @@ async function approve(
 }
 
 /**
- * Resume (plan, §D.8): the escalated run goes back to running and to the Runner, which signs in
+ * Resume (plan, §3): the escalated run goes back to running and to the Runner, which signs in
  * fresh and carries on its trail. If it cannot be handed over, the escalation is opened again: a
  * run marked running that no worker holds would never end.
  */
@@ -552,7 +552,7 @@ async function resume(
 }
 
 /**
- * Finish by hand (plan, §D.8): the person's result, in the task's own typed shape, ends the run
+ * Finish by hand (plan, §3): the person's result, in the task's own typed shape, ends the run
  * handed_off; the agent reads it with who finished it and when.
  */
 async function finish(
@@ -581,7 +581,7 @@ export interface ActDeps {
 }
 
 /**
- * A person acts on a human task, from the Console or its API (plan, §F.3, §D.8). The body is
+ * A person acts on a human task, from the Console or its API (plan, §6, §3). The body is
  * checked against the action's contract, the action against the task's kind and state, and every
  * action leaves an audit entry with its reason. A code is sealed and never written to the audit.
  */

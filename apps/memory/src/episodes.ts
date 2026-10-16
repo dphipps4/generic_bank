@@ -1,4 +1,4 @@
-// Episodes, hypotheses and lessons (plan §K.2, §K.7): what runs record and propose. Each write
+// Episodes, hypotheses and lessons (plan §8, §A.6): what runs record and propose. Each write
 // reads what it rests on inside its own transaction, so a run memory has not recorded is 409 and
 // nothing is written.
 import { randomUUID } from 'node:crypto';

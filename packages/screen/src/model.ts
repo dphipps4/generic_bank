@@ -1,4 +1,4 @@
-// The screen model: what an operator sees, read from outside the page (plan, §E.1).
+// The screen model: what an operator sees, read from outside the page (plan, §5).
 //
 // For the top document and every frame, Chromium's own layout (DOMSnapshot), its accessibility
 // tree and a screenshot. Frames are flattened into page coordinates so the screen is one picture.

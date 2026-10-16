@@ -1,4 +1,4 @@
-// Statements a run kept (plan, §D.1): where each is stored, and the reference a caller fetches it by.
+// Statements a run kept (plan, §3): where each is stored, and the reference a caller fetches it by.
 // A reference names the run and the month and nothing personal; the run says whose it is.
 import { STATEMENT_REF } from '@gb/contracts';
 

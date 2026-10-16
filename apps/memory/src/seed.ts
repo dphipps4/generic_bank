@@ -1,4 +1,4 @@
-// The starting knowledge (plan §K.10): seeds/memory, checked against its manifest, then every entry
+// The starting knowledge (plan §8): seeds/memory, checked against its manifest, then every entry
 // through memory's door as the curator, and one approval for the whole set. A file whose hash or
 // count is not the manifest's refuses the whole seed before anything is sent. Seeded lessons are
 // curated patterns. Run again, the seed writes nothing.

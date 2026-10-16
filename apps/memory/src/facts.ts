@@ -1,4 +1,4 @@
-// Facts (plan §K.2, §K.3): typed claims about a bank in a fixed vocabulary, written by code only
+// Facts (plan §8): typed claims about a bank in a fixed vocabulary, written by code only
 // on a promotion memory's records bear out, never typed in by hand and never built from page text.
 // A fact is a bi-temporal row: validAt and invalidAt bound when it held at the bank, createdAt and
 // expiredAt when memory believed it. A fact is closed, never deleted, so a search as of a past run

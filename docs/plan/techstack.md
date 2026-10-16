@@ -44,7 +44,7 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 
 | Element | Choice | Why |
 |---|---|---|
-| Browser automation | **Our own DevTools Protocol client** driving **full Chromium** in modern headless mode (Debian's in the Runner, Chrome for Testing to develop) | Reliable frames, popups, downloads and real input; the identity extension needs full Chromium (plan §E.8) |
+| Browser automation | **Our own DevTools Protocol client** driving **full Chromium** in modern headless mode (Debian's in the Runner, Chrome for Testing to develop) | Reliable frames, popups, downloads and real input; the identity extension needs full Chromium (plan §5) |
 | Page JavaScript | **Enabled and executed** | The bank draws its content with script |
 | Perception | **Chrome DevTools Protocol** through our client's sessions: `DOMSnapshot`, the `Accessibility` tree, screenshots, across every frame | Read from outside, so the page can't see or fake it; nothing is injected |
 | Pictures of text | **Image fingerprints** (perceptual hashes), named once by the factory's vision model, kept in the bank's profile | Image-only buttons get names without reading pixels |

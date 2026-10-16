@@ -1,4 +1,4 @@
-// What a run reads (plan §K.4, §K.8): the knowledge pack it starts from, the question behind
+// What a run reads (plan §A.6, §8): the knowledge pack it starts from, the question behind
 // `memory_query`, and the episodes: similar failures, a bank's latest attempts and a vendor's
 // recurring failures. The pack says what is known and labels everything that is not: a proposed
 // lesson is "verify before relying", a guess says so, and a disputed lesson carries its reason. A

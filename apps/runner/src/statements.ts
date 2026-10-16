@@ -1,5 +1,5 @@
 // Download Statements, the Runner's side: each month the driver kept is stored as a document before
-// the run settles, and the result names it by a reference the API serves (plan, §D.1). A month the
+// the run settles, and the result names it by a reference the API serves (plan, §3). A month the
 // bank does not have carries the bank's own words for it.
 import type { Outcome, Statements } from '@gb/drivers';
 import type { FrameStore } from '@gb/evidence';

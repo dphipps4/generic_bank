@@ -1,7 +1,7 @@
 // Download Statements on CoreLink Branch Console (plan, §5): sign in, find the member, open the
 // account's statements from its tile, press "Statement" on each requested month's row, and keep the
 // PDF the window it opens receives, byte for byte. A month the bank does not list is "not available"
-// only in the bank's own words (plan, Appendix A, 14); without them, the run stops for a person. The
+// only in the bank's own words (plan, §9: no false success); without them, the run stops for a person. The
 // PDF is never read: what it says is for Part 2.
 //
 // Banks differ in how a statement opens: a button on its row, or an entry in the row's drop-down

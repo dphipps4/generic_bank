@@ -1,10 +1,10 @@
-// The Scout (plan, §M.2): it navigates, one simple step at a time, as the Supervisor directs, and
-// every page it reaches is a frame. Its tools (§M.4) work over our own browser: they open only the
+// The Scout (plan, §7): it navigates, one simple step at a time, as the Supervisor directs, and
+// every page it reaches is a frame. Its tools (§7) work over our own browser: they open only the
 // run's hosts, act by control reference from the screen model, press keys from a fixed set, never
 // type a secret as text, and never run script in a page. The server types a credential and a
 // person's code; the model never sees either. It never presses the bank's submit for a transfer
 // (on the transfer path, no control named with a money word at all), and never clicks a picture no
-// one has named (§E.1).
+// one has named (§5).
 import { maskText } from '@gb/evidence';
 import {
   ActError,

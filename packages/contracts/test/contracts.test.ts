@@ -61,7 +61,7 @@ describe('the result', () => {
     for (const code of RETRYABLE) expect(statusOf(code)).toBe('failed');
   });
 
-  it('maps every status to the HTTP status of §D.7', () => {
+  it('maps every status to the HTTP status of §A.1', () => {
     expect(httpStatus({ status: 'running' })).toBe(202);
     expect(httpStatus({ status: 'needs_human' })).toBe(202);
     expect(httpStatus({ status: 'succeeded' })).toBe(200);

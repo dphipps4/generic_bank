@@ -14,7 +14,7 @@ import { HAZARD_NAMES, hazards } from '../../apps/bank/src/hazards.js';
 import { MEMBERS } from '../../apps/bank/src/seed.js';
 import { CASES, RUN } from './support.js';
 
-// The hazard lab and the outcome table read one list (plan, §S.2, Appendix P): every hazard the bank
+// The hazard lab and the outcome table read one list (plan, §A.3, §B.4): every hazard the bank
 // knows, the healthy member they are forced on, the member's own cases, and the one result each
 // gives. The bank shares no code with us, so its names and its seed are checked against the list.
 

@@ -1,4 +1,4 @@
-// API clients in the Console (plan, §D.6). Creating one shows its secret and starting code exactly
+// API clients in the Console (plan, §A.7). Creating one shows its secret and starting code exactly
 // once, on the client's own page; revoking one stops every token it holds. Only hashes are stored,
 // so the Console could not show a secret again if it wanted to.
 import { isScope, type OAuth, TASK_SCOPES } from '@gb/oauth';

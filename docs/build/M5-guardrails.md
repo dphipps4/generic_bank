@@ -6,16 +6,16 @@ with its rule and layer, and trips the guard: the bank is frozen and the run end
 `escalated: guard_tripped`. The guard judges the control on screen (and, in Part 2, the page, the member on screen and the
 request on the wire), never what the page's text asks for. Everything personal is masked before
 it's written, and the caller only ever reads our own fixed sentences. The plan's
-[§13](../plan/GENERIC_BANK_PLAN.md#13-keeping-it-safe) and
-[Appendix J](../plan/GENERIC_BANK_PLAN.md#appendix-j-guardrails) are the specification, with
-[§I.2](../plan/GENERIC_BANK_PLAN.md#i2-masking) and
-[§I.9](../plan/GENERIC_BANK_PLAN.md#i9-masking-applies-to-telemetry-too) for masking,
-[§D.2](../plan/GENERIC_BANK_PLAN.md#d2-the-result) for the messages and
-[Appendix P](../plan/GENERIC_BANK_PLAN.md#appendix-p-tests) for the two suites.
+[§9](../plan/GENERIC_BANK_PLAN.md#9-safety) and
+[§9](../plan/GENERIC_BANK_PLAN.md#9-safety) are the specification, with
+[§9](../plan/GENERIC_BANK_PLAN.md#9-safety) and
+[§9](../plan/GENERIC_BANK_PLAN.md#9-safety) for masking,
+[§A.1](../plan/GENERIC_BANK_PLAN.md#a1-results-and-http) for the messages and
+[§B.4](../plan/GENERIC_BANK_PLAN.md#b4-tests-and-ci) for the two suites.
 
 The allowlist files, the approval grant and the freeze are in `packages/guardrails`; masking and
 withheld frames are in `packages/evidence`; the PII scan is `tests/pii`; the factory's Scout
-carries its own refusals ([§M.4](../plan/GENERIC_BANK_PLAN.md#m4-tools)). This sheet puts the
+carries its own refusals ([§7](../plan/GENERIC_BANK_PLAN.md#7-the-factory)). This sheet puts the
 guard in front of every action the Runner takes; the remaining layers are Part 2.
 
 The bank is the judge throughout. A trap counts as refused when the bank's state-change counter

@@ -1,4 +1,4 @@
-// Episodes and lessons (plan §K.2, §K.3, §K.7): runs and their attempts, hypotheses, proposals that
+// Episodes and lessons (plan §8, §A.6): runs and their attempts, hypotheses, proposals that
 // cite their frames, and near-duplicates that grow a held lesson. Each write is read back from the
 // tables and the change log it leaves.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';

@@ -1,4 +1,4 @@
-// The journal (plan, §F.2, §G.2): every state-changing action a run intends and performs, hash-
+// The journal (plan, §6, §2): every state-changing action a run intends and performs, hash-
 // chained per run. Each entry's hash covers its own content and the hash before it, starting from
 // the run's own origin, so changing or reordering any entry, or removing any but the newest, breaks
 // the chain at that entry.

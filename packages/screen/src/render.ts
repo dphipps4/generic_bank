@@ -1,4 +1,4 @@
-// When a page is ready to read and act on (plan, §E.2), never "network idle": legacy pages poll,
+// When a page is ready to read and act on (plan, §5), never "network idle": legacy pages poll,
 // stream and keep connections open. A screen the caller recognizes, with something enabled to press
 // and nothing saying it is still loading, is ready once its frames have loaded and two readings
 // 300 ms apart have the same layout; no picture comparison is needed (framesets finish drawing at

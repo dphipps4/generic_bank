@@ -1,9 +1,9 @@
-// The inbox (plan, §G.2, §F.3): every open human task, oldest deadline first, with how long the agent
+// The inbox (plan, §2, §6): every open human task, oldest deadline first, with how long the agent
 // has been waiting and how often it has asked. A person answers here, and every answer is also an
 // API call (`POST /human-tasks/:id/:action`), so tests drive the same path a person does. A code is
 // sealed the moment it arrives and is never shown again, not here and not in the audit. An approval
 // shows what is being approved, as the crawler read it off the bank's review page, and its masked
-// picture. An escalation is resumed, finished by hand or cancelled (plan, §D.8).
+// picture. An escalation is resumed, finished by hand or cancelled (plan, §3).
 import formbody from '@fastify/formbody';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { ACTIONS, HumanAction, type HumanTaskKind, problem, refusal } from '@gb/contracts';
@@ -19,7 +19,7 @@ export interface InboxDeps {
   restart?: (runId: string, taskId: string) => Promise<void>;
 }
 
-/** An approval or a code waiting longer than this is called out on every page (plan, §G.4). */
+/** An approval or a code waiting longer than this is called out on every page (plan, §2). */
 export const WAITING_TOO_LONG_MS = 5 * 60_000;
 
 export async function waitingTooLong(sql: Sql, now = new Date()): Promise<number> {
@@ -47,7 +47,7 @@ const NOTICE: Partial<Record<HumanAction, string>> = {
   finish: 'Recorded: the agent sees the task finished by hand, with your result.',
 };
 
-/** The written reason every action but a code carries (plan, §G.1). */
+/** The written reason every action but a code carries (plan, §2). */
 const REASONED: Partial<Record<HumanAction, { label: string; summary?: string; quiet?: boolean }>> =
   {
     approve: { label: 'Approve' },

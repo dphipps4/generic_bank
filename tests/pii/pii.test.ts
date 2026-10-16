@@ -32,7 +32,7 @@ import {
 } from './scan.js';
 import { type Seeded, seededOf } from './seeded.js';
 
-// The PII suite (plan, §I.2): each task once on bank 1, asked for through the Task API and carried
+// The PII suite (plan, §9): each task once on bank 1, asked for through the Task API and carried
 // out by the Runner, with a person answering through the Console. Then everything those runs wrote
 // is searched for every seeded secret and personal value: each row of the control database, each
 // stored object, each log line. A stored picture is judged by what the bank drew: every place a

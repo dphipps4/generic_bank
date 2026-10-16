@@ -1,4 +1,4 @@
-// Forced hazards on a run (plan, §S.2). The hazard lab names them when it starts a run; they are kept
+// Forced hazards on a run (plan, §A.3). The hazard lab names them when it starts a run; they are kept
 // beside the run's masked inputs, where anyone reading the run sees them, and the Runner signs them
 // into the one header a forceable bank obeys. The signature is the bank's own scheme: the names
 // sorted and joined with commas, then an HMAC-SHA256 of that list.

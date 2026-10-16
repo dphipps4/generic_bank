@@ -1,4 +1,4 @@
-// A role's turn with its model, as a pi session (plan §M.6): the one place the factory calls a
+// A role's turn with its model, as a pi session (plan §7): the one place the factory calls a
 // model, and the only code that knows the provider. The role's provider, model and effort come
 // from its settings; every request goes to the gateway, which meters it and replays it in mock
 // mode, and never to the provider itself.

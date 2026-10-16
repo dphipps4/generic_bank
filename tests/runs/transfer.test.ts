@@ -8,7 +8,7 @@ import {
 import { MEMBERS } from '../../apps/bank/src/seed.js';
 import { type Harness, KEY, transferHarness } from './transfer-harness.js';
 
-// A transfer run end to end (plan, §F.1): the Runner prepares it up to the bank's review page and
+// A transfer run end to end (plan, §6): the Runner prepares it up to the bank's review page and
 // parks there holding its browser; a person approves from the Console; the run submits once under
 // the grant and finds the transfer in the history. The bank's ledger counts what moved.
 

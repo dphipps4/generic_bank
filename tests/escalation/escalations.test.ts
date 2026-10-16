@@ -10,7 +10,7 @@ import { accountsOf } from '../../apps/bank/src/ledger.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
 import { type LiveBank, liveBank, PASSWORDS } from '../support/banks.js';
 
-// An escalation as the agent and a person see it (plan, §D.8). The agent asks through the Task API;
+// An escalation as the agent and a person see it (plan, §3). The agent asks through the Task API;
 // the person acts through the Console's API, the same calls its pages make; the Runner carries out
 // the run against the real Generic Bank. Escalated: 409 with the escalation's id. Resumed: 202, then
 // 200 once the Runner is done.

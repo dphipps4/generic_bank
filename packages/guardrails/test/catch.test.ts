@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { ESLint } from 'eslint';
 import { describe, expect, it } from 'vitest';
 
-// Guard errors always propagate (plan, §J.2): the repository's own lint configuration fails code
+// Guard errors always propagate (plan, §9): the repository's own lint configuration fails code
 // that catches one, as it would fail it in a driver or in the Runner.
 
 const eslint = new ESLint({ cwd: fileURLToPath(new URL('../../..', import.meta.url)) });

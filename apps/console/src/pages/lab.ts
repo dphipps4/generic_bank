@@ -1,4 +1,4 @@
-// The hazard lab (plan, §S.2): an admin picks a bank, a task, a member and any hazards, and starts a
+// The hazard lab (plan, §A.3): an admin picks a bank, a task, a member and any hazards, and starts a
 // real run through the Task API, with the hazards forced on it. Every hazard is one click away, with
 // the result it must give beside it. Those results are the outcome table's own (`OUTCOMES`), so the
 // lab never promises what the tests do not prove. The page exists only on a stack whose banks obey

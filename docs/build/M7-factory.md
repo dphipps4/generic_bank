@@ -19,7 +19,7 @@ replays a recorded run (mock mode), so the whole path costs nothing.
 
 | # | Pull request | What it adds | What proves it |
 |---|---|---|---|
-| 1 | **This sheet, and the plan** | The Scout and the Supervisor as above, in §7 and Appendix M; a recommendation and its basis | the plan and this sheet agree |
+| 1 | **This sheet, and the plan** | The Scout and the Supervisor as above, in §7; a recommendation and its basis | the plan and this sheet agree |
 | 2 | **The model gateway, caps and mock mode** | One route to the model, metered; the caps in code; recorded responses replayed when there is no key | a run at a cap is refused before the request; mock mode replays a recording exactly, whatever the model is called (`apps/factory/test/gateway.test.ts`) |
 | 3 | **The Scout** | Open an allowed host, look (a frame), click and type by control reference, type a credential by name, enter a person's code; a frame for every page | the Scout signs in and reads the bank in the repair run (`tests/browser/repair.test.ts`); its limits have no test of their own |
 | 4 | **The Supervisor** | After every Scout step: where we are, the next step toward the goal, or stop, citing the frame | the Supervisor answers only in its fixed form, citing frames, and stops the run when it should (`apps/factory/test/supervisor.test.ts`); on bank 1, guided by it, the Scout reaches the balance in the repair run (`tests/browser/repair.test.ts`) |

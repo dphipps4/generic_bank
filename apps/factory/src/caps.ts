@@ -1,4 +1,4 @@
-// The factory's caps (plan §M.5). This file imports nothing, so no other module shapes them.
+// The factory's caps (plan §7). This file imports nothing, so no other module shapes them.
 export const CAPS = {
   /** Model spend per run, in US dollars. */
   runUsd: 25,

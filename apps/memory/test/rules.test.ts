@@ -1,4 +1,4 @@
-// The rules and facts (plan §K.3, §K.4, §K.8): each rule, set off by stored episodes alone, leaves
+// The rules and facts (plan §8, §A.6): each rule, set off by stored episodes alone, leaves
 // the versions and change-log rows the plan gives it; facts need a successful promotion, and a
 // search as of a past run returns what memory believed then.
 import { setTimeout as sleep } from 'node:timers/promises';

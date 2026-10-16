@@ -8,12 +8,12 @@ review page, a person approves it, and it's submitted once under a single-use gr
 result is unclear, the crawler reads the account's history and never presses the button again.
 Statements come back as stored documents, and every error path is one click away in the hazard
 lab. The plan's
-[Appendix F](../plan/GENERIC_BANK_PLAN.md#appendix-f-transfers-a-human-approved-activity),
-[§D.5](../plan/GENERIC_BANK_PLAN.md#d5-tools-for-agents),
-[§D.8](../plan/GENERIC_BANK_PLAN.md#d8-escalate-resolve-retry) and
-[§S.2](../plan/GENERIC_BANK_PLAN.md#s2-the-hazard-lab) are the specification, with
-[§5.1](../plan/GENERIC_BANK_PLAN.md#51-the-browsers-fingerprint-chrome-on-a-mac) and
-[Appendix W](../plan/GENERIC_BANK_PLAN.md#appendix-w-browser-identity-reference) for the fingerprint.
+[§6](../plan/GENERIC_BANK_PLAN.md#6-transfers),
+[§3](../plan/GENERIC_BANK_PLAN.md#3-the-api),
+[§3](../plan/GENERIC_BANK_PLAN.md#3-the-api) and
+[§A.3](../plan/GENERIC_BANK_PLAN.md#a3-hazards) are the specification, with
+[§5](../plan/GENERIC_BANK_PLAN.md#5-the-crawler) and
+[§5](../plan/GENERIC_BANK_PLAN.md#5-the-crawler) for the fingerprint.
 
 The bank's own ledger is the judge throughout. A test never takes the crawler's word that a
 transfer happened once: it counts the bank's postings and its state-change counter.
@@ -22,7 +22,7 @@ transfer happened once: it counts the bank's postings and its state-change count
 |---|---|---|---|
 | 1 | **Human steps, in types** | The kinds of human task (staff code, approval, supervisor code, escalation), each action and the states it is allowed from, the pending kind in a `202` body; the columns a resolution needs | an action from the wrong state is refused; the migration applies on top of the last one |
 | 2 | **The inbox** | A Console page of open human tasks, oldest deadline first, with how long the agent has waited; a staff code answered there and typed key by key; `POST /human-tasks/:id/answer` for tests; a banner for anything waiting over five minutes | the scripted answer in the run tests is gone: tests answer through the Console API, and the stored answer is `****` |
-| 3 | **Chrome on a Mac** | The Runner's browser is given the Mac identity of Appendix W at launch (user agent and client hints, headers, screen, cores, memory, language, timezone); a reference capture from a real Mac as a fixture; inside Docker the banks count as secure origins, so Chrome sends every header a real browser does | Bank 2's bot screen lets the Runner's Chrome in (`tests/browser/corelink-banks.test.ts`); the fixture is no longer compared field by field |
+| 3 | **Chrome on a Mac** | The Runner's browser is given the Mac identity of §5 at launch (user agent and client hints, headers, screen, cores, memory, language, timezone); a reference capture from a real Mac as a fixture; inside Docker the banks count as secure origins, so Chrome sends every header a real browser does | Bank 2's bot screen lets the Runner's Chrome in (`tests/browser/corelink-banks.test.ts`); the fixture is no longer compared field by field |
 | 4 | **Banks 2 to 4 refuse anything not a browser** | A bot screen before every page: curl, a request without browser headers, a headless user agent, client hints that contradict the user agent; a 403 "Access denied" page and a hazard-log entry; the README's curl example | the Runner's Chrome passes Bank 2's screen (`tests/browser/corelink-banks.test.ts`); a refusal has no test |
 | 5 | **The journal** | Every intended and performed state-changing action, hash-chained per run; the Journal page with Verify | changing any row breaks verification at that row |
 | 6 | **The payment guard** | `packages/guardrails` begins: the transfer allowlist as a file, money-moving controls refused, and approval grants (bound to the run, the masked accounts, the amount, the memo token and a nonce; five minutes; single use) | with no grant, a used one, an expired one or a different amount on screen, the submit is refused (`packages/guardrails/test/grants.test.ts`) |

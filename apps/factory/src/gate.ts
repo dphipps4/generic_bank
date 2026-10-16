@@ -1,4 +1,4 @@
-// The gate after a person's approval (plan, §10): the approved recommendation becomes a candidate
+// The gate after a person's approval (plan, §7): the approved recommendation becomes a candidate
 // version, its profile runs the hazard check against the bank, and on probation two clean runs
 // promote it. A repaired version's promotion closes the bank's repair case, and memory is told, so
 // its rules confirm what the probation runs bore out. The profile checked is the one the Runner

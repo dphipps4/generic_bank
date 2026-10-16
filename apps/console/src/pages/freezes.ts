@@ -1,4 +1,4 @@
-// Freezes (plan, §G.2, §J.2): a guard trip freezes its bank, and nothing runs there until a person
+// Freezes (plan, §2, §9): a guard trip freezes its bank, and nothing runs there until a person
 // clears the freeze here, with a written reason that goes to the audit. Newest first. Clearing is
 // also an API call (`POST /freezes/:id/clear`), so tests take the same path a person does.
 import { randomBytes } from 'node:crypto';

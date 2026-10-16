@@ -1,4 +1,4 @@
-// The privacy screen (plan §K.5), on every write: no passwords, codes, cookies or tokens, no
+// The privacy screen (plan §A.6), on every write: no passwords, codes, cookies or tokens, no
 // account-like numbers, no screenshots or page data, nothing about a person, and no advice to do
 // a forbidden action. It is blunt on purpose. A refusal names the rule and where, never the value.
 
@@ -34,7 +34,7 @@ const NOT_AN_ACCOUNT =
   /\d{4}-\d{2}-\d{2}(?:[T ][\d:.]+(?:Z|[+-]\d{2}:?\d{2})?)?|\b[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}\b/gi;
 const ACCOUNT = /\d(?:[ -]?\d){7,}/;
 
-// What memory never advises (the plan's rules, and §O.3), unless the words just before it say not
+// What memory never advises (the plan's rules, and §C.4), unless the words just before it say not
 // to. A comma ends that reach: "if the code does not arrive, request another" is still advice.
 const FORBIDDEN = [
   /\b(request|ask for|send|resend|trigger|get)\b[^.]{0,30}\b(second|another|new|fresh|extra)\b[^.]{0,15}\bcode\b/i,

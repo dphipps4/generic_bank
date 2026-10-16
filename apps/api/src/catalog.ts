@@ -16,7 +16,7 @@ import type { Sql, TaskScope } from '@gb/oauth';
 
 export type Task = TaskName;
 
-/** The OAuth2 scope each task needs (plan, §D.6). */
+/** The OAuth2 scope each task needs (plan, §A.7). */
 export const TASK_SCOPE: Record<Task, TaskScope> = {
   'check-balance': 'tasks:balance',
   transfer: 'tasks:transfer',
@@ -25,7 +25,7 @@ export const TASK_SCOPE: Record<Task, TaskScope> = {
 
 /**
  * Each bank in the registry, with the tasks a promoted driver serves on it today. A frozen bank
- * serves none until a person clears the freeze (plan, Appendix L).
+ * serves none until a person clears the freeze (plan, §7).
  */
 export async function banks(sql: Sql): Promise<BankInfo[]> {
   const r = await sql.query<{
@@ -172,7 +172,7 @@ const example = (status: keyof typeof CODES) => Object.keys(CODES[status]).join(
 /**
  * A transfer asked again with its idempotency key answers with its run's current result, so it can
  * end in any of a run's status codes; and the same transfer under a new key is refused while the
- * first is open (plan, §D.8).
+ * first is open (plan, §3).
  */
 const AGAIN = {
   '200': {

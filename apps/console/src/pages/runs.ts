@@ -1,5 +1,5 @@
 // Runs, in the Console: the list, and one run screen by screen, with its steps, its human tasks and
-// its masked frames (plan, §I.5). Nothing here is unmasked: the frames were masked before they were
+// its masked frames (plan, §9). Nothing here is unmasked: the frames were masked before they were
 // stored, and the inputs were stored masked.
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { FrameStore } from '@gb/evidence';

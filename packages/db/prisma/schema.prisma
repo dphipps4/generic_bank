@@ -191,7 +191,7 @@ model JournalEntry {
   @@unique([runId, seq])
 }
 
-/// A settled run's episode on its way to memory (plan §K.4). Each settlement is one attempt of the
+/// A settled run's episode on its way to memory (plan §A.6). Each settlement is one attempt of the
 /// run, written with the settlement itself; the recorder sends it when memory answers. It holds the
 /// outcome and when, never the run's inputs or result.
 model EpisodeOutbox {
@@ -267,7 +267,7 @@ model FactoryRun {
   recommendation Recommendation?
 }
 
-// The Supervisor's recommendation (plan, §M.4): the bank's profile drafted from the run's frames.
+// The Supervisor's recommendation (plan, §7): the bank's profile drafted from the run's frames.
 // Each claim cites frames of the run and is marked seen or guess; a person approves or rejects it,
 // and a guess is approved only when the person ticks it.
 model Recommendation {
@@ -289,7 +289,7 @@ model ModelCall {
   factoryRun    FactoryRun @relation(fields: [factoryRunId], references: [id])
   role          String
   model         String
-  // Set once prompts are reviewed files (Appendix O).
+  // Set once prompts are reviewed files (§C.4).
   promptId      String?
   promptVersion Int?
   tokensIn      Int

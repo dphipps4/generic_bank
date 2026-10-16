@@ -1,4 +1,4 @@
-// The driver SDK (plan, §E.5). A driver is the crawler's knowledge of one product's screens, as a
+// The driver SDK (plan, §5). A driver is the crawler's knowledge of one product's screens, as a
 // state machine per task; a profile adapts it to one bank. Drivers never touch the browser
 // directly: they see screen models and act through the screen package, by meaning.
 import type { ResultCode } from '@gb/contracts';

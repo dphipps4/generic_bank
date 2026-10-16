@@ -1,4 +1,4 @@
-// The guard on every action the Runner takes (plan, §J.2): each click, key press, typed field and
+// The guard on every action the Runner takes (plan, §9): each click, key press, typed field and
 // choice is judged against the job's allowlist before it reaches the browser. The guard reads the
 // screen the way the driver does, from the same fresh reading the action would use: it recognizes
 // the screen and reads the control's visible name, or a field's label, and nothing a page asks.

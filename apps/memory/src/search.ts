@@ -1,4 +1,4 @@
-// Hybrid search (plan §K.3): Postgres full-text ranking and pgvector similarity, each a ranked
+// Hybrid search (plan §8): Postgres full-text ranking and pgvector similarity, each a ranked
 // list, fused by reciprocal rank. It searches what memory serves a bank, and nothing else.
 import type { Query } from './db.js';
 import { asVector, type Embed } from './embed.js';

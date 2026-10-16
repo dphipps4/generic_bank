@@ -1,4 +1,4 @@
-// Recommendations (plan, §7, §M.4): the bank's profile as the Supervisor drafted it from a factory
+// Recommendations (plan, §7): the bank's profile as the Supervisor drafted it from a factory
 // run's frames. The review card shows each claim, whether it was seen on its frames or is a guess,
 // and a Frames button that opens the frames it cites. A person approves or rejects it with a
 // written reason that goes to the audit. A guess is never approved by default: approving a

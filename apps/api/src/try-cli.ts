@@ -1,4 +1,4 @@
-// just try: one task under forced hazards, from the command line (plan, §S.2). It runs inside the API
+// just try: one task under forced hazards, from the command line (plan, §A.3). It runs inside the API
 // container, which holds the hashing key, and starts the run through the same door as the Console's
 // hazard lab. It waits for the result and says whether it is the one the outcome table expects.
 //

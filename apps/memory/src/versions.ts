@@ -1,4 +1,4 @@
-// A lesson changes only by a new version (plan §K.5). A merge or a rule builds on the current
+// A lesson changes only by a new version (plan §A.6). A merge or a rule builds on the current
 // version and makes its own current; a version that was waiting for a person's approval is carried
 // above it, still waiting, with what the new version added, so no write skips past an approval.
 import type { Query } from './db.js';
