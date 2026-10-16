@@ -365,13 +365,12 @@ clean:
     @rm -rf apps/*/dist packages/*/dist .run
     @find . -name '*.tsbuildinfo' -not -path './node_modules/*' -delete
 
-# Not built yet: evals (M7), check-prompts (M9), docs (M10); export, import, trace, observe (Part 2)
+# Part 2: evals, check-prompts, export, import, trace, observe. The docs render with just plan.
 [group('Later')]
 later name:
     @case "{{name}}" in \
-      evals) m="milestone M7" ;; check-prompts) m="milestone M9" ;; docs) m="milestone M10" ;; \
-      memory-export|memory-import|export|import|trace|observe) m="Part 2" ;; *) m="a later milestone" ;; esac; \
-      echo "just {{name}} is not built yet: it arrives in $m."; exit 1
+      docs) echo "The docs render with: just plan"; exit 1 ;; esac; \
+      echo "just {{name}} is not built yet: it arrives in Part 2."; exit 1
 
 # Each group's services, for down, logs and rebuild.
 [private]

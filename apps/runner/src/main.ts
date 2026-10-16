@@ -1,4 +1,4 @@
-// The Runner (the crawler): it takes task runs from the queue, one browser at a time by default,
+// The Runner (the crawler): it takes task runs from the queue, a browser for each (two at a time),
 // and carries them out.
 import { DBOS } from '@dbos-inc/dbos-sdk';
 import Fastify from 'fastify';
