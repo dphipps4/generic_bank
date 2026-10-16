@@ -75,7 +75,9 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
       body: nest(
         c,
         d,
-        `${heading(c, d, 'CoreLink Branch Console')}<P>${font(c, req.query.learn ? 'Upgrade information is available from your administrator.' : `Use ${esc(L.memberSearch)} to begin.`)}</P>`,
+        bank.t.redesigned
+          ? `${heading(c, d, 'Online Banking')}<P>${font(c, `Open the Menu and choose ${esc(L.memberSearch)}.`)}</P>`
+          : `${heading(c, d, 'CoreLink Branch Console')}<P>${font(c, req.query.learn ? 'Upgrade information is available from your administrator.' : `Use ${esc(L.memberSearch)} to begin.`)}</P>`,
       ),
     })),
   );
@@ -258,6 +260,9 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
           ? `<P>${font(c, '<B>Bill pay is temporarily unavailable.</B> Please try again later.', ' COLOR="#AA5500"')}</P>`
           : '';
         const n = member!.number;
+        // The redesign stacks the tiles in one column and moves the transfer link below them.
+        const redesigned = !!bank.t.redesigned;
+        const transfer = `<P>${linkButton(c, `${base}members/${n}/transfer`, L.transferFunds)}</P>`;
         const broken = c.hz.on('js-error-widget');
         const confirm = c.hz.on('confirm-dialog');
         const decoys = (Object.keys(DECOYS) as Decoy[])
@@ -270,9 +275,9 @@ function draw(r) {
   for (var i = 0; i < r.accounts.length; i++) {
     var a = r.accounts[i];
     var avail = (CL_BROKEN && i === 0) ? '--' : CL.money(a.available);
-    h += '<td valign="top" bgcolor="#F4F4F4" style="border:2px outset #DDD"><font face="Verdana" size="2"><b>' + a.nickname + '</b><br>' + a.wording +
+    ${redesigned ? "if (i > 0) { h += '</tr><tr>'; } " : ''}h += '<td valign="top" bgcolor="#F4F4F4" style="border:2px outset #DDD"><font face="Verdana" size="2"><b>' + a.nickname + '</b><br>' + a.wording +
       '<br><br>Available balance: <b>' + avail + '</b><br>Current balance: ' + CL.money(a.current) + '<br><br>' +
-      '<a href="${base}members/${n}/activity?account=' + a.id + '">Activity</a> &nbsp; <a href="${base}members/${n}/statements?account=' + a.id + '">${esc(L.statements)}</a></font></td>';
+      '<a href="${base}members/${n}/activity?account=' + a.id + '">${esc(L.activity)}</a> &nbsp; <a href="${base}members/${n}/statements?account=' + a.id + '">${esc(L.statements)}</a></font></td>';
   }
   box.innerHTML = h + '</tr></table>';
   if (CL_BROKEN) { CL_BROKEN = false; var w = null; w.balance(); }
@@ -287,7 +292,7 @@ ${confirm ? `setTimeout(function () { if (window.confirm("This member has 2 unre
           body: nest(
             c,
             d,
-            `${heading(c, d, 'Member Summary')}${notice}<P>${linkButton(c, `${base}members/${n}/transfer`, L.transferFunds)}</P><DIV CLASS="${tiles}"></DIV><P>${font(c, decoys)}</P>`,
+            `${heading(c, d, 'Member Summary')}${notice}${redesigned ? '' : transfer}<DIV CLASS="${tiles}"></DIV>${redesigned ? transfer : ''}<P>${font(c, decoys)}</P>`,
           ),
           script,
         };
@@ -343,7 +348,7 @@ ${confirm ? `setTimeout(function () { if (window.confirm("This member has 2 unre
         bank,
         req,
         reply,
-        { page: 'activity', title: 'Activity', member: req.params.n },
+        { page: 'activity', title: L.activity, member: req.params.n },
         async ({ c, d, member }) => {
           const accounts = await accountsOf(bank.db, member!.number);
           const account = accounts.find((a) => String(a.id) === req.query.account) ?? accounts[0];
@@ -392,7 +397,7 @@ ${confirm ? `setTimeout(function () { if (window.confirm("This member has 2 unre
             body: nest(
               c,
               d,
-              `${heading(c, d, `Activity: ${account.nickname}, ${bank.t.accountWording(account.number)}`)}
+              `${heading(c, d, `${L.activity}: ${account.nickname}, ${bank.t.accountWording(account.number)}`)}
 ${form(c, d, `${base}members/${member!.number}/activity?account=${account.id}`, rows, submit(c, d, 'Show'))}<DIV CLASS="${rowsBox}"></DIV>
 <P>${linkButton(c, `${base}members/${member!.number}`, 'Back to member summary')}</P>`,
             ),

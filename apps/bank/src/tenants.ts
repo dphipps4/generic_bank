@@ -26,7 +26,11 @@ export interface Labels {
   continue: string;
   submitTransfer: string;
   statements: string;
+  activity: string;
 }
+
+/** The places BANK_REDESIGN renames. */
+export type Renamed = Pick<Labels, 'memberSearch' | 'transferFunds' | 'statements' | 'activity'>;
 
 /**
  * Failure modes that only some banks show, so crawling them teaches the factory something new.
@@ -88,6 +92,13 @@ export interface Tenant {
   markupSeed: number;
   /** The database the bank keeps its ledger in. */
   database: string;
+  /** The vendor's redesign (BANK_REDESIGN=1) renames these places, in the bank's own voice. */
+  redesign: Renamed;
+  /**
+   * The redesign is on: an interstitial after sign-in, the new names, and the nav moved into a
+   * Menu at the top right of a console laid out anew. Set only by `redesigned`.
+   */
+  redesigned?: boolean;
 }
 
 const last4 = (n: string) => n.slice(-4);
@@ -112,12 +123,19 @@ export const TENANTS: Record<TenantId, Tenant> = {
       continue: 'Continue',
       submitTransfer: 'Submit transfer',
       statements: 'Statements',
+      activity: 'Activity',
     },
     accountWording: (n) => `Account ending in ${last4(n)}`,
     supervisorThresholdCents: 250_000,
     codeChannels: ['text', 'email'],
     markupSeed: 2003,
     database: 'bank_generic',
+    redesign: {
+      memberSearch: 'Member Lookup',
+      transferFunds: 'Move Money',
+      statements: 'Documents',
+      activity: 'History',
+    },
   },
   example: {
     id: 'example',
@@ -139,6 +157,7 @@ export const TENANTS: Record<TenantId, Tenant> = {
       continue: 'Next',
       submitTransfer: 'Confirm',
       statements: 'Statements',
+      activity: 'Activity',
     },
     accountWording: (n) => `Share ****${last4(n)}-S01`,
     supervisorThresholdCents: 100_000,
@@ -150,6 +169,12 @@ export const TENANTS: Record<TenantId, Tenant> = {
     botScreen: true,
     markupSeed: 4301,
     database: 'bank_example',
+    redesign: {
+      memberSearch: 'Look Up a Member',
+      transferFunds: 'Transfers',
+      statements: 'eDocs',
+      activity: 'Transactions',
+    },
   },
   sample: {
     id: 'sample',
@@ -170,6 +195,7 @@ export const TENANTS: Record<TenantId, Tenant> = {
       continue: 'Proceed',
       submitTransfer: 'Post',
       statements: 'Statements',
+      activity: 'Activity',
     },
     accountWording: (n) => `Acct ${n.slice(0, 4)}-${n.slice(4, 8)}-${n.slice(8)}`,
     supervisorThresholdCents: 50_000,
@@ -188,6 +214,12 @@ export const TENANTS: Record<TenantId, Tenant> = {
     botScreen: true,
     markupSeed: 4302,
     database: 'bank_sample',
+    redesign: {
+      memberSearch: 'Find a Member',
+      transferFunds: 'Move Funds',
+      statements: 'Account Documents',
+      activity: 'Transaction History',
+    },
   },
   placeholder: {
     id: 'placeholder',
@@ -209,6 +241,7 @@ export const TENANTS: Record<TenantId, Tenant> = {
       continue: 'Accounts',
       submitTransfer: 'Authorize',
       statements: 'Documents',
+      activity: 'Activity',
     },
     accountWording: (n) => `··· ${last4(n)}`,
     supervisorThresholdCents: 200_000,
@@ -227,5 +260,21 @@ export const TENANTS: Record<TenantId, Tenant> = {
     botScreen: true,
     markupSeed: 4400,
     database: 'bank_placeholder',
+    redesign: {
+      memberSearch: 'Lookup',
+      transferFunds: 'Move',
+      statements: 'Records',
+      activity: 'History',
+    },
   },
 };
+
+/**
+ * The bank after its vendor's redesign (BANK_REDESIGN=1): the same ledger, members, codes,
+ * transfers and refusals, in new words and a new layout. The look changes, never the meaning.
+ */
+export const redesigned = (t: Tenant): Tenant => ({
+  ...t,
+  labels: { ...t.labels, ...t.redesign },
+  redesigned: true,
+});

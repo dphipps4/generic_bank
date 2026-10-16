@@ -3,7 +3,7 @@ import { connectPostgres, migrate } from './db.js';
 import { hazards, type Profile } from './hazards.js';
 import { seed } from './seed.js';
 import { buildServer, hazardLog } from './server.js';
-import { TENANTS, type TenantId } from './tenants.js';
+import { redesigned, TENANTS, type TenantId } from './tenants.js';
 
 // One bank per process. Everything it needs comes from the environment, and it refuses to start
 // on anything missing or malformed.
@@ -27,6 +27,13 @@ if (!['default', 'gentle', 'harsh'].includes(profile)) {
   process.exit(1);
 }
 
+// BANK_REDESIGN=1: the vendor's redesign, new words and a new layout over the same bank.
+const redesign = process.env.BANK_REDESIGN ?? '';
+if (!['', '0', '1'].includes(redesign)) {
+  console.error('BANK_REDESIGN must be 1 (on) or 0 (off)');
+  process.exit(1);
+}
+
 const db = await connectPostgres(`${need('BANK_DATABASE_URL_BASE')}/${tenant.database}`);
 await migrate(db);
 const now = () => new Date();
@@ -47,7 +54,7 @@ if (tenant.secondOrigin && !secondPort) {
   process.exit(1);
 }
 const bank = {
-  t: tenant,
+  t: redesign === '1' ? redesigned(tenant) : tenant,
   ports: { main: port, second: secondPort },
   db,
   now,

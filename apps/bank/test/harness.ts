@@ -5,7 +5,7 @@ import { type HazardName, hazards, signHazards } from '../src/hazards.js';
 import { fieldName } from '../src/markup/dialect.js';
 import { OPERATORS, seed } from '../src/seed.js';
 import { buildServer } from '../src/server.js';
-import { TENANTS, type TenantId } from '../src/tenants.js';
+import { redesigned, TENANTS, type TenantId } from '../src/tenants.js';
 import { MAC_CHROME } from './browser.js';
 
 // A bank on an in-process Postgres, a movable clock, and a client that keeps cookies the way a
@@ -38,8 +38,10 @@ export interface TestBank {
 export async function testBank(
   id: TenantId = 'generic',
   start = new Date('2026-06-15T15:00:00Z'),
+  o: { redesign?: boolean } = {},
 ): Promise<TestBank> {
-  const t = TENANTS[id];
+  // BANK_REDESIGN=1, as main.ts applies it.
+  const t = o.redesign ? redesigned(TENANTS[id]) : TENANTS[id];
   const db = await connectInProcess();
   await migrate(db);
   await seed(
@@ -91,6 +93,8 @@ export class Client {
   hazards: HazardName[] | null = null;
   /** The Host header to send, which decides the origin; defaults to the bank's main port. */
   host = '';
+  /** Where the last completed sign-in sent the operator. */
+  landing = '';
   constructor(
     private app: FastifyInstance,
     private base: string,
@@ -214,7 +218,10 @@ export async function signIn(
     const handoff = new URL(r.location, 'http://x').searchParams.get('code') ?? '';
     const done = await c.get(`auth/complete?code=${encodeURIComponent(handoff)}`);
     // Bank 4 bounces the first hand-off of the day back to sign-in; a person just signs in again.
-    if (done.location) return c;
+    if (done.location) {
+      c.landing = done.location;
+      return c;
+    }
   }
   throw new Error('sign-in did not complete');
 }
