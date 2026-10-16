@@ -181,7 +181,7 @@ describe('the API describes itself, and the descriptions agree', () => {
 });
 
 describe('the registry decides which banks can do what', () => {
-  it('lists the four banks; only Generic Bank’s drivers written by hand are promoted from the start', async () => {
+  it('lists the four banks; the drivers written by hand, bank 1’s and bank 2’s balance, are promoted from the start', async () => {
     const banks = (await get('/banks')).json();
     expect(banks.map((b: { id: string }) => b.id)).toEqual([
       'generic',
@@ -194,12 +194,13 @@ describe('the registry decides which banks can do what', () => {
       { task: 'download-statements', crawlerVersion: 'v1' },
       { task: 'transfer', crawlerVersion: 'v1' },
     ]);
-    expect(banks.slice(1).every((b: { tasks: unknown[] }) => b.tasks.length === 0)).toBe(true);
+    expect(banks[1].tasks).toEqual([{ task: 'check-balance', crawlerVersion: 'v1' }]);
+    expect(banks.slice(2).every((b: { tasks: unknown[] }) => b.tasks.length === 0)).toBe(true);
   });
 
   it('refuses a task on a bank with no promoted crawler, naming the banks that have one', async () => {
-    await promote('example', 'download-statements', 3);
-    expect((await get('/banks')).json()[1].tasks).toEqual([
+    await promote('sample', 'download-statements', 3);
+    expect((await get('/banks')).json()[2].tasks).toEqual([
       { task: 'download-statements', crawlerVersion: 'v3' },
     ]);
     const call = (bank: string) =>
@@ -209,11 +210,11 @@ describe('the registry decides which banks can do what', () => {
         headers: { authorization: `Bearer ${token}` },
         payload: { bank, memberId: '40017732', account: '7890' },
       });
-    const notYet = await call('example');
+    const notYet = await call('sample');
     expect([notYet.statusCode, notYet.json().code, notYet.json().banksThatSupportIt]).toEqual([
       404,
       'task_not_available',
-      ['generic'],
+      ['generic', 'example'],
     ]);
     const unknown = await call('nonesuch');
     expect([unknown.statusCode, unknown.json().code]).toEqual([404, 'unknown_bank']);

@@ -1990,7 +1990,7 @@ nothing is hosted elsewhere.
 | `just try <hazard> [task]` | any task under any forced hazard |
 | `just test`, `just test-browser`, `just test-pii`, `just evals` | the suites in [Appendix P](#appendix-p-tests) and the eval ladder |
 | `just check-prompts` | the prompt checker |
-| `just api-token` | creates a local API client (once) and prints a fresh access token for Swagger UI or `curl` |
+| `just api-token` | prints an access token from the local API client that `just setup` makes (OAuth2 client credentials) |
 | `just api-docs` | writes `openapi.json` and the static API reference page from the contracts |
 | `just prompts-export` | writes the prompt versions activated in the Console back to `packages/prompts/` for a pull request |
 | `just docs` | renders `README.md` and `docs/` as the white-template website into `site/`; the same build publishes to GitHub Pages |

@@ -22,6 +22,16 @@
         "type": "http",
         "scheme": "bearer",
         "description": "An OAuth2 access token from POST /oauth/token (or `just api-token`)."
+      },
+      "client": {
+        "type": "oauth2",
+        "description": "A client id and secret (the local one is in secrets/credentials.txt); Swagger UI gets the token.",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "/oauth/token",
+            "scopes": {}
+          }
+        }
       }
     },
     "schemas": {
@@ -303,6 +313,9 @@
         "security": [
           {
             "bearer": []
+          },
+          {
+            "client": []
           }
         ],
         "responses": {
@@ -331,6 +344,9 @@
         "security": [
           {
             "bearer": []
+          },
+          {
+            "client": []
           }
         ],
         "summary": "The tasks and their input schemas.",
@@ -350,6 +366,9 @@
         "security": [
           {
             "bearer": []
+          },
+          {
+            "client": []
           }
         ],
         "summary": "The API as tool definitions an agent loads directly. A tool call returns the endpoint’s answer, flagged as an error unless it is 200 (succeeded, handed_off) or 202 (waiting).",
@@ -370,6 +389,9 @@
         "security": [
           {
             "bearer": []
+          },
+          {
+            "client": []
           }
         ],
         "requestBody": {
@@ -480,6 +502,9 @@
         "security": [
           {
             "bearer": []
+          },
+          {
+            "client": []
           }
         ],
         "requestBody": {
@@ -677,6 +702,9 @@
         "security": [
           {
             "bearer": []
+          },
+          {
+            "client": []
           }
         ],
         "requestBody": {
@@ -798,6 +826,9 @@
         "security": [
           {
             "bearer": []
+          },
+          {
+            "client": []
           }
         ],
         "parameters": [
@@ -899,6 +930,9 @@
         "security": [
           {
             "bearer": []
+          },
+          {
+            "client": []
           }
         ],
         "parameters": [

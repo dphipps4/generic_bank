@@ -276,10 +276,10 @@ db-shell:
 try hazard task="" member="" account="" bank_id="":
     @{{compose}} exec -T -e CONSOLE_PORT=$CONSOLE_PORT api node apps/api/dist/try-cli.js "{{task}}" "{{hazard}}" "{{member}}" "{{account}}" "{{bank_id}}"
 
-# A fresh access token for Swagger UI or curl (15 minutes)
+# An access token for curl (15 minutes), from the local client just setup made
 [group('Run')]
 api-token:
-    @{{compose}} exec -T api node apps/api/dist/token-cli.js
+    @{{compose}} exec -T api node -e "fetch('http://127.0.0.1:8000/oauth/token',{method:'POST',headers:{authorization:'Basic '+Buffer.from(process.env.API_LOCAL_CLIENT_ID+':'+process.env.API_LOCAL_CLIENT_SECRET).toString('base64')},body:new URLSearchParams({grant_type:'client_credentials'})}).then((r)=>r.json()).then((j)=>console.log(j.access_token))"
 
 # Write the API reference from the contracts, serve it and open it in Chrome
 [group('Run')]

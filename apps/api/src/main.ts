@@ -2,7 +2,7 @@ import { DBOSClient } from '@dbos-inc/dbos-sdk';
 import { loadConfig, port, secret } from '@gb/config';
 import { sql } from '@gb/db';
 import { s3Store } from '@gb/evidence';
-import { oauth } from '@gb/oauth';
+import { oauth, TASK_SCOPES } from '@gb/oauth';
 import { WORKFLOW } from '@gb/runs';
 import { z } from 'zod';
 import { labRoutes } from './lab.js';
@@ -10,6 +10,8 @@ import { buildServer } from './server.js';
 
 const cfg = loadConfig({
   API_TOKEN_HASH_KEY: secret(),
+  API_LOCAL_CLIENT_ID: secret(),
+  API_LOCAL_CLIENT_SECRET: secret(),
   RUN_SEAL_KEY: secret(),
   CONTROL_DATABASE_URL: z.string().startsWith('postgresql://'),
   API_PORT: port(8000),
@@ -30,6 +32,13 @@ const enqueue = async (runId: string) =>
     { workflowName: WORKFLOW.name, queueName: WORKFLOW.queue, workflowID: runId },
     runId,
   ));
+// The local client: its id and secret come from just setup, so curl and Swagger UI need no more.
+await oauth(control, cfg.API_TOKEN_HASH_KEY).ensureClient({
+  clientId: cfg.API_LOCAL_CLIENT_ID,
+  clientSecret: cfg.API_LOCAL_CLIENT_SECRET,
+  name: 'Local client (just setup)',
+  scopes: [...TASK_SCOPES],
+});
 const app = await buildServer({
   oauth: oauth(control, cfg.API_TOKEN_HASH_KEY),
   sql: control,

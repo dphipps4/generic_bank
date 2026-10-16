@@ -7,6 +7,8 @@
 # For an entered key, the text after -- is what just setup tells the person about it.
 local   POSTGRES_PASSWORD        hex
 local   BANK_DB_PASSWORD         hex
+local   API_LOCAL_CLIENT_ID      hex
+local   API_LOCAL_CLIENT_SECRET  hex
 local   API_TOKEN_HASH_KEY       hex
 local   RUN_SEAL_KEY             hex
 local   ANSWER_SEAL_KEY          hex

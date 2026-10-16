@@ -35,7 +35,9 @@ MinIO (evidence store)        http://localhost:${MINIO_CONSOLE_PORT:-9001}
   password                    $(get MINIO_ROOT_PASSWORD "$local_env")
 
 Task API (Swagger UI)         http://localhost:${API_PORT:-8000}/docs
-  access token                just api-token (a fresh one, valid 15 minutes)
+  client id                   $(get API_LOCAL_CLIENT_ID "$local_env")
+  client secret               $(get API_LOCAL_CLIENT_SECRET "$local_env")
+  access token                just api-token (15 minutes), or Authorize in Swagger UI with the id and secret
 
 Memory API                    http://localhost:${MEMORY_PORT:-8470}, header Authorization: Bearer <token>
   runner token                $(get MEMORY_TOKEN_RUNNER "$local_env")

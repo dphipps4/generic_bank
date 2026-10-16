@@ -202,7 +202,7 @@ export function openapi(): Record<string, unknown> {
         post: {
           ...about(TASK_TOOLS[t].tool),
           tags: ['tasks'],
-          security: [{ bearer: [] }],
+          security: [{ bearer: [] }, { client: [] }],
           requestBody: {
             required: true,
             content: { 'application/json': { schema: schema(TASKS[t]) } },
@@ -246,6 +246,12 @@ export function openapi(): Record<string, unknown> {
           scheme: 'bearer',
           description: 'An OAuth2 access token from POST /oauth/token (or `just api-token`).',
         },
+        client: {
+          type: 'oauth2',
+          description:
+            'A client id and secret (the local one is in secrets/credentials.txt); Swagger UI gets the token.',
+          flows: { clientCredentials: { tokenUrl: '/oauth/token', scopes: {} } },
+        },
       },
       schemas: {
         TaskResult: schema(TaskResult),
@@ -258,7 +264,7 @@ export function openapi(): Record<string, unknown> {
         get: {
           ...about('list_banks'),
           tags: ['catalog'],
-          security: [{ bearer: [] }],
+          security: [{ bearer: [] }, { client: [] }],
           responses: {
             '200': {
               description: 'The banks.',
@@ -275,7 +281,7 @@ export function openapi(): Record<string, unknown> {
         get: {
           operationId: 'list_tasks',
           tags: ['catalog'],
-          security: [{ bearer: [] }],
+          security: [{ bearer: [] }, { client: [] }],
           summary: 'The tasks and their input schemas.',
           responses: { '200': { description: 'The catalog.' } },
         },
@@ -284,7 +290,7 @@ export function openapi(): Record<string, unknown> {
         get: {
           operationId: 'list_tools',
           tags: ['catalog'],
-          security: [{ bearer: [] }],
+          security: [{ bearer: [] }, { client: [] }],
           summary:
             'The API as tool definitions an agent loads directly. A tool call returns the endpoint’s answer, flagged as an error unless it is 200 (succeeded, handed_off) or 202 (waiting).',
           responses: { '200': { description: 'The tools.' } },
@@ -295,7 +301,7 @@ export function openapi(): Record<string, unknown> {
         get: {
           ...about('get_task'),
           tags: ['tasks'],
-          security: [{ bearer: [] }],
+          security: [{ bearer: [] }, { client: [] }],
           parameters: parameters(tool('get_task')),
           responses: {
             '200': {
@@ -321,7 +327,7 @@ export function openapi(): Record<string, unknown> {
         get: {
           ...about('get_statement'),
           tags: ['tasks'],
-          security: [{ bearer: [] }],
+          security: [{ bearer: [] }, { client: [] }],
           parameters: parameters(tool('get_statement')),
           responses: {
             '200': {
