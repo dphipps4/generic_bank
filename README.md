@@ -23,8 +23,8 @@ just requirements               # checks all of the above, with versions, and fa
 
 Already use Homebrew? `brew install just` and `brew install --cask docker` work just as well.
 
-You don't need Xcode or Homebrew, and nothing else goes on the Mac. SOPS, age, jq, the plan renderer, Postgres,
-Vault, MinIO and Chromium all run in containers.
+You don't need Xcode or Homebrew, and nothing else goes on the Mac. SOPS, age, jq, the plan
+renderer, Postgres, Vault, MinIO and Chromium all run in containers.
 
 ## Read the plan
 
