@@ -7,8 +7,9 @@ modes of its own. All four run the same code, each started with its own tenant c
 [Appendix C](../plan/GENERIC_BANK_PLAN.md#appendix-c-generic-bank-the-target-product) is the
 specification.
 
-Banks 1 and 2 get working drivers in the submission. Banks 3 and 4 are left for the factory to
-crawl, so they carry trouble that banks 1 and 2 never show.
+Bank 1 gets working drivers for all three tasks in the submission, and Bank 2 for Check Balance.
+Banks 3 and 4 are left for the factory to crawl, so they carry trouble that banks 1 and 2 never
+show.
 
 | # | Pull request | What it adds | What proves it |
 |---|---|---|---|
@@ -19,4 +20,4 @@ crawl, so they carry trouble that banks 1 and 2 never show.
 | 5 | **Bank 2, Example Credit Union** | Email-only codes, "Find Member", "Move Money", the Confirm image, $1,000 approval | a balance in a browser (`tests/browser/corelink-banks.test.ts`); a sign-in, a transfer and a statement through its pages (`apps/bank/test/redesign.test.ts`) |
 | 6 | **Bank 3, Sample Savings Bank** | Member Inquiry by number or last name, the "Terms updated: Acknowledge" page after sign-in, $500 approval, and its trouble: a hidden copy of the password field, a key-press-only field, notices and tax forms among statements, "View more statements", a menu drawn away from its row, a notice bar over the submit control | a sign-in, a transfer and a statement through its pages (`apps/bank/test/redesign.test.ts`); its troubles have no test of their own |
 | 7 | **Bank 4, Placeholder Federal Credit Union** | An authenticator-style code, search results in a popup window, a transfer split over Amount, Accounts and Authorize, approval always for transfers between members, and its trouble: a hand-off that bounces back, a code field cleared without a message, an HTML statement viewer, per-window statement tokens, tiles in a new order on every load, a false "Bill pay unavailable" | a sign-in, a transfer and a statement through its pages (`apps/bank/test/redesign.test.ts`); its troubles have no test of their own |
-| 8 | **Running all four** | `just bank-more`, the inbox showing all four, each bank's memory measured | all four banks seeded and browsable |
+| 8 | **Running all four** | `just bank-more`, the inbox showing all four, each bank held to 128 MB of memory | all four banks seeded and browsable |

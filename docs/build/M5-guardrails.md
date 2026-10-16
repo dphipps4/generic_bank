@@ -3,8 +3,8 @@
 Every action the crawler takes passes the guards before it reaches the browser. The allowlist
 names what each job may do, as *screen, verb, control*, and anything else is refused, recorded
 with its rule and layer, and trips the guard: the bank is frozen and the run ends
-`escalated: guard_tripped`. The guards judge the control, the page, the member on screen and the
-request on the wire, never what the page's text asks for. Everything personal is masked before
+`escalated: guard_tripped`. The guard judges the control on screen (and, in Part 2, the page, the member on screen and the
+request on the wire), never what the page's text asks for. Everything personal is masked before
 it's written, and the caller only ever reads our own fixed sentences. The plan's
 [§13](../plan/GENERIC_BANK_PLAN.md#13-keeping-it-safe) and
 [Appendix J](../plan/GENERIC_BANK_PLAN.md#appendix-j-guardrails) are the specification, with
@@ -16,7 +16,7 @@ it's written, and the caller only ever reads our own fixed sentences. The plan's
 The allowlist files, the approval grant and the freeze are in `packages/guardrails`; masking and
 withheld frames are in `packages/evidence`; the PII scan is `tests/pii`; the factory's Scout
 carries its own refusals ([§M.4](../plan/GENERIC_BANK_PLAN.md#m4-tools)). This sheet puts the
-remaining layers in front of every action the Runner takes and proves them together.
+guard in front of every action the Runner takes; the remaining layers are Part 2.
 
 The bank is the judge throughout. A trap counts as refused when the bank's state-change counter
 doesn't move, and a value counts as masked when nothing the runs wrote contains it.
@@ -24,7 +24,7 @@ doesn't move, and a value counts as masked when nothing the runs wrote contains 
 | # | Pull request | What it adds | What proves it |
 |---|---|---|---|
 | 1 | **This sheet, and the plan** | The layers still to build, in order; traces, `just trace` and `just observe` in Part 2, and the Justfile saying so | the plan, this sheet and the Justfile agree |
-| 2 | **The guard on every action** | Every click, key press and choice the Runner makes is decided against the job's allowlist, from the recognized screen and the control's visible name, before the browser; a refusal trips the guard; plain typing of any text that holds a stored secret is refused; a lint rule forbids catching a guard error | on banks 1 and 2 each task's allowed actions pass, and any other is refused with its rule and layer, the bank frozen; a `catch` around a guard error fails lint |
+| 2 | **The guard on every action** | Every click, key press and choice the Runner makes is decided against the job's allowlist, from the recognized screen and the control's visible name, before the browser; a refusal trips the guard; plain typing of any text that holds the stored password is refused; a lint rule forbids catching a guard error | each job's allowed actions pass, and any other is refused with its rule and layer (`packages/guardrails/test/decide.test.ts`); a guard trip freezes the bank (`packages/guardrails/test/grants.test.ts`); a `catch` around a guard error fails lint (`packages/guardrails/test/catch.test.ts`) |
 | 3 | **The page and the outcome** (Part 2) | Every page classified as read-only, money-moving, account-change or unknown from what it shows; on a money or account-change page the session reads and leaves, and types or clicks only as the allowlist and a grant permit; confirmation wording after a click that should not cause it trips the guard | on a decoy page ("Waive fee", "Add payee", "Close account") every action but leaving is refused; a confirmation after a read's click trips the guard |
 | 4 | **Member scope** (Part 2) | Every screen the Runner acts on must show the member number the task named; a different member, or none where one is expected, is refused and trips the guard | a screen showing another member trips the guard before any action, and nothing is read from it |
 | 5 | **The network after sign-in** (Part 2) | After sign-in, a state-changing request is refused before it is sent unless the allowlist names it (the transfer form's "Continue", the granted submit); a page's own background requests are refused quietly and logged, never a trip | a decoy form's request never reaches the bank and its counter does not move; a keep-alive is refused and logged, with no trip |
