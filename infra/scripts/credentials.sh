@@ -22,13 +22,19 @@ Console (admin UI)            http://localhost:${CONSOLE_PORT:-8080}
   email                       admin@generic-bank.local
   password                    $(get CONSOLE_ADMIN_PASSWORD "$local_env")
 
-Bank staff sign-in (every bank's console)
-  teller0412 (teller)         $(get BANK_SERVICE_PASSWORD "$local_env")
-  super0901 (supervisor)      $(get BANK_SUPERVISOR_PASSWORD "$local_env")
-  staff codes                 http://localhost:${BANK_INBOX_PORT:-8089} (the staff phone and inbox)
+The four banks' staff sites. Each asks for the same two logins, under its own name for the field:
+  Generic Bank (bank 1)            "Operator ID"   http://localhost:${BANK_GENERIC_PORT:-8081}/corelink/
+  Example Credit Union (bank 2)    "Username"      http://localhost:${BANK_EXAMPLE_PORT:-8082}/
+  Sample Savings Bank (bank 3)     "Staff number"  http://localhost:${BANK_SAMPLE_PORT:-8083}/online/branch/
+  Placeholder Federal CU (bank 4)  "User"          http://localhost:${BANK_PLACEHOLDER_PORT:-8084}/cu/ib/
 
-Bank admin API (each bank's :90xx port), header Authorization: Bearer <token>
-  token                       $(get BANK_ADMIN_TOKEN "$local_env")
+  teller (does the work)           ${BANK_OPERATOR_ID}    password  $(get BANK_SERVICE_PASSWORD "$local_env")
+  supervisor (approves big ones)   ${BANK_SUPERVISOR_ID}     password  $(get BANK_SUPERVISOR_PASSWORD "$local_env")
+  sign-in codes                    http://localhost:${BANK_INBOX_PORT:-8089} (the staff inbox)
+
+The banks' admin API, header Authorization: Bearer <token>
+  ports                            ${BANK_GENERIC_ADMIN_PORT:-9081} to ${BANK_PLACEHOLDER_ADMIN_PORT:-9084}, banks 1 to 4
+  token                            $(get BANK_ADMIN_TOKEN "$local_env")
 
 MinIO (evidence store)        http://localhost:${MINIO_CONSOLE_PORT:-9001}
   user                        $(get MINIO_ROOT_USER "$local_env")
