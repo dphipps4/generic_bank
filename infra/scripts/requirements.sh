@@ -62,8 +62,8 @@ if [[ $DEV == 1 ]]; then
   info "To develop"
   if command -v node >/dev/null; then
     n="$(node --version | sed 's/^v//')"
-    if [[ "${n%%.*}" == 22 ]] && version_ge "$n" 22.12; then ok "Node $n (22.12 or newer within 22)"
-    else bad "Node $n: Node 22 (22.12 or newer) is needed: brew install node@22, then follow its PATH note"; fi
+    if [[ "${n%%.*}" == 22 ]] && version_ge "$n" 22.19; then ok "Node $n (22.19 or newer within 22)"
+    else bad "Node $n: Node 22 (22.19 or newer) is needed: brew install node@22, then follow its PATH note"; fi
     p="$(npm --version 2>/dev/null)"
     version_ge "${p:-0}" 10.0 && ok "npm $p (10 or newer)" || bad "npm ${p:-missing}: 10 or newer comes with Node 22"
   else
