@@ -191,6 +191,9 @@ logs: ## Follow every service's logs
 vault-status: ## Show whether Vault is initialized and unsealed
 	@$(SCRIPTS)/vault.sh status
 
+memory-seed: env image ## Load the starting knowledge (seeds/memory) into memory, through its door, as the curator; again writes nothing
+	@$(COMPOSE) run --rm memory-seed
+
 db-shell: ## Open psql on the control database
 	@$(COMPOSE) exec postgres psql -U postgres control
 
@@ -233,10 +236,10 @@ secrets-scan: ## Secrets (gitleaks, in its pinned image): the whole history and 
 
 ##@ Later milestones (named now so the plan and the Makefile agree)
 
-demo evals check-prompts memory-seed memory-export memory-import export import trace observe docs: ## Not built yet: each says which milestone brings it
+demo evals check-prompts memory-export memory-import export import trace observe docs: ## Not built yet: each says which milestone brings it
 	@case "$@" in \
 	  demo) m="milestone M4" ;; evals) m="milestone M7" ;; check-prompts) m="milestone M9" ;; \
-	  memory-seed) m="milestone M6" ;; memory-export|memory-import|export|import) m="Part 2" ;; \
+	  memory-export|memory-import|export|import) m="Part 2" ;; \
 	  trace|observe) m="milestone M5" ;; docs) m="milestone M10" ;; esac; \
 	echo "make $@ is not built yet: it arrives in $$m."; exit 1
 

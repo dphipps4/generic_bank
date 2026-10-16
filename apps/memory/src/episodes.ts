@@ -53,14 +53,17 @@ const Hypothesis = z.strictObject({
 
 const sentences = (t: string) => t.split(/(?<=[.!?])\s+/).filter(Boolean).length;
 
+/** A lesson's advice: one to three sentences. */
+export const LessonText = z
+  .string()
+  .trim()
+  .min(1)
+  .max(600)
+  .refine((t) => sentences(t) <= 3, 'a lesson is one to three sentences');
+
 const Proposal = z.strictObject({
   runId: Id,
-  text: z
-    .string()
-    .trim()
-    .min(1)
-    .max(600)
-    .refine((t) => sentences(t) <= 3, 'a lesson is one to three sentences'),
+  text: LessonText,
   area: Id,
   scenario: Id.optional(),
   scope: z.enum(['tenant', 'vendor', 'pattern']),
@@ -186,9 +189,9 @@ export function episodes(memory: Memory, embed: Embed): Partial<Record<Write, Wr
               )
             ).rows[0]!.v + 1;
           await tx.query(
-            `INSERT INTO "LessonVersion" ("lessonId", version, text, area, scenario, scope, bank, vendor, state, "retiredAtBanks",
-               confidence, seen, evidence, reason, role, "runId", model, prompts, "evidenceHash", embedding)
-             SELECT "lessonId", $3, text, area, scenario, scope, bank, vendor, state, "retiredAtBanks",
+            `INSERT INTO "LessonVersion" ("lessonId", version, text, why, signals, area, scenario, scope, bank, vendor, state,
+               "retiredAtBanks", confidence, seen, evidence, reason, role, "runId", model, prompts, "evidenceHash", embedding)
+             SELECT "lessonId", $3, text, why, signals, area, scenario, scope, bank, vendor, state, "retiredAtBanks",
                confidence, seen OR $4, evidence || $5::jsonb, 'a near-duplicate proposal added its evidence',
                $6::"Role", $7, $8, $9::jsonb, $10, embedding
              FROM "LessonVersion" WHERE "lessonId" = $1 AND version = $2`,
@@ -218,9 +221,9 @@ export function episodes(memory: Memory, embed: Embed): Partial<Record<Write, Wr
         const id = randomUUID();
         await tx.query(`INSERT INTO "Lesson" (id, current) VALUES ($1, 1)`, [id]);
         await tx.query(
-          `INSERT INTO "LessonVersion" ("lessonId", version, text, area, scenario, scope, bank, vendor, state, "retiredAtBanks",
-             confidence, seen, evidence, role, "runId", model, prompts, "evidenceHash", embedding)
-           VALUES ($1, 1, $2, $3, $4, $5::"Scope", $6, $7, 'proposed', '{}', $8::"Confidence", $9, $10::jsonb,
+          `INSERT INTO "LessonVersion" ("lessonId", version, text, signals, area, scenario, scope, bank, vendor, state,
+             "retiredAtBanks", confidence, seen, evidence, role, "runId", model, prompts, "evidenceHash", embedding)
+           VALUES ($1, 1, $2, '{}', $3, $4, $5::"Scope", $6, $7, 'proposed', '{}', $8::"Confidence", $9, $10::jsonb,
              $11::"Role", $12, $13, $14::jsonb, $15, $16::vector)`,
           [
             id,
