@@ -51,17 +51,18 @@ export function signatures(p: Profile): Signature[] {
     { id: 'login.code_expired', requires: ['That code has expired'] },
     { id: 'login.terms', requires: ['Terms updated'], controls: [{ name: 'Acknowledge' }] },
     { id: 'dialog.promo', requires: ['New in CoreLink'], controls: [{ name: 'Not now' }] },
+    // The way to member search may sit in a closed drop-down menu, so the home page is known by its
+    // words; a redesign's menu, where there is one, is its control.
     {
       id: 'console.home',
       requires: [marks['console.home'] ?? 'to begin'],
-      // Behind a menu, member search shows only once the menu is open.
-      controls: [{ name: w.menu.length ? w.menu : w.memberSearch }],
+      ...(w.menu.length ? { controls: [{ name: w.menu }] } : {}),
     },
     {
       id: 'member.search',
       controls: [{ name: w.search }],
       requires: [w.memberNumber],
-      forbids: ERRORS_ON_SEARCH,
+      forbids: [...ERRORS_ON_SEARCH, 'to begin'],
     },
     { id: 'member.no_such_member', requires: ['No member found with that number'] },
     { id: 'member.closed', requires: ['Member status: Closed'] },
@@ -73,8 +74,9 @@ export function signatures(p: Profile): Signature[] {
       controls: [{ name: w.activity }],
     },
     {
+      // The whole form, or one of its pages where a bank splits it: the amount, or the accounts.
       id: 'transfer.form',
-      requires: [w.transfer, 'Amount', 'Memo'],
+      requires: [w.transfer, ['Amount', 'From']],
       controls: [{ name: w.continue }],
       forbids: ['Review transfer'],
     },
@@ -89,11 +91,17 @@ export function signatures(p: Profile): Signature[] {
       controls: [{ name: 'Approve' }],
     },
     { id: 'transfer.posted', requires: ['Transfer posted', 'Confirmation number'] },
+    // A row's way to its statement may be a button on it, or sit in the row's drop-down menu.
     {
       id: 'statements',
       requires: ['Statement Date', 'Document Type'],
-      controls: [{ name: w.statement }],
       forbids: ['Available balance'],
+    },
+    // A statement shown as a page of its own, with its own download.
+    {
+      id: 'statement.viewer',
+      requires: ['Opening balance', 'Closing balance'],
+      controls: [{ name: 'Download' }],
     },
     { id: 'error.unavailable', requires: ['Service Unavailable'] },
     { id: 'error.fatal', requires: ['An unexpected error has occurred'] },

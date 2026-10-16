@@ -20,6 +20,12 @@ export interface Balance {
 
 const cents = (s: string) => Math.round(Number(s.replace(/[$,]/g, '')) * 100);
 
+/** The last four digits an account's wording shows, its groups read in order; null if it is not one. */
+export function lastFour(wording: RegExp, text: string): string | null {
+  const m = wording.exec(text);
+  return m ? m.slice(1).join('') : null;
+}
+
 /** One account's tile on the member summary: its label and balances, read from what is drawn. */
 export function readTile(
   m: ScreenModel,
@@ -27,7 +33,7 @@ export function readTile(
   account: string,
 ): Balance | 'no-such-account' | 'widget-broken' {
   const labels = m.texts.filter((t) => wording.test(t.text));
-  const byDigits = labels.filter((t) => wording.exec(t.text)?.[1] === account);
+  const byDigits = labels.filter((t) => lastFour(wording, t.text) === account);
   let anchor = byDigits[0];
   if (!anchor) {
     // By nickname: the label drawn just above an account's wording.

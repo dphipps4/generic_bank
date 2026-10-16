@@ -7,7 +7,7 @@ export {
 } from './corelink/check-balance.js';
 export {
   downloadStatements,
-  rowDate,
+  statementRow,
   type StatementMonth,
   type Statements,
   type StatementsInput,

@@ -49,10 +49,15 @@ export interface Profile {
   refusals: { text: string; code: ResultCode }[];
   /** The bank's own words, on its statements page, for the months it does not list. */
   statementsKept: string;
-  /** An account's wording on screen, with its last four digits as the first group. */
+  /**
+   * An account's wording on screen. Its groups, read in order, are the account's last four digits:
+   * one group, or several when the bank draws a dash among them ("Acct 1234-5678-90").
+   */
   accountWording: RegExp;
   /** How codes arrive: sent (with or without a chooser), or from an authenticator app. */
   codeStyle: 'sent' | 'authenticator';
+  /** Where member search shows what it found: on its own page, or in a window it opens. */
+  searchResults: 'page' | 'window';
   /** Pictures of text the factory has named, by fingerprint. */
   pictures: KnownPicture[];
   /** Pictures safe to show unmasked in evidence (a learned button, not a value). */
