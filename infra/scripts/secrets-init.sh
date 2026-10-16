@@ -74,10 +74,10 @@ while IFS= read -r line; do
     ok "$key is set"
   elif [[ "$how" == 'entered?' ]]; then
     warn "$key is blank, which is allowed. $about"
-    echo "    To enter it: ${B}just secrets-edit $f${N}, put the value after $key= and save."
+    echo "    To enter it: copy it, then ${B}just secret-set $f $key${N} (it reads the clipboard, never shows it)."
   else
     echo "  ${R}✗${N} $key is required and blank. $about"
-    echo "    Enter it: ${B}just secrets-edit $f${N}, put the value after $key= and save."
+    echo "    Enter it: copy it, then ${B}just secret-set $f $key${N} (it reads the clipboard, never shows it)."
     missing=1
   fi
 done < <(grep -v '^\s*#' infra/secrets/secrets.spec | grep -v '^\s*$')
