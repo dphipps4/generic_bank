@@ -34,10 +34,12 @@ run ($150 a week). Without one, the factory replays a recorded repair of bank 1 
 replay only works while the bank shows exactly the pages it showed when it was recorded, and the
 stack's ambient hazards (a promotion, a slow page) keep changing them. Use the key.
 
-Keep three tabs open: the Console at http://localhost:8080 (Runs, Inbox, Recommendations, and
-Drivers for the driver's state and its repair cases), bank 1 at http://localhost:8081/corelink/,
-and the staff inbox at http://localhost:8089, where the bank's sign-in codes arrive. The logins
-are in `secrets/credentials.txt`. ACCESS.md has the rest.
+Run `just open` for three tabs: Swagger UI at http://localhost:8000/docs, the Console at
+http://localhost:8080 (it lands on the Dashboard; Runs, Inbox and Recommendations are in its bar,
+and Data, Drivers shows each driver's state and its repair cases), and the staff inbox at
+http://localhost:8089, where the bank's sign-in codes arrive. Add a fourth for bank 1 at
+http://localhost:8081/corelink/. The logins are in `secrets/credentials.txt`. ACCESS.md has the
+rest.
 
 ## Part 1: a crawl that works
 
