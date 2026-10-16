@@ -150,7 +150,7 @@ export async function buildServer(opts: {
   };
   const oauthError = (reply: FastifyReply, e: unknown) => {
     if (!(e instanceof OAuthError)) throw e;
-    if (e.status === 401) reply.header('www-authenticate', 'Basic realm="oauth"');
+    // No Basic challenge on a bad client: a browser would answer it with its own sign-in box.
     return reply
       .code(e.status)
       .header('cache-control', 'no-store')

@@ -89,6 +89,8 @@ describe('the Task API, with OAuth2', () => {
       }),
     });
     expect([bad.statusCode, bad.json().error]).toEqual([401, 'invalid_client']);
+    // No Basic challenge, or a browser opens its own sign-in box over Swagger UI.
+    expect(bad.headers['www-authenticate']).toBeUndefined();
     const grant = await app.inject({
       method: 'POST',
       url: '/oauth/token',
