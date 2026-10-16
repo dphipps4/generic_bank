@@ -76,9 +76,13 @@ all moved up by 10000 (its Console is on http://localhost:18080).
 ```sh
 make requirements-dev           # make requirements, plus Node 22
 make dev-setup                  # once: Node dependencies, the Prisma client, Chromium for the tests
-make check                      # everything CI runs: types, lint, tests, import boundaries
+make check                      # the quick checks: types, lint, tests, import boundaries, secrets
+make ci                         # everything GitHub's CI runs, on this machine (slow); no Actions needed
 make api-docs                   # write the API reference from the contracts and open it in Chrome
 ```
+
+CI on GitHub costs nothing for a public repository or its forks, and `make ci` runs the same
+jobs locally for anyone without it.
 
 ## Documents
 
