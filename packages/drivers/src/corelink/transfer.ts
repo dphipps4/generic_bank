@@ -309,7 +309,7 @@ export async function inHistory(sess: Session, input: TransferInput): Promise<nu
     if (s.screen === 'member.summary') {
       const tile = readTile(s.model, ctx.profile.accountWording, input.from);
       if (typeof tile === 'string') return -1;
-      await click(page, withText(s.model, tile.accountLabel, 'Activity'));
+      await click(page, withText(s.model, tile.accountLabel, ctx.profile.words.activity));
       // The rows arrive by a late request after the page draws.
       const rows = await see(ctx, sess.sigs, {
         until: (m) => m.texts.some((t) => t.text === 'Description') && m.texts.length > 12,

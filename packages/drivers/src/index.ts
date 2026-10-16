@@ -12,7 +12,7 @@ export {
   type Statements,
   type StatementsInput,
 } from './corelink/download-statements.js';
-export { GENERIC_BANK, PROFILES } from './corelink/profiles.js';
+export { BASES, GENERIC_BANK, PROFILES, profileFrom } from './corelink/profiles.js';
 export {
   beside,
   countInHistory,

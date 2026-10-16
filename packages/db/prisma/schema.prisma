@@ -260,6 +260,8 @@ model FactoryRun {
   stalls         Int          @default(0)
   startedAt      DateTime     @default(now())
   lastActivityAt DateTime     @default(now())
+  /// A repair starts from this version's profile; an onboarding from the bank's base profile.
+  baseVersionId  String?
   modelCalls     ModelCall[]
   evals          EvalResult[]
   recommendation Recommendation?
@@ -316,6 +318,10 @@ model RepairCase {
   consecutiveFailures Int       @default(0)
   lastFailureAt       DateTime?
   lastSuccessAt       DateTime?
+  /// The run that faulted, and the version that ran it. One case is open per tenant and task: a
+  /// partial unique index in migration 0012.
+  runId               String?
+  versionId           String?
   openedAt            DateTime  @default(now())
 }
 

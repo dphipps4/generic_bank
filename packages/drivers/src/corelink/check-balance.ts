@@ -100,7 +100,7 @@ export async function checkBalance(
         continue;
       }
       // The Activity link of that tile must exist: it proves the tile is the account's own.
-      withText(s.model, tile.accountLabel, 'Activity');
+      withText(s.model, tile.accountLabel, ctx.profile.words.activity);
       await sess.record('balance', s.screen, s.model, 'read the balances', 'succeeded');
       return { status: 'succeeded', data: { ...tile, asOf: ctx.now().toISOString() } };
     }

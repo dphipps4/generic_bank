@@ -138,6 +138,14 @@ describe('an escalation, as the agent and a person see it', () => {
     ]);
     expect(asks.rows[0]!.asks).toBeGreaterThanOrEqual(2);
 
+    // An unknown screen is a driver fault, so it took the driver out of service (registry.test.ts
+    // shows that path); this test is about the escalation, so the driver is put back.
+    const demoted = await db.query(
+      `UPDATE "Driver" SET state = 'promoted', "activeVersionId" = 'dv_generic_check_balance_1'
+        WHERE tenant = 'generic' AND task = 'check-balance' AND state = 'demoted' RETURNING id`,
+    );
+    expect(demoted.rows).toHaveLength(1);
+
     // The person clears the blocker and presses Resume; the run goes back to the Runner.
     await db.query('UPDATE "Bank" SET url = $1 WHERE id = $2', [bank.url, 'generic']);
     expect((await act(escalationId, 'resume', 'the bank is back on its own page')).json()).toEqual({

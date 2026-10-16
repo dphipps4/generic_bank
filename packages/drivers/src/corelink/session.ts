@@ -2,7 +2,7 @@
 // page and the member's summary, and how each is answered. A job (Check Balance, Transfer) runs its
 // own loop, hands each screen here first, and handles only its own screens. Recoverable conditions
 // are handled inside the run, bounded and recorded; the bank's answers become the job's outcome.
-import { button, click, field, type ScreenModel, type } from '@gb/screen';
+import { button, click, field, normalize, type ScreenModel, type } from '@gb/screen';
 import { type DriverContext, type Seen, see, stop } from '../sdk.js';
 import { signatures } from './signatures.js';
 
@@ -139,10 +139,29 @@ export async function onTheWay(sess: Session, s: Seen, memberId: string): Promis
       await click(page, button(s.model, 'Not now'));
       await sess.record('interstitial', s.screen, s.model, 'pressed Not now', 'recovered');
       return true;
-    case 'console.home':
-      await click(page, button(s.model, w.memberSearch));
+    case 'login.notice':
+      await click(page, button(s.model, w.dismiss));
+      await sess.record('notice', s.screen, s.model, `pressed ${w.dismiss[0]}`);
+      return true;
+    case 'console.home': {
+      let m = s.model;
+      if (w.menu.length) {
+        // The places to go are behind the bank's menu: open it, then wait for member search.
+        await click(page, button(m, w.menu));
+        m = (
+          await see(ctx, sess.sigs, {
+            until: (x) =>
+              x.controls.some((c) =>
+                w.memberSearch.some((n) => normalize(n) === normalize(c.name)),
+              ),
+          })
+        ).model;
+        await sess.record('console', s.screen, m, 'opened the menu');
+      }
+      await click(page, button(m, w.memberSearch));
       await sess.record('console', s.screen, s.model, 'opened member search');
       return true;
+    }
     case 'member.search': {
       // A retry or a reload goes back through the search; three searches without a result is not
       // progress.
