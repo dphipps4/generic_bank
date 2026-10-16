@@ -1,7 +1,8 @@
 // Runs: what the API starts and the Runner carries out. A run's real inputs are sealed with a key
 // only the API and the Runner hold; what anyone else can read is masked. A run ends in exactly one
 // of the contract's results. Human tasks carry what a person was asked, and a person's answer (a
-// staff code) is sealed and cleared once used; a person's approval issues the run's one grant.
+// staff code) is sealed and cleared once used; a person's approval issues the run's one grant. A run
+// that stops escalated is handed to a person, who resumes it, finishes it by hand or cancels it.
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from 'node:crypto';
 import {
   type HazardName,
@@ -10,12 +11,13 @@ import {
   type HumanTaskKind,
   messageFor,
   refusal,
+  RESULT_DATA,
   type ResultCode,
   RETRYABLE,
   type TaskName,
   type TaskResult,
 } from '@gb/contracts';
-import { issueGrant } from '@gb/guardrails';
+import { issueGrant, tripGuard } from '@gb/guardrails';
 
 export interface Sql {
   query<R = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<{ rows: R[] }>;
@@ -195,15 +197,64 @@ export type Ending =
       status: 'business_outcome' | 'failed' | 'escalated' | 'expired' | 'cancelled';
       code: ResultCode;
       retryable?: boolean;
+      /** A guard trip: the layer that refused and its rule, kept with the freeze. */
+      guard?: { layer: string; rule: string };
     };
 
-/** Ends a run with exactly one result. Its sealed inputs are no longer needed, so they go. */
+/** How long an escalation waits in the inbox before it shows as due. */
+const ESCALATION_DEADLINE_MS = 24 * 60 * 60_000;
+
+/**
+ * Ends a run with exactly one result. Its sealed inputs are no longer needed, so they go, except
+ * while a person may still let an escalated run resume.
+ */
 export async function settleRun(sql: Sql, runId: string, e: Ending) {
   const code = e.status === 'succeeded' ? null : e.code;
   const retryable = e.status === 'failed' ? (e.retryable ?? RETRYABLE.has(e.code)) : null;
+  const resumable = e.status === 'escalated' && e.code !== 'guard_tripped';
+  const r = await sql.query<{ bank: string }>(
+    `UPDATE "TaskRun" SET status = $2, "resultCode" = $3, retryable = $4, result = $5, "settledAt" = now(),
+            "inputsSealed" = CASE WHEN $6 THEN "inputsSealed" END
+      WHERE id = $1 RETURNING bank`,
+    [
+      runId,
+      e.status,
+      code,
+      retryable,
+      e.status === 'succeeded' ? JSON.stringify(e.data) : null,
+      resumable,
+    ],
+  );
+  if (e.status === 'escalated' && r.rows[0]) await escalate(sql, runId, r.rows[0].bank, e);
+}
+
+/**
+ * A stopped run goes to a person (plan, §D.8): an escalation task in the inbox. A guard trip also
+ * freezes the bank (plan, §J.2), and its escalation cannot resume.
+ */
+async function escalate(
+  sql: Sql,
+  runId: string,
+  bank: string,
+  e: { code: ResultCode; guard?: { layer: string; rule: string } },
+) {
+  const tripped = e.code === 'guard_tripped';
+  if (tripped)
+    await tripGuard(sql, {
+      runId,
+      bank,
+      ...(e.guard ?? { layer: 'unrecorded', rule: 'the run did not say which guard refused' }),
+    });
   await sql.query(
-    `UPDATE "TaskRun" SET status = $2, "resultCode" = $3, retryable = $4, result = $5, "settledAt" = now(), "inputsSealed" = NULL WHERE id = $1`,
-    [runId, e.status, code, retryable, e.status === 'succeeded' ? JSON.stringify(e.data) : null],
+    `INSERT INTO "HumanTask" (id, "runId", kind, "contextMasked", deadline, resolvable)
+     VALUES ($1, $2, 'escalation', $3, $4, $5)`,
+    [
+      id('h'),
+      runId,
+      JSON.stringify({ bank, code: e.code, prompt: messageFor(e.code) }),
+      new Date(Date.now() + ESCALATION_DEADLINE_MS),
+      !tripped,
+    ],
   );
 }
 
@@ -296,6 +347,16 @@ export async function addStep(
     'INSERT INTO "Step" (id, "runId", seq, name, screen, action, outcome, ms) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
     [id('s'), runId, seq, s.name, s.screen, s.action ?? null, s.outcome ?? null, s.ms],
   );
+}
+
+/** Where a run's trail ends so far: a run that resumes after a crash carries on from there. */
+export async function trailEnd(sql: Sql, runId: string): Promise<{ step: number; frame: number }> {
+  const r = await sql.query<{ step: number | null; frame: number | null }>(
+    `SELECT (SELECT max(seq) FROM "Step" WHERE "runId" = $1) AS step,
+            (SELECT max(seq) FROM "TrailFrame" WHERE "runId" = $1) AS frame`,
+    [runId],
+  );
+  return { step: Number(r.rows[0]?.step ?? 0), frame: Number(r.rows[0]?.frame ?? 0) };
 }
 
 export async function addFrame(
@@ -443,9 +504,73 @@ async function approve(
 }
 
 /**
- * A person acts on a human task, from the Console or its API (plan, §F.3). The body is checked
- * against the action's contract, the action against the task's kind and state, and every action
- * leaves an audit entry with its reason. A code is sealed and never written to the audit.
+ * Resume (plan, §D.8): the escalated run goes back to running and to the Runner, which signs in
+ * fresh and carries on its trail. If it cannot be handed over, the escalation is opened again: a
+ * run marked running that no worker holds would never end.
+ */
+async function resume(
+  sql: Sql,
+  taskId: string,
+  runId: string,
+  reason: string,
+  by: string,
+  restart: (runId: string, taskId: string) => Promise<void>,
+): Promise<boolean> {
+  if (!(await decide(sql, taskId, 'answered', 'resume', reason, by))) return false;
+  // The code stays until the run settles again: a running run's result shows no code.
+  await sql.query(
+    `UPDATE "TaskRun" SET status = 'running', "settledAt" = NULL WHERE id = $1 AND status = 'escalated'`,
+    [runId],
+  );
+  try {
+    await restart(runId, taskId);
+  } catch (e) {
+    await sql.query(
+      `UPDATE "TaskRun" SET status = 'escalated', "settledAt" = now() WHERE id = $1`,
+      [runId],
+    );
+    await sql.query(
+      `UPDATE "HumanTask" SET status = 'open', action = NULL, reason = NULL, "answeredAt" = NULL, "answeredBy" = NULL WHERE id = $1`,
+      [taskId],
+    );
+    throw e;
+  }
+  return true;
+}
+
+/**
+ * Finish by hand (plan, §D.8): the person's result, in the task's own typed shape, ends the run
+ * handed_off; the agent reads it with who finished it and when.
+ */
+async function finish(
+  sql: Sql,
+  taskId: string,
+  runId: string,
+  data: unknown,
+  reason: string,
+  by: string,
+): Promise<boolean> {
+  if (!(await decide(sql, taskId, 'answered', 'finish', reason, by))) return false;
+  const json = data === undefined ? null : JSON.stringify(data);
+  await sql.query('UPDATE "HumanTask" SET resolution = $2 WHERE id = $1', [taskId, json]);
+  await sql.query(
+    `UPDATE "TaskRun" SET status = 'handed_off', "resultCode" = 'taken_over', retryable = NULL, result = $2,
+            "settledAt" = now(), "inputsSealed" = NULL
+      WHERE id = $1`,
+    [runId, json],
+  );
+  return true;
+}
+
+/** What the Console can do beyond the database: hand a resumed run back to the Runner. */
+export interface ActDeps {
+  restart?: (runId: string, taskId: string) => Promise<void>;
+}
+
+/**
+ * A person acts on a human task, from the Console or its API (plan, §F.3, §D.8). The body is
+ * checked against the action's contract, the action against the task's kind and state, and every
+ * action leaves an audit entry with its reason. A code is sealed and never written to the audit.
  */
 export async function actOnHumanTask(
   sql: Sql,
@@ -454,6 +579,7 @@ export async function actOnHumanTask(
   body: unknown,
   by: string,
   secret: string,
+  deps: ActDeps = {},
 ): Promise<ActResult> {
   const parsed = HUMAN_BODIES[action].safeParse(body ?? {});
   if (!parsed.success)
@@ -465,9 +591,12 @@ export async function actOnHumanTask(
       resolvable: boolean;
       runId: string;
       contextMasked: unknown;
-    }>('SELECT kind, status, resolvable, "runId", "contextMasked" FROM "HumanTask" WHERE id = $1', [
-      taskId,
-    ])
+      task: TaskName;
+    }>(
+      `SELECT h.kind, h.status, h.resolvable, h."runId", h."contextMasked", r.task
+         FROM "HumanTask" h JOIN "TaskRun" r ON r.id = h."runId" WHERE h.id = $1`,
+      [taskId],
+    )
   ).rows[0];
   if (!task) return { ok: false, status: 404, reason: 'there is no such task' };
   const refused = refusal(task, action);
@@ -492,10 +621,24 @@ export async function actOnHumanTask(
     case 'cancel':
       reason = (parsed.data as { reason: string }).reason;
       done = await decide(sql, taskId, 'cancelled', action, reason, by);
+      // A waiting run hears the cancel itself; an escalated run is no longer running to hear it.
+      if (done && task.kind === 'escalation')
+        await settleRun(sql, task.runId, { status: 'cancelled', code: 'cancelled' });
       break;
-    default:
-      // Escalations are acted on by their own step, with its own effects.
-      return { ok: false, status: 409, reason: `${action.replace('_', ' ')} is not offered here` };
+    case 'resume':
+      if (!deps.restart)
+        return { ok: false, status: 409, reason: 'nothing here can hand a run back to the Runner' };
+      reason = (parsed.data as { reason: string }).reason;
+      done = await resume(sql, taskId, task.runId, reason, by, deps.restart);
+      break;
+    case 'finish': {
+      const f = parsed.data as { reason: string; data?: unknown };
+      if (f.data !== undefined && !RESULT_DATA[task.task].safeParse(f.data).success)
+        return { ok: false, status: 400, reason: `the result is not in the shape of ${task.task}` };
+      reason = f.reason;
+      done = await finish(sql, taskId, task.runId, f.data, reason, by);
+      break;
+    }
   }
   if (typeof done !== 'boolean') return done;
   // Someone else acted first, between the read and the write.

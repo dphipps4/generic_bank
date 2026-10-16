@@ -18,6 +18,7 @@ import {
   awaitAnswer,
   settleRun,
   type Sql,
+  trailEnd,
 } from '@gb/runs';
 import { ActError, Browser, CdpTimeout, type ScreenModel, TargetError } from '@gb/screen';
 import { keepStatements } from './statements.js';
@@ -50,9 +51,11 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
   const bank = (
     await deps.sql.query<{ url: string }>('SELECT url FROM "Bank" WHERE id = $1', [run.bank])
   ).rows[0];
+  // A frozen bank runs nothing until a person clears the freeze (plan, Appendix L).
   const promoted = (
     await deps.sql.query<{ id: string }>(
-      `SELECT id FROM "Driver" WHERE tenant = $1 AND task = $2 AND state = 'promoted'`,
+      `SELECT id FROM "Driver" WHERE tenant = $1 AND task = $2 AND state = 'promoted'
+         AND NOT EXISTS (SELECT 1 FROM "Freeze" WHERE tenant = $1 AND "clearedAt" IS NULL)`,
       [run.bank, run.task],
     )
   ).rows[0];
@@ -76,8 +79,8 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
   const creds = await deps.credentials(run.bank);
   // Everything known before the run is masked wherever it appears.
   const known = [input.memberId, input.account, creds.password, creds.operatorId];
-  let stepSeq = 0;
-  let frameSeq = 0;
+  // A resumed run carries on its trail after the steps and frames it already has.
+  let { step: stepSeq, frame: frameSeq } = await trailEnd(deps.sql, runId);
 
   const record = async (s: StepRecord, model: ScreenModel | null) => {
     stepSeq++;

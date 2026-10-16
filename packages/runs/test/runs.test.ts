@@ -562,3 +562,128 @@ describe('the long poll', () => {
     expect(Date.now() - t).toBeGreaterThanOrEqual(500);
   });
 });
+
+describe('an escalation', () => {
+  const stopped = async (code: 'unknown_screen' | 'guard_tripped', task = 'check-balance') => {
+    const { runId } = await createRun(
+      db,
+      { task: task as 'check-balance', bank: 'generic', clientId: null, inputs: input },
+      KEY,
+    );
+    await settleRun(db, runId, {
+      status: 'escalated',
+      code,
+      ...(code === 'guard_tripped'
+        ? { guard: { layer: 'approval grant', rule: 'the amount on screen is not the grant' } }
+        : {}),
+    });
+    const r = (await resultOf(db, runId))!;
+    return { runId, task: r.escalationId!, result: r };
+  };
+  const reason = { reason: 'cleared the dialog in the bank' };
+  const status = async (runId: string) => (await loadRun(db, runId))!.status;
+
+  it('goes to a person: an inbox task named in the result, and the inputs kept for a resume', async () => {
+    const { runId, task, result } = await stopped('unknown_screen');
+    expect(result).toMatchObject({ status: 'escalated', escalationId: task, resolvable: true });
+    const t = (
+      await db.query<Record<string, unknown>>('SELECT * FROM "HumanTask" WHERE id = $1', [task])
+    ).rows[0]!;
+    expect(t).toMatchObject({ kind: 'escalation', status: 'open', resolvable: true });
+    expect(t.contextMasked).toMatchObject({ prompt: result.message });
+    expect(await inputsOf(db, runId, KEY)).toEqual(input);
+  });
+
+  it('resumes once: the run is running again and handed back to the Runner', async () => {
+    const { runId, task } = await stopped('unknown_screen');
+    const restarted: string[][] = [];
+    const restart = async (r: string, t: string) => void restarted.push([r, t]);
+    // Nothing that cannot hand the run back may resume it.
+    expect(await actOnHumanTask(db, task, 'resume', reason, 'ann', KEY)).toMatchObject({
+      ok: false,
+      status: 409,
+    });
+    expect(await actOnHumanTask(db, task, 'resume', reason, 'ann', KEY, { restart })).toEqual({
+      ok: true,
+    });
+    expect(await status(runId)).toBe('running');
+    expect(await resultOf(db, runId)).toEqual({ runId, task: 'check-balance', status: 'running' });
+    expect(restarted).toEqual([[runId, task]]);
+    expect(await actOnHumanTask(db, task, 'resume', reason, 'bo', KEY, { restart })).toMatchObject({
+      ok: false,
+      status: 409,
+    });
+    expect(restarted).toHaveLength(1);
+  });
+
+  it('stays escalated, and its task open, when the Runner cannot take it back', async () => {
+    const { runId, task } = await stopped('unknown_screen');
+    const restart = async () => {
+      throw new Error('the queue is down');
+    };
+    await expect(
+      actOnHumanTask(db, task, 'resume', reason, 'ann', KEY, { restart }),
+    ).rejects.toThrow();
+    expect(await status(runId)).toBe('escalated');
+    expect(await resultOf(db, runId)).toMatchObject({
+      code: 'unknown_screen',
+      escalationId: task,
+    });
+    const t = await db.query('SELECT status FROM "HumanTask" WHERE id = $1', [task]);
+    expect(t.rows).toEqual([{ status: 'open' }]);
+  });
+
+  it('finished by hand, carries the person’s result in the task’s own shape, with who and when', async () => {
+    const { runId, task } = await stopped('unknown_screen', 'transfer');
+    const balance = {
+      accountLabel: 'Checking ****',
+      availableCents: 1,
+      currentCents: 1,
+      asOf: '2026-10-15T00:00:00.000Z',
+    };
+    expect(
+      await actOnHumanTask(db, task, 'finish', { ...reason, data: balance }, 'ann', KEY),
+    ).toMatchObject({ ok: false, status: 400 });
+    const data = { confirmation: 'TX-48213', seenInHistory: false };
+    expect(await actOnHumanTask(db, task, 'finish', { ...reason, data }, 'ann', KEY)).toEqual({
+      ok: true,
+    });
+    expect(await resultOf(db, runId)).toMatchObject({
+      status: 'handed_off',
+      code: 'taken_over',
+      data,
+      resolvedBy: 'ann',
+      resolvedAt: expect.any(String),
+    });
+    expect((await loadRun(db, runId))!.inputsSealed).toBeNull();
+  });
+
+  it('cancelled, ends the run cancelled', async () => {
+    const { runId, task } = await stopped('unknown_screen');
+    expect(await actOnHumanTask(db, task, 'cancel', reason, 'ann', KEY)).toEqual({ ok: true });
+    expect(await resultOf(db, runId)).toMatchObject({ status: 'cancelled', code: 'cancelled' });
+    expect((await loadRun(db, runId))!.inputsSealed).toBeNull();
+  });
+
+  it('after a guard trip, freezes the bank and cannot resume', async () => {
+    const { runId, task, result } = await stopped('guard_tripped');
+    expect(result).toMatchObject({ escalationId: task, resolvable: false });
+    const f = await db.query(
+      'SELECT tenant, layer, reason, "clearedAt" FROM "Freeze" WHERE "runId" = $1',
+      [runId],
+    );
+    expect(f.rows).toEqual([
+      {
+        tenant: 'generic',
+        layer: 'approval grant',
+        reason: 'the amount on screen is not the grant',
+        clearedAt: null,
+      },
+    ]);
+    const restart = async () => {};
+    expect(await actOnHumanTask(db, task, 'resume', reason, 'ann', KEY, { restart })).toMatchObject(
+      { ok: false, status: 409, reason: expect.stringContaining('cannot resume') },
+    );
+    expect((await loadRun(db, runId))!.inputsSealed).toBeNull();
+  });
+});

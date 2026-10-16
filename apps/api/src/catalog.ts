@@ -14,7 +14,10 @@ export const TASK_SCOPE: Record<Task, TaskScope> = {
   'download-statements': 'tasks:statements',
 };
 
-/** Each bank in the registry, with the tasks a promoted driver serves on it today. */
+/**
+ * Each bank in the registry, with the tasks a promoted driver serves on it today. A frozen bank
+ * serves none until a person clears the freeze (plan, Appendix L).
+ */
 export async function banks(sql: Sql): Promise<BankInfo[]> {
   const r = await sql.query<{
     id: string;
@@ -26,6 +29,7 @@ export async function banks(sql: Sql): Promise<BankInfo[]> {
     `SELECT b.id, b.brand, b."productVersion", d.task, v.version
        FROM "Bank" b
        LEFT JOIN "Driver" d ON d.tenant = b.id AND d.state = 'promoted'
+             AND NOT EXISTS (SELECT 1 FROM "Freeze" f WHERE f.tenant = b.id AND f."clearedAt" IS NULL)
        LEFT JOIN "DriverVersion" v ON v.id = d."activeVersionId"
       ORDER BY b.position, b.id, d.task`,
   );
@@ -267,7 +271,11 @@ export function openapi(): Record<string, unknown> {
               },
             },
             '202': { description: 'running or needs_human (' + example('needs_human') + ').' },
-            '409': problemResponse('escalated: ' + example('escalated') + '.'),
+            '409': problemResponse(
+              'escalated: ' +
+                example('escalated') +
+                '. escalationId names the task a person resolves in the Console; resolvable says whether the run can resume (not after a guard trip). Ask again: 202 after Resume, 200 handed_off after Finish by hand, 410 after Cancel.',
+            ),
             '410': problemResponse('expired or cancelled.'),
             '422': problemResponse('business_outcome: ' + example('business_outcome') + '.'),
             '502': problemResponse('failed, and a retry will not help.'),

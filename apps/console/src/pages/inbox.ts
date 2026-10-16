@@ -3,10 +3,10 @@
 // API call (`POST /human-tasks/:id/:action`), so tests drive the same path a person does. A code is
 // sealed the moment it arrives and is never shown again, not here and not in the audit. An approval
 // shows what is being approved, as the crawler read it off the bank's review page, and its masked
-// picture.
+// picture. An escalation is resumed, finished by hand or cancelled (plan, §D.8).
 import formbody from '@fastify/formbody';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { ACTIONS, HumanAction, type HumanTaskKind, problem } from '@gb/contracts';
+import { ACTIONS, HumanAction, type HumanTaskKind, problem, refusal } from '@gb/contracts';
 import { actOnHumanTask, type ApprovalContext } from '@gb/runs';
 import { esc, page, type Sql, type Viewer } from './layout.js';
 
@@ -15,6 +15,8 @@ export interface InboxDeps {
   /** Seals a person's answer for the Runner. It opens no run's inputs. */
   answerKey: string;
   whoIs(req: FastifyRequest): Viewer | null;
+  /** Hands a resumed run back to the Runner (the workflow queue); without it, nothing resumes. */
+  restart?: (runId: string, taskId: string) => Promise<void>;
 }
 
 /** An approval or a code waiting longer than this is called out on every page (plan, §G.4). */
@@ -41,6 +43,8 @@ const NOTICE: Partial<Record<HumanAction, string>> = {
   reject: 'Rejected: the run ends and nothing is submitted.',
   take_over: 'Taken over: finish it by hand in the bank.',
   cancel: 'The run is cancelled.',
+  resume: 'Resumed: the run signs in again and carries on; the agent sees it running.',
+  finish: 'Recorded: the agent sees the task finished by hand, with your result.',
 };
 
 /** The written reason every action but a code carries (plan, §G.1). */
@@ -49,6 +53,8 @@ const REASONED: Partial<Record<HumanAction, { label: string; summary?: string; q
     approve: { label: 'Approve' },
     reject: { label: 'Reject', summary: 'Reject the transfer', quiet: true },
     take_over: { label: 'Take over', summary: 'Take over, by hand in the bank', quiet: true },
+    resume: { label: 'Resume' },
+    finish: { label: 'Finish by hand', summary: 'Finish by hand, and record the result' },
     cancel: { label: 'Cancel', summary: 'Cancel the run', quiet: true },
   };
 
@@ -91,13 +97,14 @@ export function inboxPages(app: FastifyInstance, deps: InboxDeps) {
         task: string;
         bank: string;
         contextMasked: Partial<ApprovalContext> | null;
+        resolvable: boolean;
         openedAt: Date;
         deadline: Date;
         asks: number;
         lastAskedAt: Date | null;
       }>(
-        `SELECT h.id, h.kind, h."runId", r.task, r.bank, h."contextMasked", h."openedAt", h.deadline,
-                h.asks, h."lastAskedAt"
+        `SELECT h.id, h.kind, h."runId", r.task, r.bank, h."contextMasked", h.resolvable, h."openedAt",
+                h.deadline, h.asks, h."lastAskedAt"
            FROM "HumanTask" h JOIN "TaskRun" r ON r.id = h."runId"
           WHERE h.status = 'open'
           ORDER BY h.deadline ASC, h."openedAt" ASC`,
@@ -111,10 +118,15 @@ export function inboxPages(app: FastifyInstance, deps: InboxDeps) {
         ? `<form method="post" action="${at('answer')}" class="row"><input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4,8}" maxlength="8" required aria-label="Code" placeholder="Code"><button>Enter code</button></form>`
         : '';
       const reasoned = ACTIONS[t.kind]
-        .filter((a) => REASONED[a])
+        .filter((a) => REASONED[a] && !refusal({ ...t, status: 'open' }, a))
         .map((a) => {
           const o = REASONED[a]!;
-          const form = `<form method="post" action="${at(a)}" class="row"><input name="reason" minlength="10" required aria-label="Reason" placeholder="Why (at least ten characters)"><button${o.quiet ? ' class="quiet"' : ''}>${o.label}</button></form>`;
+          // A transfer finished by hand carries the bank's confirmation number, if it was made.
+          const extra =
+            a === 'finish' && t.task === 'transfer'
+              ? '<input name="confirmation" aria-label="Confirmation" placeholder="Confirmation number, if made">'
+              : '';
+          const form = `<form method="post" action="${at(a)}" class="row"><input name="reason" minlength="10" required aria-label="Reason" placeholder="Why (at least ten characters)">${extra}<button${o.quiet ? ' class="quiet"' : ''}>${o.label}</button></form>`;
           return o.summary ? `<details><summary>${o.summary}</summary>${form}</details>` : form;
         })
         .join('');
@@ -124,8 +136,8 @@ export function inboxPages(app: FastifyInstance, deps: InboxDeps) {
     const rows = tasks
       .map((t) => {
         const left = new Date(t.deadline).getTime() - now;
-        return `<tr><td><span class="pill needs_human">${KIND_LABEL[t.kind]}</span></td>
-<td>${esc(t.contextMasked?.prompt ?? '')}${review(t)}<br><small><a href="/runs/${esc(t.runId)}">${esc(t.task)} on ${esc(t.bank)}</a></small></td>
+        return `<tr><td><span class="pill ${t.kind === 'escalation' ? 'escalated' : 'needs_human'}">${KIND_LABEL[t.kind]}</span></td>
+<td>${esc(t.contextMasked?.prompt ?? '')}${review(t)}${t.resolvable ? '' : '<br><small>It cannot resume: the bank is frozen until it is cleared on <a href="/freezes">Freezes</a>.</small>'}<br><small><a href="/runs/${esc(t.runId)}">${esc(t.task)} on ${esc(t.bank)}</a></small></td>
 <td>${duration(now - new Date(t.openedAt).getTime())}${t.asks ? `<br><small>asked ${t.asks} ${t.asks === 1 ? 'time' : 'times'}</small>` : ''}</td>
 <td>${left > 0 ? duration(left) : '<b>due now</b>'}</td>
 <td>${actions(t)}</td></tr>`;
@@ -175,9 +187,10 @@ export function inboxPages(app: FastifyInstance, deps: InboxDeps) {
           deps.sql,
           req.params.id,
           action.data,
-          req.body,
+          fromForm && action.data === 'finish' ? finishForm(req.body) : req.body,
           who.email,
           deps.answerKey,
+          deps.restart ? { restart: deps.restart } : {},
         );
         if (!r.ok) return fail(reply, fromForm, r.status, r.reason);
         return fromForm
@@ -186,6 +199,17 @@ export function inboxPages(app: FastifyInstance, deps: InboxDeps) {
       },
     );
   });
+}
+
+/** The finish form's fields as the contract's body: a confirmation number is a transfer's result. */
+function finishForm(body: unknown) {
+  const b = (body ?? {}) as Record<string, string>;
+  const confirmation = b.confirmation?.trim();
+  return {
+    reason: b.reason,
+    // The person read it in the bank; the system did not read it back from the history.
+    ...(confirmation ? { data: { confirmation, seenInHistory: false } } : {}),
+  };
 }
 
 function fail(reply: FastifyReply, fromForm: boolean, status: number, reason: string) {

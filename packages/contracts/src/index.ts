@@ -172,6 +172,13 @@ export const StatementsData = z.object({
   ),
 });
 
+/** The success data of each task: what a run returns, and what a person finishing by hand records. */
+export const RESULT_DATA = {
+  'check-balance': BalanceData,
+  transfer: TransferData,
+  'download-statements': StatementsData,
+} as const satisfies Record<TaskName, z.ZodType>;
+
 export const TaskResult = z.object({
   runId: z.string(),
   task: z.enum(['check-balance', 'transfer', 'download-statements']),
@@ -180,8 +187,16 @@ export const TaskResult = z.object({
   retryable: z.boolean().optional(),
   message: z.string().optional().describe('A fixed, customer-safe sentence.'),
   data: z.union([BalanceData, TransferData, StatementsData]).optional(),
-  escalationId: z.string().optional(),
-  resolvable: z.boolean().optional(),
+  escalationId: z
+    .string()
+    .optional()
+    .describe('While escalated: the task in the Console inbox where a person resolves it.'),
+  resolvable: z
+    .boolean()
+    .optional()
+    .describe(
+      'While escalated: whether a person can let the run resume. After a guard trip it cannot.',
+    ),
   pending: z
     .object({
       kind: z.enum(['staff_code', 'approval', 'supervisor_code']),
@@ -292,6 +307,14 @@ export const ProblemDetails = z.object({
   code: z.string(),
   runId: z.string().optional(),
   retryable: z.boolean(),
+  escalationId: z
+    .string()
+    .optional()
+    .describe('A 409: the inbox task where a person resumes, finishes by hand or cancels.'),
+  resolvable: z
+    .boolean()
+    .optional()
+    .describe('A 409: whether the run can resume; false after a guard trip.'),
 });
 export type ProblemDetails = z.infer<typeof ProblemDetails>;
 

@@ -1,6 +1,13 @@
 import Fastify from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { awaitAnswer, awaitDecision, createRun, openHumanTask } from '@gb/runs';
+import {
+  awaitAnswer,
+  awaitDecision,
+  createRun,
+  openHumanTask,
+  resultOf,
+  settleRun,
+} from '@gb/runs';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import { inboxPages } from '../src/pages/inbox.js';
 import type { Viewer } from '../src/pages/layout.js';
@@ -13,6 +20,7 @@ const KEY = 'a'.repeat(40);
 let db: Awaited<ReturnType<typeof controlDb>>;
 let app: ReturnType<typeof Fastify>;
 let who: Viewer | null = { email: 'ann@generic-bank.local', role: 'approver' };
+const restarted: string[] = [];
 
 const input = { bank: 'generic', memberId: '40017732', account: '7890' };
 async function parked(minutesLeft: number, openedMinutesAgo = 0) {
@@ -73,7 +81,12 @@ const post = (task: string, action: string, body: unknown) =>
 beforeAll(async () => {
   db = await controlDb();
   app = Fastify();
-  inboxPages(app, { sql: db, answerKey: KEY, whoIs: () => who });
+  inboxPages(app, {
+    sql: db,
+    answerKey: KEY,
+    whoIs: () => who,
+    restart: async (runId) => void restarted.push(runId),
+  });
   await app.ready();
 });
 afterAll(async () => {
@@ -232,5 +245,61 @@ describe('the inbox', () => {
       approval.task,
     ]);
     expect(grants.rows).toEqual([]);
+  });
+});
+
+describe('an escalation in the inbox', () => {
+  async function escalated(task: 'check-balance' | 'transfer', code = 'unknown_screen') {
+    const { runId } = await createRun(
+      db,
+      { task, bank: 'generic', clientId: 'gbc_agent', inputs: input },
+      'k'.repeat(40),
+    );
+    await settleRun(db, runId, {
+      status: 'escalated',
+      code: code as 'unknown_screen',
+      ...(code === 'guard_tripped' ? { guard: { layer: 'element', rule: 'a money control' } } : {}),
+    });
+    return { runId, task: (await resultOf(db, runId))!.escalationId! };
+  }
+  const rowOf = (page: string, task: string) =>
+    page.slice(page.lastIndexOf('<tr>', page.indexOf(`/human-tasks/${task}/`)));
+
+  it('offers Resume, Finish by hand and Cancel, each with a reason', async () => {
+    const { task } = await escalated('transfer');
+    const row = rowOf((await app.inject({ url: '/inbox' })).body, task);
+    expect(row).toContain('Escalation');
+    expect(row).toContain('The bank showed a screen the system does not know');
+    for (const a of ['resume', 'finish', 'cancel'])
+      expect(row).toContain(`action="/human-tasks/${task}/${a}" class="row"><input name="reason"`);
+    expect(row).toContain('name="confirmation"');
+  });
+
+  it('resumes from the form: the run is handed back to the Runner', async () => {
+    const { runId, task } = await escalated('check-balance');
+    const r = await form(task, 'resume', 'reason=closed+the+dialog+in+the+bank');
+    expect(r.headers.location).toBe('/inbox?done=resume');
+    expect(restarted).toContain(runId);
+    expect((await resultOf(db, runId))!.status).toBe('running');
+  });
+
+  it('finishes a transfer by hand from the form, with its confirmation number', async () => {
+    const { runId, task } = await escalated('transfer');
+    const r = await form(task, 'finish', 'reason=made+it+by+hand+in+the+bank&confirmation=TX-4821');
+    expect(r.headers.location).toBe('/inbox?done=finish');
+    expect(await resultOf(db, runId)).toMatchObject({
+      status: 'handed_off',
+      data: { confirmation: 'TX-4821', seenInHistory: false },
+      resolvedBy: 'ann@generic-bank.local',
+    });
+  });
+
+  it('after a guard trip, offers no Resume and points to the Freezes page', async () => {
+    const { task } = await escalated('check-balance', 'guard_tripped');
+    const row = rowOf((await app.inject({ url: '/inbox' })).body, task);
+    expect(row).toContain('href="/freezes"');
+    expect(row).not.toContain(`/human-tasks/${task}/resume`);
+    expect(row).toContain(`/human-tasks/${task}/finish`);
+    expect((await post(task, 'resume', { reason: 'it looked fine to me' })).statusCode).toBe(409);
   });
 });
