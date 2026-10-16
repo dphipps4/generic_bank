@@ -334,9 +334,21 @@ export const countInHistory = (ctx: DriverContext, input: TransferInput) =>
 
 /**
  * How many entries in the from-account's activity carry the memo token: 1 is the transfer, 0 or 2
- * is for a person to look at. Reads only; signs in again first if the session was lost.
+ * is for a person to look at. Reads only; signs in again first if the session was lost. A read the
+ * bank got in the way of (an outage, a record in use) is read again, up to three times.
  */
-export async function inHistory(sess: Session, input: TransferInput): Promise<number> {
+export const inHistory = (sess: Session, input: TransferInput): Promise<number> =>
+  readAgain(() => historyOnce(sess, input));
+
+/** A read that came back -1 (the page could not be read) is read again; any other answer stands. */
+export async function readAgain(read: () => Promise<number>, times = 3): Promise<number> {
+  for (let i = 1; ; i++) {
+    const n = await read();
+    if (n !== -1 || i >= times) return n;
+  }
+}
+
+async function historyOnce(sess: Session, input: TransferInput): Promise<number> {
   const { ctx } = sess;
   const page = ctx.page;
   await page.goto(ctx.profile.url);
