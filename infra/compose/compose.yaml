@@ -1,5 +1,5 @@
-# Generic Bank, locally. Every service has a memory limit (the whole base stack fits in
-# about 3.3 GB), and networks enforce who may reach whom:
+# Generic Bank, locally. Every service has a memory limit (everything just up starts fits in
+# about 3.9 GB, 4.7 GB while a factory run is going), and networks enforce who may reach whom:
 #   app      box A to box B          data     box B only (no route out)
 #   world    the banks, reached by the runner (and later the factory's browser)
 #   bankdb   the banks and their own database only (no route out)
