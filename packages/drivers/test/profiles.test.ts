@@ -32,7 +32,9 @@ describe('the CoreLink profiles', () => {
       expect(p.bank).toBe(bank);
       expect(Object.keys(p).sort()).toEqual(Object.keys(GENERIC_BANK).sort());
       expect(Object.keys(p.words).sort()).toEqual(Object.keys(GENERIC_BANK.words).sort());
-      for (const words of Object.values(p.words)) expect(words.length).toBeGreaterThan(0);
+      // A menu and a notice to dismiss belong to a redesign: a bank without one has neither.
+      for (const [name, words] of Object.entries(p.words))
+        if (name !== 'menu' && name !== 'dismiss') expect(words.length).toBeGreaterThan(0);
     }
   });
 
