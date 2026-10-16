@@ -13,7 +13,7 @@ Everything runs locally with docker compose, and every step is a [just](https://
 
 You need macOS 14 or newer, and an 8 GB Mac is enough. Install git to clone this, and
 [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Engine 27+, Compose 2.29+)
-with 5 GB of memory set aside for it. To develop, add [Node 26](https://nodejs.org/en/download)
+with 5.5 GB of memory set aside for it. To develop, add [Node 26](https://nodejs.org/en/download)
 for the tests, the type checker and the linter.
 
 ```sh
