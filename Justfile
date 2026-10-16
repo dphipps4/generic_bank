@@ -361,7 +361,8 @@ secrets-scan:
 browser:
     @{{scripts}}/browser.sh
 
-# Rebuild everything from scratch: build output, every volume and the images, then start it all. Asks first.
+# Back to a fresh clone's state: build output and every volume deleted, the images rebuilt with no
+# cache. Then just up, as after just setup. Asks first.
 [group('Housekeeping')]
 [confirm('This deletes every database, Vault and object store volume, and rebuilds every image. Continue?')]
 all:
@@ -369,7 +370,7 @@ all:
     @find . -name '*.tsbuildinfo' -not -path './node_modules/*' -delete
     @{{compose}} --profile '*' down -v
     @just build-nc
-    @just up
+    @echo "Rebuilt from nothing. Next: just up"
 
 # Delete all local data (volumes) and start again from nothing. Asks first.
 [group('Housekeeping')]
