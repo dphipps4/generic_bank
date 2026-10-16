@@ -36,7 +36,7 @@ else is set up.
 
 ```sh
 make setup                      # once, after git clone: checks the Mac, creates secrets, builds the images
-make up                         # the data box, the API, the Console, the crawler and two banks
+make up                         # everything: data, memory, API, Console, crawler, all four banks, factory
 make help                       # every target
 ```
 
@@ -50,8 +50,10 @@ Each factory role's model is set in `config/app.env`: `FACTORY_SCOUT_MODEL` and
 `FACTORY_SUPERVISOR_PROVIDER` (default `anthropic`, the one provider accepted). A model with no
 price in `apps/factory/src/models.ts` is refused.
 
-Then open the Console at http://localhost:8080 (sign in as `admin@generic-bank.local`; the
-password is printed by `make console-password`).
+`make up` starts everything there is: all four banks, the staff inbox, the factory and memory
+included. Then **[ACCESS.md](ACCESS.md)** lists every page, API and health check you can reach,
+the logins (which `make up` writes to `secrets/credentials.txt`), and things to try, faults
+included.
 
 Try a fault:
 

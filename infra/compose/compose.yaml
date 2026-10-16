@@ -61,6 +61,7 @@ services:
     # limit; memory locking is disabled in vault.hcl, so the capability is not needed.
     command: ['server']
     environment: { VAULT_ADDR: 'http://127.0.0.1:8200', SKIP_SETCAP: 'true' }
+    ports: ['127.0.0.1:${VAULT_PORT}:8200']
     volumes:
       - vault-data:/vault/file
       - ../vault/vault.hcl:/vault/config/vault.hcl:ro
@@ -84,8 +85,9 @@ services:
     restart: unless-stopped
     mem_limit: 128m
     user: '0'
-    command: ['server', '/data']
+    command: ['server', '/data', '--console-address', ':9001']
     env_file: [../../.run/env/minio.env]
+    ports: ['127.0.0.1:${MINIO_PORT}:9000', '127.0.0.1:${MINIO_CONSOLE_PORT}:9001']
     volumes: [minio-data:/data]
     networks: [app, data]
     healthcheck: { <<: *health, test: ['CMD', 'mc', 'ready', 'local'] }
@@ -106,6 +108,7 @@ services:
     <<: *node
     command: ['node', 'apps/memory/dist/main.js']
     mem_limit: 512m
+    ports: ['127.0.0.1:${MEMORY_PORT}:8470']
     env_file: [../../config/app.env, ../../.run/env/memory.env]
     environment: { MEMORY_MODEL_DIR: /models }
     volumes: [memory-models:/models]
@@ -187,6 +190,7 @@ services:
     # The same Node image plus headless Chromium (infra/docker/runner.Dockerfile).
     image: ${GB_RUNNER_IMAGE}
     command: ['node', 'apps/runner/dist/main.js']
+    ports: ['127.0.0.1:${RUNNER_PORT}:8100']
     mem_limit: 768m
     env_file: [../../config/app.env, ../../.run/env/runner.env]
     networks: [app, world]
@@ -300,6 +304,7 @@ services:
     <<: *node
     profiles: [factory]
     command: ['node', 'apps/factory/dist/main.js']
+    ports: ['127.0.0.1:${FACTORY_PORT}:8200']
     mem_limit: 256m
     env_file: [../../config/app.env, ../../.run/env/factory.env]
     networks: [factory, app, world]

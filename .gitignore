@@ -209,6 +209,7 @@ docs/graph.template.html
 docs/knowledge-graph.html
 
 # Per-machine secrets and rendered env files
+/secrets/
 .run/
 .sops.yaml
 config/*.secrets.enc.env

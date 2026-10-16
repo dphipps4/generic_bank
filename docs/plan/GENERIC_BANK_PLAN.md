@@ -400,6 +400,13 @@ ground under it does:
 - **OCR** as a second masking check on every stored frame.
 - **Frames in color** instead of gray.
 - **Real Chrome on real Macs,** so every fingerprint field is genuine.
+- **Health from outside:** each service keeps its bare `/healthz` for its own container, and
+  adds a second endpoint that an outside monitor calls. It checks what the service needs to do
+  its job (Postgres, Vault, MinIO, memory, each bank it drives), each check with a short
+  timeout, and answers 503 naming every check that failed.
+- **Uptime and a status page:** Better Stack checks every public URL every five minutes and
+  publishes a status page. The list of monitors is a reviewed file in the repository, synced
+  through Better Stack's API, never clicks in its dashboard.
 - **Detection and alerting:** Falco, CrowdSec, Wazuh, Vector, and ntfy to a phone.
 - **Recovery:** encrypted, append-only backups, rebuild-and-restore, drilled.
 - **Export and import:** `make export` and `make import` move the whole system's state to a

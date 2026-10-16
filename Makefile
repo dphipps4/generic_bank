@@ -124,27 +124,39 @@ image: ## Build the image if it is missing or older than the source
 
 ##@ Run
 
-up: env image ## Start the base stack: data, back end, console, crawlers, banks 1 and 2
+up: env image ## Start everything: data, memory and its seed, back end, console, crawlers, all four banks, the factory
 	@$(MAKE) data
-	@$(MAKE) backend console crawlers bank
+	@$(MAKE) memory-seed
+	@$(MAKE) backend console crawlers bank bank-more factory
+	@$(MAKE) credentials
 	@$(MAKE) urls
 
 down: ## Stop everything (data is kept)
 	@$(COMPOSE) --profile '*' down
 
-restart: down up ## Stop and start the base stack
+restart: down up ## Stop and start everything
 
 ps: ## Show what is running and its health
 	@$(COMPOSE) --profile '*' ps --format 'table {{.Service}}\t{{.Status}}\t{{.Ports}}'
 
-urls: ## Print where everything is
+urls: ## Print where the main pages are (ACCESS.md has every URL; secrets/credentials.txt the logins)
 	@echo
 	@echo "  Console        http://localhost:$(CONSOLE_PORT)"
-	@echo "  Task API       http://localhost:$(API_PORT)/healthz"
+	@echo "  Task API       http://localhost:$(API_PORT)/docs"
 	@echo "  Generic Bank   http://localhost:$(BANK_GENERIC_PORT)/corelink/"
 	@echo "  Example CU     http://localhost:$(BANK_EXAMPLE_PORT)/"
 	@echo "  Staff inbox    http://localhost:$(BANK_INBOX_PORT)  (sign-in and approval codes)"
+	@echo "  MinIO          http://localhost:$(MINIO_CONSOLE_PORT)"
+	@echo "  Vault          http://localhost:$(VAULT_PORT)/ui"
 	@echo
+	@echo "  Every URL: ACCESS.md. Logins: secrets/credentials.txt"
+	@echo
+
+credentials: ## Write secrets/credentials.txt: every login and token for HTTP access (never committed)
+	@$(SCRIPTS)/credentials.sh
+
+hazard-header: ## A signed X-Hazards value for curl: make -s hazard-header HAZARDS=late-rows,promo
+	@$(SCRIPTS)/hazard-header.sh "$(HAZARDS)"
 
 data: env image ## Box B: Postgres, Vault, MinIO, Memory
 	@$(COMPOSE) up -d --wait postgres vault minio
