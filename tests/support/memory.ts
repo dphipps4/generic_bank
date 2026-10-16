@@ -1,6 +1,8 @@
 // The Memory service for tests that reach it as the factory and the Runner do, over HTTP: the real
 // server and every real migration, on an in-process Postgres with pgvector, and the test embedder
 // in place of the model. Seeded, it starts from seeds/memory through its own door, as the curator.
+// It can be stopped and started again on the same address and database, as when memory restarts.
+import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import { catalogRoutes, curated } from '../../apps/memory/src/curated.js';
 import { episodes } from '../../apps/memory/src/episodes.js';
@@ -16,26 +18,41 @@ export { SIGNING_KEY, TOKENS };
 
 export async function memoryService(o: { seeded?: boolean } = {}) {
   const db = await memoryDb();
-  const memory = openMemory(db);
-  const app = buildServer({
-    db,
-    memory,
-    door: testDoor(),
-    writes: { ...episodes(memory, testEmbed), ...curated(memory, testEmbed), ...facts(memory) },
-  });
-  catalogRoutes(app, db);
-  knowledgeRoutes(app, db, testEmbed);
-  factRoutes(app, db);
-  const url = await app.listen({ host: '127.0.0.1', port: 0 });
+  let app: ReturnType<typeof buildServer> | null = null;
+  let port = 0;
+  async function start() {
+    // Each start reads the change log afresh, as the service does when it starts.
+    const memory = openMemory(db);
+    app = buildServer({
+      db,
+      memory,
+      door: testDoor(),
+      writes: { ...episodes(memory, testEmbed), ...curated(memory, testEmbed), ...facts(memory) },
+    });
+    catalogRoutes(app, db);
+    knowledgeRoutes(app, db, testEmbed);
+    factRoutes(app, db);
+    await app.listen({ host: '127.0.0.1', port });
+    port = (app.server.address() as AddressInfo).port;
+    await memory.verify();
+  }
+  await start();
+  const url = `http://127.0.0.1:${port}`;
   if (o.seeded) await seed({ dir: SEEDS, url, token: TOKENS.curator, signingKey: SIGNING_KEY });
   return {
     db,
-    app,
     url,
     /** What the factory is given: memory's address, its role's token and the signing key. */
     factory: { url, token: TOKENS.factory, signingKey: SIGNING_KEY },
+    /** Memory stops answering; its database stays. */
+    async stop() {
+      await app?.close();
+      app = null;
+    },
+    /** Memory answers again, on the same address. */
+    start,
     async close() {
-      await app.close();
+      await app?.close();
       await db.close();
     },
   };

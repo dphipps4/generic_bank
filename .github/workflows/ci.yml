@@ -52,10 +52,10 @@ jobs:
       - name: The tests this change touches
         if: github.event_name == 'pull_request'
         run: npx vitest run --changed origin/${{ github.base_ref }} --passWithNoTests --reporter=default --reporter=json --outputFile.json=.run/changed.json
-      # A skipped test passes; in the escalation and transfer-safety suites, a skip is a failure.
-      - name: Nothing in the escalation and transfer-safety suites was skipped
+      # A skipped test passes; in the escalation, transfer-safety and memory suites, a skip is a failure.
+      - name: Nothing in the escalation, transfer-safety and memory suites was skipped
         if: github.event_name == 'pull_request'
-        run: node infra/scripts/suite-ran.mjs .run/changed.json tests/escalation tests/transfer
+        run: node infra/scripts/suite-ran.mjs .run/changed.json tests/escalation tests/transfer tests/memory
 
   suite:
     name: the whole suite (${{ matrix.shard }} of 3)
@@ -75,11 +75,12 @@ jobs:
       - run: npm run db:generate
       - name: Headless Chromium for the browser tests
         run: infra/scripts/browser.sh
-      # The escalation and transfer-safety suites run in their own job, below, where they are counted.
-      - run: npx vitest run --shard=${{ matrix.shard }}/3 --exclude 'tests/escalation/**' --exclude 'tests/transfer/**'
+      # The escalation, transfer-safety and memory suites run in their own job, below, where they are
+      # counted.
+      - run: npx vitest run --shard=${{ matrix.shard }}/3 --exclude 'tests/escalation/**' --exclude 'tests/transfer/**' --exclude 'tests/memory/**'
 
   suites:
-    name: the escalation and transfer-safety suites
+    name: the escalation, transfer-safety and memory suites
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
@@ -92,10 +93,10 @@ jobs:
       - run: npm run db:generate
       - name: Headless Chromium for the browser tests
         run: infra/scripts/browser.sh
-      - run: npx vitest run tests/escalation tests/transfer --reporter=default --reporter=json --outputFile.json=.run/suites.json
+      - run: npx vitest run tests/escalation tests/transfer tests/memory --reporter=default --reporter=json --outputFile.json=.run/suites.json
       # Every test ran and passed, and there are as many as each suite has: a skip is a failure.
       - name: The suites really ran
-        run: node infra/scripts/suite-ran.mjs .run/suites.json tests/escalation=9 tests/transfer=10
+        run: node infra/scripts/suite-ran.mjs .run/suites.json tests/escalation=9 tests/transfer=10 tests/memory=79
 
   long:
     name: the long suite
