@@ -1858,10 +1858,10 @@ files for a pull request.
 | Memory suite | `tests/memory` | the role matrix, the privacy screen, the seed, every rule, the pack, a tampered change log and the outbox, all through the Memory service's API. |
 | Prompts | `packages/prompts/test` | the checker, the loader, schemas. |
 
-**CI** (GitHub Actions) has three jobs. The first runs typecheck, lint, the import boundaries
-and the tests (a pull request runs the tests its change touches; a merge to master runs them
-all). The second is a fresh clone, where `just setup` and `just up` run on a machine with
-nothing cached and every service must answer. The third runs `gitleaks` over the history.
+**CI** (GitHub Actions) has four jobs. The first runs typecheck, lint and the import
+boundaries. The second runs the tests, split across three machines by file: a pull request runs
+the tests its change touches, and a merge to master runs them all. The third is a fresh clone, where `just setup` and `just up` run on a machine with
+nothing cached and every service must answer. The fourth runs `gitleaks` over the history.
 `just check` runs `gitleaks` over the history and uncommitted changes.
 
 **Rules:** fakes never return the answer under test. Every guard has a test that it refuses.
