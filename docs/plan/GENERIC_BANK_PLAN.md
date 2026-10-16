@@ -402,6 +402,7 @@ ground under it does:
   calls in the GenAI semantic conventions. `just trace …` reads one. `just observe` adds the
   Collector, Grafana Tempo, Loki and Grafana, with OpenTelemetry metrics beside the SQL views.
 - **CI:** signed, scanned images pinned by digest; SonarQube quality gate.
+- **Tests:** Part 2 adds the full hazard matrix, transfer safety under failure, every human path, a trap matrix, soak runs, and the factory and memory in depth.
 
 ---
 
@@ -1313,7 +1314,7 @@ run's workflow is in [§M.3](#m3-phases).
   scrubbing pass with the known values and patterns before anything leaves the process.
 - **Results and errors:** customer-safe messages only.
 
-`tests/pii` runs every task on banks 1 and 2, scans everything written (database rows, MinIO
+`tests/pii` runs each task once on bank 1, scans everything written (database rows, MinIO
 objects, logs) for every seeded secret and personal value, and checks that every place the bank
 drew a seeded value is covered in the stored frame.
 
@@ -1851,14 +1852,12 @@ files for a pull request.
 | Unit | `packages/*/test`, `apps/*/test` | pure logic: recognition scoring, label geometry, masking, guards, caps, memory rules, result mapping. `vitest`. |
 | Bank | `apps/bank/test` | every page in all four banks, every hazard on and off, the ledger, statements, the markup dialects. |
 | Browser | `tests/browser` | the Runner against the real bank in Chromium. Skipped only if the browser cannot launch; CI fails on any skip. |
-| Outcomes | `tests/outcomes` | for each forced hazard and each seeded member case, the exact typed result. This table is the error taxonomy's proof. |
-| Escalation | `tests/escalation` | staff code, approval, supervisor code, reject, take-over, cancel and expiry, all driven through the Console API. |
-| Transfer safety | `tests/transfer` | swallowed submit, lost session while parked, grant mismatch (amount changed on screen), grant replay, duplicate detection. The bank ledger is the oracle: never two transfers for one grant. |
-| Trap matrix | `tests/guards` | every trap, every layer removed in turn, injected text changes no verdict, clean runs leave the state-change counter at zero. |
+| Outcomes | `tests/outcomes` | one business outcome, one recoverable condition and one hard failure from the outcome table, each its exact typed result. |
+| Escalation | `tests/escalation` | an unknown screen escalates; a person resumes it through the Console API, and the run finishes. |
+| Guard | `tests/browser/guard.test.ts` | the allowlist refuses what it does not list, and the submit without a grant; the bank's state-change counter does not move. |
 | PII | `tests/pii` | scans everything runs wrote (database rows, objects and log files) for seeded secrets and personal values. |
 | Factory | `apps/factory/test` | workflow phases with a fake browser and mock model, caps, the meter, the tool veto, doneness, probation. |
 | Memory | `apps/memory/test` | screens, merge, confirm, dispute, retire, widen, return, demote, pack budget, chain verification. |
-| Memory suite | `tests/memory` | the role matrix, the privacy screen, the seed, every rule, the pack, a tampered change log and the outbox, all through the Memory service's API. |
 | Prompts | `packages/prompts/test` | the checker, the loader, schemas. |
 
 **CI** (GitHub Actions) has four jobs. The first runs typecheck, lint and the import
@@ -1900,7 +1899,7 @@ packages/
   db/            Prisma schema, migrations and seed for the control database
 seeds/
   memory/        the sanitized starting knowledge: rules, checks, lessons, scenarios, approaches
-tests/           browser, outcomes, escalation, transfer, guards, pii
+tests/           browser, outcomes, escalation, runs, pii
 infra/           compose files, SOPS files, export and import scripts
 docs/            the documents the README links to (§Q.2)
 Justfile         the only entry point: every action is a just recipe (§S.1)

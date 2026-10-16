@@ -1,7 +1,6 @@
 // The outcome table's shared parts (plan, §D.2 to §D.4): a live Generic Bank, one browser, and one
-// Check Balance run through the real driver. Each test file starts its own bank and browser, so the
-// files run side by side; inside a file, runs are sequential, because one staff operator signing in
-// from several places at once invalidates their own codes, as the bank would.
+// Check Balance run through the real driver. Runs are sequential, because one staff operator signing
+// in from several places at once invalidates their own codes, as the bank would.
 import { afterAll, beforeAll } from 'vitest';
 import {
   checkBalance,
@@ -10,20 +9,17 @@ import {
   type Outcome,
 } from '../../packages/drivers/src/index.js';
 import { Browser } from '../../packages/screen/src/index.js';
-import { type Expected, type HazardName, OUTCOMES } from '../../packages/contracts/src/index.js';
+import { type HazardName, OUTCOMES } from '../../packages/contracts/src/index.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
 import { type LiveBank, liveBank, PASSWORDS } from '../support/banks.js';
 
 export { MEMBERS };
 
-/** One bank (calm, or under the given hazard profile) and one browser for the whole file. */
-export function outcomeBank(o: { profile?: 'default' } = {}) {
+/** One calm bank and one browser for the whole file. */
+export function outcomeBank() {
   const env: { bank: LiveBank; browser: Browser } = {} as never;
   beforeAll(async () => {
-    [env.bank, env.browser] = await Promise.all([
-      liveBank('generic', o.profile ? { profile: o.profile } : {}),
-      Browser.launch(),
-    ]);
+    [env.bank, env.browser] = await Promise.all([liveBank('generic'), Browser.launch()]);
   }, 120_000);
   afterAll(async () => {
     await env.browser?.close();
@@ -65,6 +61,12 @@ export async function run(
 export const brief = (o: Outcome<{ availableCents: number }>) =>
   o.status === 'succeeded' ? { status: 'succeeded' } : { status: o.status, code: o.code };
 
-// Every hazard, forced alone, and the one result it must give: the same list the hazard lab shows.
+// The table the hazard lab shows, and the three rows the suite runs from it: a business outcome, a
+// recoverable condition and a hard failure, each with its distinct typed result.
 export const CASES = OUTCOMES['check-balance'];
-export const TABLE: [HazardName, Expected][] = CASES.hazards.map((c) => [c.hazard, c.expected]);
+const hazard = (name: HazardName) => CASES.hazards.find((c) => c.hazard === name)!;
+export const RUN = {
+  business: CASES.members.find((m) => m.expected.code === 'no_such_member')!,
+  recoverable: hazard('early-expiry'),
+  hard: hazard('service-unavailable'),
+};

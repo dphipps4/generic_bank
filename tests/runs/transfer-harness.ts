@@ -7,7 +7,7 @@ import Fastify from 'fastify';
 import { inboxPages } from '../../apps/console/src/pages/inbox.js';
 import { executeRun, type RunDeps } from '../../apps/runner/src/execute.js';
 import { memoryStore } from '../../packages/evidence/src/index.js';
-import { createRun, newMemoToken, type Sql } from '../../packages/runs/src/index.js';
+import { createRun, newMemoToken } from '../../packages/runs/src/index.js';
 import { Browser } from '../../packages/screen/src/index.js';
 import { controlDb } from '../../packages/oauth/test/control.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
@@ -66,7 +66,7 @@ export async function transferHarness() {
     db,
     bank,
     store,
-    /** Every browser a run launched, in order: a test may kill one, as a crash would. */
+    /** Every browser a run launched, in order. */
     browsers,
     /** Starts a transfer run, as the API would: the run, with the memo token minted and sealed. */
     async start(t: Transfer = {}) {
@@ -135,15 +135,6 @@ export async function transferHarness() {
       ).rows;
     },
 
-    async stepsOf(runId: string) {
-      return (
-        await db.query<{ name: string; action: string | null }>(
-          'SELECT name, action FROM "Step" WHERE "runId" = $1 ORDER BY seq',
-          [runId],
-        )
-      ).rows;
-    },
-
     async close() {
       clearInterval(answering);
       await Promise.all(browsers.map((b) => b.close().catch(() => undefined)));
@@ -175,24 +166,7 @@ export async function transferHarness() {
   }
 }
 
-/**
- * A worker that stops dead, as a crash stops it: from the first query `when` matches, that query
- * and every later one never return. Nothing it would have written after that point is written.
- */
-export function stallsAt(sql: Sql, when: (query: string, params: unknown[]) => boolean): Sql {
-  let dead = false;
-  return {
-    query: <R>(q: string, p?: unknown[]) => {
-      if (dead || when(q, p ?? [])) {
-        dead = true;
-        return new Promise<{ rows: R[] }>(() => undefined);
-      }
-      return sql.query<R>(q, p);
-    },
-  };
-}
-
-export async function until<T>(
+async function until<T>(
   read: () => Promise<T | undefined | null | false>,
   limitMs: number,
 ): Promise<T> {

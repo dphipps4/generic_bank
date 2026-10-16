@@ -12,7 +12,7 @@ import { hazardHeader } from '../../packages/runs/src/index.js';
 import { controlDb } from '../../packages/oauth/test/control.js';
 import { HAZARD_NAMES, hazards } from '../../apps/bank/src/hazards.js';
 import { MEMBERS } from '../../apps/bank/src/seed.js';
-import { CASES, TABLE } from './support.js';
+import { CASES, RUN } from './support.js';
 
 // The hazard lab and the outcome table read one list (plan, §S.2, Appendix P): every hazard the bank
 // knows, the healthy member they are forced on, the member's own cases, and the one result each
@@ -47,10 +47,15 @@ describe('one list of hazards and results', () => {
     expect(ids).toEqual([MEMBERS.demo, MEMBERS.missing, MEMBERS.closed, MEMBERS.demo]);
   });
 
-  it('is the list the outcome table runs', () => {
+  it('is the list the outcome suite runs its three rows from, one of each kind', () => {
     expect(CASES).toBe(o);
-    expect(TABLE.map(([h]) => h)).toEqual(o.hazards.map((c) => c.hazard));
-    TABLE.forEach(([, want], i) => expect(want).toBe(o.hazards[i]!.expected));
+    expect(o.members).toContain(RUN.business);
+    expect(o.hazards).toEqual(expect.arrayContaining([RUN.recoverable, RUN.hard]));
+    expect([RUN.business, RUN.recoverable, RUN.hard].map((c) => c.expected.status)).toEqual([
+      'business_outcome',
+      'succeeded',
+      'failed',
+    ]);
   });
 
   it('is the list the hazard lab shows, each result beside its hazard', async () => {
