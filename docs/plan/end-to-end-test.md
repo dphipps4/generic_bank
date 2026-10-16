@@ -4,13 +4,13 @@ This is the run a reviewer makes: build the stack from nothing, then use each of
 through the Task API, playing the bank's staff and the approver yourself. It takes about 20
 minutes. Each step says what to do, then what you should see.
 
-Keep three tabs open once the stack is up:
+Once the stack is up, `just open` opens three tabs:
 
 | Tab | Address | What it is |
 |---|---|---|
-| Console | http://localhost:8080 | where a person answers sign-in codes and approves transfers (Inbox), and follows each run (Runs) |
-| Staff inbox | http://localhost:8089 | the bank staff's phone and email: every sign-in code the banks send arrives here |
 | Swagger UI | http://localhost:8000/docs | the Task API, to read and try |
+| Console | http://localhost:8080 | lands on the Dashboard; a person answers sign-in codes and approves transfers in Inbox, and follows each run in Runs |
+| Staff inbox | http://localhost:8089 | the simulated phone and email inbox: every sign-in code the banks send their staff arrives here |
 
 ## 1. Check the Mac
 
