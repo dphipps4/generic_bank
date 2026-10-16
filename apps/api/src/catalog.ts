@@ -2,7 +2,16 @@
 // loads, and the OpenAPI document. All three are generated from the same zod contracts as the
 // endpoints, so they cannot drift apart (a test holds them to it).
 import { z } from 'zod';
-import { BankInfo, CODES, ProblemDetails, TASKS, type TaskName, TaskResult } from '@gb/contracts';
+import {
+  BankInfo,
+  CODES,
+  GetStatementInput,
+  GetTaskInput,
+  ProblemDetails,
+  TASKS,
+  type TaskName,
+  TaskResult,
+} from '@gb/contracts';
 import type { Sql, TaskScope } from '@gb/oauth';
 
 export type Task = TaskName;
@@ -67,51 +76,86 @@ export const TASK_TOOLS: Record<Task, { tool: string; description: string }> = {
   'check-balance': {
     tool: 'check_balance',
     description:
-      "Reads a member's available and current balance for one account, the way a member-services employee would. Changes nothing.",
+      "Reads a member's available and current balance for one account, the way a member-services employee would. Never changes anything at the bank, and never shows a full account number.",
   },
   transfer: {
     tool: 'transfer',
     description:
-      "Requests a transfer between a member's own accounts. No money moves until a person approves it in the Console; until then the result is needs_human. To ask again, send the same idempotencyKey: it returns the same run, never a second transfer.",
+      "Requests a transfer between a member's own accounts. Never moves money until a person approves it in the Console; until then the result is needs_human. To ask again, send the same idempotencyKey: it returns the same run, never a second transfer.",
   },
   'download-statements': {
     tool: 'download_statements',
     description:
-      "Fetches an account's monthly statements: one entry per month, either a reference to the stored PDF (GET /statements/{ref}) or the bank's own words for why it has none. Changes nothing.",
+      "Fetches an account's monthly statements: one entry per month, either a reference for get_statement or the bank's own words for why it has none. Never changes anything at the bank.",
   },
 };
 
-export function tools(): ToolDef[] {
-  return [
-    {
-      name: 'list_banks',
-      description: 'Lists every bank the system knows and the tasks each supports right now.',
-      input_schema: { type: 'object', properties: {}, additionalProperties: false },
-      endpoint: { method: 'GET', path: '/banks' },
-    },
-    ...(Object.keys(TASKS) as Task[]).map((t) => ({
-      name: TASK_TOOLS[t].tool,
-      description: TASK_TOOLS[t].description,
-      input_schema: schema(TASKS[t]),
-      endpoint: { method: 'POST' as const, path: `/tasks/${t}` },
-    })),
-    {
-      name: 'get_task',
-      description:
-        "Reads a task's current result by its run id, waiting up to `wait` seconds for it to settle. Never starts anything.",
-      input_schema: {
-        type: 'object',
-        properties: {
-          runId: { type: 'string' },
-          wait: { type: 'integer', minimum: 0, maximum: 30 },
-        },
-        required: ['runId'],
-        additionalProperties: false,
-      },
-      endpoint: { method: 'GET', path: '/tasks/{runId}' },
-    },
-  ];
+/** One tool: what the agent reads, the schema it fills in, and the endpoint it calls. */
+interface Tool {
+  name: string;
+  description: string;
+  input: z.ZodObject;
+  endpoint: ToolDef['endpoint'];
 }
+
+/** Every tool, each from its own contract: the tool list and the OpenAPI document both read this. */
+const TOOLS: Tool[] = [
+  {
+    name: 'list_banks',
+    description:
+      'Lists every bank the system knows and the tasks each supports right now. Never contacts a bank.',
+    input: z.object({}),
+    endpoint: { method: 'GET', path: '/banks' },
+  },
+  ...(Object.keys(TASKS) as Task[]).map((t) => ({
+    name: TASK_TOOLS[t].tool,
+    description: TASK_TOOLS[t].description,
+    input: TASKS[t],
+    endpoint: { method: 'POST' as const, path: `/tasks/${t}` },
+  })),
+  {
+    name: 'get_task',
+    description:
+      "Reads a task's current result by its runId, waiting up to `wait` seconds for it to settle. Never starts a task, and never repeats one.",
+    input: GetTaskInput,
+    endpoint: { method: 'GET', path: '/tasks/{runId}' },
+  },
+  {
+    name: 'get_statement',
+    description:
+      "Fetches a statement a download_statements run kept, by the reference in its result: the PDF exactly as the bank sent it. Needs tasks:statements. Never contacts the bank, and never returns a statement another client's run kept.",
+    input: GetStatementInput,
+    endpoint: { method: 'GET', path: '/statements/{ref}' },
+  },
+];
+
+const tool = (name: string) => TOOLS.find((t) => t.name === name)!;
+
+export function tools(): ToolDef[] {
+  return TOOLS.map((t) => ({
+    name: t.name,
+    description: t.description,
+    input_schema: schema(t.input),
+    endpoint: t.endpoint,
+  }));
+}
+
+/** A GET tool's input as OpenAPI parameters: in the path where the path names it, else the query. */
+function parameters(t: Tool) {
+  const s = schema(t.input) as { properties: Record<string, unknown>; required?: string[] };
+  return Object.entries(s.properties).map(([name, p]) => {
+    const inPath = t.endpoint.path.includes(`{${name}}`);
+    return {
+      name,
+      in: inPath ? 'path' : 'query',
+      required: inPath || (s.required ?? []).includes(name),
+      schema: p,
+    };
+  });
+}
+
+/** The operation's id and summary are its tool's name and description. */
+const about = (name: string) => ({ operationId: name, summary: tool(name).description });
 
 // ── OpenAPI ──────────────────────────────────────────────────────────────────
 
@@ -156,8 +200,7 @@ export function openapi(): Record<string, unknown> {
       `/tasks/${t}`,
       {
         post: {
-          operationId: TASK_TOOLS[t].tool,
-          summary: TASK_TOOLS[t].description,
+          ...about(TASK_TOOLS[t].tool),
           tags: ['tasks'],
           security: [{ bearer: [] }],
           requestBody: {
@@ -213,10 +256,9 @@ export function openapi(): Record<string, unknown> {
     paths: {
       '/banks': {
         get: {
-          operationId: 'list_banks',
+          ...about('list_banks'),
           tags: ['catalog'],
           security: [{ bearer: [] }],
-          summary: 'Every bank the system knows, and the tasks each supports now.',
           responses: {
             '200': {
               description: 'The banks.',
@@ -243,26 +285,18 @@ export function openapi(): Record<string, unknown> {
           operationId: 'list_tools',
           tags: ['catalog'],
           security: [{ bearer: [] }],
-          summary: 'The API as tool definitions an agent loads directly.',
+          summary:
+            'The API as tool definitions an agent loads directly. A tool call returns the endpoint’s answer, flagged as an error unless it is 200 (succeeded, handed_off) or 202 (waiting).',
           responses: { '200': { description: 'The tools.' } },
         },
       },
       ...taskPaths,
       '/tasks/{runId}': {
         get: {
-          operationId: 'get_task',
+          ...about('get_task'),
           tags: ['tasks'],
           security: [{ bearer: [] }],
-          summary: 'A run’s current result; `wait` long-polls up to 30 seconds.',
-          parameters: [
-            { name: 'runId', in: 'path', required: true, schema: { type: 'string' } },
-            {
-              name: 'wait',
-              in: 'query',
-              required: false,
-              schema: { type: 'integer', minimum: 0, maximum: 30 },
-            },
-          ],
+          parameters: parameters(tool('get_task')),
           responses: {
             '200': {
               description: 'succeeded or handed_off.',
@@ -285,19 +319,10 @@ export function openapi(): Record<string, unknown> {
       },
       '/statements/{ref}': {
         get: {
-          operationId: 'get_statement',
+          ...about('get_statement'),
           tags: ['tasks'],
           security: [{ bearer: [] }],
-          summary:
-            'A statement a download_statements run kept, by the reference in its result: the PDF exactly as the bank sent it. Needs tasks:statements.',
-          parameters: [
-            {
-              name: 'ref',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', pattern: '^st_[0-9a-f]{16}_\\d{4}-\\d{2}$' },
-            },
-          ],
+          parameters: parameters(tool('get_statement')),
           responses: {
             '200': {
               description: 'The statement.',

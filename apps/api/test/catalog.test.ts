@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { TASKS, type TaskName } from '@gb/contracts';
+import { httpStatus, TASKS, type TaskName, TaskStatus, toolResult } from '@gb/contracts';
+import { settleRun } from '@gb/runs';
 import { oauth } from '@gb/oauth';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import { openapi, tools } from '../src/catalog.js';
@@ -73,7 +74,7 @@ describe('the API describes itself, and the descriptions agree', () => {
 
   it('every tool’s endpoint answers, as an endpoint and not as a missing route', async () => {
     for (const tool of tools()) {
-      const url = tool.endpoint.path.replace('{runId}', 'r_none');
+      const url = tool.endpoint.path.replace(/\{\w+\}/, 'none');
       const r =
         tool.endpoint.method === 'GET'
           ? await get(url)
@@ -101,7 +102,81 @@ describe('the API describes itself, and the descriptions agree', () => {
       'transfer',
       'download_statements',
       'get_task',
+      'get_statement',
     ]);
+  });
+
+  it('every tool says what it never does', () => {
+    for (const tool of tools()) expect(tool.description, tool.name).toMatch(/\bNever\b/);
+  });
+
+  it('every tool is the document’s operation of the same name, with the same words and input', () => {
+    type Op = {
+      operationId: string;
+      summary: string;
+      tags: string[];
+      requestBody?: { content: Record<string, { schema: unknown }> };
+      parameters?: { name: string; in: string; required: boolean; schema: unknown }[];
+    };
+    const doc = openapi() as { paths: Record<string, Record<string, Op>> };
+    for (const tool of tools()) {
+      const op = doc.paths[tool.endpoint.path]![tool.endpoint.method.toLowerCase()]!;
+      expect([op.operationId, op.summary], tool.name).toEqual([tool.name, tool.description]);
+      if (tool.endpoint.method === 'POST') {
+        expect(op.requestBody!.content['application/json']!.schema).toEqual(tool.input_schema);
+        continue;
+      }
+      // A GET tool's input is its parameters: the same names, schemas and required ones.
+      const params = op.parameters ?? [];
+      expect({
+        type: 'object',
+        properties: Object.fromEntries(params.map((p) => [p.name, p.schema])),
+        ...(params.some((p) => p.required)
+          ? { required: params.filter((p) => p.required).map((p) => p.name) }
+          : {}),
+        additionalProperties: false,
+      }).toEqual(tool.input_schema);
+      for (const p of params)
+        expect(p.in, `${tool.name}.${p.name}`).toBe(
+          tool.endpoint.path.includes(`{${p.name}}`) ? 'path' : 'query',
+        );
+    }
+    // And the other way: every task operation in the document is a tool.
+    const names = tools().map((t) => t.name);
+    for (const ops of Object.values(doc.paths))
+      for (const op of Object.values(ops))
+        if (op.tags.includes('tasks')) expect(names, op.operationId).toContain(op.operationId);
+  });
+
+  it('flags a tool’s result as an error for every status but success, hand-off and waiting', async () => {
+    const fine = ['succeeded', 'handed_off', 'running', 'needs_human'];
+    for (const status of TaskStatus.options)
+      for (const retryable of [true, false])
+        expect(toolResult(httpStatus({ status, retryable }), {}).isError, status).toBe(
+          !fine.includes(status),
+        );
+    // As the endpoints answer: waiting, done, refused.
+    const start = await app.inject({
+      method: 'POST',
+      url: '/tasks/check-balance',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { bank: 'generic', memberId: '40017732', account: '7890' },
+    });
+    expect(toolResult(start.statusCode, start.json()).isError).toBe(false);
+    const runId = start.json().runId;
+    await settleRun(db, runId, { status: 'business_outcome', code: 'no_such_account' });
+    const said = await get(`/tasks/${runId}`);
+    expect([said.statusCode, toolResult(said.statusCode, said.json()).isError]).toEqual([
+      422,
+      true,
+    ]);
+    const none = await get('/statements/st_0000000000000000_2026-05');
+    expect([none.statusCode, toolResult(none.statusCode, none.json()).isError]).toEqual([
+      404,
+      true,
+    ]);
+    const banks = await get('/banks');
+    expect(toolResult(banks.statusCode, banks.json()).isError).toBe(false);
   });
 });
 
