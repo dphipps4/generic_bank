@@ -54,6 +54,7 @@ export async function buildAdmin(bank: Bank, token: string): Promise<FastifyInst
   app.get<{ Params: { member: string } }>('/members/:member/balances', async (req) =>
     (await accountsOf(bank.db, req.params.member)).map((a) => ({
       type: a.type,
+      nickname: a.nickname,
       number: a.number,
       currentCents: a.currentCents,
       availableCents: a.availableCents,

@@ -181,7 +181,7 @@ const shapeOf = (b: unknown): unknown => {
   return { type: block.type };
 };
 type Message = { role: string; content: unknown; tool_call_id?: unknown };
-const unpictured = (r: Request): unknown => ({
+export const unpictured = (r: Request): unknown => ({
   ...r,
   messages: ((r.messages ?? []) as Message[]).map((m) =>
     m.role === 'assistant' || m.role === 'system'
@@ -202,9 +202,14 @@ export function replay(recordings: string): Upstream {
     async answer(runId, role, provider, request) {
       let run = runs.get(runId);
       if (!run) {
-        const text = await readFile(file(recordings, runId), 'utf8').catch(() => {
-          throw new Refusal(400, 'invalid_request_error', `no recording for run ${runId}`);
-        });
+        // A run with no recording of its own replays the one kept for its kind: repair-generic
+        // for the run repair-generic-1a2b3c4d.
+        const kind = runId.replace(/-[0-9a-f]{8}$/, '');
+        const text = await readFile(file(recordings, runId), 'utf8')
+          .catch(() => readFile(file(recordings, kind), 'utf8'))
+          .catch(() => {
+            throw new Refusal(400, 'invalid_request_error', `no recording for run ${runId}`);
+          });
         const calls = text
           .split('\n')
           .filter(Boolean)

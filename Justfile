@@ -227,6 +227,21 @@ bank-more: env image
 factory: env image
     @{{compose}} --profile factory up -d --wait {{factory}}
 
+# The factory learns a bank, then runs the gate once you approve: just onboard sample
+[group('Factory')]
+onboard bank: factory
+    @{{compose}} --profile factory-run run --rm factory-run onboard {{bank}}
+
+# The factory repairs a bank's open repair case, then runs the gate: just repair generic
+[group('Factory')]
+repair bank: factory
+    @{{compose}} --profile factory-run run --rm factory-run repair {{bank}}
+
+# The gate alone, for a recommendation approved later: just gate rec_...
+[group('Factory')]
+gate rec: factory
+    @{{compose}} --profile factory-run run --rm factory-run gate {{rec}}
+
 # Apply database migrations
 [group('Run')]
 migrate: env image
