@@ -1,4 +1,4 @@
-// A guard trip (plan, §J.2): the bank is frozen until a person clears it on the Freezes page, the
+// A guard trip (plan, §9): the bank is frozen until a person clears it on the Freezes page, the
 // run ends escalated: guard_tripped, and the journal records why. The freeze is written here; the
 // journal line and the ending are returned for the Runner, which owns the run's journal and its
 // result.

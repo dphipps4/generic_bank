@@ -1,4 +1,4 @@
-// What a person curates (plan §K.8, §K.10): rules, checks, scenarios, approaches and lessons. Each
+// What a person curates (plan §8): rules, checks, scenarios, approaches and lessons. Each
 // save is a new version that waits, unserved, until approved; one approval can make a whole set
 // current, as the seed does. A save the same as the latest version writes nothing, and the catalog
 // and lessons read at any version.

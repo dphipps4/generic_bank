@@ -1,4 +1,4 @@
-// Approval grants (plan, §F.1 step 3-4): the single key to the one money-moving click. A person's
+// Approval grants (plan, §6 step 3-4): the single key to the one money-moving click. A person's
 // Approve issues it, bound to the run, the masked accounts, the exact amount, the memo token and a
 // nonce, for five minutes. The click consumes it, and only when the screen shows exactly what the
 // person approved.

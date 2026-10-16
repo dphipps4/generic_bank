@@ -3,7 +3,7 @@
 Generic Bank becomes a working staff console: a ledger, staff sign-in with codes, member
 lookup, balances, activity, statements, and transfers with supervisor approval. The markup is
 old-fashioned on purpose, and the tests can force hazards. The plan's
-[Appendix C](../plan/GENERIC_BANK_PLAN.md#appendix-c-generic-bank-the-target-product) is the
+[§4](../plan/GENERIC_BANK_PLAN.md#4-the-four-banks) is the
 specification.
 
 It lands as a series of small pull requests. Each stands alone, has its own tests and leaves

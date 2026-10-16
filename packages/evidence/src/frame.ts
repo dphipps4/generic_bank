@@ -1,4 +1,4 @@
-// A trail frame (plan, §I.1): a masked screenshot, the masked screen model, host and path, the step
+// A trail frame (plan, §9): a masked screenshot, the masked screen model, host and path, the step
 // and the time. A frame that cannot be proven clean is withheld: stored as a placeholder with the
 // reason, never as an image.
 import type { ScreenModel } from '@gb/screen';

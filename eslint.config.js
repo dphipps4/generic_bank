@@ -26,7 +26,7 @@ export default tseslint.config(
     },
   },
   {
-    // A guard's refusal trips it, and nothing catches one to carry on (plan, §J.2): no catch names
+    // A guard's refusal trips it, and nothing catches one to carry on (plan, §9): no catch names
     // the guard's error, and no catch around an action swallows what the action threw.
     files: ['apps/**/*.ts', 'packages/**/*.ts'],
     ignores: ['**/test/**'],

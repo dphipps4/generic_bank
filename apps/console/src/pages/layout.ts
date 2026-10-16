@@ -6,7 +6,7 @@ export interface Sql {
   query<R = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<{ rows: R[] }>;
 }
 
-/** Who is signed in to the Console, and with which role (plan, §G.1). */
+/** Who is signed in to the Console, and with which role (plan, §2). */
 export interface Viewer {
   email: string;
   role: 'viewer' | 'approver' | 'admin';

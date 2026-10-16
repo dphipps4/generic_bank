@@ -1,4 +1,4 @@
-// Masking (plan, §I.2). Everything is masked before it is written. Known values (the member's name,
+// Masking (plan, §9). Everything is masked before it is written. Known values (the member's name,
 // account numbers, credentials, codes) and patterns (runs of four or more digits, amounts of money,
 // emails, phone numbers, street lines) are masked in text. Screenshots are masked from the screen
 // model, which already knows where every piece of text is: every input, every text run that holds a

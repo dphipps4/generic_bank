@@ -53,7 +53,7 @@ const app = await buildServer({
   }),
   logger: true,
 });
-// The hazard lab starts runs with hazards forced, only where the banks obey them (plan, §S.2).
+// The hazard lab starts runs with hazards forced, only where the banks obey them (plan, §A.3).
 if (cfg.HAZARDS_FORCEABLE === 'true')
   labRoutes(app, { sql: control, sealKey: cfg.RUN_SEAL_KEY, enqueue });
 await app.listen({ host: '0.0.0.0', port: cfg.API_PORT });

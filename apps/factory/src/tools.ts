@@ -1,4 +1,4 @@
-// The closed tool set (plan, §M.4): each role's tools, by name, and a tool's shape whatever model
+// The closed tool set (plan, §7): each role's tools, by name, and a tool's shape whatever model
 // calls it. Every call is checked here before it runs; a tool outside the role's list is refused.
 import type { z } from 'zod';
 import type { Role } from './models.js';

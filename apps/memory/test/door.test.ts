@@ -1,4 +1,4 @@
-// One door (plan §K.5, §K.11): a token per role, only the writes that role is given, a signature
+// One door (plan §A.6): a token per role, only the writes that role is given, a signature
 // on every write, and the privacy screen. A refused write leaves nothing behind.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -9,7 +9,7 @@ import { screen } from '../src/screen.js';
 import { buildServer, type WriteHandler } from '../src/server.js';
 import { memoryDb, SIGNING_KEY, testDoor, TOKENS } from './db.js';
 
-// The writes each role is given, as §K.5 states them.
+// The writes each role is given, as §A.6 states them.
 const GIVEN: Record<Role, Write[]> = {
   runner: ['episodes/runs', 'episodes/attempts', 'lessons/proposals', 'lessons/relied-on'],
   factory: [
@@ -81,7 +81,7 @@ async function refused(res: Promise<{ statusCode: number; json(): unknown }>, st
 }
 
 describe('the door', () => {
-  it('gives each role only the writes §K.5 gives it', async () => {
+  it('gives each role only the writes §A.6 gives it', async () => {
     for (const role of ROLES) {
       for (const write of Object.keys(WRITES) as Write[]) {
         const body = { note: `${role} ${write}` };

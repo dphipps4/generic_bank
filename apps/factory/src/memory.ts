@@ -1,4 +1,4 @@
-// Memory, as the factory reads and writes it (plan §K.4, §M.4): the knowledge pack a run starts
+// Memory, as the factory reads and writes it (plan §A.6, §7): the knowledge pack a run starts
 // from, `memory_query` for both roles, `record_lesson` for the Supervisor, and, at the run's end,
 // its lessons sent as proposals with what it relied on and contradicted. The factory only
 // proposes; memory's own rules decide what a lesson becomes. Every write is signed with a key only

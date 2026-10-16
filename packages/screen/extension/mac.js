@@ -1,4 +1,4 @@
-// The Mac identity's last part (plan, §5.1, §E.8): what neither a launch switch nor the DevTools
+// The Mac identity's last part (plan, §5): what neither a launch switch nor the DevTools
 // Protocol can set, applied before any of the page's own scripts run. Everything else (the user
 // agent and client hints, the languages, the cores, the screen size and pixel ratio, the timezone)
 // is set by the browser itself and is not repeated here. The values are the reference capture's

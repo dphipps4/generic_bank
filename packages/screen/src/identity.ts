@@ -1,4 +1,4 @@
-// The browser's fingerprint (plan, §5.1, §E.8, Appendix W): Chrome on an Apple-silicon Mac. Every
+// The browser's fingerprint (plan, §5): Chrome on an Apple-silicon Mac. Every
 // value is set over the DevTools Protocol before the first navigation, from outside the page; no
 // script is ever run inside a bank's page to change what it sees. The values come from a reference
 // capture of a real Mac (tests/fixtures/browser/mac-chrome.json). What cannot be set that way stays
@@ -70,7 +70,7 @@ export interface Identity {
 export function macChrome(product: string, timezone: string): Identity {
   const full = /\/([\d.]+)/.exec(product)?.[1] ?? '0.0.0.0';
   const major = Number(full.split('.')[0]);
-  // Chrome reports this exact string on every Mac, Apple silicon included (plan, §W.1).
+  // Chrome reports this exact string on every Mac, Apple silicon included (plan, §5).
   const userAgent = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${major}.0.0.0 Safari/537.36`;
   return {
     userAgent,

@@ -1,4 +1,4 @@
-// The bank's own names for the controls the allowlists name (plan, §J.1). The lists say "Sign In";
+// The bank's own names for the controls the allowlists name (plan, §A.5). The lists say "Sign In";
 // a bank draws "Log In". The guard reads the visible name and asks the list through these. They
 // come from the reviewed profile, and no name here can let a control the lists never allow
 // through: those are refused first, whatever a bank calls them.

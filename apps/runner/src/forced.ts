@@ -1,5 +1,5 @@
 // A run started from the hazard lab carries its forced hazards to the bank in the signed header the
-// bank checks (plan, §S.2); every other run carries none. Only the Runner holds the signing key.
+// bank checks (plan, §A.3); every other run carries none. Only the Runner holds the signing key.
 import { forcedHazardsOf, hazardHeader } from '@gb/runs';
 import type { RunDeps } from './execute.js';
 

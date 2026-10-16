@@ -231,7 +231,7 @@ export const BASES: Record<string, Omit<Profile, 'url'>> = {
 
 /**
  * A profile from approved claims over the profile they start from: the bank's base for a bank the
- * factory onboards, the bank's last profile for a repair (plan, §M.1). A claimed word replaces the
+ * factory onboards, the bank's last profile for a repair (plan, §7). A claimed word replaces the
  * base's (two claims for one word are synonyms), and so does a claimed refusal, statements notice
  * or screen's words. The rest is the base's, and the hazard check is what proves it holds.
  */

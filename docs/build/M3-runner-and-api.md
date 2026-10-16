@@ -3,8 +3,8 @@
 The first time an agent gets a real answer from a bank. The Task API takes a call authenticated
 with OAuth2, a durable run drives a real browser through Bank 1's console the way a person
 would, and the result comes back typed, with a masked trail anyone can review. The
-plan's [Appendix D](../plan/GENERIC_BANK_PLAN.md#appendix-d-task-api) and
-[Appendix E](../plan/GENERIC_BANK_PLAN.md#appendix-e-the-runner-driving-a-messy-ui) are the
+plan's [§3](../plan/GENERIC_BANK_PLAN.md#3-the-api) and
+[§5](../plan/GENERIC_BANK_PLAN.md#5-the-crawler) are the
 specification.
 
 A small client of our own drives the browser over the DevTools Protocol, instead of a browser

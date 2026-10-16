@@ -1,4 +1,4 @@
-// Pictures of text (plan, §E.1 step 4). Some labels and buttons are images with no alt text. The
+// Pictures of text (plan, §5 step 4). Some labels and buttons are images with no alt text. The
 // crawler does not read pixels: when the factory explores a bank, its vision model names each such
 // image once, and the bank's profile keeps the image's fingerprint with that name. At runtime the
 // crawler matches pictures on screen against those fingerprints, so a picture gets a name like any

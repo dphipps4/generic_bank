@@ -1,5 +1,5 @@
 // The Task API: typed tasks in, one typed result out. The caller never sees the UI. Every call
-// but health and the OAuth2 endpoints carries a bearer access token (plan, §D.6).
+// but health and the OAuth2 endpoints carries a bearer access token (plan, §A.7).
 import formbody from '@fastify/formbody';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
@@ -280,7 +280,7 @@ export async function buildServer(opts: {
         return r;
       }));
     } catch (e) {
-      // Plan, §D.8: while a transfer is open, the same transfer again is refused and points to it.
+      // Plan, §3: while a transfer is open, the same transfer again is refused and points to it.
       if (!(e instanceof DuplicateRun)) throw e;
       return reply
         .code(409)
@@ -354,7 +354,7 @@ export async function buildServer(opts: {
       .send(pdf);
   });
 
-  /** A result as HTTP (plan, §D.7): the status code says what to do next. */
+  /** A result as HTTP (plan, §A.1): the status code says what to do next. */
   function answer(reply: FastifyReply, r: TaskResult) {
     const status = httpStatus(r);
     reply.header('location', `/tasks/${r.runId}`);

@@ -1,4 +1,4 @@
-// Text to a vector for similarity, in this process: bge-small-en-v1.5 on CPU (plan §K.12). No text
+// Text to a vector for similarity, in this process: bge-small-en-v1.5 on CPU (plan §8). No text
 // leaves the service. The model is fetched once into `cacheDir` and loaded on first use.
 
 /** A unit-length vector of DIMENSIONS numbers for a text. */

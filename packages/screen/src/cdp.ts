@@ -1,6 +1,6 @@
 // A small client for the Chrome DevTools Protocol. We read the browser from outside the page: no
 // script of ours ever runs in a bank's page, and every call has its own timeout, because a frozen
-// DevTools session never times out by itself (plan, §E.1 and §E.2).
+// DevTools session never times out by itself (plan, §5).
 
 /** Where messages go: Chromium's debugging pipe in the Runner, anything in tests. */
 export interface Transport {

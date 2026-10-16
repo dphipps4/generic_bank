@@ -1,4 +1,4 @@
-// The hazard check (plan, §7, Appendix N, E2): the approved profile run against the bank with each
+// The hazard check (plan, §7, §C.4, E2): the approved profile run against the bank with each
 // hazard forced alone, after a control run with none. Each run must give the outcome table's result
 // for its hazard (the same table the hazard lab shows), and a balance it read must be the one in
 // the bank's own ledger: the bank's word, never the crawler's. Every hazard that gives another

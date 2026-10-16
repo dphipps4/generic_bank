@@ -21,7 +21,7 @@ beforeAll(async () => {
 });
 afterAll(() => db.close());
 
-// The plan's traps (§J.1): never on any list, for any job.
+// The plan's traps (§A.5): never on any list, for any job.
 const TRAPS = [
   'Pay now',
   'Add payee',

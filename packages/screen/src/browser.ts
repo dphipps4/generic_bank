@@ -95,11 +95,11 @@ export interface LaunchOptions {
    * HTTP. Chrome sends its Sec-Fetch headers and client hints only to secure origins.
    */
   secureOrigins?: string[];
-  /** The timezone the browser reports: the machine's own (plan, §E.8). */
+  /** The timezone the browser reports: the machine's own (plan, §5). */
   timezone?: string;
   /**
    * The only hosts (host and port) the page and its frames may reach. Every other request is
-   * refused before it is sent (plan, §J.2, "Session guard: network").
+   * refused before it is sent (plan, §9, "Session guard: network").
    */
   hosts?: string[];
 }
@@ -183,7 +183,7 @@ export class Browser {
       { timeoutMs: 20_000 },
     );
     // The identity extension, before the first page exists, so its script runs in every page from
-    // the first one (plan, §E.8). The headless shell has no extensions; full Chrome does.
+    // the first one (plan, §5). The headless shell has no extensions; full Chrome does.
     if (!/headless[-_]shell/.test(bin))
       await cdp.call(
         'Extensions.loadUnpacked',
@@ -191,7 +191,7 @@ export class Browser {
         { path: EXTENSION, enableInIncognito: true },
         { timeoutMs: 20_000 },
       );
-    // The fingerprint, for this engine's own version (plan, §5.1).
+    // The fingerprint, for this engine's own version (plan, §5).
     const timezone =
       o.timezone ?? process.env.TZ ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
     return new Browser(cdp, child, profile, { ...o, width, height }, macChrome(product, timezone));
@@ -464,7 +464,7 @@ export class Page {
     o: { extra?: [string, Record<string, unknown>][]; resume?: () => Promise<unknown> } = {},
   ) {
     const commands: [string, Record<string, unknown>][] = [];
-    // The identity first, before anything this session loads (plan, §E.8). Screen metrics belong to
+    // The identity first, before anything this session loads (plan, §5). Screen metrics belong to
     // the page; a frame takes the rest. A window this page opened already has the page's locale.
     for (const [method, params] of identityCommands(this.identity, {
       width: this.options.width ?? 1280,

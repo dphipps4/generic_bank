@@ -1,4 +1,4 @@
-// The factory reads and writes memory (plan §K.4, §M.4): no pack, no run; `record_lesson` keeps a
+// The factory reads and writes memory (plan §A.6, §7): no pack, no run; `record_lesson` keeps a
 // lesson only when it cites frames of this run, and the Scout cannot call it; at the run's end the
 // lessons reach memory as proposals, with the served lessons the run relied on and contradicted.
 // The models are fake fetches behind the real gateway, and memory is the real service over HTTP.

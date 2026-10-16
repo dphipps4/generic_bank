@@ -60,7 +60,7 @@ export interface RunDeps {
   headers?: Record<string, string>;
 }
 
-/** At most this many frames per run (plan, §I.1); the last step always gets one. */
+/** At most this many frames per run (plan, §9); the last step always gets one. */
 const MAX_FRAMES = 60;
 
 /** The jobs a run can be: each has its allowlist. */
@@ -236,7 +236,7 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
   if (trip) ending = { status: 'escalated', code: 'guard_tripped', guard: trip };
   await settleRun(deps.sql, runId, ending);
   // A screen the driver does not know is the driver's fault, never the bank's: it is taken out of
-  // service, and a repair case opens (plan, Appendix L). A hazard forced in the lab is the bank
+  // service, and a repair case opens (plan, §7). A hazard forced in the lab is the bank
   // misbehaving on purpose, and is no fault.
   if (
     ending.status === 'escalated' &&

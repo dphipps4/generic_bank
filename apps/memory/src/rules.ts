@@ -1,4 +1,4 @@
-// The rules (plan §K.4): fixed functions of stored evidence, with no model, that confirm, dispute,
+// The rules (plan §A.6): fixed functions of stored evidence, with no model, that confirm, dispute,
 // retire, widen and bring back lessons. Each change is a new version and a change-log row written
 // as the system, in the transaction of the write that set it off.
 //

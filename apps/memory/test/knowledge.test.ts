@@ -1,4 +1,4 @@
-// Search and the knowledge pack (plan §K.3, §K.4, §K.8): hybrid search fused by reciprocal rank,
+// Search and the knowledge pack (plan §8, §A.6): hybrid search fused by reciprocal rank,
 // the episodes a run reads, the pack in tiers within its budget, and the question behind
 // `memory_query`. Everything is written through the door, except the states only the rules write.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';

@@ -1,4 +1,4 @@
-// The model gateway (plan §M.6): the agents' only route to the model, Anthropic's or OpenAI's.
+// The model gateway (plan §7): the agents' only route to the model, Anthropic's or OpenAI's.
 // Before every request it checks the run's and the week's spend against the caps at the request's
 // worst case; after, it records what the call cost, per run and role. It fails closed.
 import { CAPS, type Caps } from './caps.js';

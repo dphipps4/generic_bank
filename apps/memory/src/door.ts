@@ -1,4 +1,4 @@
-// Memory's one door (plan §K.5): every caller holds a token for one role, and each role may make
+// Memory's one door (plan §A.6): every caller holds a token for one role, and each role may make
 // only the writes listed here. Every write is also signed with a key that only deterministic code
 // holds, so a model that learns a token still cannot forge a write.
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';

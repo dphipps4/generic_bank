@@ -9,10 +9,10 @@ a confidence, and says whether it was seen on those frames or is a guess. The Su
 memory through the knowledge pack and `memory_query` before it reasons, and at the end records
 what the run taught through `record_lesson`. Memory starts from the cleaned set in
 `seeds/memory/`, loaded through the same single door. The plan's
-[Appendix K](../plan/GENERIC_BANK_PLAN.md#appendix-k-memory-how-the-agents-remember) is the
-specification, with [§K.5](../plan/GENERIC_BANK_PLAN.md#k5-guardrails) for who may write what,
-[§K.10](../plan/GENERIC_BANK_PLAN.md#k10-the-starting-knowledge) for the seed and
-[§M.4](../plan/GENERIC_BANK_PLAN.md#m4-tools) for the factory's tools.
+[§8](../plan/GENERIC_BANK_PLAN.md#8-memory) is the
+specification, with [§A.6](../plan/GENERIC_BANK_PLAN.md#a6-memory) for who may write what,
+[§8](../plan/GENERIC_BANK_PLAN.md#8-memory) for the seed and
+[§7](../plan/GENERIC_BANK_PLAN.md#7-the-factory) for the factory's tools.
 
 The change log is the judge throughout. No model decides anything inside memory: every rule is a
 fixed function of stored evidence, so a test states exactly which versions and change-log rows a
@@ -21,7 +21,7 @@ write must leave behind, and reads them back.
 | # | Pull request | What it adds | What proves it |
 |---|---|---|---|
 | 1 | **Memory's tables** | Memory's own Prisma schema and first migration on the `memory` database: episodes (runs and attempts), hypotheses, facts as bi-temporal rows (`valid_at`, `invalid_at`, `expired_at`), lessons and their versions, the catalog (rules, checks, scenarios, approaches), and an embedding column in pgvector; every write and its change-log row in one serializable transaction, hash-chained; `history` and `history/verify`; a chain that fails verification turns memory read-only | the migration applies to an empty `memory` database; changing any change-log row breaks verification at that row, and the next write is refused |
-| 2 | **One door** | A token per role (runner, factory, curator, system), each limited to the writes §K.5 gives it; every write signed with a key only deterministic code holds; the privacy screen on every write; `401`, `403 role_forbidden` and `422` as §K.11 gives them | for every role and every write, the allowed ones succeed and the rest are `403` with nothing written; an unsigned write is `403`; a password, code, token, account-like number, screenshot or advice to do a forbidden action is `422` |
+| 2 | **One door** | A token per role (runner, factory, curator, system), each limited to the writes §A.6 gives it; every write signed with a key only deterministic code holds; the privacy screen on every write; `401`, `403 role_forbidden` and `422` as §A.6 gives them | for every role and every write, the allowed ones succeed and the rest are `403` with nothing written; an unsigned write is `403`; a password, code, token, account-like number, screenshot or advice to do a forbidden action is `422` |
 | 3 | **Episodes and lessons** | `episodes/runs`, `episodes/attempts`, hypotheses, `lessons/proposals` and `lessons/relied-on`; a lesson cites its run, frames and evidence hash, carries a confidence (low, medium, high) and is marked seen or guess; `bge-small-en-v1.5` in-process for embeddings; a proposal within 0.95 similarity of a lesson in the same scope adds its evidence to that lesson | a lesson with no frame is refused; a near-duplicate grows the held lesson's evidence and adds no lesson; an attempt with no run is `409` |
 | 4 | **The seed** | `just memory-seed`: the manifest's hashes checked, then every entry through the door as the curator, with one approval record for the whole set; seeded lessons start as curated patterns; `scenarios`, `approaches`, `rules`, `checks` and `lessons` read at any version | on a fresh database the counts match the manifest (19 rules, 7 checks, 268 lessons, 49 scenarios, 46 approaches) and the chain verifies; a second run writes nothing; a file whose hash differs is refused whole |
 | 5 | **Search and the knowledge pack** | Hybrid search: full-text ranking and pgvector similarity fused by reciprocal rank; `episodes/search`, `/recent` and `/recurring`; `knowledge/pack` in tiers within a size budget (patterns, vendor, tenant, proposed marked "verify before relying", disputed with the reason, recurring failures, the two nearest drivers); the query behind `memory_query`, at most eight items and three facts | the pack for bank 2 comes in tier order within its budget, labels every unconfirmed lesson, and never holds a hypothesis or an unconfirmed pattern |

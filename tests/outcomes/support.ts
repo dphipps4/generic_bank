@@ -1,4 +1,4 @@
-// The outcome table's shared parts (plan, §D.2 to §D.4): a live Generic Bank, one browser, and one
+// The outcome table's shared parts (plan, §A.1 to §A.2): a live Generic Bank, one browser, and one
 // Check Balance run through the real driver. Runs are sequential, because one staff operator signing
 // in from several places at once invalidates their own codes, as the bank would.
 import { afterAll, beforeAll } from 'vitest';

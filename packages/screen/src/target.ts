@@ -1,4 +1,4 @@
-// Targeting by meaning (plan, §E.4). Drivers never write selectors: they ask for a field by its
+// Targeting by meaning (plan, §5). Drivers never write selectors: they ask for a field by its
 // label, a button by its name, a control by the text it sits with. Every answer is exactly one
 // control, or an error that says why; never a guess.
 import type { Box, Control, Role, ScreenModel, Text } from './model.js';

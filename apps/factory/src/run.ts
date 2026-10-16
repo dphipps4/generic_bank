@@ -1,4 +1,4 @@
-// A factory run, start to recommendation (plan, §M.1): build mode onboards a bank, from its base
+// A factory run, start to recommendation (plan, §7): build mode onboards a bank, from its base
 // profile, toward each of the product's three goals; repair mode starts from the open repair case,
 // the profile of the version that faulted and the frames of the run where it stopped, toward the
 // goal of the task that broke. Either way the run starts from memory's knowledge pack, which the

@@ -1,4 +1,4 @@
-// The allowlist (plan, §J.1) and the decision every action passes before it reaches the browser.
+// The allowlist (plan, §A.5) and the decision every action passes before it reaches the browser.
 // The files in allowlists/ are the list: the guard enforces them and the Console renders them, so
 // what a person reads is what runs. A decision judges the job, the screen, the verb and the
 // control's visible name, and nothing a page says: injected instructions have no way in.
@@ -45,7 +45,7 @@ export interface Context {
   names?: Names;
 }
 
-/** A refusal, thrown. It trips the guard; nothing may catch it to carry on (plan, §J.2). */
+/** A refusal, thrown. It trips the guard; nothing may catch it to carry on (plan, §9). */
 export class GuardError extends Error {
   constructor(
     readonly layer: Layer,
@@ -86,7 +86,7 @@ export const ALLOWLISTS: Readonly<Record<TaskName, readonly Entry[]>> = Object.f
 ) as Record<TaskName, Entry[]>;
 
 /**
- * Words that move money or change an account (plan, §J.2, "Session guard: element"), matched at
+ * Words that move money or change an account (plan, §9, "Session guard: element"), matched at
  * the start of a word, so "Payment" and "Transfers" count too. A wrong match only refuses.
  */
 export const MONEY_WORDS =
@@ -99,7 +99,7 @@ export const MONEY_SCREENS: ReadonlySet<string> = new Set([
   'supervisor_approval',
 ]);
 
-/** Never on any list (plan, §J.1): refused on every screen, whatever a bank calls its controls. */
+/** Never on any list (plan, §A.5): refused on every screen, whatever a bank calls its controls. */
 export const NEVER = [
   'Pay now',
   'Add payee',

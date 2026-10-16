@@ -1,9 +1,9 @@
-// The durable run (plan, §D, DBOS). The workflow holds only the run id: the inputs stay sealed in
+// The durable run (plan, §3, DBOS). The workflow holds only the run id: the inputs stay sealed in
 // our own table, and the result is settled there too, so nothing personal lands in the workflow
 // engine's tables. The crawl is one step: a browser cannot be checkpointed, so a run that resumes
 // after a crash starts a fresh browser and signs in again, as the plan says. A transfer resumes from
 // what it wrote down: an approval already asked for is waited on again, and a journaled submit goes
-// to the account's history, never to the button (§F.2).
+// to the account's history, never to the button (§6).
 import { DBOS } from '@dbos-inc/dbos-sdk';
 import { WORKFLOW } from '@gb/runs';
 import { executeRun, type RunDeps } from './execute.js';

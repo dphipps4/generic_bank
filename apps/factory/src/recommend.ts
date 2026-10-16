@@ -1,4 +1,4 @@
-// The recommendation (plan, §M.4): once a run has reached its goals, the Supervisor drafts the
+// The recommendation (plan, §7): once a run has reached its goals, the Supervisor drafts the
 // bank's profile from the run's frames: the bank's words for each thing, the words that mark its
 // screens, and its refusals. Every claim cites frames of this run and says whether it was seen on
 // them or is a guess. A claim with no frame, or citing a frame that is not this run's, is refused,

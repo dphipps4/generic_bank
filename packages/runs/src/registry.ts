@@ -1,4 +1,4 @@
-// The registry (plan, §10, Appendix L): which version of a bank's driver serves a task, and the
+// The registry (plan, §7): which version of a bank's driver serves a task, and the
 // profile it runs. A version the factory made is its approved claims over the profile it started
 // from: the bank's base for an onboarding, the repaired version's profile for a repair. A version
 // written by hand runs the hand-written profile. The first driver fault demotes the version that
@@ -39,7 +39,7 @@ export async function serving(
   tenant: string,
   task: string,
 ): Promise<{ versionId: string | null; profile: Bankless } | null> {
-  // A frozen bank runs nothing until a person clears the freeze (plan, Appendix L).
+  // A frozen bank runs nothing until a person clears the freeze (plan, §7).
   const d = (
     await sql.query<{ active: string | null }>(
       `SELECT "activeVersionId" AS active FROM "Driver"

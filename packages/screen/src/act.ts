@@ -1,4 +1,4 @@
-// Acting like a person (plan, §E.4): the real mouse and keyboard, at a control's center in page
+// Acting like a person (plan, §5): the real mouse and keyboard, at a control's center in page
 // coordinates. Right before a click the screen is read again and the same control must still be
 // there; if it moved (tiles that re-render), it is found again, up to twice. Typing is key by key,
 // and every key comes from a fixed set. A page given a guard asks it first, every time, with the

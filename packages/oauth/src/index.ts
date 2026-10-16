@@ -1,4 +1,4 @@
-// OAuth2 for the Task API (plan, §D.6). An admin creates a client in the Console and receives its
+// OAuth2 for the Task API (plan, §A.7). An admin creates a client in the Console and receives its
 // secret and a one-time code, once. The code becomes a 15-minute access token and a 30-day refresh
 // token; refresh tokens rotate, and presenting a spent one revokes its whole family. Only keyed
 // hashes of secrets, codes and tokens are ever stored.

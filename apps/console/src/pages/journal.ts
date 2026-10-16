@@ -1,4 +1,4 @@
-// The journal, in the Console (plan, §G.2): every intended and performed action, newest first, and
+// The journal, in the Console (plan, §2): every intended and performed action, newest first, and
 // a button that walks every chain and says where, if anywhere, it breaks. Read-only: nothing in the
 // journal can be changed from here.
 import type { FastifyInstance, FastifyRequest } from 'fastify';

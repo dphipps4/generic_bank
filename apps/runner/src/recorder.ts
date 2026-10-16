@@ -1,4 +1,4 @@
-// The recorder (plan §K.4, §K.6): every run the system settles leaves one attempt of its episode in
+// The recorder (plan §A.6, §8): every run the system settles leaves one attempt of its episode in
 // the outbox, in the same statement as the settlement, and this sends them to memory as the runner,
 // signed. A task never waits on memory: while memory is down, episodes wait here, in order, and go
 // once it answers. Memory holds each run and each attempt once, so sending one again is harmless,

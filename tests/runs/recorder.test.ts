@@ -1,4 +1,4 @@
-// The recorder (plan §K.4, §K.11): every run the system settles leaves its episode in the outbox, in
+// The recorder (plan §A.6): every run the system settles leaves its episode in the outbox, in
 // the same statement as the settlement, and the recorder sends it to the real Memory service, as the
 // runner, signed. Memory being stopped never changes a task's result, each episode arrives exactly
 // once, and nothing personal reaches the outbox or memory.

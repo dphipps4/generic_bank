@@ -36,7 +36,7 @@ export const TransferInput = z.object({
   to: AccountRef,
   amountCents: z.number().int().positive().max(2_500_000).describe('The amount in cents.'),
   // The bank's memo holds 32 letters, digits, spaces and hyphens; our memo token and a space take
-  // the first nine (plan, §F.2), so the member's words are never cut short.
+  // the first nine (plan, §6), so the member's words are never cut short.
   memo: z
     .string()
     .max(MEMO_MAX)
@@ -212,7 +212,7 @@ export type TaskResult = z.infer<typeof TaskResult>;
 // ── Human steps ──────────────────────────────────────────────────────────────
 
 /**
- * What a person is asked for (plan, §F.3, §D.8). A staff code or a supervisor code is something only
+ * What a person is asked for (plan, §6, §3). A staff code or a supervisor code is something only
  * a person can read; an approval is the only key to a money-moving click; an escalation is a run
  * that stopped because it could not safely go on.
  */
@@ -238,7 +238,7 @@ export const ACTIONS: Record<HumanTaskKind, readonly HumanAction[]> = {
   escalation: ['resume', 'finish', 'cancel'],
 };
 
-/** Every state-changing action but typing a code carries a written reason (plan, §G.1). */
+/** Every state-changing action but typing a code carries a written reason (plan, §2). */
 const Reason = z.string().trim().min(10, 'a reason of at least ten characters');
 
 export const HUMAN_BODIES = {
@@ -277,7 +277,7 @@ export function refusal(
 
 // ── HTTP ─────────────────────────────────────────────────────────────────────
 
-/** The HTTP status for a result (plan, §D.7). */
+/** The HTTP status for a result (plan, §A.1). */
 export function httpStatus(r: Pick<TaskResult, 'status' | 'retryable'>): number {
   switch (r.status) {
     case 'running':
@@ -361,7 +361,7 @@ export const GetStatementInput = z.object({
 });
 
 /**
- * A tool call's result (plan, §D.7): the endpoint's answer as it is, flagged as an error for every
+ * A tool call's result (plan, §A.1): the endpoint's answer as it is, flagged as an error for every
  * answer but succeeded and handed_off (200) and the waiting states (202). A refusal (400, 401, 403,
  * 404, 409, 429) is an error too.
  */
@@ -408,8 +408,8 @@ export type BankInfo = z.infer<typeof BankInfo>;
 
 // ── Hazards ──────────────────────────────────────────────────────────────────
 
-// Every hazard a bank can be forced into, and the one typed result each must give (plan, §C.4,
-// §S.2, Appendix P). The outcome table proves these results and the hazard lab shows them; both
+// Every hazard a bank can be forced into, and the one typed result each must give (plan, §A.3,
+// §A.3, §B.4). The outcome table proves these results and the hazard lab shows them; both
 // read this one list. The bank shares no code with us, so a test checks its names against these.
 
 export const HAZARDS = [

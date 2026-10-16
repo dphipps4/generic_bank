@@ -7,7 +7,7 @@ import { controlDb } from '../../../packages/oauth/test/control.js';
 import { openapi, tools } from '../src/catalog.js';
 import { buildServer } from '../src/server.js';
 
-// Transfers through the API (plan, §D.1, §D.8, Appendix F). The tests stop at the API and the runs
+// Transfers through the API (plan, §3, §6). The tests stop at the API and the runs
 // table: a run is created, sealed and handed to the Runner once, and every answer has its status.
 const SEAL = 'r'.repeat(40);
 let db: Awaited<ReturnType<typeof controlDb>>;

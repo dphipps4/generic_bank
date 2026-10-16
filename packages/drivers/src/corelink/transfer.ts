@@ -1,4 +1,4 @@
-// Transfer on CoreLink Branch Console, up to the review page (plan, §F.1 step 1): sign in, find the
+// Transfer on CoreLink Branch Console, up to the review page (plan, §6 step 1): sign in, find the
 // member, open the transfer form, choose both accounts by identity, type the amount and a memo that
 // carries the run's own memo token, press the bank's Continue, and read the review page back. It
 // never presses the bank's submit: that click needs a person's approval and a grant, and is a step
@@ -25,7 +25,7 @@ export interface TransferInput {
   to: string;
   amountCents: number;
   memo?: string;
-  /** Our own marker for this transfer inside the bank's data (plan, §F.2), typed into the memo. */
+  /** Our own marker for this transfer inside the bank's data (plan, §6), typed into the memo. */
   memoToken: string;
 }
 
@@ -181,7 +181,7 @@ export async function prepareTransfer(
 export interface SubmitHooks {
   /**
    * Uses the run's approval grant if, and only if, it matches the review page as read now. The
-   * click happens only after this says yes; it can say yes once (plan, §F.1 step 4).
+   * click happens only after this says yes; it can say yes once (plan, §6 step 4).
    */
   consume(review: Review): Promise<{ ok: true } | { ok: false; reason: string }>;
   journal(line: { intent: string; action?: string; result?: string }): Promise<void>;
@@ -192,7 +192,7 @@ export interface SubmitHooks {
 
 /**
  * The journal's line for the submit, written before the click. A run that finds it in its journal
- * has pressed, or may have: it reads the history and never presses again (plan, §F.2).
+ * has pressed, or may have: it reads the history and never presses again (plan, §6).
  */
 export const pressIntent = (profile: Pick<Profile, 'words'>, memoToken: string) =>
   `press ${profile.words.submitTransfer[0]} for ${memoToken}`;
@@ -293,7 +293,7 @@ export async function submitTransfer(
             return await unknown(sess, s);
           }
           // After the click, anything but the confirmation is unclear: never press again; read the
-          // account's history for the memo token instead (plan, §F.2).
+          // account's history for the memo token instead (plan, §6).
           await sess.record('submit', s.screen, s.model, undefined, 'no confirmation');
           const found = await inHistory(sess, input);
           await hooks.journal({

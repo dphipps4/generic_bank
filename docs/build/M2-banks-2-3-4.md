@@ -4,7 +4,7 @@ One product, four banks. Bank 1 comes from M1, and this milestone builds the oth
 varies the way one vendor's product does from one institution to the next: brand and labels,
 layout, URL shape, account wording, thresholds, the code step, text drawn as images, and failure
 modes of its own. All four run the same code, each started with its own tenant config. The plan's
-[Appendix C](../plan/GENERIC_BANK_PLAN.md#appendix-c-generic-bank-the-target-product) is the
+[§4](../plan/GENERIC_BANK_PLAN.md#4-the-four-banks) is the
 specification.
 
 Bank 1 gets working drivers for all three tasks in the submission, and Bank 2 for Check Balance.
