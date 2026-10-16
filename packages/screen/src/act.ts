@@ -27,6 +27,7 @@ const SPECIAL = {
   Escape: 27,
 } as const;
 export type SpecialKey = keyof typeof SPECIAL;
+export const SPECIAL_KEYS = Object.keys(SPECIAL) as [SpecialKey, ...SpecialKey[]];
 
 const center = (c: Control) => ({
   x: Math.round(c.box.x + c.box.w / 2),

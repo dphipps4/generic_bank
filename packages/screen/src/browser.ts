@@ -97,6 +97,11 @@ export interface LaunchOptions {
   secureOrigins?: string[];
   /** The timezone the browser reports: the machine's own (plan, §E.8). */
   timezone?: string;
+  /**
+   * The only hosts (host and port) the page and its frames may reach. Every other request is
+   * refused before it is sent (plan, §J.2, "Session guard: network").
+   */
+  hosts?: string[];
 }
 
 export class Browser {
@@ -247,6 +252,8 @@ export class Page {
   private lastNavigationRequest = 0;
   /** A JavaScript dialog the page has open (it freezes the page until answered), or null. */
   dialog: { type: string; message: string; session: string } | null = null;
+  /** Requests refused because their host is not allowed: host and path, never the query. */
+  readonly refused: { host: string; path: string; document: boolean }[] = [];
   private offs: (() => void)[] = [];
 
   constructor(
@@ -312,6 +319,32 @@ export class Page {
             this.loaded.set(e.params.frameId as string, true);
           if (e.method === 'Page.frameDetached') this.loaded.delete(e.params.frameId as string);
         }
+        if (
+          e.method === 'Fetch.requestPaused' &&
+          this.options.hosts &&
+          (e.sessionId === this.sessionId ||
+            [...this.frames.values()].some((f) => f.sessionId === e.sessionId))
+        ) {
+          const p = e.params as {
+            requestId: string;
+            request: { url: string };
+            resourceType: string;
+          };
+          const u = new URL(p.request.url);
+          const allowed = !/^(http|ws)s?:$/.test(u.protocol) || this.options.hosts.includes(u.host);
+          const document = p.resourceType === 'Document';
+          if (!allowed) this.refused.push({ host: u.host, path: u.pathname, document });
+          // A refused page is answered "No Content", so the frame stays where it was rather than
+          // showing an error page; anything else simply fails.
+          const [method, params] = allowed
+            ? ['Fetch.continueRequest', {}]
+            : document
+              ? ['Fetch.fulfillRequest', { responseCode: 204 }]
+              : ['Fetch.failRequest', { errorReason: 'BlockedByClient' }];
+          void this.cdp
+            .call(method, { requestId: p.requestId, ...params }, { sessionId: e.sessionId })
+            .catch(() => undefined);
+        }
         if (e.method === 'Page.javascriptDialogOpening') {
           this.dialog = {
             type: e.params.type as string,
@@ -346,6 +379,9 @@ export class Page {
         throw e;
       });
     }
+    // A window this page opened has its own interception (openedDocument).
+    if (this.options.hosts && kind !== 'window')
+      await c('Fetch.enable', { patterns: [{ urlPattern: '*', requestStage: 'Request' }] });
     await c('Page.enable');
     await c('Page.setLifecycleEventsEnabled', { enabled: true });
     await c('DOM.enable');
