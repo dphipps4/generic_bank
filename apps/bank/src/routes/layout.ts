@@ -6,7 +6,8 @@ import { html } from './frame.js';
 
 // The console's shape, a tenant setting. Every shape offers the same places to go; only how they
 // are laid out differs: a nav frame, a tab strip, a tab strip with a notices frame, or a
-// drop-down menu bar with no frameset at all.
+// drop-down menu bar with no frameset at all. After the vendor's redesign, every bank has one
+// shape: a single Menu at the top right, the notices on the left.
 
 interface NavItem {
   href: string;
@@ -97,6 +98,43 @@ function menubarPage(bank: Bank, c: Ctx, operator: string): string {
   });
 }
 
+const NOTICES = [
+  'Lobby hours change next Monday.',
+  'Verify photo ID for every withdrawal over $5,000.',
+  'The rate sheet was updated this morning.',
+];
+
+/**
+ * The redesign's console, the same for every bank: one Menu at the top right that opens on click
+ * and holds every place to go, the notices in a column on the left, the main page on the right.
+ */
+function refreshedPage(bank: Bank, c: Ctx, operator: string): string {
+  const base = bank.t.basePath;
+  const p = palette(bank.t);
+  const d = dialect(bank.t, bank.uiVersion, 'refreshed-console');
+  const items = navItems(bank)
+    .map(
+      (i) =>
+        `<A HREF="${i.href}" TARGET="${target(i)}" STYLE="display:block;padding:6px 12px;color:#000;text-decoration:none">${esc(i.text)}</A>`,
+    )
+    .join('');
+  const menu = `<TD ALIGN="right" STYLE="position:relative;padding:8px 14px;cursor:pointer" ONCLICK="CL.menu(this)">${font(c, '<B>Menu &#9662;</B>', ` COLOR="${p.headText}"`)}<DIV CLASS="${d.cls('menu')}" STYLE="display:none;position:absolute;right:0;top:32px;text-align:left;background:#FFF;border:1px solid #999;min-width:200px;z-index:5">${items}</DIV></TD>`;
+  const bar = `<TABLE WIDTH="100%" CELLPADDING="0" CELLSPACING="0" BORDER="0" BGCOLOR="${p.head}"><TR>
+<TD STYLE="padding:8px 12px">${font(c, `<B>${esc(bank.t.brand)}</B> &middot; Online Banking`, ` COLOR="${p.headText}"`)}</TD>
+<TD ALIGN="right" STYLE="padding:8px 4px">${font(c, esc(operator), ` COLOR="${p.headText}"`)}</TD>${menu}</TR></TABLE>`;
+  const notices = `<TD WIDTH="190" VALIGN="top" BGCOLOR="${p.panel}" STYLE="padding:8px">${font(c, '<B>Notices</B>')}${NOTICES.map((n) => `<P>${font(c, esc(n))}</P>`).join('')}</TD>`;
+  const script = `CL.menu = function (td) {
+  var m = td.getElementsByTagName('div')[0];
+  m.style.display = m.style.display === 'none' ? 'block' : 'none';
+};`;
+  return doc(c, d, {
+    title: 'Online Banking',
+    footer: false,
+    body: `${bar}<TABLE WIDTH="100%" CELLPADDING="0" CELLSPACING="0" BORDER="0"><TR>${notices}<TD VALIGN="top"><IFRAME NAME="main" SRC="${base}home" WIDTH="100%" HEIGHT="640" FRAMEBORDER="0"></IFRAME></TD></TR></TABLE>`,
+    script,
+  });
+}
+
 export function layoutRoutes(app: FastifyInstance, bank: Bank) {
   const base = bank.t.basePath;
   const p = palette(bank.t);
@@ -104,6 +142,8 @@ export function layoutRoutes(app: FastifyInstance, bank: Bank) {
   app.get(`${base}console`, async (req, reply) => {
     const cur = await current(bank, req);
     if (!cur) return reply.redirect(`${base}signin`);
+    if (bank.t.redesigned)
+      return html(reply, refreshedPage(bank, ctxOf(bank, req), cur.operator.displayName));
     if (bank.t.layout === 'menubar')
       return html(reply, menubarPage(bank, ctxOf(bank, req), cur.operator.displayName));
     return html(reply, frameset(bank, origins(bank, req)));
@@ -162,17 +202,12 @@ export function layoutRoutes(app: FastifyInstance, bank: Bank) {
   app.get(`${base}frame/notices`, async (req, reply) => {
     const c = ctxOf(bank, req);
     const d = dialect(bank.t, bank.uiVersion, 'notices');
-    const notices = [
-      'Lobby hours change next Monday.',
-      'Verify photo ID for every withdrawal over $5,000.',
-      'The rate sheet was updated this morning.',
-    ];
     return html(
       reply,
       doc(c, d, {
         title: 'Notices',
         footer: false,
-        body: `<TABLE WIDTH="100%" CELLPADDING="4" CELLSPACING="0" BORDER="0"><TR><TD BGCOLOR="${p.head}">${font(c, '<B>Notices</B>', ` COLOR="${p.headText}"`)}</TD></TR>${notices.map((n) => `<TR><TD>${font(c, esc(n))}</TD></TR>`).join('')}</TABLE>`,
+        body: `<TABLE WIDTH="100%" CELLPADDING="4" CELLSPACING="0" BORDER="0"><TR><TD BGCOLOR="${p.head}">${font(c, '<B>Notices</B>', ` COLOR="${p.headText}"`)}</TD></TR>${NOTICES.map((n) => `<TR><TD>${font(c, esc(n))}</TD></TR>`).join('')}</TABLE>`,
       }),
     );
   });

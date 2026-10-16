@@ -175,6 +175,8 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
   bouncedBy.set(bank, bounced);
   const base = bank.t.basePath;
   const L = bank.t.labels;
+  // Where a sign-in lands: the console, or after a redesign, the page that announces it first.
+  const landing = bank.t.redesigned ? 'refreshed' : 'console';
 
   // Entry: a blank "Loading..." shell; a script moves on to the sign-in page after a delay.
   app.get(base, async (req, reply) => {
@@ -353,7 +355,7 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
         }),
       );
     }
-    return reply.redirect(`${to}${base}${bank.t.termsAfterSignIn ? 'terms' : 'console'}`);
+    return reply.redirect(`${to}${base}${bank.t.termsAfterSignIn ? 'terms' : landing}`);
   });
 
   // Bank 3: "Terms updated: Acknowledge" after every sign-in, before the console.
@@ -377,6 +379,30 @@ ${form(c, d, `${base}terms`, '', submit(c, d, 'Acknowledge'), '_top')}`,
       );
     });
     app.post(`${base}terms`, async (req, reply) =>
+      reply.redirect(`${base}${(await current(bank, req)) ? landing : 'signin'}`),
+    );
+  }
+
+  // The redesign: "We've refreshed Online Banking", once per sign-in, before the console.
+  if (bank.t.redesigned) {
+    app.get(`${base}refreshed`, async (req, reply) => {
+      if (!(await current(bank, req))) return reply.redirect(`${base}signin`);
+      const c = ctxOf(bank, req);
+      const d = dialect(bank.t, bank.uiVersion, 'refreshed');
+      return html(
+        reply,
+        doc(c, d, {
+          title: 'Online Banking',
+          body: nest(
+            c,
+            d,
+            `${heading(c, d, "We've refreshed Online Banking")}<P>${font(c, `${esc(bank.t.brand)} has a new look. Everything you use is still here, under clearer names, and the Menu at the top right takes you anywhere.`)}</P>
+${form(c, d, `${base}refreshed`, '', submit(c, d, 'Continue to Online Banking'), '_top')}`,
+          ),
+        }),
+      );
+    });
+    app.post(`${base}refreshed`, async (req, reply) =>
       reply.redirect(`${base}${(await current(bank, req)) ? 'console' : 'signin'}`),
     );
   }

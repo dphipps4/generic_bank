@@ -261,20 +261,26 @@ services:
   bank-sample:
     <<: *bank
     profiles: [more-banks]
-    environment: { TENANT: sample, MALLOC_ARENA_MAX: '2', PORT: '8083', ADMIN_PORT: '9000' }
+    # BANK_REDESIGN: '1' turns on the vendor's redesign: an interstitial after sign-in, new names
+    # and the nav in a Menu, over the same ledger. Off when absent.
+    environment:
+      TENANT: sample
+      MALLOC_ARENA_MAX: '2'
+      PORT: '8083'
+      ADMIN_PORT: '9000'
+      # BANK_REDESIGN: '1'
     ports: ['127.0.0.1:${BANK_SAMPLE_PORT}:8083', '127.0.0.1:${BANK_SAMPLE_ADMIN_PORT}:9000']
 
   bank-placeholder:
     <<: *bank
     profiles: [more-banks]
     environment:
-      {
-        TENANT: placeholder,
-        MALLOC_ARENA_MAX: '2',
-        PORT: '8084',
-        SECOND_PORT: '8094',
-        ADMIN_PORT: '9000',
-      }
+      TENANT: placeholder
+      MALLOC_ARENA_MAX: '2'
+      PORT: '8084'
+      SECOND_PORT: '8094'
+      ADMIN_PORT: '9000'
+      # BANK_REDESIGN: '1'
     ports:
       - '127.0.0.1:${BANK_PLACEHOLDER_PORT}:8084'
       - '127.0.0.1:${BANK_PLACEHOLDER_SECOND_PORT}:8094'

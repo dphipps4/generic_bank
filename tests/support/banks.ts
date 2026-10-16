@@ -7,7 +7,7 @@ import { connectInProcess, type Db, migrate } from '../../apps/bank/src/db.js';
 import { hazards, type HazardName, signHazards } from '../../apps/bank/src/hazards.js';
 import { OPERATORS, seed } from '../../apps/bank/src/seed.js';
 import { buildServer } from '../../apps/bank/src/server.js';
-import { TENANTS, type TenantId } from '../../apps/bank/src/tenants.js';
+import { redesigned, TENANTS, type TenantId } from '../../apps/bank/src/tenants.js';
 import { totp } from '../../apps/bank/src/auth.js';
 import { MAC_CHROME } from '../../apps/bank/test/browser.js';
 
@@ -30,9 +30,10 @@ export interface LiveBank {
 
 export async function liveBank(
   id: TenantId,
-  o: { now?: () => Date; profile?: 'none' | 'default' } = {},
+  o: { now?: () => Date; profile?: 'none' | 'default'; redesign?: boolean } = {},
 ): Promise<LiveBank> {
-  const t = TENANTS[id];
+  // BANK_REDESIGN=1, as main.ts applies it.
+  const t = o.redesign ? redesigned(TENANTS[id]) : TENANTS[id];
   const db = await connectInProcess();
   await migrate(db);
   const now = o.now ?? (() => new Date());
