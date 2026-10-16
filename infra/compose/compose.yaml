@@ -1,9 +1,9 @@
 # Generic Bank, locally. Every service has a memory limit (everything just up starts fits in
 # about 3.9 GB, 4.7 GB while a factory run is going), and networks enforce who may reach whom:
-#   app      box A to box B          data     box B only (no route out)
+#   app      the app box to the data box    data     the data box only (no route out)
 #   world    the banks, reached by the runner (and later the factory's browser)
 #   bankdb   the banks and their own database only (no route out)
-#   factory  box D, created with `just factory`
+#   factory  the factory box, created with `just factory`
 # Ports are published on 127.0.0.1 only. Run everything through just, which names the project
 # after its folder (a second copy in another folder is a separate stack).
 
@@ -39,7 +39,7 @@ volumes:
   memory-models: {}
 
 services:
-  # ── box B: data ──────────────────────────────────────────────────────────────
+  # ── the data box ─────────────────────────────────────────────────────────────
   postgres:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
@@ -112,7 +112,7 @@ services:
     networks: [app]
     depends_on: { memory: { condition: service_healthy } }
 
-  # ── box A: app ───────────────────────────────────────────────────────────────
+  # ── the app box ──────────────────────────────────────────────────────────────
   migrate:
     <<: *node
     restart: 'no'
@@ -289,7 +289,7 @@ services:
           "fetch('http://127.0.0.1:8089/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
         ]
 
-  # ── box D: the factory (created per session) ────────────────────────────────
+  # ── the factory box (created per session) ────────────────────────────────────
   factory:
     <<: *node
     profiles: [factory]

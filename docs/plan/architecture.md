@@ -1,8 +1,9 @@
 # Generic Bank Architecture
 
-> **The boxes:** box A runs the application (Task API, Console, workflows, the Runner). Box B
-> holds everything that lasts (Postgres, object storage, Memory). Box D is the software factory;
-> it's created for a session and destroyed after. The four banks are the outside world.
+> **The boxes:** the app box runs the application (Task API, Console, workflows, the Runner). The
+> data box holds everything that lasts (Postgres, object storage, Memory). The factory box is the
+> software factory; it's created for a session and destroyed after. The four banks are the outside
+> world.
 
 ## Overview
 
@@ -26,9 +27,9 @@ once. When in doubt, a run stops.
 
 ![Generic Bank: the shape in one picture](diagrams/system.svg)
 
-Box A holds no data of its own and can be rebuilt any time. Box B holds everything but can't
-reach out to anything. Box D runs code a model wrote and calls the model live. That's why it lasts
-one session and its sandbox has no way out at all. Only people and tests can read the fake staff
+The app box holds no data of its own and can be rebuilt any time. The data box holds everything
+but can't reach out to anything. The factory box calls the model live and writes profiles, never
+code. That's why it lasts one session. Only people and tests can read the fake staff
 inbox, so a sign-in code is always a human step.
 
 ## Generic Bank (the target)

@@ -1,4 +1,4 @@
-// The control database (box B). Memory has its own database and schema.
+// The control database (the data box). Memory has its own database and schema.
 
 generator client {
   provider      = "prisma-client-js"

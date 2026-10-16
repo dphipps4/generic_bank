@@ -192,13 +192,13 @@ credentials:
 hazard-header hazards:
     @{{scripts}}/hazard-header.sh "{{hazards}}"
 
-# Box B: Postgres, MinIO, Memory
+# The data box: Postgres, MinIO, Memory
 [group('Run')]
 data: env image
     @{{compose}} up -d --wait postgres minio
     @{{compose}} up -d --wait memory
 
-# Box A back end: the Task API (and its migrations)
+# The app box's back end: the Task API (and its migrations)
 [group('Run')]
 backend: env image migrate
     @{{compose}} up -d --wait {{backend}}
@@ -224,7 +224,7 @@ bank-more: env image
     @{{compose}} --profile more-banks up -d --wait {{bank_more}}
     @echo "  Sample Savings Bank   http://localhost:$BANK_SAMPLE_PORT/online/branch/"; echo "  Placeholder FCU       http://127.0.0.1:$BANK_PLACEHOLDER_PORT/cu/ib/"
 
-# Box D: the software factory (mock mode until ANTHROPIC_API_KEY is set)
+# The factory box: the software factory (mock mode until ANTHROPIC_API_KEY is set)
 [group('Run')]
 factory: env image
     @{{compose}} --profile factory up -d --wait {{factory}}

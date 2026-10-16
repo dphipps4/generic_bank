@@ -1,5 +1,5 @@
-// Memory's own database (box B). Only the Memory service opens it, and it writes in plain SQL,
-// so this schema generates no client: it is the tables and their migrations.
+// Memory's own database (the data box). Only the Memory service opens it, and it writes in plain
+// SQL, so this schema generates no client: it is the tables and their migrations.
 
 datasource db {
   provider = "postgresql"

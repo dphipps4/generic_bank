@@ -1,4 +1,5 @@
-// Where trail frames are kept: an S3 bucket (MinIO, in box B) in the services, memory in tests.
+// Where trail frames are kept: an S3 bucket (MinIO, in the data box) in the services, memory in
+// tests.
 // The S3 client is the few signed requests we need (AWS Signature Version 4), not an SDK.
 import { createHash, createHmac } from 'node:crypto';
 

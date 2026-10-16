@@ -41,11 +41,11 @@ for the factory to learn.
 
 Three boxes ([§B.1](#b1-the-three-boxes)):
 
-- **Box A, the app:** Task API, Console, task runner, crawler. Keeps nothing.
-- **Box B, the data:** Postgres, object storage for masked screenshots, Memory. Reaches
+- **The app box:** Task API, Console, task runner, crawler. Keeps nothing.
+- **The data box:** Postgres, object storage for masked screenshots, Memory. Reaches
   nothing. Staff passwords are SOPS secrets that only the Runner, the factory and the banks
   receive.
-- **Box D, the factory:** the agents and their browser, created per factory run and thrown away
+- **The factory box:** the agents and their browser, created per factory run and thrown away
   after. It writes profiles, not code; a sandbox for generated code is Part 2.
 
 The four banks stand in for the outside world; only the crawler talks to them.
@@ -217,7 +217,7 @@ promotion confirmed. Fixed rules do all of this; no model decides. A person appr
 meant to hold everywhere. Nothing is ever overwritten, and every change is recorded with who
 made it and why.
 
-**Where it lives.** All of it is in one Postgres database on box B, behind one service, the
+**Where it lives.** All of it is in one Postgres database in the data box, behind one service, the
 only thing allowed to open it. There is no graph database. Each kind of memory is a table:
 episodes, hypotheses, facts, and the lessons with their versions. Every lesson and episode
 also carries an embedding (a vector from a small local model, stored with pgvector), so the
@@ -393,7 +393,7 @@ In a graph they are the data, and questions like "what do we know about every ba
 this sign-in screen?" become one short query.
 
 **Neo4j is the store.** A graph database holds all of memory: every node, every relationship and
-every version. It listens only inside box B, and only the Memory service opens it. Episodes,
+every version. It listens only inside the data box, and only the Memory service opens it. Episodes,
 hypotheses, lesson versions and the change log are written in plain Cypher by code, with no
 model in the loop. It is backed up every night, encrypted, and a monthly drill restores the
 backup and compares counts.
@@ -520,9 +520,9 @@ Locally, each box is a set of containers on its own docker network.
 
 | Box | Runs | Holds | May reach |
 |---|---|---|---|
-| **A, app** | Task API, Console, workflow engine, Runner (one headless browser per active task) | Nothing durable. Browser sessions live only in memory for the life of a task. | Box B; the bank sites. Published: the Console/API port only. |
-| **B, data** | Postgres (with pgvector), MinIO, the Memory service | Everything durable: runs, trails, journal, registry, memory, evidence (MinIO). Only masked data. | Nothing outbound. No published ports. |
-| **D, disposable factory** | The factory's gateway, and per run the agents and the Scout's browser (a sealed sandbox for generated code is Part 2) | Nothing. A run's frames and records go to box B as it runs. | Box B's Postgres, Memory and evidence store (over `app`), the bank sites. |
+| **App** | Task API, Console, workflow engine, Runner (one headless browser per active task) | Nothing durable. Browser sessions live only in memory for the life of a task. | The data box; the bank sites. Published: the Console/API port only. |
+| **Data** | Postgres (with pgvector), MinIO, the Memory service | Everything durable: runs, trails, journal, registry, memory, evidence (MinIO). Only masked data. | Nothing outbound. No published ports. |
+| **Factory**, disposable | The factory's gateway, and per run the agents and the Scout's browser (a sealed sandbox for generated code is Part 2) | Nothing. A run's frames and records go to the data box as it runs. | The data box's Postgres, Memory and evidence store (over `app`), the bank sites. |
 
 The **bank sites** are "the world": a separate network only the Runner and the Scout browser
 can reach, sharing no code, database or network with our system.
@@ -1285,7 +1285,7 @@ drew a seeded value is covered in the stored frame.
 
 | Signal | Where it lives | What it is for |
 |---|---|---|
-| **Records** | Postgres, box B | the source of truth: runs, steps, frames, journal, human tasks, model calls, tool calls, evals, registry events |
+| **Records** | Postgres, in the data box | the source of truth: runs, steps, frames, journal, human tasks, model calls, tool calls, evals, registry events |
 | **Logs** | JSON lines on each container's stdout, kept by Docker | what each process was doing, in order, for debugging the system itself |
 
 ### I.5 What the crawler did
@@ -1421,7 +1421,7 @@ strictly, and only a person can approve a new one.
 
 ### K.3 Where memory lives
 
-**Postgres is the store.** Memory has its own database (`memory`) on box B, with its own Prisma
+**Postgres is the store.** Memory has its own database (`memory`) in the data box, with its own Prisma
 schema, and only the Memory service opens it. Episodes, hypotheses, lesson versions and the
 change log are written in plain SQL by code, with no model in the loop.
 
@@ -1472,7 +1472,7 @@ unserved, until a person approves it in the Console.
 
 Every writer holds a token for one role, and memory refuses any write outside it. The Scout
 and Supervisor may record episodes and hypotheses, and the Supervisor may propose lessons and
-challenge a fact or lesson. Box A, the only box that faces callers, can add episodes and
+challenge a fact or lesson. The app box, the only box that faces callers, can add episodes and
 forward lessons, nothing more. Confirmations and verified facts are written by the Memory
 service itself, when a promotion checks out. **No agent can promote its own belief into
 truth.** Writes are also signed with a key that only deterministic code holds, so a model
@@ -1685,7 +1685,7 @@ Each role is its own **pi** session ([pi.dev](https://pi.dev)). Each factory ste
 role's session file, runs one prompt-to-idle cycle, and saves it, so a crash costs at most one
 turn. Our code, not pi, owns:
 
-- **The model gateway:** a metering endpoint in box D for each configured provider, pi's only route to
+- **The model gateway:** a metering endpoint in the factory box for each configured provider, pi's only route to
   the model. It checks the budget before every request, records tokens and cost, and refuses at
   a cap; a model with no known price counts as free.
 - **The tool allowlist:** pi's tool-call hook asks our registry before every tool; a tool outside
@@ -1918,7 +1918,7 @@ elsewhere.
 | `just dev-setup` | once, to develop: Node dependencies, the Prisma client, Chromium for the browser tests |
 | `just up` | everything: data, memory's seed, back end, console, crawlers, all four banks and the factory's gateway |
 | `just down` | stops everything; volumes are kept |
-| `just data` | box B: Postgres, MinIO, Memory |
+| `just data` | the data box: Postgres, MinIO, Memory |
 | `just backend` | box A's back end: the Task API and workflows (needs `data`) |
 | `just console` | the AdminJS Console (needs `data`) |
 | `just crawlers` | the Runner, which drives the banks for tasks (needs `backend`) |
@@ -1977,7 +1977,7 @@ with no virtual display.
 
 Networks: `edge` (published ports), `app` (A to B), `data` (B internal), `world` (banks;
 reachable from the Runner and the Scout browser), `bankdb` (the banks' database, internal),
-`factory` (the factory's gateway and its runs, which reach box B over `app`).
+`factory` (the factory's gateway and its runs, which reach the data box over `app`).
 
 Each image carries a hash of its source as a label, so `just up` rebuilds a stale image instead
 of running yesterday's code. Every container has a memory limit.
