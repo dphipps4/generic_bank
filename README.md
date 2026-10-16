@@ -49,11 +49,9 @@ keys, because someone else issues them. `just setup` explains them, and you ente
 `just secrets-edit …`, which opens the encrypted file in sops. Both can stay blank; the factory
 then runs in mock mode.
 
-Each factory role's model is set in `config/app.env`: `FACTORY_SCOUT_MODEL` and
-`FACTORY_SUPERVISOR_MODEL` (default `claude-opus-5-5`), `FACTORY_SCOUT_EFFORT` and
-`FACTORY_SUPERVISOR_EFFORT` (default `low` and `high`), and `FACTORY_SCOUT_PROVIDER` and
-`FACTORY_SUPERVISOR_PROVIDER` (default `anthropic`; `openai` is the other). A model with no
-price in `apps/factory/src/models.ts` is refused.
+Each factory role's model is set in one place, `config/app.env`: `FACTORY_SCOUT_MODEL` and
+`FACTORY_SUPERVISOR_MODEL`, `FACTORY_SCOUT_EFFORT` and `FACTORY_SUPERVISOR_EFFORT`, and
+`FACTORY_SCOUT_PROVIDER` and `FACTORY_SUPERVISOR_PROVIDER` (`anthropic` or `openai`).
 
 `just up` starts everything: all four banks, the staff inbox, the factory and memory. From there,
 **[ACCESS.md](ACCESS.md)** lists every page, API and health check you can reach, the logins
@@ -71,27 +69,26 @@ screen does. Bank 1, the 2003 site, lets it through.
 
 ## Models
 
-Only the software factory and the demo agent call a model. The crawler that runs customer tasks
-never does. Every factory call goes through a metering gateway, which holds spending to the caps
-($25 a run, $150 a rolling week) and refuses any model it has no price for.
+Only the software factory calls a model. The crawler that runs customer tasks never does. Every
+factory call goes through a metering gateway, which holds spending to the caps ($25 a run, $150 a
+rolling week).
 
 | Role | What it does | Default model | Effort |
 |---|---|---|---|
-| Scout | Navigates the bank, one simple step at a time | `claude-opus-5-5` | low |
+| Scout | Navigates the bank, one simple step at a time | `claude-sonnet-5-5` | low |
 | Supervisor | Looks at every frame, reasons, directs the Scout, drafts the bank's profile | `claude-opus-5-5` | high |
-| Demo agent | A member assistant whose only tools are the Task API's | `claude-opus-5-5` | default |
 
-With no API key, the factory and the demo agent run in **mock mode**: recorded or scripted
-answers stand in for the model, so nothing is sent to one and nothing is spent.
+With no API key, the factory runs in **mock mode**: recorded answers stand in for the model, so
+nothing is sent to one and nothing is spent.
 
 To use a key, enter it once (sops keeps it encrypted):
 
 ```sh
-make secret-set FILE=factory KEY=ANTHROPIC_API_KEY
+just secret-set factory ANTHROPIC_API_KEY
 ```
 
 To change a role's model or effort, set it in `config/local.env`, which isn't committed, then run
-`make factory`:
+`just factory`:
 
 ```sh
 FACTORY_SUPERVISOR_MODEL=claude-opus-5-5
@@ -104,7 +101,7 @@ config change, not a code change. To run a role on OpenAI, enter the key, then n
 and model:
 
 ```sh
-make secret-set FILE=factory KEY=OPENAI_API_KEY
+just secret-set factory OPENAI_API_KEY
 ```
 
 ```sh
@@ -112,8 +109,8 @@ FACTORY_SCOUT_PROVIDER=openai
 FACTORY_SCOUT_MODEL=<an OpenAI model id>
 ```
 
-First add the model's price to `apps/factory/src/models.ts`, because the gateway refuses any
-model it can't meter.
+Add the model's price to `apps/factory/src/models.ts` so the caps count it; a model with no price
+there runs, but costs nothing on the meter.
 
 ## A second copy, side by side
 

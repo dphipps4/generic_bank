@@ -165,7 +165,6 @@ curl -s http://localhost:9081/members/40017732/balances -H "Authorization: Beare
 
 | Command | What it does |
 |---|---|
-| `just agent` | the demo agent: a member assistant that uses only the Task API's tools (mock mode with no key) |
 | `just try …` | one task under a forced hazard, with its expected result |
 | `just api-token` | a fresh Task API token, for Swagger UI or curl (15 minutes) |
 | `just api-docs` | writes and serves the API reference on port 8099 |

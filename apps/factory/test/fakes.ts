@@ -3,7 +3,18 @@
 // form, whichever provider it was sent to, and answers with text or one tool call.
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
-import type { Provider } from '../src/models.js';
+import { readFileSync } from 'node:fs';
+import { z } from 'zod';
+import { type Provider, ROLE_SETTINGS, type Roles, rolesOf } from '../src/models.js';
+
+/** Each role's model as config/app.env sets it: the one place a model is named. */
+const appEnv = Object.fromEntries(
+  readFileSync(new URL('../../../config/app.env', import.meta.url), 'utf8')
+    .split('\n')
+    .filter((l) => /^[A-Z_]+=/.test(l))
+    .map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)]),
+);
+export const DEFAULT_ROLES: Roles = rolesOf(z.object(ROLE_SETTINGS).parse(appEnv));
 
 /** An OpenAI model, priced for tests only: no OpenAI price ships. */
 export const OPENAI_TEST_MODEL = 'gpt-test';

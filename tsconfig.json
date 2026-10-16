@@ -45,9 +45,6 @@
     },
     {
       "path": "apps/factory"
-    },
-    {
-      "path": "apps/agent"
     }
   ]
 }

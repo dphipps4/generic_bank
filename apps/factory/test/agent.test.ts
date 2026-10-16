@@ -11,7 +11,8 @@ import { controlDb } from '../../../packages/oauth/test/control.js';
 import { type Agent, turn } from '../src/agent.js';
 import { gateway } from '../src/gateway.js';
 import { sqlLedger } from '../src/ledger.js';
-import { DEFAULT_ROLES, PRICES, type Provider } from '../src/models.js';
+import { PRICES, type Provider } from '../src/models.js';
+import { DEFAULT_ROLES } from './fakes.js';
 import { buildServer } from '../src/server.js';
 import { ToolRefusal, type Tool } from '../src/tools.js';
 import { live } from '../src/upstream.js';
@@ -119,15 +120,5 @@ describe.each(['anthropic', 'openai'] as const)('a turn on %s', (provider: Provi
     await expect(
       turn(agent(), { system: 'You echo.', say: 'Break.', tools: [echo], maxTokens: 1000 }),
     ).rejects.toThrow('the browser is gone');
-  });
-
-  it('fails with the gateway’s refusal when a model has no price', async () => {
-    const a = agent();
-    await expect(
-      turn(
-        { ...a, model: { ...a.model, model: 'unpriced' } },
-        { system: '', say: 'Hi.', maxTokens: 1000 },
-      ),
-    ).rejects.toThrow(/no known price for model unpriced/);
   });
 });

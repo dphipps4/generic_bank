@@ -21,7 +21,8 @@ import {
   servedBy,
   writeLessons,
 } from '../src/memory.js';
-import { DEFAULT_ROLES, type Role } from '../src/models.js';
+import { type Role } from '../src/models.js';
+import { DEFAULT_ROLES } from './fakes.js';
 import { factoryRun } from '../src/run.js';
 import { runScout, type Scout } from '../src/scout.js';
 import { buildServer } from '../src/server.js';

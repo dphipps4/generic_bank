@@ -1,5 +1,5 @@
 // Each role's provider, model and effort, read from the factory's settings, and the prices the
-// meter charges (plan §M.6). A model with no price here is refused.
+// meter charges (plan §M.6). The models themselves are set in config/app.env, nowhere else.
 import { z } from 'zod';
 
 export const ROLE_NAMES = ['scout', 'supervisor', 'lessons'] as const;
@@ -20,10 +20,10 @@ export type Roles = Readonly<Record<Role, RoleModel>>;
 /** The settings, for loadConfig. The Supervisor reasons, so it thinks harder than the Scout. */
 export const ROLE_SETTINGS = {
   FACTORY_SCOUT_PROVIDER: z.enum(PROVIDERS).default('anthropic'),
-  FACTORY_SCOUT_MODEL: z.string().min(1).default('claude-opus-5-5'),
+  FACTORY_SCOUT_MODEL: z.string().min(1),
   FACTORY_SCOUT_EFFORT: z.enum(EFFORTS).default('low'),
   FACTORY_SUPERVISOR_PROVIDER: z.enum(PROVIDERS).default('anthropic'),
-  FACTORY_SUPERVISOR_MODEL: z.string().min(1).default('claude-opus-5-5'),
+  FACTORY_SUPERVISOR_MODEL: z.string().min(1),
   FACTORY_SUPERVISOR_EFFORT: z.enum(EFFORTS).default('high'),
 };
 type Settings = z.infer<z.ZodObject<typeof ROLE_SETTINGS>>;
@@ -43,9 +43,7 @@ export function rolesOf(s: Settings): Roles {
   return { scout, supervisor, lessons: supervisor };
 }
 
-export const DEFAULT_ROLES: Roles = rolesOf(z.object(ROLE_SETTINGS).parse({}));
-
-/** US dollars per million tokens. A model with no price here is refused. */
+/** US dollars per million tokens. A model with no price here is metered at nothing. */
 export interface Price {
   input: number;
   output: number;
@@ -58,13 +56,13 @@ export interface Price {
 // maker's prices, before a role is set to it.
 export const PRICES: Readonly<Record<string, Price>> = {
   'claude-opus-5-5': { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 8 },
+  'claude-sonnet-5-5': { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 4 },
 };
 
-export const priceOf = (
-  model: unknown,
-  prices: Readonly<Record<string, Price>> = PRICES,
-): Price | undefined =>
-  typeof model === 'string' && Object.hasOwn(prices, model) ? prices[model] : undefined;
+export const priceOf = (model: unknown, prices: Readonly<Record<string, Price>> = PRICES): Price =>
+  typeof model === 'string' && Object.hasOwn(prices, model) ? prices[model]! : FREE;
+
+const FREE: Price = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 
 /** What a call used, in tokens, whichever provider answered. `input` is the uncached input. */
 export interface Usage {
