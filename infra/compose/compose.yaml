@@ -50,7 +50,9 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ../postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks: [app, data]
-    healthcheck: { <<: *health, test: ['CMD', 'pg_isready', '-U', 'postgres'] }
+    # Over TCP: on first start the image runs its init script on a socket-only server, which a
+    # socket check would call ready before the real server listens.
+    healthcheck: { <<: *health, test: ['CMD', 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres'] }
 
   vault:
     image: hashicorp/vault:1.21
@@ -218,7 +220,7 @@ services:
       - bank-db-data:/var/lib/postgresql/data
       - ../bank-db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks: [bankdb]
-    healthcheck: { <<: *health, test: ['CMD', 'pg_isready', '-U', 'postgres'] }
+    healthcheck: { <<: *health, test: ['CMD', 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres'] }
 
   bank-generic: &bank
     <<: *node
