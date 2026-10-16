@@ -2,5 +2,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "dist" },
   "include": ["src"],
-  "references": [{ "path": "../../packages/config" }, { "path": "../../packages/db" }]
+  "references": [
+    { "path": "../../packages/config" },
+    { "path": "../../packages/db" },
+    { "path": "../../packages/evidence" },
+    { "path": "../../packages/runs" },
+    { "path": "../../packages/screen" }
+  ]
 }
