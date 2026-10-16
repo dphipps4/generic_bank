@@ -53,8 +53,9 @@ It takes about a minute and a half. It prints the logins (the same as
 Open http://localhost:8080 and sign in as `admin@generic-bank.local` with the password from
 `just console-password`.
 
-You should see the Console's bar: **Inbox, Runs, Recommendations, Journal, Hazard lab, Freezes,
-Data**. The Inbox is empty.
+You land on the **Dashboard**: what waits for a person (nothing yet), frozen banks (none), each
+bank and the tasks it serves, the latest runs, and links to Swagger UI and the staff inbox. The
+bar reads **Dashboard, Inbox, Runs, Recommendations, Journal, Hazard lab, Freezes, Data**.
 
 ## 5. Get a token
 

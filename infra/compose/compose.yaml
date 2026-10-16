@@ -145,6 +145,8 @@ services:
     command: ['node', 'apps/console/dist/main.js']
     mem_limit: 256m
     env_file: [../../config/app.env, ../../.run/env/console.env]
+    # The host ports, which a second copy moves (config/local.env): the Dashboard links to them.
+    environment: { API_PORT: '${API_PORT}', BANK_INBOX_PORT: '${BANK_INBOX_PORT}' }
     ports: ['127.0.0.1:${CONSOLE_PORT}:8080']
     networks: [app]
     depends_on: { postgres: { condition: service_healthy } }
