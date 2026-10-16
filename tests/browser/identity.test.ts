@@ -86,7 +86,12 @@ beforeAll(async () => {
   const otherUrl = `http://localhost:${(other.address() as AddressInfo).port}`;
   main = await serve((req, body) => {
     if (req.url === '/report') report = JSON.parse(body);
-    return req.url === '/report' ? [204, 'text/plain', ''] : [200, 'text/html', PAGE(otherUrl)];
+    if (req.url === '/report') return [204, 'text/plain', ''];
+    // A link that opens a window without its opener, as TARGET="_blank" does, and what it brings.
+    if (req.url === '/links')
+      return [200, 'text/html', '<a href="/doc" target="_blank">Download</a>'];
+    if (req.url === '/doc') return [200, 'text/plain', 'the document'];
+    return [200, 'text/html', PAGE(otherUrl)];
   });
   mainUrl = `http://127.0.0.1:${(main.address() as AddressInfo).port}`;
   browser = await Browser.launch({ timezone: fixture.page.timezone });
@@ -96,6 +101,12 @@ beforeAll(async () => {
   await page.goto(`${mainUrl}/again`);
   for (let i = 0; i < 50 && !report; i++) await new Promise((r) => setTimeout(r, 100));
   await page.close();
+  const links = await browser.newPage();
+  await links.goto(`${mainUrl}/links`);
+  await links.openedDocument(() =>
+    links.call('Runtime.evaluate', { expression: "document.querySelector('a').click()" }),
+  );
+  await links.close();
 }, 60_000);
 afterAll(async () => {
   await browser?.close();
@@ -137,6 +148,13 @@ describe('the browser presents Chrome on a Mac', () => {
     expect(h['sec-ch-ua-platform']).toBe('"macOS"');
     expect(h['accept-language']).toBe('en-US,en;q=0.9');
     expect(names(frame.headers)).toContain('sec-fetch-dest');
+  });
+
+  it('gives a window opened without its opener the same identity, from its first request', () => {
+    const page = Object.fromEntries(seen.find((r) => r.path === '/')!.headers);
+    const doc = Object.fromEntries(seen.find((r) => r.path === '/doc')!.headers);
+    for (const h of ['user-agent', 'sec-ch-ua', 'sec-ch-ua-mobile', 'sec-ch-ua-platform'])
+      expect([h, doc[h]]).toEqual([h, page[h]]);
   });
 
   it('shows a page’s scripts exactly what the Mac showed', () => {

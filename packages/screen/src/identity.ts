@@ -115,3 +115,21 @@ export function identityCommands(id: Identity, viewport: { width: number; height
     ],
   ] as const;
 }
+
+/**
+ * The low-entropy client hints Chrome sends with every request, as this identity's metadata gives
+ * them. Chrome derives them from the metadata itself, except on the first request of a window
+ * opened without its opener, which gets the engine's own; such a window carries these instead.
+ */
+export function clientHints(id: Identity): Record<string, string> {
+  const m = id.override.userAgentMetadata as {
+    brands: { brand: string; version: string }[];
+    mobile: boolean;
+    platform: string;
+  };
+  return {
+    'sec-ch-ua': m.brands.map((b) => `"${b.brand}";v="${b.version}"`).join(', '),
+    'sec-ch-ua-mobile': m.mobile ? '?1' : '?0',
+    'sec-ch-ua-platform': `"${m.platform}"`,
+  };
+}
