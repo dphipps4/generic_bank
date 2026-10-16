@@ -18,45 +18,54 @@ cat >"$out" <<EOF
 # Generic Bank: credentials for this machine's stack. Written by just up (just credentials).
 # Never commit this file. Postgres is not here: just secrets-edit local shows it.
 
-Console (admin UI)            http://localhost:${CONSOLE_PORT:-8080}
-  email                       admin@generic-bank.local
-  password                    $(get CONSOLE_ADMIN_PASSWORD "$local_env")
+Console, the admin UI
+  address         http://localhost:${CONSOLE_PORT:-8080}
+  email           admin@generic-bank.local
+  password        $(get CONSOLE_ADMIN_PASSWORD "$local_env")
 
-The four banks' staff sites. Each asks for the same two logins, under its own name for the field:
+The four banks' staff sites: the same two logins work at each; each names the login field its own way
   Generic Bank (bank 1)            "Operator ID"   http://localhost:${BANK_GENERIC_PORT:-8081}/corelink/
   Example Credit Union (bank 2)    "Username"      http://localhost:${BANK_EXAMPLE_PORT:-8082}/
   Sample Savings Bank (bank 3)     "Staff number"  http://localhost:${BANK_SAMPLE_PORT:-8083}/online/branch/
   Placeholder Federal CU (bank 4)  "User"          http://localhost:${BANK_PLACEHOLDER_PORT:-8084}/cu/ib/
 
-  Teller, who does the work
-    username  ${BANK_OPERATOR_ID}
-    password  $(get BANK_SERVICE_PASSWORD "$local_env")
-  Supervisor, who approves large transfers
-    username  ${BANK_SUPERVISOR_ID}
-    password  $(get BANK_SUPERVISOR_PASSWORD "$local_env")
-  Sign-in codes arrive in the staff inbox: http://localhost:${BANK_INBOX_PORT:-8089}
+Teller, who does the work
+  username        ${BANK_OPERATOR_ID}
+  password        $(get BANK_SERVICE_PASSWORD "$local_env")
+
+Supervisor, who approves large transfers
+  username        ${BANK_SUPERVISOR_ID}
+  password        $(get BANK_SUPERVISOR_PASSWORD "$local_env")
+
+Staff inbox, where the sign-in codes arrive
+  address         http://localhost:${BANK_INBOX_PORT:-8089}
 
 The banks' admin API, header Authorization: Bearer <token>
-  ports                       ${BANK_GENERIC_ADMIN_PORT:-9081} to ${BANK_PLACEHOLDER_ADMIN_PORT:-9084}, banks 1 to 4
-  token                       $(get BANK_ADMIN_TOKEN "$local_env")
+  ports           ${BANK_GENERIC_ADMIN_PORT:-9081} to ${BANK_PLACEHOLDER_ADMIN_PORT:-9084}, banks 1 to 4
+  token           $(get BANK_ADMIN_TOKEN "$local_env")
 
-MinIO (evidence store)        http://localhost:${MINIO_CONSOLE_PORT:-9001}
-  user                        $(get MINIO_ROOT_USER "$local_env")
-  password                    $(get MINIO_ROOT_PASSWORD "$local_env")
+MinIO, the evidence store
+  address         http://localhost:${MINIO_CONSOLE_PORT:-9001}
+  user            $(get MINIO_ROOT_USER "$local_env")
+  password        $(get MINIO_ROOT_PASSWORD "$local_env")
 
-Task API (Swagger UI)         http://localhost:${API_PORT:-8000}/docs
-  client id                   $(get API_LOCAL_CLIENT_ID "$local_env")
-  client secret               $(get API_LOCAL_CLIENT_SECRET "$local_env")
-  access token                just api-token (15 minutes), or Authorize in Swagger UI with the id and secret
+Task API
+  Swagger UI      http://localhost:${API_PORT:-8000}/docs
+  client id       $(get API_LOCAL_CLIENT_ID "$local_env")
+  client secret   $(get API_LOCAL_CLIENT_SECRET "$local_env")
+  access token    just api-token (15 minutes), or Authorize in Swagger UI with the id and secret
 
-Memory API                    http://localhost:${MEMORY_PORT:-8470}, header Authorization: Bearer <token>
-  runner token                $(get MEMORY_TOKEN_RUNNER "$local_env")
-  curator token               $(get MEMORY_TOKEN_CURATOR "$local_env")
+Memory API, header Authorization: Bearer <token>
+  address         http://localhost:${MEMORY_PORT:-8470}
+  runner token    $(get MEMORY_TOKEN_RUNNER "$local_env")
+  curator token   $(get MEMORY_TOKEN_CURATOR "$local_env")
 
-Factory gateway               http://localhost:${FACTORY_PORT:-8200}, header Authorization: Bearer <token>
-  token                       $(get FACTORY_GATEWAY_TOKEN "$(decrypt factory 2>/dev/null || true)")
+Factory gateway, header Authorization: Bearer <token>
+  address         http://localhost:${FACTORY_PORT:-8200}
+  token           $(get FACTORY_GATEWAY_TOKEN "$(decrypt factory 2>/dev/null || true)")
 
-Forced hazards                just hazard-header late-rows,promo (a signed X-Hazards value)
+Forced hazards
+  header          just hazard-header late-rows,promo (a signed X-Hazards value)
 EOF
 chmod 600 "$out"
 ok "$out written (readable only by you)"
