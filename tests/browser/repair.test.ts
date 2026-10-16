@@ -310,8 +310,14 @@ describe('a bank redesigns, the crawl breaks, the factory repairs it', () => {
       payload: { reason: 'the new words are on the frames' },
     });
     expect(approved.json()).toEqual({ ok: true, status: 'approved' });
+    // One hazard of each kind of result is enough here; the factory's real gate runs them all.
     const v = await gate(
-      { sql: db, sandbox: sandbox(), memory: memoryClient(memory.factory) },
+      {
+        sql: db,
+        sandbox: sandbox(),
+        memory: memoryClient(memory.factory),
+        hazards: ['promo', 'permission-denial', 'service-unavailable'],
+      },
       recommendationId!,
     );
     expect(v.state).toBe('promoted');

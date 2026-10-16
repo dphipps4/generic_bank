@@ -102,16 +102,21 @@ export interface HazardCheck {
   failed: (HazardName | 'control')[];
 }
 
-/** The control run, and if it passes, every hazard in the outcome table forced alone. */
+/**
+ * The control run, and if it passes, every hazard in the outcome table forced alone, or only
+ * those named (a test's short list).
+ */
 export async function hazardCheck(
   attempt: Attempt,
   ledger: Sandbox['ledger'],
+  only?: readonly HazardName[],
 ): Promise<HazardCheck> {
   const control = await judge(attempt, ledger, null, HEALTHY.expected);
   if (!control.passed) return { passed: false, verdicts: [control], failed: ['control'] };
   const verdicts = [control];
   // One at a time: one staff operator signing in from two places invalidates their own codes.
-  for (const c of CASES.hazards) verdicts.push(await judge(attempt, ledger, c.hazard, c.expected));
+  const cases = only ? CASES.hazards.filter((c) => only.includes(c.hazard)) : CASES.hazards;
+  for (const c of cases) verdicts.push(await judge(attempt, ledger, c.hazard, c.expected));
   const failed = verdicts.filter((v) => !v.passed).map((v) => v.hazard!);
   return { passed: !failed.length, verdicts, failed };
 }

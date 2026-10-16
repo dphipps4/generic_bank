@@ -27,9 +27,10 @@ export default defineConfig({
       'packages/db/prisma/**',
       'apps/memory/prisma/**',
       'seeds/**',
-      'config/**',
-      'infra/**',
-      '.github/**',
+      // Only the files tests read directly; compose, scripts and CI are the fresh-clone check's.
+      'config/app.env',
+      'infra/secrets/**',
+      'infra/docker/**',
       'tests/support/**',
       'tests/fixtures/**',
     ],

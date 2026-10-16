@@ -3,6 +3,7 @@
 // promote it. A repaired version's promotion closes the bank's repair case, and memory is told, so
 // its rules confirm what the probation runs bore out. The profile checked is the one the Runner
 // will serve: the registry's, built from the same claims over the same base.
+import type { HazardName } from '@gb/contracts';
 import { closeRepairCase, profileOf, type Sql } from '@gb/runs';
 import { attemptOn, hazardCheck, HEALTHY, judge, type Sandbox } from './hazard-check.js';
 import { candidate, checked, CLEAN_RUNS, probationRun, type Version } from './lifecycle.js';
@@ -29,7 +30,14 @@ export async function decided(
 }
 
 export async function gate(
-  o: { sql: Sql; sandbox: Sandbox; memory?: Memory; log?: (line: string) => void },
+  o: {
+    sql: Sql;
+    sandbox: Sandbox;
+    memory?: Memory;
+    log?: (line: string) => void;
+    /** Only these hazards in the hazard check (a test's short list); every hazard otherwise. */
+    hazards?: readonly HazardName[];
+  },
   recommendationId: string,
 ): Promise<Version> {
   const { sql, sandbox } = o;
@@ -44,7 +52,7 @@ export async function gate(
 
   if (v.state === 'candidate') {
     log(`v${v.version}: the hazard check`);
-    const check = await hazardCheck(attempt, sandbox.ledger);
+    const check = await hazardCheck(attempt, sandbox.ledger, o.hazards);
     v = await checked(sql, v.id, check);
     if (!check.passed) {
       log(`  failed: ${check.failed.join(', ')}`);
