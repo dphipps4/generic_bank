@@ -1,12 +1,12 @@
 # Access
 
-Everything you can open, call or poke once `just up` has run. `just up` starts the whole stack:
-the data box, memory and its seed, the Task API, the Console, the crawler, all four banks, the
-staff inbox and the factory. Every port listens on this machine only (127.0.0.1).
+Everything you can open, call or poke once `just up` has run. That command starts the whole
+stack: the data box, memory and its seed, the Task API, the Console, the crawler, all four banks,
+the staff inbox and the factory. Every port listens only on this machine (127.0.0.1).
 
-The logins are in `secrets/credentials.txt`, which `just up` writes from the encrypted secrets
-(run `just credentials` to write it again). It never leaves your machine and is never committed.
-Postgres isn't in it; read that with `just secrets-edit local`.
+The logins are in `secrets/credentials.txt`. `just up` writes it from the encrypted secrets, and
+`just credentials` writes it again. The file never leaves your machine and is never committed.
+The Postgres login isn't in it; read that one with `just secrets-edit local`.
 
 If you ran `just fork-ports` in a second copy, add its offset (10000 by default) to every port
 below.
@@ -31,12 +31,12 @@ below.
 | Staff inbox (the bank staff's phone and email) | http://localhost:8089 | none |
 | MinIO console (evidence and statements) | http://localhost:9001 | MinIO user and password |
 
-Bank 2 also serves pages from a second origin on 8092, and bank 4 on 8094; you reach them
-through the bank's own pages, not directly. Supervisor `0901` signs in the same way as `0412`
-and is the one who approves a large transfer.
+Bank 2 also serves pages from a second origin on 8092, and bank 4 does the same on 8094. You
+reach those through the bank's own pages, not directly. Supervisor `0901` signs in just like
+`0412` and approves large transfers.
 
-A bank sends its sign-in codes to the staff inbox. Bank 4 uses an authenticator app instead,
-and the inbox shows that app's current code too.
+Banks send their sign-in codes to the staff inbox. Bank 4 uses an authenticator app instead, and
+the inbox shows that app's current code as well.
 
 ## APIs
 
@@ -93,7 +93,7 @@ done
 
 ## Things to try with curl
 
-Banks 2 to 4 turn away anything that isn't shaped like a browser, the way a real bank's bot
+Banks 2 to 4 turn away anything that doesn't look like a browser, the way a real bank's bot
 screen does. Bank 1, the old site, doesn't check:
 
 ```sh
@@ -101,8 +101,8 @@ curl -i http://localhost:8082/             # 403 Access denied
 curl -i http://localhost:8081/corelink/    # 200
 ```
 
-Ask the Task API for a balance, then read the result. The run waits for a person when the bank
-sends a sign-in code: answer it in the Console inbox.
+Ask the Task API for a balance, then read the result. When the bank sends a sign-in code, the run
+waits for you; answer it in the Console inbox.
 
 ```sh
 TOKEN=$(just api-token 2>/dev/null)
@@ -123,8 +123,8 @@ curl -s -X POST http://localhost:8000/tasks/transfer \
 
 ### Faults
 
-A bank throws faults on its own now and then. To force one, sign a hazard header and send it
-with the request; a bank only obeys a header signed with this machine's key.
+The banks throw faults on their own now and then. To force one, sign a hazard header and send it
+with the request. A bank only obeys a header signed with this machine's key.
 
 ```sh
 H=$(just hazard-header service-unavailable)
@@ -141,8 +141,8 @@ The hazards: `confirm-dialog`, `early-expiry`, `injected-instruction`, `js-error
 `swallowed-submit`, `unknown-screen`, `validation-error`. Several can go in one header,
 separated by commas.
 
-To watch the crawler meet a hazard and end in the result it should, run a whole task under it,
-from the command line or from the Console's hazard lab:
+To watch the crawler meet a hazard and land on the right result, run a whole task under it, from
+the command line or the Console's hazard lab:
 
 ```sh
 just try late-rows
@@ -150,10 +150,10 @@ just try permission-denial
 just try swallowed-submit transfer
 ```
 
-Each prints the run, the expected result and a link to the run in the Console, where the Frames
-button shows every page the crawler saw.
+Each prints the run, the expected result and a Console link to it, where the Frames button shows
+every page the crawler saw.
 
-What the bank recorded, straight from the bank:
+To see what the bank itself recorded:
 
 ```sh
 BANK_ADMIN_TOKEN=$(awk '/^Bank admin API/{f=1; next} f && /^  token/{print $2; exit}' secrets/credentials.txt)

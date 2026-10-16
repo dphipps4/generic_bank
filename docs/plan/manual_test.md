@@ -1,11 +1,11 @@
 # Manual test: a bank redesigns, the crawl breaks, the factory repairs it
 
-This is the demo of the whole idea. A deterministic crawler checks balances at Generic Bank (bank
-1). Then the bank ships a redesign: a new page after sign-in, new words, a menu in a new place.
-The crawler can't cope. The run stops and goes to a person, and the driver is taken out of
-service. The factory's two agents look at the redesigned bank, work out what changed, and write
-the crawler a new profile. You approve it with the evidence in front of you, and the request that
-failed succeeds again, with no model running while it does.
+This demo shows the whole idea. A deterministic crawler checks balances at Generic Bank (bank 1).
+Then the bank ships a redesign: a new page after sign-in, new words, a menu in a new place. The
+crawler can't cope, so the run stops and goes to a person, and the driver comes out of service.
+The factory's two agents look at the redesigned bank, work out what changed, and write the
+crawler a new profile. You approve it with the evidence in front of you, and the request that
+failed works again. No model runs while it does.
 
 Onboarding a bank the factory has never seen (banks 3 and 4) is a separate section at the end.
 
@@ -29,11 +29,10 @@ just secret-set factory ANTHROPIC_API_KEY   # the factory's agents need a real m
 just factory                                # restarts the factory with the key
 ```
 
-With a key, each factory run spends real money: a few dollars, and never more than the cap of
-$25 a run ($150 a week). Without a key, the factory replays the run recorded for a repair at bank
-1, which costs nothing. But a replay only works while the bank shows exactly the pages it showed
-when it was recorded, and the stack's ambient hazards (a promotion, a slow page) keep changing
-them. Use the key.
+With a key, each factory run costs real money: a few dollars, never more than the cap of $25 a
+run ($150 a week). Without one, the factory replays a recorded repair of bank 1 for free. But a
+replay only works while the bank shows exactly the pages it showed when it was recorded, and the
+stack's ambient hazards (a promotion, a slow page) keep changing them. Use the key.
 
 Keep three tabs open: the Console at http://localhost:8080 (Runs, Inbox, Recommendations, and
 Drivers for the driver's state and its repair cases), bank 1 at http://localhost:8081/corelink/,
@@ -49,7 +48,7 @@ curl -s -X POST http://localhost:8000/tasks/check-balance \
   -d '{"bank":"generic","memberId":"40017732","account":"Everyday Checking"}'
 ```
 
-Answer the sign-in code in the Console inbox when it asks (the code is in the staff inbox). Then
+When it asks, answer the sign-in code in the Console inbox; the code is in the staff inbox. Then
 read the run with `curl -s http://localhost:8000/tasks/<runId> -H "Authorization: Bearer $TOKEN"`.
 You get `200` and the balance. No model ran: the driver is code, and the run's `driverVersionId`
 in the Console names the version that served it.
@@ -90,10 +89,11 @@ never seen. It didn't click around hoping for the best, and it didn't return a w
 
 ## Part 4: the driver comes out of service
 
-That fault demotes bank 1's driver on its own. Under Drivers in the Console, the check-balance
-driver is `demoted`, a registry event says which run did it, and an open repair case names that
-run and the version that ran it. There's no earlier version to fall back to, so another balance
-request at bank 1 is refused (`task_not_available`) before any browser opens.
+That fault demotes bank 1's driver automatically. Under Drivers in the Console, the
+check-balance driver is `demoted`, a registry event says which run did it, and an open repair
+case names that run and the driver version behind it. There's no earlier version to fall back
+to, so another balance request at bank 1 is refused (`task_not_available`) before any browser
+opens.
 
 ## Part 5: the factory repairs it
 
@@ -101,24 +101,24 @@ request at bank 1 is refused (`task_not_available`) before any browser opens.
 just repair generic
 ```
 
-The same two agents go back to bank 1, starting from its profile as it was and the frames where
-the failing run stopped. The Scout meets the new page and the moved menu, and the Supervisor
-works out what changed from the frames and steers it through. Answer the sign-in code in the
+The factory's two agents go back to bank 1. They start from its old profile and the frames where
+the failing run stopped. The Scout runs into the new page and the moved menu; the Supervisor
+reads the frames, works out what changed, and steers it through. Answer the sign-in code in the
 Console inbox when it asks.
 
-The recommendation, under Recommendations in the Console, changes only what changed: the notice
-and its Continue button, the menu, the new name for member search and for the tile's history
-link, and the words of the new home page. Everything else stays as it was. Every claim cites the
-frames that show it.
+The recommendation shows up under Recommendations in the Console, and it touches only what
+changed: the notice and its Continue button, the menu, the new name for member search and for
+the tile's history link, and the words of the new home page. Everything else stays as it was,
+and every claim cites the frames that show it.
 
 ## Part 6: approve the repair
 
 Check the claims against their frames, tick any guess you accept (a guess can't be approved
-without its tick), and approve, with a reason.
+without its tick), and approve with a reason.
 
 `just repair` has been waiting in its terminal all this time. Once you approve, it runs the gate:
-the new profile runs against bank 1 with each hazard forced in turn, and every result has to match
-what the bank actually does. Two clean probation runs then promote it. The terminal shows each
+the new profile goes up against bank 1 with each hazard forced in turn, and every result has to
+match what the bank really does. Then two clean probation runs promote it. The terminal shows each
 step, the repair case closes, and bank 1's check-balance is back in `GET /banks`:
 
 ```sh
@@ -135,14 +135,14 @@ menu, and again no model in the run. Its `driverVersionId` is the repaired versi
 
 ## Putting it back
 
-Comment the `BANK_REDESIGN` line out again and run `just bank`. The repaired driver now fails the
-old look in the same safe way and comes out of service, which makes a quick second demo of Parts 3
+Comment the `BANK_REDESIGN` line out again and run `just bank`. The repaired driver now fails on
+the old look, just as safely, and comes out of service. That makes a quick second demo of Parts 3
 and 4. `just repair generic` repairs it back.
 
 ## Onboarding a new bank
 
-This works once the driver can handle the bank. The CoreLink driver can't read a balance at bank
-3 (`sample`) or bank 4 (`placeholder`) yet, so their hazard check fails at the control run.
+This only works when the driver can handle the bank. The CoreLink driver can't read a balance at
+bank 3 (`sample`) or bank 4 (`placeholder`), so their hazard check fails at the control run.
 
 ```sh
 just onboard sample
@@ -153,11 +153,11 @@ page, the statements list), and the Supervisor looks at every page it reaches an
 do next. Answer each sign-in code in the Console inbox. When it's done, the Supervisor's draft
 profile shows up under Recommendations: the bank's words for each thing, its screens and its
 refusals, each claim marked **seen** (it's on the frames it cites) or **guess**. Approve it as in
-Part 6, and the same gate runs. What a claim can't say (how an account is worded, how codes
-arrive) comes from the bank's base profile in `packages/drivers`.
+Part 6, and the same gate runs. Anything the claims can't cover (how an account is worded, how
+codes arrive) comes from the bank's base profile in `packages/drivers`.
 
-Bank 4 is harder still. It signs in with an authenticator code, while the gate reads sign-in
-codes from the messages the bank sent, so its hazard check needs the authenticator too.
+Bank 4 is harder still. It signs in with an authenticator code, but the gate reads sign-in codes
+from the messages the bank sent, so its hazard check needs the authenticator as well.
 
 ## If something goes wrong
 

@@ -2,8 +2,7 @@
 
 The factory teaches the crawler a bank it has not seen, for the three things the product does:
 check a balance, prepare a transfer up to the bank's review page, and download statements where
-the bank offers them. Navigation is there to reach those goals; reasoning is there to guide the
-navigation.
+the bank offers them. Navigation serves those goals, and reasoning guides the navigation.
 
 Two roles. The **Scout** navigates: it opens the bank, signs in, clicks and types, one simple step
 at a time, and reports each page to the Supervisor. The **Supervisor** looks at the evidence for
@@ -14,9 +13,9 @@ it cites the frames that show it and says whether it was **seen** on those frame
 **guess**. A person approves or rejects it with the frames in front of them. A guess is never
 approved by default.
 
-The bank's own behavior is the judge: the profile is run against the bank with each hazard
-forced, and the result must be the one the outcome table expects. Without an API key the factory
-replays a recorded run (mock mode), so the whole path runs for free.
+The bank's own behavior is the judge: the profile runs against the bank with each hazard forced,
+and each result must be the one the outcome table expects. Without an API key the factory
+replays a recorded run (mock mode), so the whole path costs nothing.
 
 | # | Pull request | What it adds | What proves it |
 |---|---|---|---|

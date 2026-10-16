@@ -1,13 +1,13 @@
 # M4: Human steps
 
-First the browser's fingerprint: the Runner presents Chrome on a Mac, and banks 2 to 4 turn away
-anything that is not a browser. Then everything a person does for the crawler, and the one thing the crawler never does without a
-person: move money. Staff codes are answered in the Console instead of by a script. A transfer
-is prepared by the crawler, parked on the bank's review page, approved by a person, and
-submitted once under a single-use grant; if the result is unclear, the crawler reads the
-account's history and never presses the button again. Statements come back as stored
-documents, the demo agent holds a whole conversation through the API's own tools, and every
-error path is one click away in the hazard lab. The plan's
+First comes the browser's fingerprint: the Runner passes as Chrome on a Mac, and banks 2 to 4
+turn away anything that isn't a browser. Then comes everything a person does for the crawler,
+and the one thing the crawler never does without a person: move money. A person answers staff
+codes in the Console, not a script. The crawler prepares a transfer and parks it on the bank's
+review page, a person approves it, and it's submitted once under a single-use grant. If the
+result is unclear, the crawler reads the account's history and never presses the button again.
+Statements come back as stored documents, the demo agent holds a whole conversation through the
+API's own tools, and every error path is one click away in the hazard lab. The plan's
 [Appendix F](../plan/GENERIC_BANK_PLAN.md#appendix-f-transfers-a-human-approved-activity),
 [§D.5](../plan/GENERIC_BANK_PLAN.md#d5-tools-for-agents-and-the-demo-agent),
 [§D.8](../plan/GENERIC_BANK_PLAN.md#d8-escalate-resolve-retry) and
