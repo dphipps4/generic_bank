@@ -153,6 +153,8 @@ up: env image
     @just backend console crawlers bank bank-more factory
     @just credentials
     @just urls
+    @# Swagger UI in the browser, ready to try the Task API (not in CI, which has no browser).
+    @[[ -n "${CI:-}" ]] || open "http://localhost:$API_PORT/docs" 2>/dev/null || true
 
 # Stop everything (data is kept), or only some groups: just down console bank
 [group('Run')]

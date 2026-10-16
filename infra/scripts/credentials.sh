@@ -18,6 +18,11 @@ cat >"$out" <<EOF
 # Generic Bank: credentials for this machine's stack. Written by just up (just credentials).
 # Never commit this file. Postgres is not here: just secrets-edit local shows it.
 
+Start here
+  Swagger UI      http://localhost:${API_PORT:-8000}/docs
+  Console         http://localhost:${CONSOLE_PORT:-8080}
+  Staff inbox     http://localhost:${BANK_INBOX_PORT:-8089}
+
 Console: the admin UI
   address         http://localhost:${CONSOLE_PORT:-8080}
   email           admin@generic-bank.local
