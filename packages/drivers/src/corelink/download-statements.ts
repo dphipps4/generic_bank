@@ -161,7 +161,7 @@ export async function downloadStatements(
         doc.body.subarray(0, 5).toString('latin1') === '%PDF-';
       if (!isPdf) {
         await sess.record('statement', 'statements', m, `opened ${month}'s statement`, 'no PDF');
-        return stop('escalated', 'unknown_screen', `the window for ${month} received no PDF`);
+        return stop('escalated', 'unknown_screen', `the window for ${month} received no PDF: ${doc.status} ${doc.contentType} ${doc.url} ${doc.body.subarray(0, 120).toString('latin1')}`);
       }
       await sess.record(
         'statement',
