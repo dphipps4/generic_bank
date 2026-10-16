@@ -385,10 +385,15 @@ export async function runScout(o: {
       calls: CAPS.scoutTurns,
       maxTokens: 8000,
     });
-    // A tool the Scout was not given is answered as not found; it is refused all the same.
-    for (const n of t.called.filter((x) => !offered.has(x)))
+    // A call pi turned away before the tool (one the Scout was not given, or input that does not
+    // fit) is refused all the same.
+    for (const r of t.refused)
       await o.trail.step(
-        { name: 'refused', action: n, outcome: `${n} is not one of the scout's tools` },
+        {
+          name: 'refused',
+          action: r.name,
+          outcome: offered.has(r.name) ? r.why : `${r.name} is not one of the scout's tools`,
+        },
         null,
       );
     conversation = t.conversation;

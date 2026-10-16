@@ -3,7 +3,6 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import Anthropic from '@anthropic-ai/sdk';
 import Fastify from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
@@ -11,13 +10,14 @@ import { runPages } from '../../apps/console/src/pages/runs.js';
 import type { Agent, Conversation } from '../../apps/factory/src/agent.js';
 import { gateway } from '../../apps/factory/src/gateway.js';
 import { sqlLedger } from '../../apps/factory/src/ledger.js';
-import { DEFAULT_ROLES, type Role } from '../../apps/factory/src/models.js';
+import { DEFAULT_ROLES, PRICES, type Provider, type Role } from '../../apps/factory/src/models.js';
 import { personCode } from '../../apps/factory/src/person.js';
 import { scout } from '../../apps/factory/src/scout.js';
 import { buildServer } from '../../apps/factory/src/server.js';
 import { type Goal, GOALS, runGoal } from '../../apps/factory/src/supervisor.js';
 import { openTrail } from '../../apps/factory/src/trail.js';
 import { live, upstreamFor, type Upstream } from '../../apps/factory/src/upstream.js';
+import { fakeModels, OPENAI_TEST_MODEL, TEST_PRICE } from '../../apps/factory/test/fakes.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
 import { GENERIC_BANK } from '../../packages/drivers/src/corelink/profiles.js';
 import { memoryStore } from '../../packages/evidence/src/index.js';
@@ -28,8 +28,8 @@ import { type LiveBank, liveBank, PASSWORDS } from '../support/banks.js';
 
 // The Scout against the real Generic Bank in Chrome: its tools, what they refuse, and a run guided
 // by the Supervisor to the three goals' pages, through the model gateway, recorded and then
-// replayed in mock mode. No request reaches a model and no key is used: both roles' models are a
-// scripted fake fetch behind the gateway.
+// replayed in mock mode, on the Anthropic defaults and with OpenAI configured. No request reaches
+// a model and no key is used: both roles' models are a scripted fake fetch behind the gateway.
 
 const TOKEN = 'gateway-token-for-tests-0123456789abcdef';
 const CREDS = { operatorId: OPERATORS.service.id, password: PASSWORDS.service };
@@ -457,55 +457,28 @@ function decide(goal: Goal, p: View, steps: string): string {
   }
 }
 
-const sse = (n: number, block: object, delta: object, stop: string) =>
-  new Response(
-    [
-      {
-        type: 'message_start',
-        message: {
-          id: `msg_${n}`,
-          type: 'message',
-          role: 'assistant',
-          model: 'claude-opus-5-5',
-          content: [],
-          stop_reason: null,
-          stop_sequence: null,
-          usage: { input_tokens: 2000, output_tokens: 1 },
-        },
-      },
-      { type: 'content_block_start', index: 0, content_block: block },
-      { type: 'content_block_delta', index: 0, delta },
-      { type: 'content_block_stop', index: 0 },
-      {
-        type: 'message_delta',
-        delta: { stop_reason: stop, stop_sequence: null },
-        usage: { output_tokens: 50 },
-      },
-      { type: 'message_stop' },
-    ]
-      .map((e) => `event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`)
-      .join(''),
-    { headers: { 'content-type': 'text/event-stream' } },
-  );
-
-const results = (m: Anthropic.MessageParam[]) =>
-  m.flatMap((x) =>
-    Array.isArray(x.content) ? x.content.filter((b) => b.type === 'tool_result') : [],
-  ) as Anthropic.ToolResultBlockParam[];
+/** The page a tool's result shows, if it shows one (a refusal does not). */
+const pageOf = (text: string) => {
+  try {
+    return read(text).page;
+  } catch {
+    return undefined;
+  }
+};
 
 /**
- * Both roles' models, scripted. The Supervisor reads the goal and the latest frame and answers in
- * its form, citing that frame (its first answer cites a frame of no run, which counts as a wait);
- * the Scout follows the plan for its instruction, on the latest page a tool showed it.
+ * Both roles' models, scripted, on either provider. The Supervisor reads the goal and the latest
+ * frame and answers in its form, citing that frame (its first answer cites a frame of no run, which
+ * counts as a wait); the Scout follows the plan for its instruction, on the latest page a tool
+ * showed it.
  */
-function scriptedModel(): Anthropic {
+function scripted() {
   let n = 0;
-  const fetch = async (_url: unknown, init?: RequestInit) => {
-    const body = JSON.parse(String(init?.body)) as Anthropic.MessageCreateParams;
+  return fakeModels((_provider, r) => {
     n++;
-    if (String(body.system).startsWith('You are the Supervisor')) {
-      const content = body.messages[0]!.content as Anthropic.ContentBlockParam[];
-      const text = (content.find((b) => b.type === 'text') as Anthropic.TextBlockParam).text;
+    const said = r.items.flatMap((x) => ('user' in x ? [x.user] : []));
+    if (r.system.startsWith('You are the Supervisor')) {
+      const text = said[0]!;
       const goal = (Object.keys(GOALS) as Goal[]).find((g) =>
         text.startsWith(`Goal: ${GOALS[g](MEMBERS.demo)}`),
       )!;
@@ -515,33 +488,19 @@ function scriptedModel(): Anthropic {
         reason: `the page in ${ref} shows where the Scout is`,
         frames: [n === 1 ? 'f999' : ref],
       };
-      return sse(
-        n,
-        { type: 'text', text: '' },
-        { type: 'text_delta', text: JSON.stringify(answer) },
-        'end_turn',
-      );
+      return { text: JSON.stringify(answer) };
     }
-    const msgs = body.messages;
-    const at = msgs.findLastIndex((m) => typeof m.content === 'string');
-    const said = msgs[at]!.content as string;
-    const plan = PLANS[said.split('\n')[0]!]!;
-    const done = results(msgs.slice(at + 1)).length;
+    // The instruction is the last thing the Supervisor said; the tool results after it are this step's.
+    const at = r.items.findLastIndex((x) => 'user' in x && PLANS[x.user.split('\n')[0]!]);
+    const instruction = (r.items[at] as { user: string }).user;
+    const plan = PLANS[instruction.split('\n')[0]!]!;
+    const results = r.items.slice(at + 1).flatMap((x) => ('result' in x ? [x.result] : []));
     // The latest page: the one the instruction came with, or one a tool showed since.
-    const shown = results(msgs.slice(at + 1))
-      .filter((r) => !r.is_error)
-      .at(-1)?.content as string | undefined;
-    const step = done < plan.length ? plan[done]!(read(shown ?? said).page) : null;
-    return step
-      ? sse(
-          n,
-          { type: 'tool_use', id: `toolu_${n}`, name: step.name, input: {} },
-          { type: 'input_json_delta', partial_json: JSON.stringify(step.input) },
-          'tool_use',
-        )
-      : sse(n, { type: 'text', text: '' }, { type: 'text_delta', text: 'Done.' }, 'end_turn');
-  };
-  return new Anthropic({ apiKey: 'not-a-real-key', fetch: fetch as never, maxRetries: 0 });
+    const shown = results.map(pageOf).filter(Boolean).at(-1);
+    const step =
+      results.length < plan.length ? plan[results.length]!(shown ?? read(instruction).page) : null;
+    return step ? { tool: step.name, input: step.input } : { text: 'Done.' };
+  });
 }
 
 const ANSWER_KEY = 'a'.repeat(32);
@@ -571,9 +530,13 @@ function person(runId: string) {
 }
 
 /** The three goals in one run and one browser session: the balance, statements, the transfer. */
-async function runThrough(upstream: Upstream, runId: string) {
+async function runThrough(upstream: Upstream, runId: string, provider: Provider) {
   const app = buildServer({
-    gateway: gateway({ ledger: sqlLedger(db), upstream }),
+    gateway: gateway({
+      ledger: sqlLedger(db),
+      upstream,
+      prices: { ...PRICES, [OPENAI_TEST_MODEL]: TEST_PRICE },
+    }),
     token: TOKEN,
     mode: upstream.spends ? 'live' : 'mock',
   });
@@ -588,7 +551,7 @@ async function runThrough(upstream: Upstream, runId: string) {
   });
   const { page, trail, s } = await newScout(runId, bank.url, code);
   const agent = (role: Role): Agent => ({
-    model: DEFAULT_ROLES[role],
+    model: MODELS[provider][role],
     url: `http://127.0.0.1:${port}/gateway/${runId}/${role}`,
     token: TOKEN,
   });
@@ -620,98 +583,121 @@ async function runThrough(upstream: Upstream, runId: string) {
   }
 }
 
-describe('the Supervisor guiding the Scout', () => {
-  it('reaches the balance, the statements list and the transfer review page on bank 1, recorded once and replayed in mock mode', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'gb-supervisor-'));
-    await db.query(
-      `INSERT INTO "FactoryRun" (id, tenant, task, mode, phase, status) VALUES
-         ('guided-live', 'generic', 'check-balance', 'build', 'SCOUT', 'running'),
-         ('guided-mock', 'generic', 'check-balance', 'build', 'SCOUT', 'running')`,
-    );
-    try {
-      // The scripted models, recorded through the gateway as a live run is.
-      const recorded = await runThrough(live(scriptedModel(), dir), 'guided-live');
-      // The same run with no key: every request must be the recording's, byte for byte.
-      await copyFile(join(dir, 'guided-live.jsonl'), join(dir, 'guided-mock.jsonl'));
-      const upstream = upstreamFor('', dir);
-      expect(upstream.spends).toBe(false);
-      const replayed = await runThrough(upstream, 'guided-mock');
-      // The model's own turns, in the same places; what the live bank showed may differ.
-      const modelTurns = (c: Conversation | undefined) =>
-        (c as { role: string }[] | undefined)?.map((m) =>
-          m.role === 'assistant' ? m : { role: m.role },
+/** Each role's model: the Anthropic defaults, or OpenAI configured for both roles. */
+const MODELS: Record<Provider, Record<Role, Agent['model']>> = {
+  anthropic: DEFAULT_ROLES,
+  openai: {
+    scout: { ...DEFAULT_ROLES.scout, provider: 'openai', model: OPENAI_TEST_MODEL },
+    supervisor: { ...DEFAULT_ROLES.supervisor, provider: 'openai', model: OPENAI_TEST_MODEL },
+    lessons: { ...DEFAULT_ROLES.lessons, provider: 'openai', model: OPENAI_TEST_MODEL },
+  },
+};
+
+// A conversation as the replay checks it: the agents' own turns (system and assistant) in full, in
+// the same places; what the live bank showed may differ. Less when each message was added and how
+// long the model took.
+const untimed = (c: unknown) =>
+  (
+    JSON.parse(
+      JSON.stringify(c, (k, v: unknown) =>
+        k === 'timestamp' || k === 'durationMs' ? undefined : v,
+      ),
+    ) as { role: string }[] | undefined
+  )?.map((m) => (m.role === 'assistant' || m.role === 'system' ? m : { role: m.role }));
+
+describe.each(['anthropic', 'openai'] as const)(
+  'the Supervisor guiding the Scout on %s',
+  (provider) => {
+    it('reaches the balance, the statements list and the transfer review page on bank 1, recorded once and replayed in mock mode', async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'gb-supervisor-'));
+      const [liveRun, mockRun] = [`guided-live-${provider}`, `guided-mock-${provider}`];
+      await db.query(
+        `INSERT INTO "FactoryRun" (id, tenant, task, mode, phase, status) VALUES
+         ($1, 'generic', 'check-balance', 'build', 'SCOUT', 'running'),
+         ($2, 'generic', 'check-balance', 'build', 'SCOUT', 'running')`,
+        [liveRun, mockRun],
+      );
+      try {
+        // The scripted models, recorded through the gateway as a live run is.
+        const recorded = await runThrough(live(scripted(), dir), liveRun, provider);
+        // The same run with no key: every request must be the recording's, byte for byte.
+        await copyFile(join(dir, `${liveRun}.jsonl`), join(dir, `${mockRun}.jsonl`));
+        const upstream = upstreamFor({}, dir);
+        expect(upstream.spends).toBe(false);
+        const replayed = await runThrough(upstream, mockRun, provider);
+        expect(untimed(replayed.conversation)).toEqual(untimed(recorded.conversation));
+        expect(replayed.reached).toEqual(recorded.reached);
+
+        // Each goal ended on its page, by the Supervisor's stop.
+        const model = async (ref: string | null) =>
+          JSON.parse(
+            (await store.get(`runs/${mockRun}/${ref!.slice(1).padStart(3, '0')}.json`))!.toString(),
+          ) as { controls: { name: string }[]; texts: { text: string }[] };
+        const [balance, statements, review] = await Promise.all(replayed.reached.map(model));
+        expect(balance!.texts.some((t) => t.text.includes('Available balance'))).toBe(true);
+        expect(statements!.controls.some((c) => c.name === 'Show')).toBe(true);
+        expect(review!.texts.some((t) => t.text === 'Review transfer')).toBe(true);
+        expect(replayed.ended.every((e) => e?.startsWith('the page in f'))).toBe(true);
+
+        // Every answer cites a frame of the run; the first, citing f999, was read as a wait.
+        const turns = await rows<{ action: string; outcome: string }>(
+          `SELECT action, outcome FROM "Step" WHERE "runId" = $1 AND name = 'supervisor' ORDER BY seq`,
+          mockRun,
         );
-      expect(modelTurns(replayed.conversation)).toEqual(modelTurns(recorded.conversation));
-      expect(replayed.reached).toEqual(recorded.reached);
+        expect(turns[0]).toEqual({
+          action: 'wait',
+          outcome: 'unreadable: f999 is not a frame of this run',
+        });
+        for (const t of turns.slice(1)) expect(t.outcome).toMatch(/ \[f\d+\]$/);
 
-      // Each goal ended on its page, by the Supervisor's stop.
-      const model = async (ref: string | null) =>
-        JSON.parse(
-          (await store.get(`runs/guided-mock/${ref!.slice(1).padStart(3, '0')}.json`))!.toString(),
-        ) as { controls: { name: string }[]; texts: { text: string }[] };
-      const [balance, statements, review] = await Promise.all(replayed.reached.map(model));
-      expect(balance!.texts.some((t) => t.text.includes('Available balance'))).toBe(true);
-      expect(statements!.controls.some((c) => c.name === 'Show')).toBe(true);
-      expect(review!.texts.some((t) => t.text === 'Review transfer')).toBe(true);
-      expect(replayed.ended.every((e) => e?.startsWith('the page in f'))).toBe(true);
+        // Told to submit, the Scout could not: the button and Enter were refused, and nothing posted.
+        const refused = await rows<{ action: string; outcome: string }>(
+          `SELECT action, outcome FROM "Step" WHERE "runId" = $1 AND name = 'refused' ORDER BY seq`,
+          mockRun,
+        );
+        expect(refused.map((r) => r.action)).toEqual(['browser_click', 'browser_press']);
+        for (const r of refused)
+          expect(r.outcome).toMatch(/the factory stops at the transfer's review page/);
+        expect((await bank.db.query('SELECT 1 FROM transfers')).rows).toHaveLength(0);
 
-      // Every answer cites a frame of the run; the first, citing f999, was read as a wait.
-      const turns = await rows<{ action: string; outcome: string }>(
-        `SELECT action, outcome FROM "Step" WHERE "runId" = $1 AND name = 'supervisor' ORDER BY seq`,
-        'guided-mock',
-      );
-      expect(turns[0]).toEqual({
-        action: 'wait',
-        outcome: 'unreadable: f999 is not a frame of this run',
-      });
-      for (const t of turns.slice(1)) expect(t.outcome).toMatch(/ \[f\d+\]$/);
+        // The code came from a person through the Console's inbox, and no model saw it.
+        expect(replayed.answered).toHaveLength(1);
+        expect(
+          await rows(`SELECT kind, status FROM "HumanTask" WHERE "runId" = $1`, mockRun),
+        ).toEqual([{ kind: 'staff_code', status: 'answered' }]);
+        // The masked screenshots are left out: base64 holds runs of digits that a code can match.
+        const recording = (await readFile(join(dir, `${liveRun}.jsonl`), 'utf8'))
+          .replace(/"data":"[A-Za-z0-9+/=]+"/g, '"data":""')
+          .replace(/"url":"data:image\/png;base64,[A-Za-z0-9+/=]+"/g, '"url":""');
+        const seen = recording + (await stored(liveRun)) + (await stored(mockRun));
+        const codes = [...recorded.answered, ...replayed.answered];
+        for (const secret of [PASSWORDS.service, OPERATORS.service.id, ...codes])
+          expect(seen).not.toContain(secret);
 
-      // Told to submit, the Scout could not: the button and Enter were refused, and nothing posted.
-      const refused = await rows<{ action: string; outcome: string }>(
-        `SELECT action, outcome FROM "Step" WHERE "runId" = $1 AND name = 'refused' ORDER BY seq`,
-        'guided-mock',
-      );
-      expect(refused.map((r) => r.action)).toEqual(['browser_click', 'browser_press']);
-      for (const r of refused)
-        expect(r.outcome).toMatch(/the factory stops at the transfer's review page/);
-      expect((await bank.db.query('SELECT 1 FROM transfers')).rows).toHaveLength(0);
+        // Both roles went through the gateway, on their models, at no cost in mock mode.
+        const calls = await rows<{ role: string; model: string; usd: string }>(
+          `SELECT role, model, "costUsd"::text AS usd FROM "ModelCall" WHERE "factoryRunId" = $1`,
+          mockRun,
+        );
+        expect(new Set(calls.map((c) => c.role))).toEqual(new Set(['scout', 'supervisor']));
+        expect(
+          calls.every((c) => c.model === MODELS[provider].scout.model && c.usd === '0.0000'),
+        ).toBe(true);
 
-      // The code came from a person through the Console's inbox, and no model saw it.
-      expect(replayed.answered).toHaveLength(1);
-      expect(
-        await rows(`SELECT kind, status FROM "HumanTask" WHERE "runId" = $1`, 'guided-mock'),
-      ).toEqual([{ kind: 'staff_code', status: 'answered' }]);
-      // The masked screenshots are left out: base64 holds runs of digits that a code can match.
-      const recording = (await readFile(join(dir, 'guided-live.jsonl'), 'utf8')).replace(
-        /"data":"[A-Za-z0-9+/=]+"/g,
-        '"data":""',
-      );
-      const seen = recording + (await stored('guided-live')) + (await stored('guided-mock'));
-      const codes = [...recorded.answered, ...replayed.answered];
-      for (const secret of [PASSWORDS.service, OPERATORS.service.id, ...codes])
-        expect(seen).not.toContain(secret);
-
-      // Both roles went through the gateway, on their models, at no cost in mock mode.
-      const calls = await rows<{ role: string; model: string; usd: string }>(
-        `SELECT role, model, "costUsd"::text AS usd FROM "ModelCall" WHERE "factoryRunId" = $1`,
-        'guided-mock',
-      );
-      expect(new Set(calls.map((c) => c.role))).toEqual(new Set(['scout', 'supervisor']));
-      expect(calls.every((c) => c.model === 'claude-opus-5-5' && c.usd === '0.0000')).toBe(true);
-
-      // The Console shows the run's trail, behind its Frames button.
-      const frames = await rows('SELECT seq FROM "TrailFrame" WHERE "runId" = $1', 'guided-mock');
-      const consoleApp = Fastify();
-      runPages(consoleApp, {
-        sql: db,
-        store,
-        whoIs: () => ({ email: 'staff@test', role: 'approver' }),
-      });
-      const html = (await consoleApp.inject({ method: 'GET', url: '/runs/guided-mock' })).body;
-      expect(html).toContain(`Frames (${frames.length})`);
-      await consoleApp.close();
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  }, 600_000);
-});
+        // The Console shows the run's trail, behind its Frames button.
+        const frames = await rows('SELECT seq FROM "TrailFrame" WHERE "runId" = $1', mockRun);
+        const consoleApp = Fastify();
+        runPages(consoleApp, {
+          sql: db,
+          store,
+          whoIs: () => ({ email: 'staff@test', role: 'approver' }),
+        });
+        const html = (await consoleApp.inject({ method: 'GET', url: `/runs/${mockRun}` })).body;
+        expect(html).toContain(`Frames (${frames.length})`);
+        await consoleApp.close();
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+    }, 600_000);
+  },
+);

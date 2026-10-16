@@ -1,17 +1,19 @@
-// The model gateway: caps before every request, spend after it, and mock mode. No test reaches
-// the model: the live path runs the real SDK against a fake fetch, with a key that is not one.
+// The model gateway: caps before every request, spend after it, and mock mode, on Anthropic's
+// route and OpenAI's. No test reaches a model: the live path runs each real SDK against a fake
+// fetch, with a key that is not one.
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConfigError, loadConfig } from '../../../packages/config/src/index.js';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import { CAPS } from '../src/caps.js';
 import { gateway, worstCaseUsd } from '../src/gateway.js';
 import { sqlLedger, type Ledger } from '../src/ledger.js';
-import { DEFAULT_ROLES, PRICES, ROLE_SETTINGS, rolesOf } from '../src/models.js';
+import { DEFAULT_ROLES, PRICES, type Provider, ROLE_SETTINGS, rolesOf } from '../src/models.js';
 import { buildServer } from '../src/server.js';
 import { live, upstreamFor, type Upstream } from '../src/upstream.js';
 
@@ -59,16 +61,74 @@ function fakeModel(): Anthropic {
   return new Anthropic({ apiKey: 'not-a-real-key', fetch: fetch as never, maxRetries: 0 });
 }
 
-function factory(upstream: Upstream, ledger: Ledger = sqlLedger(db)) {
-  const app = buildServer({ gateway: gateway({ ledger, upstream }), token: TOKEN, mode: 'live' });
+// An OpenAI model, priced for these tests only.
+const TEST_PRICES = {
+  ...PRICES,
+  'gpt-test': { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 0 },
+};
+
+/** What the fake OpenAI model answers: 1,000 tokens in (200 of them cached) and 500 out. */
+const CHUNKS = [
+  {
+    choices: [{ index: 0, delta: { role: 'assistant', content: 'Sign in.' }, finish_reason: null }],
+  },
+  { choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] },
+  {
+    choices: [],
+    usage: {
+      prompt_tokens: 1000,
+      completion_tokens: 500,
+      total_tokens: 1500,
+      prompt_tokens_details: { cached_tokens: 200 },
+    },
+  },
+].map((c) => ({
+  id: 'chatcmpl-1',
+  object: 'chat.completion.chunk',
+  created: 1,
+  model: 'gpt-test',
+  ...c,
+}));
+const CHAT_SSE = `${CHUNKS.map((c) => `data: ${JSON.stringify(c)}\n\n`).join('')}data: [DONE]\n\n`;
+
+function fakeOpenAI(): OpenAI {
+  const fetch = async (_url: unknown, init?: RequestInit) => {
+    sent.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+    await release;
+    return new Response(CHAT_SSE, { headers: { 'content-type': 'text/event-stream' } });
+  };
+  return new OpenAI({ apiKey: 'not-a-real-key', fetch: fetch as never, maxRetries: 0 });
+}
+
+const PATHS: Record<Provider, string> = { anthropic: 'messages', openai: 'chat/completions' };
+
+function factory(
+  upstream: Upstream,
+  ledger: Ledger = sqlLedger(db),
+  provider: Provider = 'anthropic',
+) {
+  const app = buildServer({
+    gateway: gateway({ ledger, upstream, prices: TEST_PRICES }),
+    token: TOKEN,
+    mode: 'live',
+  });
   return (runId: string, role: string, body: Record<string, unknown>, token = TOKEN) =>
     app.inject({
       method: 'POST',
-      url: `/gateway/${runId}/${role}/v1/messages`,
-      headers: { 'x-api-key': token },
+      url: `/gateway/${runId}/${role}/v1/${PATHS[provider]}`,
+      headers:
+        provider === 'anthropic' ? { 'x-api-key': token } : { authorization: `Bearer ${token}` },
       payload: body,
     });
 }
+
+const chat = (extra: Record<string, unknown> = {}) => ({
+  model: 'gpt-test',
+  max_completion_tokens: 1000,
+  stream: true,
+  messages: [{ role: 'user', content: 'Where is the sign-in form?' }],
+  ...extra,
+});
 
 const ask = (extra: Record<string, unknown> = {}) => ({
   model: 'claude-opus-5-5',
@@ -130,7 +190,7 @@ describe('the caps', () => {
 
 describe('the model gateway', () => {
   it('refuses a request that would pass the run’s cap before it is sent', async () => {
-    const post = factory(live(fakeModel(), dir));
+    const post = factory(live({ anthropic: fakeModel() }, dir));
     await spent('run1', 23.5);
     // 64,000 output tokens could cost $1.28: past the $24 a run may spend before the lessons.
     const r = await post('run1', 'scout', ask({ max_tokens: 64_000 }));
@@ -143,14 +203,14 @@ describe('the model gateway', () => {
   });
 
   it('keeps the reserve for the lessons', async () => {
-    const post = factory(live(fakeModel(), dir));
+    const post = factory(live({ anthropic: fakeModel() }, dir));
     await spent('run1', 23.9);
     expect((await post('run1', 'supervisor', ask({ max_tokens: 20_000 }))).statusCode).toBe(402);
     expect((await post('run1', 'lessons', ask({ max_tokens: 20_000 }))).statusCode).toBe(200);
   });
 
   it('refuses at the week’s cap across runs, counting only the last seven days', async () => {
-    const post = factory(live(fakeModel(), dir));
+    const post = factory(live({ anthropic: fakeModel() }, dir));
     await spent('run2', 149.5, 8);
     expect((await post('run1', 'scout', ask({ max_tokens: 64_000 }))).statusCode).toBe(200);
     await spent('run2', 149.5);
@@ -161,7 +221,7 @@ describe('the model gateway', () => {
   it('holds a request in flight against the cap', async () => {
     let go!: () => void;
     release = new Promise((r) => (go = r));
-    const post = factory(live(fakeModel(), dir));
+    const post = factory(live({ anthropic: fakeModel() }, dir));
     await spent('run1', 22);
     // Each could cost about $1.28; one fits under $24, two do not.
     const first = post('run1', 'scout', ask({ max_tokens: 64_000 }));
@@ -172,7 +232,7 @@ describe('the model gateway', () => {
   });
 
   it('refuses a model with no known price, server tools, an unknown run and a bad token', async () => {
-    const post = factory(live(fakeModel(), dir));
+    const post = factory(live({ anthropic: fakeModel() }, dir));
     const fable = await post('run1', 'scout', ask({ model: 'claude-fable-5-1' }));
     expect(fable.statusCode).toBe(400);
     expect(fable.json().error.message).toBe('no known price for model claude-fable-5-1');
@@ -189,13 +249,13 @@ describe('the model gateway', () => {
       spend: () => Promise.reject(new Error('connection refused')),
       record: () => Promise.resolve(),
     };
-    const r = await factory(live(fakeModel(), dir), broken)('run1', 'scout', ask());
+    const r = await factory(live({ anthropic: fakeModel() }, dir), broken)('run1', 'scout', ask());
     expect(r.statusCode).toBe(503);
     expect(sent).toHaveLength(0);
   });
 
-  it('records tokens and cost per run and role, and sets each role’s effort', async () => {
-    const post = factory(live(fakeModel(), dir));
+  it('records tokens and cost per run and role', async () => {
+    const post = factory(live({ anthropic: fakeModel() }, dir));
     const streamed = await post('run1', 'scout', ask({ stream: true }));
     expect(streamed.headers['content-type']).toMatch(/^text\/event-stream/);
     expect(streamed.body).toBe(SSE);
@@ -203,11 +263,6 @@ describe('the model gateway', () => {
     expect(whole.json().content).toEqual([{ type: 'text', text: 'Sign in.' }]);
     await post('run2', 'supervisor', ask());
 
-    expect(sent.map((b) => (b.output_config as { effort: string }).effort)).toEqual([
-      'low',
-      'high',
-      'high',
-    ]);
     const rows = await db.query<{ run: string; role: string; calls: number; usd: string }>(
       `SELECT "factoryRunId" AS run, role, COUNT(*)::int AS calls, SUM("costUsd")::text AS usd,
               SUM("tokensIn")::int AS "in", SUM("tokensOut")::int AS out
@@ -224,7 +279,7 @@ describe('the model gateway', () => {
 describe('mock mode', () => {
   it('replays a recording exactly, without a key or the network', async () => {
     // A live run, recorded.
-    const recorder = factory(live(fakeModel(), dir));
+    const recorder = factory(live({ anthropic: fakeModel() }, dir));
     const calls = [
       ['scout', ask({ stream: true })],
       ['supervisor', ask({ messages: [{ role: 'user', content: 'What next?' }] })],
@@ -237,7 +292,7 @@ describe('mock mode', () => {
     vi.stubGlobal('fetch', () => Promise.reject(new Error('mock mode used the network')));
     const connect = vi.spyOn(net.Socket.prototype, 'connect');
     await db.query(`DELETE FROM "ModelCall"`);
-    const upstream = upstreamFor('', dir);
+    const upstream = upstreamFor({}, dir);
     expect(upstream.spends).toBe(false);
     const post = factory(upstream);
     for (const [i, [role, body]] of calls.entries()) {
@@ -263,8 +318,8 @@ describe('mock mode', () => {
   });
 
   it('refuses a request that differs from the recording', async () => {
-    await factory(live(fakeModel(), dir))('run1', 'scout', ask());
-    const post = factory(upstreamFor('', dir));
+    await factory(live({ anthropic: fakeModel() }, dir))('run1', 'scout', ask());
+    const post = factory(upstreamFor({}, dir));
     const r = await post('run1', 'scout', ask({ max_tokens: 999 }));
     expect(r.statusCode).toBe(400);
     expect(r.json().error.message).toBe('call 1 differs from the recording');
@@ -285,9 +340,17 @@ describe('mock mode', () => {
           },
         ],
       });
-    await factory(live(fakeModel(), dir))('run1', 'supervisor', shot('AAAA', 'Page one'));
-    await factory(live(fakeModel(), dir))('run2', 'supervisor', shot('AAAA', 'Page one'));
-    const post = factory(upstreamFor('', dir));
+    await factory(live({ anthropic: fakeModel() }, dir))(
+      'run1',
+      'supervisor',
+      shot('AAAA', 'Page one'),
+    );
+    await factory(live({ anthropic: fakeModel() }, dir))(
+      'run2',
+      'supervisor',
+      shot('AAAA', 'Page one'),
+    );
+    const post = factory(upstreamFor({}, dir));
     // The page moved and its text changed between the recording and the replay: still the same call.
     expect((await post('run1', 'supervisor', shot('BBBB', 'Page one, redrawn'))).statusCode).toBe(
       200,
@@ -314,17 +377,77 @@ describe('each role’s model', () => {
     expect(DEFAULT_ROLES.lessons).toEqual(DEFAULT_ROLES.supervisor);
   });
 
-  it('comes from the settings, and a provider not yet supported is refused', async () => {
-    const roles = settings({ FACTORY_SUPERVISOR_EFFORT: 'max', FACTORY_SCOUT_MODEL: 'other' });
+  it('comes from the settings: Anthropic or OpenAI, and no other provider', () => {
+    const roles = settings({
+      FACTORY_SUPERVISOR_EFFORT: 'max',
+      FACTORY_SCOUT_PROVIDER: 'openai',
+      FACTORY_SCOUT_MODEL: 'gpt-test',
+    });
     expect(roles.supervisor.effort).toBe('max');
     expect(roles.lessons.effort).toBe('max');
-    expect(roles.scout.model).toBe('other');
-    expect(() => settings({ FACTORY_SCOUT_PROVIDER: 'openai' })).toThrow(ConfigError);
+    expect(roles.scout).toEqual({ provider: 'openai', model: 'gpt-test', effort: 'low' });
+    expect(() => settings({ FACTORY_SCOUT_PROVIDER: 'google' })).toThrow(ConfigError);
+  });
+});
 
-    // The gateway sets the configured effort; a model with no price is refused.
-    const post = factory(live(fakeModel(), dir, roles));
-    await post('run1', 'supervisor', ask());
-    expect((sent[0]!.output_config as { effort: string }).effort).toBe('max');
-    expect((await post('run1', 'scout', ask({ model: 'other' }))).statusCode).toBe(400);
+describe('the OpenAI route', () => {
+  const openai = (ledger?: Ledger) =>
+    factory(live({ anthropic: fakeModel(), openai: fakeOpenAI() }, dir), ledger, 'openai');
+
+  it('is metered as Anthropic’s is: the cost recorded after, at the model’s price', async () => {
+    const r = await openai()('run1', 'scout', chat());
+    expect(r.statusCode).toBe(200);
+    expect(r.headers['content-type']).toMatch(/^text\/event-stream/);
+    expect(r.body).toBe(CHAT_SSE);
+    // The usage is always asked for, so the call can be metered.
+    expect(sent[0]!.stream_options).toEqual({ include_usage: true });
+    const rows = await db.query(
+      `SELECT role, model, "tokensIn" AS "in", "tokensOut" AS out, "tokensCached" AS cached,
+              "costUsd"::text AS usd FROM "ModelCall"`,
+    );
+    // 800 tokens at $2, 200 cached at $0.20 and 500 out at $10 a million: $0.00664, rounded up.
+    expect(rows.rows).toEqual([
+      { role: 'scout', model: 'gpt-test', in: 1000, out: 500, cached: 200, usd: '0.0067' },
+    ]);
+  });
+
+  it('checks the budget before the call, and refuses a model with no price or a server tool', async () => {
+    const post = openai();
+    await spent('run1', 23.5);
+    // 64,000 output tokens could cost $0.64 at $10 a million: past the $0.50 left before the lessons.
+    const big = await post('run1', 'scout', chat({ max_completion_tokens: 64_000 }));
+    expect(big.statusCode).toBe(402);
+    expect(big.json().error.type).toBe('billing_error');
+    const unpriced = await post('run1', 'scout', chat({ model: 'gpt-unknown' }));
+    expect(unpriced.statusCode).toBe(400);
+    expect(unpriced.json().error.message).toBe('no known price for model gpt-unknown');
+    expect(
+      (await post('run1', 'scout', chat({ max_completion_tokens: undefined }))).statusCode,
+    ).toBe(400);
+    expect((await post('run1', 'scout', chat({ web_search_options: {} }))).statusCode).toBe(400);
+    expect((await post('run1', 'scout', chat({ service_tier: 'priority' }))).statusCode).toBe(400);
+    expect((await post('run1', 'scout', chat(), 'wrong-token')).statusCode).toBe(401);
+    expect(sent).toHaveLength(0);
+    expect((await post('run1', 'scout', chat())).statusCode).toBe(200);
+  });
+
+  it('refuses a provider with no key in live mode, and replays in mock mode without the network', async () => {
+    const keyless = factory(live({ anthropic: fakeModel() }, dir), undefined, 'openai');
+    const r = await keyless('run1', 'scout', chat());
+    expect(r.statusCode).toBe(401);
+    expect(r.json().error.message).toBe('OPENAI_API_KEY is not set');
+
+    const recorded = (await openai()('run1', 'scout', chat())).body;
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('mock mode used the network')));
+    const connect = vi.spyOn(net.Socket.prototype, 'connect');
+    const post = factory(upstreamFor({}, dir), undefined, 'openai');
+    const again = await post('run1', 'scout', chat());
+    expect(again.statusCode).toBe(200);
+    expect(again.body).toBe(recorded);
+    expect(connect).not.toHaveBeenCalled();
+    // The same bytes on the other provider's route are not the recording's.
+    await rm(join(dir, 'run1.jsonl'));
+    await openai()('run1', 'scout', chat());
+    expect((await factory(upstreamFor({}, dir))('run1', 'scout', chat())).statusCode).toBe(400);
   });
 });
