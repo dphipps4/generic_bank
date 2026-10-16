@@ -154,6 +154,12 @@ up: env image
     @just credentials
     @just urls
 
+# Open Swagger UI, the Console and the staff inbox in the browser
+[group('Run')]
+open:
+    @open "http://localhost:$API_PORT/docs" "http://localhost:$CONSOLE_PORT" "http://localhost:$BANK_INBOX_PORT" 2>/dev/null \
+      || echo "  Open http://localhost:$API_PORT/docs, http://localhost:$CONSOLE_PORT and http://localhost:$BANK_INBOX_PORT"
+
 # Stop everything (data is kept), or only some groups: just down console bank
 [group('Run')]
 down *groups:
