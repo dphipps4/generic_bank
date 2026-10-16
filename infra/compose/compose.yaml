@@ -1,5 +1,5 @@
 # Generic Bank, locally. Every service has a memory limit (the whole base stack fits in
-# about 2.5 GB), and networks enforce who may reach whom:
+# about 3.3 GB), and networks enforce who may reach whom:
 #   app      box A to box B          data     box B only (no route out)
 #   world    the banks, reached by the runner (and later the factory's browser)
 #   bankdb   the banks and their own database only (no route out)
@@ -164,7 +164,9 @@ services:
     image: ${GB_RUNNER_IMAGE}
     command: ['node', 'apps/runner/dist/main.js']
     ports: ['127.0.0.1:${RUNNER_PORT}:8100']
-    mem_limit: 768m
+    # Two runs at a time (RUNNER_CONCURRENCY), each with its own browser: a transfer waiting for
+    # approval holds one and never holds up the other tasks.
+    mem_limit: 1536m
     env_file: [../../config/app.env, ../../.run/env/runner.env]
     # Not a dependency: runs never wait on memory; their episodes wait in the outbox instead.
     environment: { MEMORY_URL: 'http://memory:8470' }
