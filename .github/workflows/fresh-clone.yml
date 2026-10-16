@@ -14,8 +14,6 @@ on:
       - 'package-lock.json'
       - 'config/app.env'
       - '.github/workflows/fresh-clone.yml'
-  schedule:
-    - cron: '47 9 * * *'
   workflow_dispatch:
 
 permissions:

@@ -34,4 +34,10 @@ describe('loadConfig', () => {
       ]),
     ).toThrow(/must differ/);
   });
+
+  it('lets two optional secrets both be blank', () => {
+    const optional = { A_KEY: z.string().optional(), B_KEY: z.string().optional() };
+    const cfg = loadConfig(optional, { A_KEY: '', B_KEY: '' }, ['A_KEY', 'B_KEY']);
+    expect(cfg).toEqual({ A_KEY: '', B_KEY: '' });
+  });
 });

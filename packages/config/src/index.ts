@@ -33,6 +33,8 @@ export function loadConfig<S extends z.ZodRawShape>(
   const clashes: string[] = [];
   for (const key of secretKeys) {
     const value = data[key];
+    // Two optional secrets left blank (no model key yet) are not the same secret twice.
+    if (value === undefined || value === '') continue;
     const earlier = seen.get(value);
     if (earlier) clashes.push(`${key}: must differ from ${earlier}`);
     else seen.set(value, key);
