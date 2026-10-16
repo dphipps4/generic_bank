@@ -6,7 +6,8 @@ import { type Harness, stallsAt, transferHarness, until } from './transfer-harne
 // The swallowed-submit protocol (plan, §F.2, §D.4): the submit is never retried blindly. An unclear
 // result reads the history; a run that resumes after its journaled submit goes to the history and
 // never to the button; a run that lost its browser while parked signs in fresh and checks the
-// screen against the grant. The bank's ledger is the judge: never two postings for one grant.
+// screen against the grant. The bank's ledger is the judge: never two postings for one grant. The
+// swallowed submit itself, which waits out the bank's endless "Processing" page, is in tests/long.
 
 let h: Harness;
 beforeAll(async () => {
@@ -20,23 +21,6 @@ const presses = async (runId: string) =>
   (await h.journalOf(runId)).filter((l) => l.intent.startsWith('press ') && !l.result);
 
 describe('the swallowed-submit protocol', () => {
-  it('a swallowed submit is read from the history, never pressed again: one posting', async () => {
-    const { runId, memoToken } = await h.start({ amountCents: 2_500 });
-    const done = h.execute(runId, { headers: h.bank.forced(['swallowed-submit']) });
-    expect(await h.act(await h.approval(runId), 'approve')).toBe(200);
-    // The confirmation never came, so the reference is the one read from the history.
-    expect(await done).toMatchObject({
-      status: 'succeeded',
-      data: { confirmation: memoToken, seenInHistory: true },
-    });
-    expect(await h.postings(memoToken)).toBe(1);
-    // One intent, one press.
-    expect((await presses(runId)).map((l) => l.action)).toEqual([null, 'pressed']);
-    expect(await h.journalOf(runId)).toContainEqual(
-      expect.objectContaining({ intent: 'find the memo token in the history', result: '1 found' }),
-    );
-  }, 300_000);
-
   it('a browser killed while parked: a fresh sign-in after approval, checked against the grant, one posting', async () => {
     const { runId, memoToken } = await h.start({ amountCents: 3_100 });
     const before = h.browsers.length;
