@@ -375,6 +375,8 @@ ground under it does:
   and destroyed after.
 - **Access:** no public SSH; Tailscale only; people sign in with Google (Console roles from
   Google groups, four-eyes approvals).
+- **Edge:** the Task API sits behind Cloudflare (a tunnel, a firewall, rate limits); nothing else
+  is public.
 - **Secrets:** Vault replaces SOPS for the staff credentials and the trusted-workstation
   cookies. They are read at the moment of typing, and they are dynamic, short-lived and rotated.
 - **Encryption** at rest and in flight everywhere, keys in Vault; banks 2 to 4 on real HTTPS.
