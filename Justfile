@@ -68,6 +68,7 @@ plan-html:
 [group('Start here')]
 setup: requirements tools secrets-init build env
     @echo; echo "Ready. Next: just up, then open http://localhost:$CONSOLE_PORT"; echo "Console sign-in: $CONSOLE_ADMIN_EMAIL, password: just console-password"
+    @{{scripts}}/model-mode.sh
 
 # Once, to develop: Node dependencies, the Prisma client, Chromium for the tests
 [group('Start here')]
@@ -178,7 +179,9 @@ urls:
       echo "  Staff inbox    http://localhost:$BANK_INBOX_PORT  (sign-in and approval codes)"; \
       echo "  MinIO          http://localhost:$MINIO_CONSOLE_PORT"; \
       echo "  Vault          http://localhost:$VAULT_PORT/ui"; \
-      echo; echo "  Every URL: ACCESS.md. Logins: secrets/credentials.txt"; echo
+      echo; echo "  Every URL: ACCESS.md. Logins: secrets/credentials.txt"
+    @{{scripts}}/model-mode.sh
+    @echo
 
 # Write secrets/credentials.txt: every login and token for HTTP access (never committed)
 [group('Run')]
