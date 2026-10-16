@@ -251,8 +251,9 @@ model ModelCall {
   factoryRun    FactoryRun @relation(fields: [factoryRunId], references: [id])
   role          String
   model         String
-  promptId      String
-  promptVersion Int
+  // Set once prompts are reviewed files (Appendix O).
+  promptId      String?
+  promptVersion Int?
   tokensIn      Int
   tokensOut     Int
   tokensCached  Int        @default(0)
