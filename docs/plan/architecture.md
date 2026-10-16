@@ -1,9 +1,8 @@
 # Generic Bank Architecture
 
-> **The boxes named here:** box A runs the application (Task API, Console, workflows, the
-> Runner); box B holds every durable thing (Postgres, object storage, Memory); box D is
-> the software factory, created for a session and destroyed after. The four banks are the
-> outside world.
+> **The boxes:** box A runs the application (Task API, Console, workflows, the Runner). Box B
+> holds everything that lasts (Postgres, object storage, Memory). Box D is the software factory;
+> it's created for a session and destroyed after. The four banks are the outside world.
 
 ---
 
@@ -12,16 +11,17 @@
 An AI agent asks for a typed task (check a balance, prepare a transfer, fetch statements) at a
 bank whose staff website has no API. The system works the website the way a person would and
 hands back a typed result. When it can't go on safely, it stops and passes the work to a person,
-along with the pictures of what it saw.
+with pictures of what it saw.
 
 **Models build, runs stay deterministic, and people move money.** A customer's task runs
-reviewed TypeScript, a driver someone approved, with no model in it; models only work in the
-software factory. Nothing presses a money button without a person's one-time approval of exactly
-that transfer. When in doubt, a run stops.
+reviewed TypeScript: a driver someone approved, with no model in it. Models only work in the
+software factory. Nothing presses a money button until a person approves that exact transfer,
+once. When in doubt, a run stops.
 
 - **The page is read the way a person reads it.** A driver asks for "the field labeled Amount",
   never a selector.
-- **One vendor, many banks.** One driver per vendor product; each bank on it is a profile.
+- **One vendor, many banks.** One driver per vendor product, and each bank on that product is a
+  profile.
 - **Small.** One Postgres, a workflow library and AdminJS, all on an 8 GB laptop.
 
 ---
@@ -30,42 +30,42 @@ that transfer. When in doubt, a run stops.
 
 ![Generic Bank: the shape in one picture](diagrams/system.svg)
 
-Box A holds no data of its own and can be rebuilt any time. Box B holds everything and can't
-reach out to anything. Box D runs code a model wrote and calls the model live, so it lives for one
-session, and its sandbox has no way out at all. Only people and tests can read the fake staff
+Box A holds no data of its own and can be rebuilt any time. Box B holds everything but can't
+reach out to anything. Box D runs code a model wrote and calls the model live. That's why it lasts
+one session and its sandbox has no way out at all. Only people and tests can read the fake staff
 inbox, so a sign-in code is always a human step.
 
 ---
 
 ## Generic Bank (the target)
 
-The target is a deliberately unfriendly staff console, **CoreLink Branch Console**, from the
-made-up vendor Acme Core Systems. It runs as four banks: the same product, each with its own
-words, look and quirks. The crawler signs in as staff, with one service account per bank, never
-as a member.
+The target is **CoreLink Branch Console**, a staff console from the made-up vendor Acme Core
+Systems, and it's unfriendly on purpose. It runs as four banks: one product, each with its own
+words, look and quirks. The crawler signs in as staff, with one service account per bank. It never
+signs in as a member.
 
-Each bank has a real double-entry ledger, staff with roles and one-time sign-in codes,
-statements built from the ledger, and a hazard engine that throws the faults real banks throw:
-slow pages, script errors, outages, dialogs, expired sessions, and a submit that seems to vanish.
-Hazards strike at random, or a test forces exactly the ones it wants with a signed header. Every
-hazard is logged on the bank's side, and that log, the ledger, and a counter of state changes are
-how tests judge what really happened. A redesign switch (`BANK_REDESIGN`) gives a bank a new
-look and new words, so the factory's repair can be shown.
+Each bank has a real double-entry ledger, staff with roles and one-time sign-in codes, and
+statements built from the ledger. It also has a hazard engine that throws the faults real banks
+throw: slow pages, script errors, outages, dialogs, expired sessions, and a submit that seems to
+vanish. Hazards strike at random, or a test forces exactly the ones it wants with a signed header.
+The bank logs every hazard on its side. Tests judge what really happened from that log, the ledger
+and a counter of state changes. A redesign switch (`BANK_REDESIGN`) gives a bank a new look and new
+words, so we can show the factory's repair at work.
 
-Appendix A has the four banks side by side, and the screens a staff member walks through.
+Appendix A puts the four banks side by side and walks through the screens a staff member sees.
 
 ---
 
 ## Task API and the workflow engine
 
-One typed task goes in, one durable workflow runs it, and one typed result comes out. The same
-request twice is the same run. The caller never sees the bank's screens, a selector, a screenshot
-or any text from the page; it gets one fixed sentence per result code.
+One typed task goes in, one durable workflow runs it, and one typed result comes out. Send the
+same request twice and you get the same run. The caller never sees the bank's screens, a selector,
+a screenshot or any text from the page. It gets one fixed sentence per result code.
 
 Each task is a DBOS workflow stored in Postgres, and every side effect is a recorded step. A run
-first prepares (signs in, asks a person for a code if the bank wants one, finds the accounts,
-reads), then does the one step that matters, then checks the result. When it needs a person it
-waits, durably, until someone answers or the deadline passes. Appendix B lists the endpoints and
+prepares first: it signs in, asks a person for a code if the bank wants one, finds the accounts and
+reads. Then it does the one step that matters and checks the result. When it needs a person, it
+waits (durably) until someone answers or the deadline passes. Appendix B lists the endpoints and
 every result a run can end in.
 
 ---
@@ -73,23 +73,23 @@ every result a run can end in.
 ## The Runner
 
 The Runner is the crawler. It runs one task at a time in one Chromium browser, through a promoted
-driver and the guardrails, and nothing else touches a bank in production.
+driver and the guardrails. In production, nothing else touches a bank.
 
-The browser runs the bank's own scripts. After every action the Runner waits until the page is
-ready: the expected screen is there, something on it can be pressed, nothing says it is still
+The browser runs the bank's own scripts. After every action the Runner waits for the page to be
+ready: the expected screen is there, something on it can be pressed, nothing says it's still
 loading, and its frames have loaded. Then it reads the page from outside, without injecting any
-script: the layout of every frame, the accessibility tree and a screenshot. From those it builds
-a **screen model**, the controls and text a person would see, with anything hidden, transparent
-or covered left out.
+script. It takes the layout of every frame, the accessibility tree and a screenshot, and builds a
+**screen model** from them: the controls and text a person would see. Anything hidden,
+transparent or covered is left out.
 
-With the screen model the Runner does three things. It recognizes which screen this is, and
-exactly one must match or the run stops. It finds what to act on by meaning ("the field labeled
-Amount", "the button Submit transfer"). And it covers personal information before anything is
-saved (see Evidence and PII removal).
+The Runner uses the screen model for three things. It recognizes which screen it's on; exactly one
+must match, or the run stops. It finds what to act on by meaning ("the field labeled Amount", "the
+button Submit transfer"). And it covers personal information before anything is saved (see
+Evidence and PII removal).
 
-A **driver** is written once per vendor product, as a small state machine over named screens; a
+A **driver** is written once per vendor product, as a small state machine over named screens. A
 **profile** fills in one bank's words, account format and limits. Steps have time limits, and a
-watchdog ends a run that goes quiet for three minutes.
+watchdog ends any run that goes quiet for three minutes.
 
 ---
 
@@ -97,75 +97,82 @@ watchdog ends a run that goes quiet for three minutes.
 
 ![A transfer: prepared by automation, approved by a person, one click](diagrams/transfer.svg)
 
-Money moves only when a person approves exactly this transfer, and an unclear submit is never
-repeated.
+Money moves only when a person approves this exact transfer. An unclear submit is never repeated.
 
-The Runner fills in the transfer and stops on the bank's review page, holding it. The person sees
-the review page (with personal details covered) and the values the Runner read, and approves with
-a reason. That approval issues a one-time grant for this run, these accounts, this amount and
-this memo, good for five minutes. The Runner checks the screen still matches the grant, writes
-down that it's about to press, presses once, and the grant is used up.
+The Runner fills in the transfer and holds on the bank's review page. A person sees that page, with
+personal details covered, next to the values the Runner read, and approves with a reason. The
+approval issues a one-time grant for this run, these accounts, this amount and this memo. It's good
+for five minutes. The Runner checks that the screen still matches the grant, writes down that it's
+about to press, and presses once. That uses up the grant.
 
 If the bank shows a confirmation number, that's the answer. If it doesn't, the Runner never
-presses again: it reads the account's history for the transfer's memo marker. Found once, it
-succeeded; found twice or not at all, a person looks. A run whose browser was lost while waiting
-signs in again and checks the review page against the grant before it presses.
+presses again. It searches the account's history for the transfer's memo marker. Found once, the
+transfer succeeded; found twice or not at all, a person looks. If a run loses its browser while
+waiting, it signs in again and checks the review page against the grant before it presses.
 
 ---
 
 ## Guardrails
 
 Every safety rule is code in `packages/guardrails`, which imports nothing from the drivers, the
-Runner or the factory; prompts only repeat the rules.
+Runner or the factory. Prompts only repeat the rules.
 
-Before any click or key press, six checks run in order: is this action part of the task at all;
-is the request going to the bank's own site; does the control's visible name mean moving money or
-changing an account; is this a money or account page; for the one money click, is there a valid
-grant; and afterward, did a confirmation appear that shouldn't have. Any refusal stops the run,
-writes it down, freezes that bank until a person clears it, and tells someone.
+Before any click or key press, six checks run in order:
 
-Credentials are SOPS secrets only the Runner receives; they are typed and never come back out. Sign-ins are capped per day. The
-guards judge the controls themselves, so instructions planted in a page's text change nothing.
-A guard error always stops the run, and a lint rule forbids catching one.
+1. Is this action part of the task at all?
+2. Is the request going to the bank's own site?
+3. Does the control's visible name mean moving money or changing an account?
+4. Is this a money or account page?
+5. For the one money click, is there a valid grant?
+6. Afterward, did a confirmation appear that shouldn't have?
+
+Any refusal stops the run, gets written down, freezes that bank until a person clears it, and tells
+someone.
+
+Credentials are SOPS secrets that only the Runner receives. They're typed, and they never come back
+out. Sign-ins are capped per day. The guards judge the controls themselves, so instructions planted
+in a page's text change nothing. A guard error always stops the run, and a lint rule forbids
+catching one.
 
 ---
 
 ## How failures are handled
 
-Every failure ends up in one of four places. **The bank said no** for a reason a member would
+Every failure lands in one of four places. **The bank said no** for a reason a member would
 understand (no such member, insufficient funds): the run stops and reports it. **Something went
-wrong that the run can fix** (a slow page, a dialog, an expired session): it fixes it, within a
+wrong that the run can fix** (a slow page, a dialog, an expired session): it fixes it, up to a
 limit, and writes down what it did. **Something broke for good** (the bank is down, the password
 is wrong): the run stops cleanly and says whether trying again might help. **The run can't go on
 safely** (a screen it doesn't know, an unclear submit): it stops where it is and hands the work
 to a person with everything they need.
 
-Three rules hold throughout. Only reads are retried, at most twice. A run that ends badly ends
-with a picture of where it stopped. And when a guard, the secret store or the spend meter is
-missing, nothing acts.
+Three rules always hold. Only reads are retried, at most twice. A run that goes wrong finishes with
+a picture of where it stopped. And when a guard, the secret store or the spend meter is missing,
+nothing acts.
 
 ### Failures in the bank
 
-Sign-in trouble stops the run or asks a person: a wrong password stops at once, a locked operator
-freezes the bank's sign-ins, and a sign-in code goes to a person. When the bank refuses something
-in its own words (no member, a closed member, insufficient funds, a restricted account), that's
-the answer the caller gets. When the bank is slow or briefly broken, the run waits or tries a
-read again, then gives up in a way that says a retry may help. When the page is something the run
-doesn't recognize, it stops and escalates rather than guess.
+Sign-in trouble either stops the run or asks for help. A wrong password stops it at once, a locked
+operator freezes the bank's sign-ins, and a sign-in code goes to a person. When the bank refuses
+something in its own words (no member, a closed member, insufficient funds, a restricted account),
+that's the answer the caller gets. If the bank is slow or briefly broken, the run waits or retries
+a read, then gives up with a result that says a retry may help. A page the run doesn't recognize
+makes it stop and escalate. It never guesses.
 
 ### Failures in our own system
 
-A crashed worker or browser picks up at the last finished step; a crash between deciding to press
-submit and seeing the result goes to the history check, never to a second press. A run that
-stalls is ended with a final picture. A person who never answers lets the deadline end the run.
-When Postgres, object storage or memory is down, the system refuses new work, stops before
-signing in, keeps pictures on disk until it can upload them, or queues memory's records for
-later, as each case calls for.
+A crashed worker or browser picks up at the last finished step. If the crash came between deciding
+to press submit and seeing the result, the run goes to the history check, never to a second press.
+A stalled run is ended with a final picture. If a person never answers, the deadline ends the run.
+When Postgres, object storage or memory is down, the system does what each case calls for: it
+refuses new work, stops before signing in, keeps pictures on disk until it can upload them, or
+queues memory's records for later.
 
 ### Failures in the factory
 
-Model errors are retried within the caps; at a cap, or after the same failure twice, the factory
-stops and hands back what it knows. A tool the role isn't allowed is refused and recorded.
+Model errors are retried within the caps. At a cap, or after the same failure twice, the factory
+stops and hands back what it knows. If a role calls a tool it isn't allowed, the call is refused
+and recorded.
 
 Appendix C has every case: what notices it, what the system does, and what the caller sees.
 
@@ -179,29 +186,28 @@ and a record of what was on it: its visible text and controls, as JSON. It also 
 happened, the answers people gave, and every guard decision. A run keeps its evidence however it
 ends, and its last picture shows where it stopped.
 
-**What it's for.** People use it to see what happened: the Console's Frames button on a run shows
-every page, one at a time. An approver sees the bank's own review page before approving a
-transfer, and the factory's recommendations each come with the pages that back them up. The
-agents use it too: the Supervisor decides the next step by looking at the latest picture and
-page record, every claim it makes about a bank must point at pictures from its own run, and a
+**What it's for.** People use it to see what happened. The Frames button on a run in the Console
+steps through every page, one at a time. An approver sees the bank's own review page before
+approving a transfer, and each of the factory's recommendations comes with the pages that back it
+up. The agents use it too. The Supervisor picks the next step by looking at the latest picture and
+page record, and every claim it makes about a bank must point at pictures from its own run. A
 repair starts from the pictures of the run that failed.
 
 **PII removal.** Nothing personal is saved. Before a picture is stored, every piece of personal
 information on it is covered with a white box: names, account numbers, amounts, codes,
 passwords, emails, phone numbers and addresses, along with anything typed into a field and any
 image the system can't read. The page record gets the same treatment. The system knows the
-member's details before the run starts, so it covers those wherever they show up, and it also
-covers anything that looks like an account number, an amount, an email or a phone number. If it
-can't be sure a picture is clean, it doesn't keep the picture, only a note saying why. Logs are
-scrubbed the same way. A test suite (the PII scan) runs every task, then searches everything that
-was saved, every database row, file and log line, for the seeded personal details; one hit fails
-it.
+member's details before the run starts, so it covers them wherever they show up. It also covers
+anything that looks like an account number, an amount, an email or a phone number. If it can't be
+sure a picture is clean, it keeps only a note saying why, not the picture. Logs are scrubbed the
+same way. A test suite, the PII scan, runs every task and then searches everything saved (every
+database row, file and log line) for the seeded personal details. One hit fails it.
 
 ---
 
 ## Observability
 
-What is saved, all of it in Postgres and on this machine:
+What gets saved, all of it in Postgres and on this machine:
 
 - **For every task run:** each step (screen, action, outcome, how long), each picture and page
   record, every recovery and the hazard behind it, every guard decision, every network request
@@ -213,26 +219,26 @@ What is saved, all of it in Postgres and on this machine:
   holds a field value, credential, code, account number, amount or name, and the PII scan checks
   the logs too.
 
-Every row and log line carries the run's id and its step, so either leads to the other. The
+Every row and log line carries the run's id and its step, so either one leads to the other. The
 Console's pages read these records. Traces, `just trace` and `just observe` are Part 2.
 
 ---
 
 ## The Console
 
-The Console is where people step in, built on AdminJS over the database models. It shows runs,
-steps, human tasks, drivers and their versions, factory runs and model calls, repair cases,
+The Console is where people step in. It's built on AdminJS over the database models and lists
+runs, steps, human tasks, drivers and their versions, factory runs and model calls, repair cases,
 freezes and the journal, newest first, with filters and search. Its own pages add the inbox
 (answer a code, approve, reject, take over), each run's frames, the hazard lab, the factory's
-recommendations, freezes, and buttons for promoting, rolling back, freezing and unfreezing, each
-of which needs a written reason.
+recommendations and freezes. There are buttons to promote, roll back, freeze and unfreeze, and
+each one needs a written reason.
 
-There are three roles: viewer, approver and admin. Pictures are shown only if they passed PII
-removal; a withheld one shows its reason instead. Two people answering the same task: the first
-wins, and the second is told who got there first.
+There are three roles: viewer, approver and admin. A picture shows only if it passed PII removal;
+a withheld one shows its reason instead. If two people answer the same task, the first wins and
+the second is told who got there first.
 
 A driver moves through draft, candidate, probation and promoted. Faults in real use demote it,
-and the previous version serves again. A guard trip freezes a bank until a person clears it.
+and the previous version takes over again. A guard trip freezes a bank until a person clears it.
 
 ![A driver's life: from draft to promoted, and back through repair](diagrams/driver-states.svg)
 
@@ -242,74 +248,78 @@ and the previous version serves again. A guard trip freezes a bank until a perso
 
 ![The software factory: two agents learn a bank, a person approves, the bank's own results decide](diagrams/factory.svg)
 
-Given a bank and a task, the factory makes a driver version a person approves. It has two
-agents, on **pi** ([pi.dev](https://pi.dev)), an open-source harness that can talk to any model
-provider; the provider and model for each role are configuration. pi reaches the model only
-through our metering gateway, and every tool call is checked against the role's list first, so
-spend, caps and the allowed tools stay in our code.
+Give the factory a bank and a task, and it makes a driver version for a person to approve. It has
+two agents running on **pi** ([pi.dev](https://pi.dev)), an open-source harness that can talk to
+any model provider. The provider and model for each role are set in configuration. pi reaches the
+model only through our metering gateway, and every tool call is checked against the role's list
+first. That keeps spend, caps and the allowed tools in our code.
 
-The **Scout** navigates: one simple browser step at a time, as the Supervisor directs. The
-**Supervisor** looks at every page the Scout reaches, the picture and the page record, decides
-the next step toward the goal, and when the goals are reached drafts the bank's profile. Every
-claim in the draft points at the pictures that show it and says whether it was seen there or is
-a guess. A person approves the draft in the Console, ticking any guess they accept. The approved
-profile is then run against the bank with each hazard forced, then on probation, and two clean
-runs promote it. When a promoted driver later fails because the bank changed, it is demoted, a
-repair case opens, and the factory starts again from the old profile and the pictures of the
-failing run.
+The **Scout** navigates, one simple browser step at a time, as the Supervisor directs. The
+**Supervisor** looks at every page the Scout reaches (the picture and the page record) and decides
+the next step toward the goal. Once the goals are reached, it drafts the bank's profile. Every
+claim in the draft points at the pictures that show it and says whether it was seen there or is a
+guess. A person approves the draft in the Console and ticks any guess they accept. The approved
+profile then runs against the bank with each hazard forced, then goes on probation; two clean runs
+promote it. If a promoted driver later fails because the bank changed, it's demoted, a repair case
+opens, and the factory starts again from the old profile and the pictures of the failing run.
 
 Neither agent can move money, run script in a page, send a request of its own or leave the bank's
-site; transfer work stops at the review page, and the money buttons are refused in code. Each run
-is capped: $25, $150 a rolling week, and limits on turns, sign-ins and hours. With no API key the
-factory replays a recorded run, so it costs nothing. Appendix E has the roles and the evaluation
-ladder.
+site. Transfer work stops at the review page, and code refuses the money buttons. Spend is capped
+at $25 a run and $150 a rolling week, and each run has limits on turns, sign-ins and hours. With
+no API key, the factory replays a recorded run and costs nothing. Appendix E has the roles and the
+evaluation ladder.
 
 ### Memory: how the factory remembers
 
 Memory is how the factory's agents remember. Without it, every factory job starts from zero and
-rediscovers what the last one learned. With it, the factory learns from each job, from its
-successes and its mistakes, and from every crawler it has shipped.
+learns again what the last one already knew. With it, the factory learns from each job (what went
+right and what went wrong) and from every crawler it has shipped.
 
-It keeps four kinds of thing: **episodes** (what happened: a run, its attempts, the outcome and
-evidence; always trusted, because it's a record), **hypotheses** (what an agent believes but
-hasn't proven; never served as truth), **facts** (typed claims proven by a run that succeeded),
-and **lessons** (advice for future jobs, with their evidence and scope, trusted once confirmed).
+It keeps four kinds of thing:
 
-Episodes are episodic memory, facts are semantic memory, and lessons, with the curated rules,
-checks, scenarios and approaches, are procedural memory. A lesson's scope is one bank, every
-bank on the same product, or everywhere. The last is a pattern: the most valuable kind and the
-most dangerous, so only a person can approve one.
+- **Episodes:** what happened (a run, its attempts, the outcome and evidence). Always trusted,
+  because they're records.
+- **Hypotheses:** what an agent believes but hasn't proven. Never served as truth.
+- **Facts:** typed claims proven by a run that succeeded.
+- **Lessons:** advice for future jobs, with their evidence and scope. Trusted once confirmed.
+
+Episodes are episodic memory, facts are semantic memory, and lessons (along with the curated
+rules, checks, scenarios and approaches) are procedural memory. A lesson covers one bank, every
+bank on the same product, or everywhere. One that covers everywhere is a pattern. Patterns are the
+most valuable kind and the most dangerous, so only a person can approve one.
 
 ![Memory: who reads and writes, through one door](diagrams/memory.svg)
 
-Code writes the episodes and facts; the only thing a model writes is a lesson proposal, from the
-Supervisor. Fixed rules, not models, decide what a lesson becomes: a near-duplicate merges into
-the one already held; a driver's promotion confirms the lessons its probation runs relied on; one
-contradiction disputes a lesson and two retire it; a lesson confirmed at two banks of a vendor
-widens to the vendor, and one proven across three vendors becomes a pattern candidate a person
-approves. Every write adds a row to a hash-chained change log.
+Code writes the episodes and facts. The only thing a model writes is a lesson proposal, and those
+come from the Supervisor. Fixed rules, not models, decide what a lesson becomes:
 
-A factory run starts from a **knowledge pack**: the patterns, then the vendor's lessons, then the
-bank's, then the proposed ones (marked "verify before relying") and the disputed ones (with the
-reason), plus recurring failures and the two nearest working drivers as examples. When the
-factory explores a new bank on a product it already knows, the pack already carries what the last
-bank taught it.
+- A near-duplicate merges into the lesson already held.
+- A driver's promotion confirms the lessons its probation runs relied on.
+- One contradiction disputes a lesson; two retire it.
+- A lesson confirmed at two banks of a vendor widens to the vendor.
+- A lesson proven across three vendors becomes a pattern candidate, which a person approves.
+
+Every write adds a row to a hash-chained change log.
+
+A factory run starts from a **knowledge pack**. It holds the patterns first, then the vendor's
+lessons, then the bank's, then the proposed ones (marked "verify before relying") and the disputed
+ones (with the reason). It adds recurring failures and the two nearest working drivers as examples.
+So when the factory explores a new bank on a product it knows, the pack carries what the last bank
+taught it.
 
 - **Postgres is the store,** in its own `memory` database that only the Memory service opens.
-  Episodes, versions and the change log are written in plain SQL by code, with no model in the
-  loop.
-- **Facts are bi-temporal rows** (`valid_at`, `invalid_at`, `expired_at`): closed, never
-  deleted, so memory can say what was believed at the time of any past run.
-- **Search is hybrid:** full-text ranking and pgvector similarity, fused by reciprocal rank,
+  Code writes episodes, versions and the change log in plain SQL, with no model in the loop.
+- **Facts are bi-temporal rows** (`valid_at`, `invalid_at`, `expired_at`). An old fact is closed,
+  never deleted, so memory can say what it believed at the time of any past run.
+- **Search is hybrid:** full-text ranking plus pgvector similarity, merged by reciprocal rank,
   with embeddings from a local model.
-- **Every writer holds a role token,** and writes are signed with a key only deterministic code
-  holds. No agent can promote its own belief into truth.
+- **Every writer holds a role token,** and writes are signed with a key that only deterministic
+  code holds. No agent can promote its own belief into truth.
 - **Provenance on every entry** (run, model, prompt versions, evidence hash), **nothing
   overwritten**, and a **privacy screen** on every write.
 
-Agents ask mid-run questions with one tool, `memory_query`. People read memory in the Console,
-which goes through the same API, so memory keeps one door. Appendix D has the API and its
-answers.
+Agents ask questions mid-run with one tool, `memory_query`. People read memory in the Console,
+which uses the same API, so memory has one door. Appendix D has the API and its answers.
 
 ---
 
@@ -322,7 +332,7 @@ Every package and why it was chosen: [techstack.md](techstack.md).
 ## Known Limitations
 
 - **Web only.** Desktop and terminal capture would plug into the same screen-model seam.
-- **One browser at a time** by default, to fit in 8 GB; concurrency is a setting.
+- **One browser at a time** by default, to fit in 8 GB. Concurrency is a setting.
 - **Hazards are ours.** Real vendors will have others.
 
 ---
@@ -336,18 +346,19 @@ Every package and why it was chosen: [techstack.md](techstack.md).
 | Sample Savings Bank (4.3, customized) | `localhost:8083/online/branch/` | Staff number, Member Inquiry, Internal Transfer, Post | bank 2 plus a notices frame; headings as images | "Acct 1234-5678-90" | $500 |
 | Placeholder FCU (4.4) | `127.0.0.1:8084/cu/ib/` | User, Search (popup results), Authorize | menu bar, no frameset; cross-origin sign-in iframe; two-page transfer | "··· 7890 (Checking)" | $2,000 |
 
-A staff member's path through a bank: a blank "Loading…" page that moves on by itself; the
-sign-in, which can say wrong password, locked or rate-limited; a sign-in code sent by text or
-email; a blank page that holds mid-sign-in; then the console, with its banner, menu and main
-area. From there, a member search (no member found, record in use, member closed), the member's
-summary with account tiles, and from a tile its activity (rows arrive late), statements (a PDF in
-a new window), or a transfer, which goes to a review page, a supervisor's approval over the
-threshold, and a confirmation number.
+A staff member's path through a bank starts at a blank "Loading…" page that moves on by itself.
+Next comes the sign-in, which can say wrong password, locked or rate-limited. Then a sign-in code
+arrives by text or email, and a blank page holds mid-sign-in. After that is the console, with its
+banner, menu and main area. From there the staff member runs a member search (no member found,
+record in use, member closed) and reaches the member's summary with account tiles. A tile leads to
+its activity (rows arrive late), its statements (a PDF in a new window) or a transfer. A transfer
+goes to a review page, then to a supervisor's approval if it's over the threshold, and ends with a
+confirmation number.
 
-Ambient hazards: latency of 250 ms to 1.8 s on every response; script errors (harmless 10%,
-widget 5%, fatal 2%); a 503 3%; a confirmation dialog 10%; a promotional page 10%; an early
-session expiry 2%. Forced only: a swallowed submit or click, late rows, an injected instruction,
-an unknown screen, and permission, not-found and validation errors.
+Ambient hazards: 250 ms to 1.8 s of latency on every response; script errors (harmless 10%,
+widget 5%, fatal 2%); a 503 at 3%; a confirmation dialog at 10%; a promotional page at 10%; an
+early session expiry at 2%. These happen only when forced: a swallowed submit or click, late rows,
+an injected instruction, an unknown screen, and permission, not-found and validation errors.
 
 ## Appendix B. The Task API
 
@@ -401,10 +412,10 @@ an unknown screen, and permission, not-found and validation errors.
 | Postgres down | new calls refused; running workflows pause and resume | HTTP 503 |
 | Object storage down | pictures wait on disk and upload later | nothing |
 | Memory down | runs continue; their records wait in an outbox; the factory won't start without its pack | nothing for tasks |
-| A picture can't be proven clean | not kept; the reason is | nothing |
+| A picture can't be proven clean | the picture isn't kept; the reason is | nothing |
 | No promoted driver | refused before a browser opens | `failed: no_driver` |
 | Invalid input | refused, naming the field | HTTP 400 |
-| Same idempotency key twice | the existing run | the same run |
+| Same idempotency key twice | returns the existing run | the same run |
 
 ### In the factory
 
@@ -458,5 +469,5 @@ A change log that fails verification puts Memory into read-only mode until a per
 | E5 probation | two clean production runs in 30 days | production |
 | E6 stability | success rate, recoveries used, typical and slow durations over many runs | production-like |
 
-The eval tool prints one JSON object and exits 0 (passed), 1 (failed) or 2 (couldn't run);
-"couldn't run" is never a pass.
+The eval tool prints one JSON object and exits 0 (passed), 1 (failed) or 2 (couldn't run).
+"Couldn't run" never counts as a pass.
