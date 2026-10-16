@@ -53,10 +53,12 @@ leave it red for this test.
 
 ```sh
 just up
+just open
 ```
 
-It takes about a minute and a half. It prints the logins (the same as
-`secrets/credentials.txt`), the URLs, and the factory line again.
+`just up` takes about a minute and a half. It prints the logins (the same as
+`secrets/credentials.txt`), the URLs, and the factory line again. `just open` opens Swagger UI,
+the Console and the staff inbox in the browser.
 
 ## 4. Sign in to the Console
 
