@@ -1,5 +1,6 @@
-// The software factory. With no ANTHROPIC_API_KEY and no OPENAI_API_KEY it runs in mock mode:
-// recorded answers are replayed and nothing reaches a model.
+// The software factory. With no model key it runs in mock mode: recorded answers are replayed and
+// nothing reaches a model. Any combination of ANTHROPIC_API_KEY, OPENAI_API_KEY and
+// OPENROUTER_API_KEY enables live mode for the providers whose keys are set.
 import { loadConfig, port, secret } from '@gb/config';
 import { sql } from '@gb/db';
 import { z } from 'zod';
@@ -14,16 +15,21 @@ const cfg = loadConfig(
     FACTORY_PORT: port(8200),
     ANTHROPIC_API_KEY: z.string().default(''),
     OPENAI_API_KEY: z.string().default(''),
+    OPENROUTER_API_KEY: z.string().default(''),
     FACTORY_GATEWAY_TOKEN: secret(),
     CONTROL_DATABASE_URL: z.string().startsWith('postgresql://'),
     FACTORY_RECORDINGS: z.string().default('apps/factory/recordings'),
     ...ROLE_SETTINGS,
   },
   process.env,
-  ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'FACTORY_GATEWAY_TOKEN'],
+  ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'OPENROUTER_API_KEY', 'FACTORY_GATEWAY_TOKEN'],
 );
 const upstream = upstreamFor(
-  { anthropic: cfg.ANTHROPIC_API_KEY, openai: cfg.OPENAI_API_KEY },
+  {
+    anthropic: cfg.ANTHROPIC_API_KEY,
+    openai: cfg.OPENAI_API_KEY,
+    openrouter: cfg.OPENROUTER_API_KEY,
+  },
   cfg.FACTORY_RECORDINGS,
 );
 const mode = upstream.spends ? 'live' : 'mock';

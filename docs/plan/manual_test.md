@@ -24,14 +24,14 @@ Onboarding a bank the factory has never seen (banks 3 and 4) is a separate secti
 ## Before you start
 
 ```sh
-just up                                     # everything, the factory included
-just secret-set factory ANTHROPIC_API_KEY   # the factory's agents need a real model for this
-just factory                                # restarts the factory with the key
+just up                                      # everything, the factory included
+just secret-set factory OPENROUTER_API_KEY   # the factory's agents need a real model for this
+just factory                                 # restarts the factory with the key
 ```
 
 With a key, each factory run costs real money: a few dollars, never more than the cap of $25 a
-run ($150 a week). Without one, the factory replays a recorded repair of bank 1 for free. But a
-replay only works while the bank shows exactly the pages it showed when it was recorded, and the
+run ($150 a week). Without one, the factory replays scripted model turns for a repair of bank 1,
+for free. But a replay only works while the bank shows the same pages the script expects, and the
 stack's ambient hazards (a promotion, a slow page) keep changing them. Use the key.
 
 Run `just open` for three tabs: Swagger UI at http://localhost:8000/docs, the Console at
@@ -155,14 +155,15 @@ Balance. Start with the stack up (`just up`) and a token (`TOKEN=$(just api-toke
 
 ### 1. Give the factory a model key
 
-Copy your Anthropic key to the clipboard, then:
+Copy your OpenRouter key to the clipboard, then:
 
 ```sh
-just secret-set factory ANTHROPIC_API_KEY
+just secret-set factory OPENROUTER_API_KEY
 ```
 
-You should see `✓ ANTHROPIC_API_KEY set in …`, with the clipboard cleared. An OpenAI key works the
-same way, as `OPENAI_API_KEY`. A run stops before it spends $25, and all runs together before $150
+You should see `✓ OPENROUTER_API_KEY set in …`, with the clipboard cleared. An Anthropic key works
+the same way, as `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`). A run stops before it spends $25, and
+all runs together before $150
 in a week. The Console's **Model calls** table shows what each call cost.
 
 With no key, use bank 2 instead: `just onboard example` replays a recorded onboarding of bank 2,

@@ -14,6 +14,7 @@ import { streamSimple as anthropicStream } from '@earendil-works/pi-ai/api/anthr
 import { streamSimple as openaiStream } from '@earendil-works/pi-ai/api/openai-completions';
 import { ANTHROPIC_MODELS } from '@earendil-works/pi-ai/providers/anthropic.models';
 import { OPENAI_MODELS } from '@earendil-works/pi-ai/providers/openai.models';
+import { OPENROUTER_MODELS } from '@earendil-works/pi-ai/providers/openrouter.models';
 import { z } from 'zod';
 import type { RoleModel } from './models.js';
 import { type Tool, ToolRefusal } from './tools.js';
@@ -58,7 +59,8 @@ const png = (b: Buffer): ImageContent => ({
 });
 
 // Each provider's wire protocol in pi. OpenAI is spoken as Chat Completions, which most
-// OpenAI-compatible servers speak too.
+// OpenAI-compatible servers speak too. OpenRouter speaks both; its Claude models use Anthropic
+// Messages, which is the format the gateway records and replays.
 const PROVIDER = {
   anthropic: {
     api: 'anthropic-messages',
@@ -67,6 +69,12 @@ const PROVIDER = {
     send: anthropicStream,
   },
   openai: { api: 'openai-completions', path: '/v1', models: OPENAI_MODELS, send: openaiStream },
+  openrouter: {
+    api: 'anthropic-messages',
+    path: '',
+    models: OPENROUTER_MODELS,
+    send: anthropicStream,
+  },
 } as const;
 
 /** The role's model as pi knows it, pointed at the gateway. A model pi does not list still runs. */

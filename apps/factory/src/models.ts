@@ -6,7 +6,7 @@ export const ROLE_NAMES = ['scout', 'supervisor', 'lessons'] as const;
 export type Role = (typeof ROLE_NAMES)[number];
 export const isRole = (r: string): r is Role => (ROLE_NAMES as readonly string[]).includes(r);
 
-export const PROVIDERS = ['anthropic', 'openai'] as const;
+export const PROVIDERS = ['anthropic', 'openai', 'openrouter'] as const;
 export type Provider = (typeof PROVIDERS)[number];
 export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 
@@ -57,6 +57,10 @@ export interface Price {
 export const PRICES: Readonly<Record<string, Price>> = {
   'claude-opus-5-5': { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 8 },
   'claude-sonnet-5-5': { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 4 },
+  // OpenRouter model ids carry the provider prefix; the prices are the maker's.
+  'anthropic/claude-opus-4.6': { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 },
+  'anthropic/claude-opus-4.8': { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 },
+  'anthropic/claude-sonnet-5.5': { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 4 },
 };
 
 export const priceOf = (model: unknown, prices: Readonly<Record<string, Price>> = PRICES): Price =>

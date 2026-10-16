@@ -501,7 +501,8 @@ boundaries: nothing imports `apps/bank` (the bank is reached only over HTTP); `g
 `config/app.env` is committed and holds nothing secret, models included. SOPS with age encrypts the
 secrets files that `just setup` generates; neither they nor the key are committed. Each service
 receives only its own secrets. The factory's model key starts blank (mock mode); `just secret-set
-factory ANTHROPIC_API_KEY` sets it. Settings fail closed: every required value present, secrets at
+factory OPENROUTER_API_KEY` sets it (or `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`). Settings fail
+closed: every required value present, secrets at
 least 32 characters, no two alike.
 
 ### B.3 Memory budget

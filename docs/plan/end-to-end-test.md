@@ -46,7 +46,7 @@ Console sign-in: admin@generic-bank.local, password: just console-password
 ```
 
 and a last line about the factory: green if a model key is set, otherwise a red ✗ telling you to
-run `just secret-set factory ANTHROPIC_API_KEY`. The Task API doesn't need a model key, so you can
+run `just secret-set factory OPENROUTER_API_KEY`. The Task API doesn't need a model key, so you can
 leave it red for this test.
 
 ## 3. Start everything

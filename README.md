@@ -45,14 +45,15 @@ just down                       # stop everything; the data stays
 just help                       # every recipe, grouped, with what each does
 ```
 
-`just setup` generates every secret it can. The only ones it can't are the Claude and OpenAI API
-keys, because someone else issues them. `just setup` explains them. Run `just secret-set factory
-ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`) and paste the key when it asks; what you paste stays
-hidden. Both can stay blank; the factory then runs in mock mode.
+`just setup` generates every secret it can. The only one it can't is the model key, because someone
+else issues it. `just setup` explains it. Run `just secret-set factory OPENROUTER_API_KEY` and paste
+the key when it asks; what you paste stays hidden. An Anthropic or OpenAI key works the same way
+(`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`). All three can stay blank; the factory then runs in mock
+mode.
 
 Each factory role's model is set in one place, `config/app.env`: `FACTORY_SCOUT_MODEL` and
 `FACTORY_SUPERVISOR_MODEL`, `FACTORY_SCOUT_EFFORT` and `FACTORY_SUPERVISOR_EFFORT`, and
-`FACTORY_SCOUT_PROVIDER` and `FACTORY_SUPERVISOR_PROVIDER` (`anthropic` or `openai`).
+`FACTORY_SCOUT_PROVIDER` and `FACTORY_SUPERVISOR_PROVIDER` (`anthropic`, `openai` or `openrouter`).
 
 `just up` starts everything: all four banks, the staff inbox, the factory and memory. From there,
 **[ACCESS.md](ACCESS.md)** lists every page, API and health check you can reach, the logins
@@ -86,29 +87,30 @@ To use a key, enter it once (sops keeps it encrypted). It asks for the key, then
 restarts the factory with it:
 
 ```sh
-just secret-set factory ANTHROPIC_API_KEY
+just secret-set factory OPENROUTER_API_KEY
 just factory
 ```
 
 To change a role's model or effort, edit it in `config/app.env`, then run `just factory`:
 
 ```sh
-FACTORY_SUPERVISOR_MODEL=claude-opus-5-5
+FACTORY_SUPERVISOR_MODEL=anthropic/claude-opus-4.6
 FACTORY_SUPERVISOR_EFFORT=high
 FACTORY_SCOUT_EFFORT=medium
 ```
 
 The agents run on [pi](https://pi.dev), which talks to many providers, so switching provider is a
-config change, not a code change. To run a role on OpenAI, enter the key, then name the provider
-and model:
+config change, not a code change. The default is OpenRouter, which routes to Claude, OpenAI and
+others at the same API. To run a role directly on Anthropic or OpenAI, enter the key, then name the
+provider and model:
 
 ```sh
-just secret-set factory OPENAI_API_KEY
+just secret-set factory ANTHROPIC_API_KEY
 ```
 
 ```sh
-FACTORY_SCOUT_PROVIDER=openai
-FACTORY_SCOUT_MODEL=<an OpenAI model id>
+FACTORY_SCOUT_PROVIDER=anthropic
+FACTORY_SCOUT_MODEL=claude-opus-4.6
 ```
 
 Add the model's price to `apps/factory/src/models.ts` so the caps count it; a model with no price

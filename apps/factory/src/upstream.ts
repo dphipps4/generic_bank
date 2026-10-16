@@ -120,11 +120,15 @@ async function openai(client: OpenAI, request: Request): Promise<Answer> {
   }
 }
 
-const KEYS = { anthropic: 'ANTHROPIC_API_KEY', openai: 'OPENAI_API_KEY' } as const;
+const KEYS = {
+  anthropic: 'ANTHROPIC_API_KEY',
+  openai: 'OPENAI_API_KEY',
+  openrouter: 'OPENROUTER_API_KEY',
+} as const;
 
 /** Each provider's model, through its SDK; every call is recorded. */
 export function live(
-  clients: { anthropic?: Anthropic; openai?: OpenAI },
+  clients: { anthropic?: Anthropic; openai?: OpenAI; openrouter?: Anthropic },
   recordings: string,
 ): Upstream {
   return {
@@ -137,7 +141,7 @@ export function live(
           body: new Refusal(401, 'authentication_error', `${KEYS[provider]} is not set`).body,
         };
       const answer =
-        provider === 'anthropic'
+        provider === 'anthropic' || provider === 'openrouter'
           ? await anthropic(client as Anthropic, request)
           : await openai(client as OpenAI, request);
       await mkdir(recordings, { recursive: true });
@@ -148,16 +152,22 @@ export function live(
   };
 }
 
+/** OpenRouter speaks the Anthropic Messages API at its own base URL. */
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api';
+
 /** With a key, the model; with none at all, mock mode, and no client is ever made. */
 export function upstreamFor(
-  keys: { anthropic?: string; openai?: string },
+  keys: { anthropic?: string; openai?: string; openrouter?: string },
   recordings: string,
 ): Upstream {
-  if (!keys.anthropic && !keys.openai) return replay(recordings);
+  if (!keys.anthropic && !keys.openai && !keys.openrouter) return replay(recordings);
   return live(
     {
       anthropic: keys.anthropic ? new Anthropic({ apiKey: keys.anthropic }) : undefined,
       openai: keys.openai ? new OpenAI({ apiKey: keys.openai }) : undefined,
+      openrouter: keys.openrouter
+        ? new Anthropic({ apiKey: keys.openrouter, baseURL: OPENROUTER_BASE_URL })
+        : undefined,
     },
     recordings,
   );
