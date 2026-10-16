@@ -13,4 +13,4 @@ case "$how" in
 esac
 printf '%s' "$value" | json_string \
   | sops set --value-stdin "$(secret_path "$FILE")" "[\"$KEY\"]"
-ok "$KEY rotated in $(secret_path "$FILE"). Run just env, then restart the services that use it."
+ok "$KEY rotated in $(secret_path "$FILE"). Next: just up restarts the services that use it."
