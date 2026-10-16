@@ -81,8 +81,8 @@ and the balance. Nothing in this run called a model: the factory's work became c
 
 ## Part 4: the redesign
 
-Open `infra/compose/compose.yaml`, find the `bank-sample` service, and add one line to its
-`environment`:
+Open `infra/compose/compose.yaml`, find the `bank-sample` service, and uncomment the one line
+waiting under its `environment`:
 
 ```yaml
       BANK_REDESIGN: '1'
@@ -94,10 +94,20 @@ Then restart bank 3:
 make bank-more
 ```
 
-Look at bank 3 in the browser. After sign-in there's a new "We've refreshed Online Banking" page
-with a Continue button, the menu has moved, and the words changed ("Member Search" is now "Find a
-Member", and so on). The money, the members and the rules are all the same; only the look and the
-words are new.
+Look at bank 3 in the browser. After sign-in (and the terms page bank 3 already had) there's a new
+page, "We've refreshed Online Banking", with a "Continue to Online Banking" button. The menu has
+moved into a "Menu ▾" dropdown at the top right, the branch notices moved to the left, and the
+words changed:
+
+| Before | After |
+|---|---|
+| Member Inquiry | Find a Member |
+| Internal Transfer | Move Funds |
+| Statements | Account Documents |
+| Activity | Transaction History |
+
+The money, the members and the rules are all the same; only the look and the words are new.
+Bank 3 draws its page headings as pictures, so even the new page's title is pixels, not text.
 
 ## Part 5: the crawl breaks, safely
 
@@ -137,14 +147,14 @@ menu, and again no model in the run.
 
 ## Bank 4
 
-Do it again with bank 4: `make onboard BANK=placeholder`, then add `BANK_REDESIGN: '1'` under
+Do it again with bank 4: `make onboard BANK=placeholder`, then uncomment `BANK_REDESIGN: '1'` under
 `bank-placeholder` in compose, `make bank-more`, and `make repair BANK=placeholder`. Bank 4 signs
 in with an authenticator code (the staff inbox shows it), and its pages are drawn differently from
 bank 3's, so the factory has a different redesign to work out.
 
 ## Putting it back
 
-Remove the `BANK_REDESIGN` line and run `make bank-more`. The redesigned driver now fails the old
+Comment the `BANK_REDESIGN` line out again and run `make bank-more`. The redesigned driver now fails the old
 look in the same safe way, which is a quick second demo of Part 5.
 
 ## If something goes wrong
