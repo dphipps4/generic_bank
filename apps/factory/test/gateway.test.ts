@@ -270,10 +270,12 @@ describe('mock mode', () => {
     expect(r.json().error.message).toBe('call 1 differs from the recording');
   });
 
-  it('matches a screenshot by its place, since the same page differs where it moves', async () => {
-    const shot = (data: string, text = 'What next?') =>
+  it('replays what the bank showed by its shape, and refuses a turn of the model that differs', async () => {
+    const shot = (data: string, text: string, earlier = 'Open the sign-in page.') =>
       ask({
         messages: [
+          { role: 'user', content: 'Reach the balance.' },
+          { role: 'assistant', content: [{ type: 'text', text: earlier }] },
           {
             role: 'user',
             content: [
@@ -283,12 +285,18 @@ describe('mock mode', () => {
           },
         ],
       });
-    await factory(live(fakeModel(), dir))('run1', 'supervisor', shot('AAAA'));
-    await factory(live(fakeModel(), dir))('run2', 'supervisor', shot('AAAA'));
+    await factory(live(fakeModel(), dir))('run1', 'supervisor', shot('AAAA', 'Page one'));
+    await factory(live(fakeModel(), dir))('run2', 'supervisor', shot('AAAA', 'Page one'));
     const post = factory(upstreamFor('', dir));
-    expect((await post('run1', 'supervisor', shot('BBBB'))).statusCode).toBe(200);
-    // Every other byte must still match.
-    expect((await post('run2', 'supervisor', shot('AAAA', 'What now?'))).statusCode).toBe(400);
+    // The page moved and its text changed between the recording and the replay: still the same call.
+    expect((await post('run1', 'supervisor', shot('BBBB', 'Page one, redrawn'))).statusCode).toBe(
+      200,
+    );
+    // The model's own earlier turn is not what was recorded: refused.
+    expect(
+      (await post('run2', 'supervisor', shot('AAAA', 'Page one', 'Open the help page.')))
+        .statusCode,
+    ).toBe(400);
   });
 });
 

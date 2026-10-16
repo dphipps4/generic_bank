@@ -86,14 +86,34 @@ export function live(
 export const upstreamFor = (apiKey: string, recordings: string, roles?: Roles): Upstream =>
   apiKey ? live(new Anthropic({ apiKey }), recordings, roles) : replay(recordings);
 
-// Two screenshots of the same page differ where the page moves (bank 1's marquee), so a picture is
-// matched by its place in the request, not its bytes; every other byte must match.
-const unpictured = (r: Request) =>
-  JSON.parse(
-    JSON.stringify(r, (_k, v: unknown) =>
-      (v as { type?: unknown } | null)?.type === 'image' ? { type: 'image' } : v,
-    ),
-  ) as unknown;
+// What a replayed request must repeat exactly: the model's own turns, the order and shape of the
+// conversation, the tool calls and the request's settings. What the bank showed (the page text,
+// the screenshots and the tool results read from a live page) may differ between the recording and
+// the replay, where the page moves or the bank's state is not the same, so only its shape is kept.
+type Block = { type?: unknown; tool_use_id?: unknown; is_error?: unknown };
+const shapeOf = (b: unknown): unknown => {
+  if (typeof b === 'string') return { type: 'text' };
+  const block = b as Block;
+  if (block.type === 'tool_result')
+    return {
+      type: 'tool_result',
+      tool_use_id: block.tool_use_id,
+      is_error: block.is_error ?? false,
+    };
+  return { type: block.type };
+};
+type Message = { role: string; content: unknown };
+const unpictured = (r: Request): unknown => ({
+  ...r,
+  messages: ((r.messages ?? []) as Message[]).map((m) =>
+    m.role === 'assistant'
+      ? m
+      : {
+          role: m.role,
+          content: Array.isArray(m.content) ? m.content.map(shapeOf) : shapeOf(m.content),
+        },
+  ),
+});
 
 /** Mock mode: each request must be the next one in the run's recording, which answers it. */
 export function replay(recordings: string): Upstream {
