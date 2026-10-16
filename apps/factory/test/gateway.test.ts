@@ -322,7 +322,7 @@ describe('mock mode', () => {
     const post = factory(upstreamFor({}, dir));
     const r = await post('run1', 'scout', ask({ max_tokens: 999 }));
     expect(r.statusCode).toBe(400);
-    expect(r.json().error.message).toBe('call 1 differs from the recording');
+    expect(r.json().error.message).toBe('call 1 differs from the recording at max_tokens');
   });
 
   it('replays what the bank showed by its shape, and refuses a turn of the model that differs', async () => {

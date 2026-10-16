@@ -34,6 +34,13 @@ import { type LiveBank, liveBank, PASSWORDS } from '../support/banks.js';
 // a model and no key is used: both roles' models are a scripted fake fetch behind the gateway.
 
 const TOKEN = 'gateway-token-for-tests-0123456789abcdef';
+
+/** Whether a text holds a secret as itself: the operator's four digits are also inside many a port
+ *  number or duration, which reveal nothing. */
+const holds = (text: string, secret: string) =>
+  new RegExp(
+    `(?<![0-9A-Za-z])${secret.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![0-9A-Za-z])`,
+  ).test(text);
 const CREDS = { operatorId: OPERATORS.service.id, password: PASSWORDS.service };
 
 let db: Awaited<ReturnType<typeof controlDb>>;
@@ -380,7 +387,7 @@ describe('the Scout’s tools', () => {
       (await stored('scout-frames')) +
       JSON.stringify(await rows('SELECT * FROM "Step" WHERE "runId" = $1', 'scout-frames'));
     for (const secret of [PASSWORDS.service, OPERATORS.service.id, await lastCode(), MEMBERS.demo])
-      expect(all).not.toContain(secret);
+      expect(holds(all, secret), secret).toBe(false);
     await page.close();
   }, 180_000);
 });
@@ -744,7 +751,7 @@ describe.each(['anthropic', 'openai'] as const)(
         const seen = recording + (await stored(liveRun)) + (await stored(mockRun));
         const codes = [...recorded.answered, ...replayed.answered];
         for (const secret of [PASSWORDS.service, OPERATORS.service.id, ...codes])
-          expect(seen).not.toContain(secret);
+          expect(holds(seen, secret), secret).toBe(false);
 
         // Both roles went through the gateway, on their models, at no cost in mock mode.
         const calls = await rows<{ role: string; model: string; usd: string }>(

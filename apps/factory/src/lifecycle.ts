@@ -28,6 +28,13 @@ export interface Version {
 
 const id = (p: string) => `${p}_${randomBytes(8).toString('hex')}`;
 
+/**
+ * The version a factory run's recommendation becomes once a person approves it. Known from the
+ * run's start, so the run's episode in memory names the driver its promotion will name.
+ */
+export const versionIdOf = (factoryRunId: string) =>
+  `dv_${createHash('sha256').update(factoryRunId).digest('hex').slice(0, 16)}`;
+
 export async function versionOf(sql: Sql, versionId: string): Promise<Version | null> {
   const r = await sql.query<Version>(
     `SELECT v.id, v."driverId", d.tenant, d.task, v.version, v.state::text AS state, r.claims
@@ -92,7 +99,7 @@ export async function candidate(sql: Sql, recommendationId: string): Promise<Ver
     )
   ).rows[0]!;
   const v: Version = {
-    id: id('dv'),
+    id: versionIdOf(r.run),
     driverId: driver.id,
     tenant: r.tenant,
     task: r.task,

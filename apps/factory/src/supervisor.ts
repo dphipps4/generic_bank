@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { type Agent, type Conversation, turn } from './agent.js';
 import { CAPS } from './caps.js';
 import { runScout, type Scout, type Supervisor } from './scout.js';
+import { type Tool, toolsOf } from './tools.js';
 import type { Trail } from './trail.js';
 
 /** The three things the product does, as goals for a run on a member's accounts. */
@@ -25,6 +26,8 @@ export type Goal = keyof typeof GOALS;
 const UNREADABLE_IN_A_ROW = 3;
 // The stall rule (§M.3): no progress for three turns ends the run.
 const STALL = 3;
+// The most questions to memory in one step, before the answer.
+const QUERIES = 2;
 
 // For the model: structured output takes no length limits, so those are checked after.
 const ANSWER_SCHEMA = {
@@ -79,7 +82,9 @@ After every step you see the latest frame: the masked picture of the page, and t
 - reason: why, in one line;
 - frames: the frames you relied on, from the ones you were shown.
 
-The Scout types the staff credentials and any code the bank sends with its own tools: tell it to sign in or to enter the code, never the values. Never tell it to submit a transfer: the bank's review page is where a transfer ends.`;
+The Scout types the staff credentials and any code the bank sends with its own tools: tell it to sign in or to enter the code, never the values. Never tell it to submit a transfer: the bank's review page is where a transfer ends.
+
+You are also shown what the factory's memory knows about this bank and banks like it, best first. A lesson labeled "verify before relying" is not yet proven, and a disputed one says why: weigh it against the frames. To ask memory something more, call memory_query; it changes nothing.`;
 
 export function supervisor(o: {
   agent: Agent;
@@ -88,6 +93,10 @@ export function supervisor(o: {
   goal: string;
   /** When the run started; the run stops at CAPS.activeHoursPerRun after it. */
   startedAt?: Date;
+  /** The knowledge pack, as the Supervisor reads it with every step. */
+  knowledge?: string;
+  /** Tools beside the answer, such as memory_query; only those the Supervisor may call are given. */
+  tools?: Tool[];
 }): Supervisor & { ended(): string | null } {
   const until = (o.startedAt?.getTime() ?? Date.now()) + CAPS.activeHoursPerRun * 3_600_000;
   const steps: string[] = [];
@@ -95,6 +104,7 @@ export function supervisor(o: {
   let repeats = 0;
   let ended: string | null = null;
   const mask = (s: string) => maskText(s, o.trail.policy);
+  const tools = toolsOf('supervisor', o.tools ?? []);
 
   return {
     ended: () => ended,
@@ -116,10 +126,13 @@ export function supervisor(o: {
           system: SYSTEM,
           say: [
             `Goal: ${o.goal}`,
+            ...(o.knowledge ? [`What memory knows, best first:\n${o.knowledge}`] : []),
             `Steps so far:\n${steps.join('\n') || '(none)'}`,
             `Latest frame, ${f.ref ?? 'not kept'}:\n${JSON.stringify(f.view)}`,
           ].join('\n\n'),
           image: f.image,
+          tools,
+          calls: tools.length ? QUERIES + 1 : undefined,
           answer: ANSWER_SCHEMA,
           maxTokens: 16_000,
         });
@@ -177,6 +190,10 @@ export async function runGoal(o: {
   member: string;
   conversation?: Conversation;
   startedAt?: Date;
+  /** The knowledge pack, as the Supervisor reads it. */
+  knowledge?: string;
+  /** Memory's tools, given to each role that may call them. */
+  tools?: Tool[];
 }): Promise<{ conversation: Conversation; ended: string | null }> {
   o.scout.onTransferPath(o.goal === 'transfer');
   if (!o.scout.latest()) await o.scout.call('scout', 'browser_open', {});
@@ -186,6 +203,8 @@ export async function runGoal(o: {
     trail: o.trail,
     goal: GOALS[o.goal](o.member),
     startedAt: o.startedAt,
+    knowledge: o.knowledge,
+    tools: o.tools,
   });
   const conversation = await runScout({
     agent: o.scoutAgent,
@@ -193,6 +212,7 @@ export async function runGoal(o: {
     supervisor: s,
     trail: o.trail,
     conversation: o.conversation,
+    extra: o.tools,
   });
   return { conversation, ended: s.ended() };
 }

@@ -172,6 +172,7 @@ describe('the privacy screen', () => {
     expect(
       screen({
         runId: '123e4567-e89b-12d3-a456-426614174000',
+        driver: 'dv_0123456789abcdef',
         evidenceHash: '1234567890'.repeat(6) + 'abcd',
         evidence: [{ run: 'run-1', frame: 'frame-0012', hash: 'ab'.repeat(32) }],
         startedAt: '2026-01-02T03:04:05.678Z',

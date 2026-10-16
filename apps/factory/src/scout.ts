@@ -26,7 +26,7 @@ import { z } from 'zod';
 import { type Agent, type Conversation, turn } from './agent.js';
 import { CAPS } from './caps.js';
 import type { Role } from './models.js';
-import { refusal, type Tool, ToolRefusal, type ToolResult } from './tools.js';
+import { refusal, type Tool, ToolRefusal, type ToolResult, toolsOf } from './tools.js';
 import type { Seen, Trail } from './trail.js';
 
 export interface ScoutDeps {
@@ -355,7 +355,7 @@ const SYSTEM = `You are the Scout. You drive one browser at a bank's staff conso
 
 Do only the step you are given, with the fewest tool calls, then reply in one or two sentences: what you did and what page you are on now. Every tool returns the page after it: its controls, each with a reference such as c3, and its text. Act on controls by those references; choose in a list by the option's position.
 
-You never see credentials or codes. Type the user ID or password with browser_type_credential, and a code the bank sent with browser_enter_code. If a step cannot be done, say why and stop.`;
+You never see credentials or codes. Type the user ID or password with browser_type_credential, and a code the bank sent with browser_enter_code. If a step cannot be done, say why and stop. memory_query asks what the factory knows about sites like this one; it changes nothing.`;
 
 /**
  * The Scout's side of a run: each instruction from the Supervisor is one turn of the Scout's model
@@ -367,8 +367,10 @@ export async function runScout(o: {
   supervisor: Supervisor;
   trail: Trail;
   conversation?: Conversation;
+  /** Tools beside the browser's, such as memory_query; only those the Scout may call are given. */
+  extra?: Tool[];
 }): Promise<Conversation> {
-  const tools = o.scout.tools('scout');
+  const tools = [...o.scout.tools('scout'), ...toolsOf('scout', o.extra ?? [])];
   const offered = new Set(tools.map((t) => t.name));
   let conversation = o.conversation ?? [];
   let report: string | null = null;

@@ -194,6 +194,21 @@ export const unpictured = (r: Request): unknown => ({
   ),
 });
 
+/** Where two requests first differ, as a path such as messages[3].content[0].is_error; or null. */
+function differs(a: unknown, b: unknown, path: string): string | null {
+  if (isDeepStrictEqual(a, b)) return null;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null)
+    return path || 'the request';
+  if (Array.isArray(a) !== Array.isArray(b)) return path || 'the request';
+  const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])];
+  for (const k of keys) {
+    const at = Array.isArray(a) ? `${path}[${k}]` : path ? `${path}.${k}` : k;
+    const d = differs((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k], at);
+    if (d) return d;
+  }
+  return path || 'the request';
+}
+
 /** Mock mode: each request must be the next one in the run's recording, which answers it. */
 export function replay(recordings: string): Upstream {
   const runs = new Map<string, { calls: Recorded[]; next: number }>();
@@ -221,12 +236,18 @@ export function replay(recordings: string): Upstream {
       const call = run.calls[run.next];
       if (!call)
         throw new Refusal(400, 'invalid_request_error', `the recording ends before call ${n}`);
-      if (
-        call.role !== role ||
-        call.provider !== provider ||
-        !isDeepStrictEqual(unpictured(call.request), unpictured(request))
-      )
-        throw new Refusal(400, 'invalid_request_error', `call ${n} differs from the recording`);
+      const where =
+        call.role !== role
+          ? `the role (${role}, recorded ${call.role})`
+          : call.provider !== provider
+            ? `the provider (${provider}, recorded ${call.provider})`
+            : differs(unpictured(call.request), unpictured(request), '');
+      if (where)
+        throw new Refusal(
+          400,
+          'invalid_request_error',
+          `call ${n} differs from the recording at ${where}`,
+        );
       run.next = n;
       return call;
     },

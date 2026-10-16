@@ -14,10 +14,16 @@ export const TOOLS: Readonly<Record<Role, readonly string[]>> = {
     'browser_wait',
     'browser_type_credential',
     'browser_enter_code',
+    'memory_query',
   ],
-  supervisor: ['browser_look', 'recommend'],
-  lessons: [],
+  supervisor: ['browser_look', 'recommend', 'memory_query', 'record_lesson'],
+  // The Supervisor writing the run's lessons, on the budget kept for them.
+  lessons: ['memory_query', 'record_lesson'],
 };
+
+/** Of the tools given, those the role may call. */
+export const toolsOf = (role: Role, tools: Tool[]): Tool[] =>
+  tools.filter((t) => refusal(role, t.name) === null);
 
 /** Why a role may not call a tool, or null when it may. */
 export const refusal = (role: Role, tool: string): string | null =>
