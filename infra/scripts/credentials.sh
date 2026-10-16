@@ -23,6 +23,12 @@ Start here
   Console         http://localhost:${CONSOLE_PORT:-8080}
   Staff inbox     http://localhost:${BANK_INBOX_PORT:-8089}
 
+Try it with: the seeded demo member, the same on every fresh stack
+  member          40017732 (Alex Sample)
+  bank 1          accounts "Everyday Checking" and "Rainy Day Savings"
+  bank 2          the account ending 7255
+  Swagger UI's Try it out starts from these
+
 Console: the admin UI
   address         http://localhost:${CONSOLE_PORT:-8080}
   email           admin@generic-bank.local

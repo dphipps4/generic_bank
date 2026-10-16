@@ -424,6 +424,32 @@
                   "account"
                 ],
                 "additionalProperties": false
+              },
+              "examples": {
+                "bank1": {
+                  "summary": "Bank 1, Generic Bank",
+                  "value": {
+                    "bank": "generic",
+                    "memberId": "40017732",
+                    "account": "Everyday Checking"
+                  }
+                },
+                "bank2": {
+                  "summary": "Bank 2, Example Credit Union: an account by its last four digits",
+                  "value": {
+                    "bank": "example",
+                    "memberId": "40017732",
+                    "account": "7255"
+                  }
+                },
+                "bank3": {
+                  "summary": "Bank 3, Sample Savings Bank: no crawler until the factory learns it (404)",
+                  "value": {
+                    "bank": "sample",
+                    "memberId": "40017732",
+                    "account": "Everyday Checking"
+                  }
+                }
               }
             }
           }
@@ -564,6 +590,20 @@
                   "idempotencyKey"
                 ],
                 "additionalProperties": false
+              },
+              "examples": {
+                "bank1": {
+                  "summary": "Bank 1, Generic Bank: $25 to savings, waiting for a person to approve",
+                  "value": {
+                    "bank": "generic",
+                    "memberId": "40017732",
+                    "from": "Everyday Checking",
+                    "to": "Rainy Day Savings",
+                    "amountCents": 2500,
+                    "memo": "rent",
+                    "idempotencyKey": "try-transfer-0001"
+                  }
+                }
               }
             }
           }
@@ -748,6 +788,19 @@
                   "months"
                 ],
                 "additionalProperties": false
+              },
+              "examples": {
+                "bank1": {
+                  "summary": "Bank 1, Generic Bank: one month's statement",
+                  "value": {
+                    "bank": "generic",
+                    "memberId": "40017732",
+                    "account": "Everyday Checking",
+                    "months": [
+                      "2026-09"
+                    ]
+                  }
+                }
               }
             }
           }
@@ -1007,6 +1060,7 @@
                 "properties": {
                   "grant_type": {
                     "enum": [
+                      "client_credentials",
                       "authorization_code",
                       "refresh_token"
                     ]
