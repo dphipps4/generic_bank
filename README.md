@@ -126,7 +126,7 @@ all moved up by 10000 (its Console is on http://localhost:18080).
 just requirements-dev           # just requirements, plus Node 22
 just dev-setup                  # once: Node dependencies, the Prisma client, Chromium for the tests
 just check                      # the quick checks: types, lint, tests, import boundaries, secrets
-just ci                         # everything GitHub's CI runs, on this machine (slow); no Actions needed
+just ci                         # what GitHub's CI checks, on this machine; no Actions needed
 just api-docs                   # write the API reference from the contracts and open it in Chrome
 ```
 
