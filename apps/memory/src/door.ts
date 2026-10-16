@@ -4,9 +4,9 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { ROLES, type Role } from './memory.js';
 
-/** Who may make each write. Box A (the runner) adds episodes and forwards lessons, nothing more;
- *  the factory's agents add episodes and hypotheses, propose lessons and challenge what is held;
- *  only memory's own rules confirm and write facts; a person curates and approves. */
+/** Who may make each write. The app box (the runner) adds episodes and forwards lessons, nothing
+ *  more; the factory's agents add episodes and hypotheses, propose lessons and challenge what is
+ *  held; only memory's own rules confirm and write facts; a person curates and approves. */
 export const WRITES = {
   'episodes/runs': ['runner', 'factory'],
   'episodes/attempts': ['runner', 'factory'],
