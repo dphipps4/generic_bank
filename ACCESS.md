@@ -22,7 +22,7 @@ below.
 | Recommendations (the factory's drafts) | http://localhost:8080/recommendations | the same |
 | Journal, Freezes | http://localhost:8080/journal, http://localhost:8080/freezes | the same |
 | Database tables (AdminJS) | http://localhost:8080/admin | the same |
-| Task API, Swagger UI | http://localhost:8000/docs | press Authorize, paste `just api-token` |
+| Task API, Swagger UI | http://localhost:8000/docs | press Authorize, enter the local client's id and secret (secrets/credentials.txt) |
 | API reference, static | http://localhost:8099 | none (`just api-docs` serves it) |
 | Bank 1, Generic Bank (2003 frameset) | http://localhost:8081/corelink/ | operator `0412` and its password |
 | Bank 2, Example Credit Union | http://localhost:8082/ | the same |
@@ -101,26 +101,6 @@ curl -i http://localhost:8082/             # 403 Access denied
 curl -i http://localhost:8081/corelink/    # 200
 ```
 
-Ask the Task API for a balance, then read the result. When the bank sends a sign-in code, the run
-waits for you; answer it in the Console inbox.
-
-```sh
-TOKEN=$(just api-token 2>/dev/null)
-curl -s -X POST http://localhost:8000/tasks/check-balance \
-  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{"bank":"generic","memberId":"40017732","account":"Everyday Checking"}'
-curl -s http://localhost:8000/tasks/<runId> -H "Authorization: Bearer $TOKEN"
-```
-
-A transfer stops on the bank's review page until a person approves it in the Console. Send the
-same `idempotencyKey` again and you get the same run back, never a second transfer:
-
-```sh
-curl -s -X POST http://localhost:8000/tasks/transfer \
-  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{"bank":"generic","memberId":"40017732","from":"Everyday Checking","to":"Rainy Day Savings","amountCents":2500,"memo":"rent","idempotencyKey":"try-transfer-0001"}'
-```
-
 ### Faults
 
 The banks throw faults on their own now and then. To force one, sign a hazard header and send it
@@ -166,8 +146,68 @@ curl -s http://localhost:9081/members/40017732/balances -H "Authorization: Beare
 | Command | What it does |
 |---|---|
 | `just try …` | one task under a forced hazard, with its expected result |
-| `just api-token` | a fresh Task API token, for Swagger UI or curl (15 minutes) |
+| `just api-token` | an access token for curl, from the local client (15 minutes) |
 | `just api-docs` | writes and serves the API reference on port 8099 |
 | `just ps`, `just logs` | what's running, and its logs |
 | `just db-shell` | psql on the control database |
 | `just urls` | the main pages, printed |
+
+## Try the Task API
+
+All of this runs on this machine. `just setup` made a local API client; its id and secret are in
+`secrets/credentials.txt`.
+
+**In the browser, with Swagger UI.** Open http://localhost:8000/docs and press **Authorize**. Under
+`client`, enter the id and secret; Swagger UI gets the token itself. Then open a task, press
+**Try it out**, then **Execute**.
+
+**With curl.** First a token, good for 15 minutes:
+
+```sh
+TOKEN=$(just api-token)
+```
+
+A balance on bank 1. It answers with a `runId`:
+
+```sh
+curl -s -X POST http://localhost:8000/tasks/check-balance \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"bank":"generic","memberId":"40017732","account":"Everyday Checking"}'
+```
+
+Read the result. `?wait=30` holds the call until the run ends, or 30 seconds pass. If the bank asks
+for a sign-in code, the run waits for you: answer it in the Console inbox,
+http://localhost:8080/inbox.
+
+```sh
+curl -s "http://localhost:8000/tasks/<runId>?wait=30" -H "Authorization: Bearer $TOKEN"
+```
+
+The same on bank 2, where an account goes by its last four digits. The bank's admin API lists them:
+
+```sh
+BANK_ADMIN_TOKEN=$(awk '/^Bank admin API/{f=1; next} f && /^  token/{print $2; exit}' secrets/credentials.txt)
+curl -s http://localhost:9082/members/40017732/balances -H "Authorization: Bearer $BANK_ADMIN_TOKEN"
+curl -s -X POST http://localhost:8000/tasks/check-balance \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"bank":"example","memberId":"40017732","account":"<last four>"}'
+```
+
+A transfer stops on the bank's review page until a person approves it in the Console inbox; then
+read its result as above. Send the same `idempotencyKey` again and you get the same run back,
+never a second transfer:
+
+```sh
+curl -s -X POST http://localhost:8000/tasks/transfer \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"bank":"generic","memberId":"40017732","from":"Everyday Checking","to":"Rainy Day Savings","amountCents":2500,"memo":"rent","idempotencyKey":"try-transfer-0001"}'
+```
+
+Statements, for last month. The result names each month's document by a `ref`; fetch it:
+
+```sh
+curl -s -X POST http://localhost:8000/tasks/download-statements \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"bank":"generic","memberId":"40017732","account":"Everyday Checking","months":["<YYYY-MM>"]}'
+curl -s -o statement.pdf http://localhost:8000/statements/<ref> -H "Authorization: Bearer $TOKEN"
+```

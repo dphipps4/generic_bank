@@ -165,15 +165,17 @@ export async function buildServer(opts: {
     const b = (req.body ?? {}) as Record<string, string>;
     try {
       const tokens =
-        b.grant_type === 'authorization_code'
-          ? await opts.oauth.exchangeCode(id, secret, String(b.code ?? ''))
-          : b.grant_type === 'refresh_token'
-            ? await opts.oauth.refresh(id, secret, String(b.refresh_token ?? ''))
-            : null;
+        b.grant_type === 'client_credentials'
+          ? await opts.oauth.clientCredentials(id, secret)
+          : b.grant_type === 'authorization_code'
+            ? await opts.oauth.exchangeCode(id, secret, String(b.code ?? ''))
+            : b.grant_type === 'refresh_token'
+              ? await opts.oauth.refresh(id, secret, String(b.refresh_token ?? ''))
+              : null;
       if (!tokens)
         return reply.code(400).send({
           error: 'unsupported_grant_type',
-          error_description: 'Use authorization_code or refresh_token.',
+          error_description: 'Use client_credentials, authorization_code or refresh_token.',
         });
       return reply.header('cache-control', 'no-store').header('pragma', 'no-cache').send(tokens);
     } catch (e) {

@@ -173,6 +173,36 @@ export function oauth(sql: Sql, hashKey: string, now: () => Date = () => new Dat
       return code;
     },
 
+    /** grant_type=client_credentials: a program's own id and secret become an access token. */
+    async clientCredentials(clientId: string, clientSecret: string): Promise<Tokens> {
+      const c = await client(clientId, clientSecret);
+      const familyId = id();
+      await sql.query('INSERT INTO "TokenFamily" (id, "clientPk") VALUES ($1, $2)', [
+        familyId,
+        c.id,
+      ]);
+      return issue(familyId, c.scopes, clientId, 'token.issued');
+    },
+
+    /**
+     * A client with this id and secret, made if it is missing and brought up to date if it is not:
+     * the local client that just setup configures for curl and Swagger UI.
+     */
+    async ensureClient(o: {
+      clientId: string;
+      clientSecret: string;
+      name: string;
+      scopes: string[];
+    }) {
+      await sql.query(
+        `INSERT INTO "ApiClient" (id, name, "clientId", "secretHash", scopes, "createdBy")
+           VALUES ($1, $2, $3, $4, $5, 'just setup')
+         ON CONFLICT ("clientId") DO UPDATE
+           SET "secretHash" = EXCLUDED."secretHash", scopes = EXCLUDED.scopes, "revokedAt" = NULL`,
+        [id(), o.name, o.clientId, hash(o.clientSecret), o.scopes],
+      );
+    },
+
     /** grant_type=authorization_code: a starting code becomes the first pair of tokens. */
     async exchangeCode(clientId: string, clientSecret: string, code: string): Promise<Tokens> {
       const c = await client(clientId, clientSecret);

@@ -46,6 +46,23 @@ describe('clients', () => {
     expect(dump).not.toContain(c.code);
   });
 
+  it('keep the local client as configured, and give it a token by client credentials', async () => {
+    const local = {
+      clientId: 'local-client',
+      clientSecret: 'x'.repeat(48),
+      name: 'Local',
+      scopes: ['tasks:read'],
+    };
+    await o().ensureClient(local);
+    await o().ensureClient(local);
+    const t = await o().clientCredentials(local.clientId, local.clientSecret);
+    expect(t).toMatchObject({ token_type: 'Bearer', expires_in: 900, scope: 'tasks:read' });
+    expect(await o().authenticate(t.access_token)).toMatchObject({ clientId: 'local-client' });
+    await expect(o().clientCredentials(local.clientId, 'y'.repeat(48))).rejects.toThrow(
+      /not valid/,
+    );
+  });
+
   it('refuse an unknown scope', async () => {
     await fails(
       o().createClient({ name: 'x', scopes: ['tasks:everything'], createdBy: 'a' }),
