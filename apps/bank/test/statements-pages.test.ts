@@ -60,9 +60,9 @@ describe('the statements page', () => {
     ).toBe(404);
   });
 
-  it('delays the rows three seconds when late rows are forced', async () => {
+  it('delays the rows a second when late rows are forced', async () => {
     c.hazards = ['late-rows'];
-    expect((await c.get(`members/${MEMBERS.demo}/statements`)).body).toMatch(/\}, 3000\);/);
+    expect((await c.get(`members/${MEMBERS.demo}/statements`)).body).toMatch(/\}, 1000\);/);
     c.hazards = null;
   });
 });

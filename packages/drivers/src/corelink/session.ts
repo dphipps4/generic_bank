@@ -70,10 +70,11 @@ const DISMISS = 'Dismiss';
 const dismissable = (m: ScreenModel) => m.controls.some((c) => c.name === DISMISS);
 
 /** The next screen, fully rendered and recognized; a dialog is answered with the non-committal choice. */
-export async function next(sess: Session): Promise<Seen | null> {
+export async function next(sess: Session, limitMs?: number): Promise<Seen | null> {
   sess.stepStart = Date.now();
   const s = await see(sess.ctx, sess.sigs, {
     until: (m) => dismissable(m) || recognize(m, sess.sigs).screen !== null,
+    ...(limitMs ? { limitMs } : {}),
   });
   if (s.dialog) {
     await sess.ctx.page.answerDialog(false);
@@ -334,7 +335,7 @@ export async function onTheWay(sess: Session, s: Seen, memberId: string): Promis
     case 'member.in_use': {
       await sess.record('member search', s.screen, s.model, undefined, 'record in use');
       if (counts.inUse++ >= 2) return stop('failed', 'record_in_use', undefined, true);
-      await new Promise((r) => setTimeout(r, 1000 * counts.inUse));
+      await new Promise((r) => setTimeout(r, 300 * counts.inUse));
       await type(page, field(s.model, w.memberNumber), memberId);
       await click(page, button(s.model, w.search));
       return true;
@@ -345,7 +346,7 @@ export async function onTheWay(sess: Session, s: Seen, memberId: string): Promis
       await sess.record('error', s.screen, s.model, undefined, code);
       // Reads only, and never more than twice, with backoff.
       if (counts.retries++ >= 2) return stop('failed', code, undefined, true);
-      await new Promise((r) => setTimeout(r, 750 * counts.retries));
+      await new Promise((r) => setTimeout(r, 250 * counts.retries));
       await page.goto(sess.lastUrl);
       return true;
     }

@@ -134,7 +134,7 @@ export function startRecorder(
     } catch (e) {
       opts.onError?.(e);
     }
-    if (!stopped) timer = setTimeout(tick, opts.everyMs ?? 5000);
+    if (!stopped) timer = setTimeout(tick, opts.everyMs ?? 1000);
   };
   void tick();
   return () => {

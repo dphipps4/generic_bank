@@ -38,17 +38,17 @@ describe('fully rendered, on Generic Bank', () => {
     await p.close();
   }, 30_000);
 
-  it('does not read activity before its rows arrive, three seconds late', async () => {
+  it('does not read activity before its rows arrive, a second late', async () => {
     const a = (await accountsOf(bank.db, MEMBERS.demo))[0]!;
     const p = await page({ signedIn: true, headers: bank.forced(['late-rows']) });
     await p.goto(`${bank.url}members/${MEMBERS.demo}/activity?account=${a.id}`);
-    // The page is perfectly still for three seconds before its rows arrive: only the screen's own
+    // The page is perfectly still for a second before its rows arrive: only the screen's own
     // definition of complete (rows in the table) can tell, so the driver supplies it.
     const hasRows = (m: { texts: { text: string }[] }) =>
       m.texts.some((t) => /^\d{4}-\d{2}-\d{2}$/.test(t.text));
     const r = await waitFullyRendered(p, { limitMs: 20_000, until: hasRows });
     expect(r.rendered).toBe(true);
-    expect(r.waitedMs).toBeGreaterThanOrEqual(2500);
+    expect(r.waitedMs).toBeGreaterThanOrEqual(800);
     expect(r.model.texts.some((t) => /^\d{4}-\d{2}-\d{2}$/.test(t.text))).toBe(true);
     await p.close();
   }, 30_000);

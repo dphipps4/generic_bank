@@ -116,12 +116,12 @@ describe('the hand-off', () => {
     );
   });
 
-  it('holds five to eight seconds when the slow hand-off hazard fires', async () => {
+  it('holds two to three seconds when the slow hand-off hazard fires', async () => {
     const c = b.client();
     c.hazards = ['slow-handoff'];
     const delay = Number(/\}, (\d+)\);/.exec((await c.get('auth/callback?code=x')).body)![1]);
-    expect(delay).toBeGreaterThanOrEqual(5000);
-    expect(delay).toBeLessThanOrEqual(8000);
+    expect(delay).toBeGreaterThanOrEqual(2000);
+    expect(delay).toBeLessThanOrEqual(3000);
   });
 });
 

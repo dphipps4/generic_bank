@@ -64,7 +64,7 @@ export function statementRoutes(app: FastifyInstance, bank: Bank) {
             ),
           );
           const box = d.cls('statements');
-          const late = c.hz.on('late-rows') ? 3000 : 250;
+          const late = c.hz.on('late-rows') ? 1000 : 250;
           const viewMore = has(bank.t, 'view-more');
           const detached = has(bank.t, 'detached-menu');
           const viewer = has(bank.t, 'html-statement-viewer');

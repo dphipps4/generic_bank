@@ -194,6 +194,9 @@ export interface SubmitHooks {
 export const pressIntent = (profile: Pick<Profile, 'words'>, memoToken: string) =>
   `press ${profile.words.submitTransfer[0]} for ${memoToken}`;
 
+/** How long the bank gets to answer the submit before the run reads the history instead. */
+export const AFTER_PRESS_MS = 10_000;
+
 export interface Posted {
   confirmation: string;
   seenInHistory: boolean;
@@ -223,7 +226,8 @@ export async function submitTransfer(
     }
     while (sess.counts.steps++ < 40) {
       if (!s) {
-        s = await next(sess);
+        // After the press, an answer that has not come in 10 s is unclear: read the history.
+        s = await next(sess, pressed ? AFTER_PRESS_MS : undefined);
         continue;
       }
       switch (s.screen) {

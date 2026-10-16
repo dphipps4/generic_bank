@@ -49,11 +49,11 @@ describe('ambient hazards', () => {
     expect(n('harsh')).toBeGreaterThan(n('default') * 1.5);
   });
 
-  it('delay every response by 250 ms to 1.8 s, and never when none', () => {
+  it('delay every response by up to 150 ms, and never when none', () => {
     const r = make().h.forRequest(undefined, '/p');
     if (r === 'bad-signature') throw new Error('unexpected');
-    expect(r.latencyMs()).toBeGreaterThanOrEqual(250);
-    expect(r.latencyMs()).toBeLessThanOrEqual(1800);
+    expect(r.latencyMs()).toBeGreaterThanOrEqual(0);
+    expect(r.latencyMs()).toBeLessThanOrEqual(150);
     expect(fire(make({ profile: 'none' }).h, 500)).toEqual([]);
   });
 

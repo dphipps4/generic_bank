@@ -76,7 +76,7 @@ export function signInPage(
 ${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}
 <P>${linkButton(c, `${c.base}signin?other=1`, `Not ${o.trusted.name}? Sign in as someone else`, '_top')}</P>`,
     );
-    return doc(c, d, { title: L.signIn, body, script: hydrate(randomInt(300, 900)) });
+    return doc(c, d, { title: L.signIn, body, script: hydrate(randomInt(150, 400)) });
   }
   const d = dialect(bank.t, bank.uiVersion, 'signin');
   const rows =
@@ -99,7 +99,7 @@ ${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}
     `${banner}${heading(c, d, `${bank.t.brand}: CoreLink Branch Console`)}${o.error ? message(c, o.error) : ''}${o.note ? `<P>${font(c, esc(o.note))}</P>` : ''}
 ${shadow}${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}`,
   );
-  return doc(c, d, { title: L.signIn, body, script: hydrate(randomInt(300, 900)) });
+  return doc(c, d, { title: L.signIn, body, script: hydrate(randomInt(150, 400)) });
 }
 
 /**
@@ -190,7 +190,7 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
       doc(c, d, {
         title: 'CoreLink Branch Console',
         body: `<P>&nbsp;</P><P>${font(c, 'Loading&hellip;')}</P>`,
-        script: `setTimeout(function () { location.replace(${js(`${base}signin`)}); }, ${randomInt(600, 1400)});`,
+        script: `setTimeout(function () { location.replace(${js(`${base}signin`)}); }, ${randomInt(300, 700)});`,
         footer: false,
       }),
     );
@@ -311,7 +311,7 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
   app.get<{ Querystring: { code?: string } }>(`${base}auth/callback`, async (req, reply) => {
     const c = ctxOf(bank, req);
     const d = dialect(bank.t, bank.uiVersion, 'callback');
-    const wait = c.hz.on('slow-handoff') ? randomInt(5000, 8001) : randomInt(400, 1000);
+    const wait = c.hz.on('slow-handoff') ? randomInt(2000, 3001) : randomInt(200, 500);
     const next = `${base}auth/complete?code=${encodeURIComponent(String(req.query.code ?? ''))}`;
     return html(
       reply,
@@ -354,7 +354,7 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
           title: 'CoreLink',
           footer: false,
           body: `${heading(c, d, bank.t.brand)}<P>${font(c, 'Loading your workspace&hellip;')}</P>`,
-          script: `setTimeout(function () { top.location.replace(${js(`${to}${base}signin`)}); }, 900);`,
+          script: `setTimeout(function () { top.location.replace(${js(`${to}${base}signin`)}); }, 400);`,
         }),
       );
     }

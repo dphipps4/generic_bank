@@ -80,7 +80,8 @@ beforeAll(async () => {
     s.setHeader('content-type', 'text/html');
     if (q.method === 'POST') {
       posts++;
-      return s.end('<title>Near</title><p>Posted.</p>');
+      // A link to act on, so the page is ready once it is still, not after the full minute.
+      return s.end('<title>Near</title><p>Posted.</p><a href="/">Back</a>');
     }
     // A review page whose submit is a picture of text with no name, as bank 2's is, and a named
     // picture button beside it.
