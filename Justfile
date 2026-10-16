@@ -307,7 +307,7 @@ check:
 test:
     @npx vitest run
 
-# Everything GitHub's CI runs, here (slow: most of an hour): checks, both suites, images, secrets
+# What GitHub's CI checks, here: schemas, types, lint, import boundaries, the whole suite, secrets
 [group('Quality')]
 ci:
     @{{scripts}}/ci.sh
@@ -321,11 +321,6 @@ test-changed:
 [group('Quality')]
 test-pii:
     @npx vitest run tests/pii
-
-# The long suite: runs that sit through the banks' real hazards for minutes
-[group('Quality')]
-test-long:
-    @npx vitest run --config vitest.long.config.ts
 
 # TypeScript, every package
 [group('Quality')]

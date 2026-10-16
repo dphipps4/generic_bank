@@ -6,9 +6,7 @@ import { type Harness, stallsAt, transferHarness, until } from '../runs/transfer
 // The swallowed-submit protocol (plan, §F.2, §D.4): the submit is never retried blindly. An unclear
 // result reads the history; a run that resumes after its journaled submit goes to the history and
 // never to the button; a run that lost its browser while parked signs in fresh and checks the
-// screen against the grant. The bank's ledger is the judge: never two postings for one grant. The
-// swallowed submit itself, which waits out the bank's endless "Processing" page, is in
-// tests/long/transfer-swallowed.test.ts.
+// screen against the grant. The bank's ledger is the judge: never two postings for one grant.
 
 let h: Harness;
 beforeAll(async () => {

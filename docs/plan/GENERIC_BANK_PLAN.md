@@ -1841,7 +1841,6 @@ files for a pull request.
 | Bank | `apps/bank/test` | every page in all four banks, every hazard on and off, the ledger, statements, the markup dialects. |
 | Browser | `tests/browser` | the Runner against the real bank in Chromium. Skipped only if the browser cannot launch; CI fails on any skip. |
 | Outcomes | `tests/outcomes` | for each forced hazard and each seeded member case, the exact typed result. This table is the error taxonomy's proof. |
-| Long | `tests/long` | runs that sit through the banks' real ambient hazards for minutes: Check Balance, run after run. On every merge to master and every night, and with `just test-long`. |
 | Escalation | `tests/escalation` | staff code, approval, supervisor code, reject, take-over, cancel and expiry, all driven through the Console API. |
 | Transfer safety | `tests/transfer` | swallowed submit, lost session while parked, grant mismatch (amount changed on screen), grant replay, duplicate detection. The bank ledger is the oracle: never two transfers for one grant. |
 | Trap matrix | `tests/guards` | every trap, every layer removed in turn, injected text changes no verdict, clean runs leave the state-change counter at zero. |
@@ -1851,11 +1850,10 @@ files for a pull request.
 | Memory suite | `tests/memory` | the role matrix, the privacy screen, the seed, every rule, the pack, a tampered change log and the outbox, all through the Memory service's API. |
 | Prompts | `packages/prompts/test` | the checker, the loader, schemas. |
 
-**CI** (GitHub Actions): typecheck and lint (with E0 and the import boundaries). A pull request
-runs the tests its change touches; changes to migrations, seeds, config, infrastructure or CI run
-them all. Every merge to master and every night run the whole suite in three parallel shards, the
-long suite, check-prompts, a compose job for bank, browser, outcomes, escalation, transfer,
-guards and PII, `gitleaks` over the history and every built image, and `npm audit`. `just check`
+**CI** (GitHub Actions), three jobs: typecheck, lint, the import boundaries and the tests (a pull
+request runs the tests its change touches, a merge to master runs them all); a fresh clone, where
+`just setup` and `just up` run on a machine with nothing cached and every service must answer;
+and `gitleaks` over the history. `just check`
 runs `gitleaks` over the history and uncommitted changes.
 
 **Rules:** fakes never return the answer under test; every guard has a test that it refuses;

@@ -4,8 +4,6 @@ import { submitHarness } from '../support/submit.js';
 
 // Submitting a transfer once, under a grant, and confirming it in the account's history (plan,
 // §F.1 steps 4 and 5, §F.2). The bank's own ledger is the judge: never two postings for one grant.
-// The swallowed submit, which waits out the bank's endless "Processing" page, is in
-// tests/long/swallowed-submit.test.ts.
 
 const { transfer, postings, token, verify } = submitHarness();
 
