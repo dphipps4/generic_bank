@@ -24,4 +24,4 @@ It lands as a series of small pull requests. Each stands alone, has its own test
 | 11 | **Transfers** | The form, the review page, supervisor approval over the threshold | a transfer posts end to end |
 | 12 | **Hazards in the pages** | Every hazard wired into the pages that show it | one test per forced hazard |
 | 13 | **The inbox and ground truth** | The fake inbox for codes; the bank-admin API the tests read | codes arrive; tests read the ledger, not the page |
-| 14 | **Running it** | Compose wiring, the operator passwords as secrets, the inbox service | `just up`, in the fresh-clone check; the bank's memory is not measured |
+| 14 | **Running it** | Compose wiring, the staff passwords as secrets, the inbox service | `just up`, in the fresh-clone check; the bank's memory is not measured |

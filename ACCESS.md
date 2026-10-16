@@ -24,7 +24,7 @@ below.
 | Database tables (AdminJS) | http://localhost:8080/admin | the same |
 | Task API, Swagger UI | http://localhost:8000/docs | press Authorize, enter the local client's id and secret (secrets/credentials.txt) |
 | API reference, static | http://localhost:8099 | none (`just api-docs` serves it) |
-| Bank 1, Generic Bank (2003 frameset) | http://localhost:8081/corelink/ | operator `teller0412` and its password |
+| Bank 1, Generic Bank (2003 frameset) | http://localhost:8081/corelink/ | `teller0412` and its password |
 | Bank 2, Example Credit Union | http://localhost:8082/ | the same |
 | Bank 3, Sample Savings Bank | http://localhost:8083/online/branch/ | the same |
 | Bank 4, Placeholder FCU | http://127.0.0.1:8084/cu/ib/ | the same, with a code from its authenticator |
@@ -32,7 +32,7 @@ below.
 | MinIO console (evidence and statements) | http://localhost:9001 | MinIO user and password |
 
 Bank 2 also serves pages from a second origin on 8092, and bank 4 does the same on 8094. You
-reach those through the bank's own pages, not directly. Supervisor `super0901` signs in just like
+reach those through the bank's own pages, not directly. Supervisor `supervisor0901` signs in just like
 `teller0412` and approves large transfers.
 
 Banks send their sign-in codes to the staff inbox. Bank 4 uses an authenticator app instead, and

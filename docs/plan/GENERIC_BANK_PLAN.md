@@ -341,7 +341,7 @@ until a person clears the freeze.
 | Failure | The crawler | The caller sees |
 |---|---|---|
 | Wrong password | stops; never submits again | `failed: bad_credentials` |
-| Operator locked | stops | `failed: operator_locked` |
+| Teller locked out | stops | `failed: operator_locked` |
 | Staff code needed | parks once the bank proves it sent one; one attempt per code | `needs_human: awaiting_staff_code` |
 | No member, closed member | stops | `business_outcome` |
 | Record in use | retries the read twice, then stops | `failed: record_in_use`, retryable |

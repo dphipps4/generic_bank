@@ -32,12 +32,15 @@ export async function buildInbox(banks: InboxBank[]): Promise<FastifyInstance> {
     const sections: string[] = [];
     for (const b of banks) {
       const r = await b.db
-        .query<Message>('SELECT mailbox, address, body, at FROM messages ORDER BY id DESC LIMIT 30')
-        .catch(() => ({ rows: [] as Message[] }));
+        .query<Message & { username: string | null }>(
+          `SELECT m.mailbox, m.address, m.body, m.at, o.operator_id AS username FROM messages m
+             LEFT JOIN operators o ON m.address IN (o.phone, o.email) ORDER BY m.id DESC LIMIT 30`,
+        )
+        .catch(() => ({ rows: [] as (Message & { username: string | null })[] }));
       const items = r.rows
         .map(
           (m) =>
-            `<li><span class="when">${esc(new Date(m.at).toISOString().slice(11, 19))} UTC</span> <span class="kind">${m.mailbox === 'phone' ? 'Text' : 'Email'}</span> <span class="to">${esc(m.address)}</span><div class="body">${esc(m.body)}</div></li>`,
+            `<li><span class="when">${esc(new Date(m.at).toISOString().slice(11, 19))} UTC</span> <span class="kind">${m.mailbox === 'phone' ? 'Text' : 'Email'}</span> <b>for ${esc(m.username ?? 'unknown')}</b> <span class="to">${esc(m.address)}</span><div class="body">${esc(m.body)}</div></li>`,
         )
         .join('');
       // Bank 4's staff read codes from an authenticator app; this panel is that app.
@@ -55,7 +58,7 @@ export async function buildInbox(banks: InboxBank[]): Promise<FastifyInstance> {
         app = `<div class="app"><b>Authenticator</b> <span class="when">new codes in ${left} s</span>${ops.rows
           .map(
             (o) =>
-              `<div class="code"><span class="to">${esc(o.display_name)}</span> <b>${totp(o.totp_secret!, now)}</b></div>`,
+              `<div class="code"><span class="to">for ${esc(o.operator_id)}</span> <b>${totp(o.totp_secret!, now)}</b></div>`,
           )
           .join('')}</div>`;
       }

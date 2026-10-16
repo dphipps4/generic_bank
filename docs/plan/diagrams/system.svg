@@ -4,7 +4,7 @@
 <text class="sub" x="44" y="125">member ID + typed task</text>
 <text class="sub" x="44" y="141">never sees the UI</text>
 <rect x="30" y="176" width="180" height="92" rx="9" fill="#eef3f8" stroke="#9db8d0" stroke-width="1.5"/>
-<text class="ttl" x="44" y="202">Approvers, operators</text>
+<text class="ttl" x="44" y="202">Approvers and staff</text>
 <text class="sub" x="44" y="221">approve every transfer</text>
 <text class="sub" x="44" y="237">enter staff codes</text>
 <text class="sub" x="44" y="253">review and promote drivers</text>
