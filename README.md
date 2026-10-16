@@ -1,10 +1,11 @@
 # Generic Bank
 
-This is a take-home implementation: a small working system that lets an AI agent get real work
-done in bank software with no API, by driving the screens the way a staff member would. The agent
-asks for a balance, a statement or a transfer through a plain typed API; the system clicks through
-the bank's website to do it, hands off to a person when it can't safely carry on, and never moves
-money until a person says yes.
+This is a take-home implementation of an API for bank websites that have no API of their own: an
+AI agent calls it to check a balance, transfer money (only once a person approves) or download
+statements, and a crawler does the work by operating the bank's staff screens the way a person
+would. Behind it is a software factory where AI agents study a bank they haven't seen, like banks
+3 and 4, and write the crawler for it as plain deterministic code, so no model runs when a
+customer's task does.
 
 Everything runs locally with docker compose, and every step is a make target.
 
