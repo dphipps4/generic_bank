@@ -636,7 +636,12 @@ describe('the Supervisor guiding the Scout', () => {
       const upstream = upstreamFor('', dir);
       expect(upstream.spends).toBe(false);
       const replayed = await runThrough(upstream, 'guided-mock');
-      expect(replayed.conversation).toEqual(recorded.conversation);
+      // The model's own turns, in the same places; what the live bank showed may differ.
+      const modelTurns = (c: Conversation | undefined) =>
+        (c as { role: string }[] | undefined)?.map((m) =>
+          m.role === 'assistant' ? m : { role: m.role },
+        );
+      expect(modelTurns(replayed.conversation)).toEqual(modelTurns(recorded.conversation));
       expect(replayed.reached).toEqual(recorded.reached);
 
       // Each goal ended on its page, by the Supervisor's stop.
