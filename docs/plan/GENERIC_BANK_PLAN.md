@@ -1849,11 +1849,12 @@ files for a pull request.
 | Memory | `apps/memory/test` | screens, merge, confirm, dispute, retire, widen, return, demote, pack budget, chain verification. |
 | Prompts | `packages/prompts/test` | the checker, the loader, schemas. |
 
-**CI** (GitHub Actions) has four jobs. The first runs typecheck, lint and the import
+**CI** (GitHub Actions) has five jobs. The first runs typecheck, lint and the import
 boundaries. The second runs the tests: a pull request runs the ones its change touches, a merge to
-master runs them all, and the first failure stops the run. The third is a fresh clone, where
-`just setup` and `just up` run on a machine with nothing cached and every service must answer.
-The fourth runs `gitleaks` over the history.
+master runs them all, and the first failure stops the run. The third runs the factory's repair on
+a machine of its own, on a pull request only when the change touches the factory, the drivers or
+the screen code. The fourth is a fresh clone, where `just setup` and `just up` run on a machine
+with nothing cached and every service must answer. The fifth runs `gitleaks` over the history.
 `just check` runs `gitleaks` over the history and uncommitted changes.
 
 **Rules:** fakes never return the answer under test. Every guard has a test that it refuses.
