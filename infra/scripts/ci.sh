@@ -8,8 +8,10 @@ set -e
 
 info "Checks: Prisma schemas, types, lint, import boundaries"
 npm run --silent db:generate
-npx prisma validate --schema packages/db/prisma/schema.prisma >/dev/null
-npx prisma validate --schema apps/memory/prisma/schema.prisma >/dev/null
+CONTROL_DATABASE_URL=postgresql://ci:ci@localhost:5432/control \
+  npx prisma validate --schema packages/db/prisma/schema.prisma >/dev/null
+MEMORY_DATABASE_URL=postgresql://ci:ci@localhost:5432/memory \
+  npx prisma validate --schema apps/memory/prisma/schema.prisma >/dev/null
 npm run --silent typecheck
 npm run --silent lint
 npm run --silent depcruise
