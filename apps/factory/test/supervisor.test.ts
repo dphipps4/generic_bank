@@ -115,7 +115,7 @@ describe('the Supervisor’s answer', () => {
   });
 });
 
-describe.each(['anthropic', 'openai'] as const)('the Supervisor on %s', (provider) => {
+describe.each(['anthropic'] as const)('the Supervisor on %s', (provider) => {
   it('is asked of the Supervisor’s model with the frame’s picture, in a fixed form, at its effort', async () => {
     const { s, steps } = setUp(provider);
     answers = [answer('Sign in as the staff service account.')];

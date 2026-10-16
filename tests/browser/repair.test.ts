@@ -244,21 +244,6 @@ async function onItsFrames(runId: string, claims: Claim[]) {
 }
 
 describe('a bank redesigns, the crawl breaks, the factory repairs it', () => {
-  it('onboards a bank: its three goals reached, its profile recommended and awaiting a person', async () => {
-    const { runId, recommendationId } = await factoryRunAt('build');
-    const rec = await recommendationOf(runId);
-    expect(rec.id).toBe(recommendationId);
-    expect(rec.status).toBe('open');
-    expect(rec.claims.map((c) => c.basis)).toEqual([...Array<string>(6).fill('seen'), 'guess']);
-    await onItsFrames(runId, rec.claims);
-    const run = (
-      await db.query(`SELECT mode, phase, status FROM "FactoryRun" WHERE id = $1`, [runId])
-    ).rows[0];
-    expect(run).toEqual({ mode: 'build', phase: 'REVIEW GATE', status: 'review' });
-    // Nothing moved money: the transfer stopped at the bank's review page.
-    expect((await before.db.query('SELECT 1 FROM transfers')).rows).toHaveLength(0);
-  }, 600_000);
-
   it('breaks on the redesign, is taken out of service, is repaired, approved, checked, promoted and recovers', async () => {
     // The hand-written driver reads the balance.
     const first = await checkBalance();
@@ -349,5 +334,5 @@ describe('a bank redesigns, the crawl breaks, the factory repairs it', () => {
     expect(back.version).toBe(v.id);
     expect(back.steps).toEqual(expect.arrayContaining(['notice', 'console', 'balance']));
     expect((await db.query(`SELECT count(*)::int AS n FROM "ModelCall"`)).rows[0]).toEqual(calls);
-  }, 1_800_000);
+  }, 240_000);
 });

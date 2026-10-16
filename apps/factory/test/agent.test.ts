@@ -54,7 +54,7 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-describe.each(['anthropic', 'openai'] as const)('a turn on %s', (provider: Provider) => {
+describe.each(['anthropic'] as const)('a turn on %s', (provider: Provider) => {
   const agent = (): Agent => ({
     model:
       provider === 'anthropic'

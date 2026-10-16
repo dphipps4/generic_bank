@@ -129,7 +129,7 @@ describe('the Runner carries out a run', () => {
     // The member's name was not known before the run; the driver learned it when the bank showed it.
     for (const v of [MEMBERS.demo, acct.number, acct.number.slice(-4), PASSWORDS.service, 'Sample'])
       expect(stored).not.toContain(v);
-  }, 180_000);
+  }, 120_000);
 
   it('downloads statements: each month stored as the bank serves it, or not available in its words', async () => {
     const acct = (await accountsOf(bank.db, MEMBERS.demo)).find((a) => a.type === 'checking')!;

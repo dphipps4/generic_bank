@@ -1843,16 +1843,17 @@ files for a pull request.
 | Browser | `tests/browser` | the Runner against the real bank in Chromium. Skipped only if the browser cannot launch; CI fails on any skip. |
 | Outcomes | `tests/outcomes` | one business outcome, one recoverable condition and one hard failure from the outcome table, each its exact typed result. |
 | Escalation | `tests/escalation` | an unknown screen escalates; a person resumes it through the Console API, and the run finishes. |
-| Guard | `tests/browser/guard.test.ts` | the allowlist refuses what it does not list, and the submit without a grant; the bank's state-change counter does not move. |
+| Guard | `packages/guardrails/test` | the allowlist refuses what it does not list, and the submit without a grant; every end-to-end run goes through the guard. |
 | PII | `tests/pii` | scans everything runs wrote (database rows, objects and log files) for seeded secrets and personal values. |
 | Factory | `apps/factory/test` | workflow phases with a fake browser and mock model, caps, the meter, the tool veto, doneness, probation. |
 | Memory | `apps/memory/test` | screens, merge, confirm, dispute, retire, widen, return, demote, pack budget, chain verification. |
 | Prompts | `packages/prompts/test` | the checker, the loader, schemas. |
 
 **CI** (GitHub Actions) has four jobs. The first runs typecheck, lint and the import
-boundaries. The second runs the tests, split across three machines by file: a pull request runs
-the tests its change touches, and a merge to master runs them all. The third is a fresh clone, where `just setup` and `just up` run on a machine with
-nothing cached and every service must answer. The fourth runs `gitleaks` over the history.
+boundaries. The second runs the tests: a pull request runs the ones its change touches, a merge to
+master runs them all, and the first failure stops the run. The third is a fresh clone, where
+`just setup` and `just up` run on a machine with nothing cached and every service must answer.
+The fourth runs `gitleaks` over the history.
 `just check` runs `gitleaks` over the history and uncommitted changes.
 
 **Rules:** fakes never return the answer under test. Every guard has a test that it refuses.

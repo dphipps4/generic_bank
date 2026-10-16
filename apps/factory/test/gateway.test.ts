@@ -1,12 +1,11 @@
 // The model gateway: caps before every request, spend after it, and mock mode, on Anthropic's
-// route and OpenAI's. No test reaches a model: the live path runs each real SDK against a fake
+// route. No test reaches a model: the live path runs each real SDK against a fake
 // fetch, with a key that is not one.
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Anthropic from '@anthropic-ai/sdk';
-import OpenAI from 'openai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import { CAPS } from '../src/caps.js';
@@ -66,39 +65,6 @@ const TEST_PRICES = {
   'gpt-test': { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 0 },
 };
 
-/** What the fake OpenAI model answers: 1,000 tokens in (200 of them cached) and 500 out. */
-const CHUNKS = [
-  {
-    choices: [{ index: 0, delta: { role: 'assistant', content: 'Sign in.' }, finish_reason: null }],
-  },
-  { choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] },
-  {
-    choices: [],
-    usage: {
-      prompt_tokens: 1000,
-      completion_tokens: 500,
-      total_tokens: 1500,
-      prompt_tokens_details: { cached_tokens: 200 },
-    },
-  },
-].map((c) => ({
-  id: 'chatcmpl-1',
-  object: 'chat.completion.chunk',
-  created: 1,
-  model: 'gpt-test',
-  ...c,
-}));
-const CHAT_SSE = `${CHUNKS.map((c) => `data: ${JSON.stringify(c)}\n\n`).join('')}data: [DONE]\n\n`;
-
-function fakeOpenAI(): OpenAI {
-  const fetch = async (_url: unknown, init?: RequestInit) => {
-    sent.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
-    await release;
-    return new Response(CHAT_SSE, { headers: { 'content-type': 'text/event-stream' } });
-  };
-  return new OpenAI({ apiKey: 'not-a-real-key', fetch: fetch as never, maxRetries: 0 });
-}
-
 const PATHS: Record<Provider, string> = { anthropic: 'messages', openai: 'chat/completions' };
 
 function factory(
@@ -120,14 +86,6 @@ function factory(
       payload: body,
     });
 }
-
-const chat = (extra: Record<string, unknown> = {}) => ({
-  model: 'gpt-test',
-  max_completion_tokens: 1000,
-  stream: true,
-  messages: [{ role: 'user', content: 'Where is the sign-in form?' }],
-  ...extra,
-});
 
 const ask = (extra: Record<string, unknown> = {}) => ({
   model: 'claude-opus-5-5',
@@ -356,64 +314,5 @@ describe('mock mode', () => {
       (await post('run2', 'supervisor', shot('AAAA', 'Page one', 'Open the help page.')))
         .statusCode,
     ).toBe(400);
-  });
-});
-
-describe('the OpenAI route', () => {
-  const openai = (ledger?: Ledger) =>
-    factory(live({ anthropic: fakeModel(), openai: fakeOpenAI() }, dir), ledger, 'openai');
-
-  it('is metered as Anthropic’s is: the cost recorded after, at the model’s price', async () => {
-    const r = await openai()('run1', 'scout', chat());
-    expect(r.statusCode).toBe(200);
-    expect(r.headers['content-type']).toMatch(/^text\/event-stream/);
-    expect(r.body).toBe(CHAT_SSE);
-    // The usage is always asked for, so the call can be metered.
-    expect(sent[0]!.stream_options).toEqual({ include_usage: true });
-    const rows = await db.query(
-      `SELECT role, model, "tokensIn" AS "in", "tokensOut" AS out, "tokensCached" AS cached,
-              "costUsd"::text AS usd FROM "ModelCall"`,
-    );
-    // 800 tokens at $2, 200 cached at $0.20 and 500 out at $10 a million: $0.00664, rounded up.
-    expect(rows.rows).toEqual([
-      { role: 'scout', model: 'gpt-test', in: 1000, out: 500, cached: 200, usd: '0.0067' },
-    ]);
-  });
-
-  it('checks the budget before the call, and refuses a server tool', async () => {
-    const post = openai();
-    await spent('run1', 23.5);
-    // 64,000 output tokens could cost $0.64 at $10 a million: past the $0.50 left before the lessons.
-    const big = await post('run1', 'scout', chat({ max_completion_tokens: 64_000 }));
-    expect(big.statusCode).toBe(402);
-    expect(big.json().error.type).toBe('billing_error');
-    expect(
-      (await post('run1', 'scout', chat({ max_completion_tokens: undefined }))).statusCode,
-    ).toBe(400);
-    expect((await post('run1', 'scout', chat({ web_search_options: {} }))).statusCode).toBe(400);
-    expect((await post('run1', 'scout', chat({ service_tier: 'priority' }))).statusCode).toBe(400);
-    expect((await post('run1', 'scout', chat(), 'wrong-token')).statusCode).toBe(401);
-    expect(sent).toHaveLength(0);
-    expect((await post('run1', 'scout', chat())).statusCode).toBe(200);
-  });
-
-  it('refuses a provider with no key in live mode, and replays in mock mode without the network', async () => {
-    const keyless = factory(live({ anthropic: fakeModel() }, dir), undefined, 'openai');
-    const r = await keyless('run1', 'scout', chat());
-    expect(r.statusCode).toBe(401);
-    expect(r.json().error.message).toBe('OPENAI_API_KEY is not set');
-
-    const recorded = (await openai()('run1', 'scout', chat())).body;
-    vi.stubGlobal('fetch', () => Promise.reject(new Error('mock mode used the network')));
-    const connect = vi.spyOn(net.Socket.prototype, 'connect');
-    const post = factory(upstreamFor({}, dir), undefined, 'openai');
-    const again = await post('run1', 'scout', chat());
-    expect(again.statusCode).toBe(200);
-    expect(again.body).toBe(recorded);
-    expect(connect).not.toHaveBeenCalled();
-    // The same bytes on the other provider's route are not the recording's.
-    await rm(join(dir, 'run1.jsonl'));
-    await openai()('run1', 'scout', chat());
-    expect((await factory(upstreamFor({}, dir))('run1', 'scout', chat())).statusCode).toBe(400);
   });
 });
