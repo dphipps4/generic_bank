@@ -320,6 +320,7 @@ async function readSession(
       if (!role) continue;
 
       const backendNodeId = n.backendNodeId[ni]!;
+      // Only what is drawn names a control: the items of a closed menu inside it are not.
       const textInside = () => {
         const parts: string[] = [];
         for (let k = ni + 1; k < n.nodeName.length; k++) {
@@ -330,7 +331,12 @@ async function readSession(
           // items) has no layout, and is no part of the name.
           if (!layoutOf.has(k)) continue;
           const parentTag = S(n.nodeName[n.parentIndex[k]!]);
-          if (S(n.nodeName[k]) === '#text' && parentTag !== 'SCRIPT' && parentTag !== 'STYLE')
+          if (
+            S(n.nodeName[k]) === '#text' &&
+            parentTag !== 'SCRIPT' &&
+            parentTag !== 'STYLE' &&
+            layoutOf.has(k)
+          )
             parts.push(S(n.nodeValue[k]));
           if (S(n.nodeName[k]) === 'IMG' && attrs(k).alt) parts.push(attrs(k).alt!);
         }

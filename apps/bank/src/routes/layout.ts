@@ -54,8 +54,12 @@ function frameset(bank: Bank, o: ReturnType<typeof origins>): string {
       : bank.t.layout === 'tabs'
         ? `<FRAMESET ROWS="56,30,*" BORDER="0">${banner}${tabs}${f('home', 'main')}</FRAMESET>`
         : `<FRAMESET ROWS="56,30,*" BORDER="0">${banner}${tabs}<FRAMESET COLS="*,190">${f('home', 'main')}${f('frame/notices', 'notices')}</FRAMESET></FRAMESET>`;
+  // The cross-origin tab strip asks for a page by message; only a page of this console is opened.
+  const relay = tabsFrom
+    ? `<SCRIPT>window.onmessage = function (e) { var u = String(e.data); if (e.origin === ${js(o.second)} && u.indexOf(${js(`${o.main}${base}`)}) === 0) { frames['main'].location.href = u; } };</SCRIPT>`
+    : '';
   return `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Frameset//EN">
-<HTML><HEAD><TITLE>CoreLink Branch Console - ${esc(bank.t.brand)}</TITLE></HEAD>
+<HTML><HEAD><TITLE>CoreLink Branch Console - ${esc(bank.t.brand)}</TITLE>${relay}</HEAD>
 ${body}</HTML>`;
 }
 
@@ -180,12 +184,19 @@ export function layoutRoutes(app: FastifyInstance, bank: Bank) {
   app.get(`${base}frame/tabs`, async (req, reply) => {
     const c = ctxOf(bank, req);
     const d = dialect(bank.t, bank.uiVersion, 'tabs');
-    // Served from the second origin, the tabs must name the main origin to navigate it.
-    const home = bank.t.secondOrigin === 'tabs' ? origins(bank, req).main : '';
+    // Served from the second origin, the tabs must name the main origin to navigate it. A browser
+    // lets a frame of another origin neither find the main frame by its name (TARGET="main" alone
+    // would open a new window) nor navigate it: the tab asks the frameset to, by message.
+    const cross = bank.t.secondOrigin === 'tabs';
+    const home = cross ? origins(bank, req).main : '';
+    const link = (i: NavItem) =>
+      cross && target(i) === 'main'
+        ? `<A HREF="${home}${i.href}" TARGET="main" ONCLICK="parent.postMessage(this.href, ${esc(js(home))}); return false;">${font(c, esc(i.text))}</A>`
+        : linkButton(c, `${home}${i.href}`, i.text, target(i));
     const tabs = navItems(bank)
       .map(
         (i) =>
-          `<TD BGCOLOR="${i.group === 'out' ? p.body : p.panel}" STYLE="border:1px solid ${p.head};border-bottom:0;padding:4px 12px" NOWRAP>${linkButton(c, `${home}${i.href}`, i.text, target(i))}</TD><TD WIDTH="3"></TD>`,
+          `<TD BGCOLOR="${i.group === 'out' ? p.body : p.panel}" STYLE="border:1px solid ${p.head};border-bottom:0;padding:4px 12px" NOWRAP>${link(i)}</TD><TD WIDTH="3"></TD>`,
       )
       .join('');
     return html(

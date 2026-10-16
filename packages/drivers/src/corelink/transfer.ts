@@ -4,10 +4,19 @@
 // never presses the bank's submit: that click needs a person's approval and a grant, and is a step
 // of its own. A refusal in the bank's own words ends the run as the business outcome it is, with
 // nothing submitted.
-import { button, choose, click, field, type ScreenModel, type, withText } from '@gb/screen';
+import {
+  button,
+  choose,
+  click,
+  field,
+  type ScreenModel,
+  TargetError,
+  type,
+  withText,
+} from '@gb/screen';
 import { type DriverContext, type Outcome, type Profile, see, stop, Stop } from '../sdk.js';
-import { readTile } from './check-balance.js';
-import { next, onTheWay, type Session, startSession, unknown } from './session.js';
+import { lastFour, readTile } from './check-balance.js';
+import { next, onTheWay, pressOnScreen, type Session, startSession, unknown } from './session.js';
 
 export interface TransferInput {
   memberId: string;
@@ -46,9 +55,19 @@ export function beside(m: ScreenModel, label: string): string | null {
   return right ? right.text.trim() : null;
 }
 
+/** The field for a label, or null when this screen has none. */
+function fieldOrNull(m: ScreenModel, label: string) {
+  try {
+    return field(m, label);
+  } catch (e) {
+    if (e instanceof TargetError && e.kind === 'none') return null;
+    throw e;
+  }
+}
+
 /** Does this option of the bank's account list name the account the caller meant? */
 export function isAccount(option: string, ref: string, wording: RegExp): boolean {
-  const digits = wording.exec(option)?.[1];
+  const digits = lastFour(wording, option);
   if (/^\d{4}$/.test(ref)) return digits === ref;
   return option.toLowerCase().startsWith(`${ref.toLowerCase()},`);
 }
@@ -60,7 +79,7 @@ export async function prepareTransfer(
   const sess = startSession(ctx);
   const w = ctx.profile.words;
   const page = ctx.page;
-  let filled = false;
+  const filled = { accounts: false, amount: false };
   try {
     await page.goto(ctx.profile.url);
     while (sess.counts.steps++ < 60) {
@@ -91,10 +110,21 @@ export async function prepareTransfer(
             await sess.record('transfer', s.screen, s.model, undefined, refused.code);
             return stop('business_outcome', refused.code);
           }
-          if (filled) return stop('escalated', 'stuck', 'the form came back with no reason given');
-          const options = (label: string) => field(s.model, label);
+          // A bank may split the form over pages (the amount, then the accounts): each page is
+          // filled with what it asks for, and a page that asks again for what was filled is stuck.
+          // A field of a pair without the other is a form this driver does not know.
+          const asks = (label: string) => fieldOrNull(s.model, label) !== null;
+          const pair = (a: string, b: string) => {
+            if (asks(a) !== asks(b))
+              stop('escalated', 'unknown_screen', `the form asks for ${asks(a) ? a : b} alone`);
+            return asks(a);
+          };
+          const accounts = pair('From', 'To');
+          const amount = pair('Amount', 'Memo');
+          if ((!accounts && !amount) || (accounts && filled.accounts) || (amount && filled.amount))
+            return stop('escalated', 'stuck', 'the form came back with no reason given');
           const pick = async (label: string, ref: string) => {
-            const list = options(label);
+            const list = field(s.model, label);
             const matches = (list.options ?? []).filter((o) =>
               isAccount(o, ref, ctx.profile.accountWording),
             );
@@ -104,18 +134,21 @@ export async function prepareTransfer(
             }
             await choose(page, list, matches[0]!);
           };
-          await pick('From', input.from);
-          await pick('To', input.to);
-          await type(page, field(s.model, 'Amount'), dollars(input.amountCents));
-          await type(page, field(s.model, 'Memo'), memoFor(input));
-          await click(page, button(s.model, w.continue));
-          filled = true;
-          await sess.record(
-            'transfer',
-            s.screen,
-            s.model,
-            'chose both accounts, typed the amount and the memo; pressed Continue',
-          );
+          const did: string[] = [];
+          if (accounts) {
+            await pick('From', input.from);
+            await pick('To', input.to);
+            filled.accounts = true;
+            did.push('chose both accounts');
+          }
+          if (amount) {
+            await type(page, field(s.model, 'Amount'), dollars(input.amountCents));
+            await type(page, field(s.model, 'Memo'), memoFor(input));
+            filled.amount = true;
+            did.push('typed the amount and the memo');
+          }
+          await pressOnScreen(sess, w.continue);
+          await sess.record('transfer', s.screen, s.model, `${did.join(', ')}; pressed Continue`);
           break;
         }
         case 'transfer.review': {

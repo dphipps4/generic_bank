@@ -50,9 +50,12 @@ import {
 const html = (reply: FastifyReply, body: string) =>
   reply.type('text/html; charset=utf-8').send(body);
 
-/** The script that enables a form only after the page has "hydrated". */
+/**
+ * The script that enables the page's forms only after the page has "hydrated". Every form: bank 3's
+ * hidden copy comes first, and the form a person sees must still come alive.
+ */
 const hydrate = (ms: number) =>
-  `setTimeout(function () { var f = document.forms[0]; if (!f) { return; } for (var i = 0; i < f.elements.length; i++) { f.elements[i].disabled = false; } }, ${ms});`;
+  `setTimeout(function () { for (var k = 0; k < document.forms.length; k++) { var f = document.forms[k]; for (var i = 0; i < f.elements.length; i++) { f.elements[i].disabled = false; } } }, ${ms});`;
 
 export function signInPage(
   bank: Bank,

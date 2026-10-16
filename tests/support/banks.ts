@@ -3,6 +3,7 @@
 // test harness may start a bank; nothing in apps/ or packages/ may import one.
 import { createHmac } from 'node:crypto';
 import type { AddressInfo } from 'node:net';
+import { buildAdmin } from '../../apps/bank/src/admin.js';
 import { connectInProcess, type Db, migrate } from '../../apps/bank/src/db.js';
 import { hazards, type HazardName, signHazards } from '../../apps/bank/src/hazards.js';
 import { OPERATORS, seed } from '../../apps/bank/src/seed.js';
@@ -16,6 +17,8 @@ export const PASSWORDS = {
   supervisor: 'supervisor-password-for-tests',
 };
 export const HMAC = 'h'.repeat(32);
+/** The bank-admin token the harness's admin API answers to: plainly not a real one. */
+export const ADMIN_TOKEN = 'k'.repeat(40);
 
 export interface LiveBank {
   id: TenantId;
@@ -25,6 +28,8 @@ export interface LiveBank {
   origin: string;
   secondOrigin?: string;
   forced(names: HazardName[]): Record<string, string>;
+  /** The bank's admin API, its ground truth for tests: a GET, answered as JSON. */
+  admin<T>(path: string): Promise<T>;
   close(): Promise<void>;
 }
 
@@ -67,6 +72,7 @@ export async function liveBank(
     bank.ports.second = (second.server.address() as AddressInfo).port;
   }
   const origin = `http://localhost:${bank.ports.main}`;
+  const admin = await buildAdmin(bank, ADMIN_TOKEN);
   return {
     id,
     db,
@@ -74,7 +80,17 @@ export async function liveBank(
     origin,
     secondOrigin: bank.ports.second ? `http://localhost:${bank.ports.second}` : undefined,
     forced: (names) => ({ 'x-hazards': signHazards(names, HMAC) }),
+    admin: async <T>(path: string) => {
+      const r = await admin.inject({
+        method: 'GET',
+        url: path,
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
+      });
+      if (r.statusCode !== 200) throw new Error(`bank admin ${path}: ${r.statusCode}`);
+      return r.json() as T;
+    },
     close: async () => {
+      await admin.close();
       await main.close();
       await second?.close();
       await db.close();
