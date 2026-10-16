@@ -1056,8 +1056,8 @@ expects is recognized, a control on it is visible and enabled, nothing says it i
 (no `aria-busy`, spinner, skeleton or short "Loading…" text), and its layout holds for 300 ms.
 
 Otherwise it is ready when two screenshots 700 ms apart are identical with the same layout
-structure. A still page that is no known screen is handed back after 20
-seconds as an unknown screen. A page that is still loading is waited on for up to 3 minutes.
+structure. A loaded, usable page that is no known screen is handed back
+after 10 seconds as an unknown screen, still or not. A page that is still loading is waited on for up to 3 minutes.
 
 Signed in means a recognized signed-in screen, never a missing password field. Every browser
 call has its own timeout.
