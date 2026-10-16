@@ -176,8 +176,9 @@ curl -s -X POST http://localhost:8000/tasks/check-balance \
 ```
 
 Read the result. `?wait=30` holds the call until the run ends, or 30 seconds pass. If the bank asks
-for a sign-in code, the run waits for you: answer it in the Console inbox,
-http://localhost:8080/inbox.
+for a sign-in code, the run waits for you: the code is in the staff inbox, http://localhost:8089,
+and you answer it in the Console inbox, http://localhost:8080/inbox. If a safety check stops a
+run, it freezes that bank until an admin clears it on the Console's Freezes page.
 
 ```sh
 curl -s "http://localhost:8000/tasks/<runId>?wait=30" -H "Authorization: Bearer $TOKEN"
@@ -203,11 +204,12 @@ curl -s -X POST http://localhost:8000/tasks/transfer \
   -d '{"bank":"generic","memberId":"40017732","from":"Everyday Checking","to":"Rainy Day Savings","amountCents":2500,"memo":"rent","idempotencyKey":"try-transfer-0001"}'
 ```
 
-Statements, for last month. The result names each month's document by a `ref`; fetch it:
+Statements, for last month. The result names each month's document in its `statement` field;
+fetch it:
 
 ```sh
 curl -s -X POST http://localhost:8000/tasks/download-statements \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"bank":"generic","memberId":"40017732","account":"Everyday Checking","months":["<YYYY-MM>"]}'
-curl -s -o statement.pdf http://localhost:8000/statements/<ref> -H "Authorization: Bearer $TOKEN"
+curl -s -o statement.pdf http://localhost:8000/statements/<statement> -H "Authorization: Bearer $TOKEN"
 ```

@@ -120,9 +120,10 @@ export async function waitFullyRendered(
       sameOutside(prev.image, image, model.animated);
     if (still && signals.length === 0 && actionable && complete)
       return { model, rendered: true, waitedMs: Date.now() - start };
-    // Loaded and usable, but no screen the caller knows: after 2 s it is what it is.
+    // Loaded and usable, but no screen the caller knows: after 10 s it is what it is. Shorter, and a
+    // page whose rows or panels arrive late under the bank's own slowness is called unknown.
     usableSince = signals.length === 0 && actionable ? (usableSince ?? Date.now()) : null;
-    if (usableSince !== null && Date.now() - usableSince >= 2_000)
+    if (usableSince !== null && Date.now() - usableSince >= 10_000)
       return { model, rendered: true, waitedMs: Date.now() - start };
     reason =
       signals[0] ??

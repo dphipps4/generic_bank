@@ -107,7 +107,7 @@ services:
     command: ['node', 'apps/memory/dist/seed-cli.js']
     mem_limit: 128m
     env_file: [../../config/app.env, ../../.run/env/memory-seed.env]
-    environment: { MEMORY_URL: 'http://memory:${MEMORY_PORT}', MEMORY_SEED_DIR: /seeds }
+    environment: { MEMORY_URL: 'http://memory:8470', MEMORY_SEED_DIR: /seeds }
     volumes: ['../../seeds/memory:/seeds:ro']
     networks: [app]
     depends_on: { memory: { condition: service_healthy } }
@@ -167,7 +167,7 @@ services:
     mem_limit: 768m
     env_file: [../../config/app.env, ../../.run/env/runner.env]
     # Not a dependency: runs never wait on memory; their episodes wait in the outbox instead.
-    environment: { MEMORY_URL: 'http://memory:${MEMORY_PORT}' }
+    environment: { MEMORY_URL: 'http://memory:8470' }
     networks: [app, world]
     depends_on: { postgres: { condition: service_healthy } }
     healthcheck:
@@ -318,6 +318,6 @@ services:
     entrypoint: ['node', 'apps/factory/dist/cli.js']
     mem_limit: 768m
     env_file: [../../config/app.env, ../../.run/env/factory.env]
-    environment: { MEMORY_URL: 'http://memory:${MEMORY_PORT}' }
+    environment: { MEMORY_URL: 'http://memory:8470' }
     networks: [factory, app, world]
     depends_on: { memory: { condition: service_healthy } }
