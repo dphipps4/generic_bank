@@ -8,6 +8,7 @@ import { buildServer as buildApi } from '../../apps/api/src/server.js';
 import { recommendationPages } from '../../apps/console/src/pages/recommendations.js';
 import { gate } from '../../apps/factory/src/gate.js';
 import { gateway } from '../../apps/factory/src/gateway.js';
+import { memoryClient } from '../../apps/factory/src/memory.js';
 import type { Sandbox } from '../../apps/factory/src/hazard-check.js';
 import { sqlLedger } from '../../apps/factory/src/ledger.js';
 import { DEFAULT_ROLES } from '../../apps/factory/src/models.js';
@@ -21,7 +22,6 @@ import {
   unpictured,
   upstreamFor,
 } from '../../apps/factory/src/upstream.js';
-import { fakeModels } from '../../apps/factory/test/fakes.js';
 import { executeRun } from '../../apps/runner/src/execute.js';
 import { accountsOf } from '../../apps/bank/src/ledger.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
@@ -31,15 +31,18 @@ import { controlDb } from '../../packages/oauth/test/control.js';
 import { answerHumanTask, createRun, resultOf } from '../../packages/runs/src/index.js';
 import { Browser } from '../../packages/screen/src/index.js';
 import { type LiveBank, liveBank, PASSWORDS } from '../support/banks.js';
+import { memoryService } from '../support/memory.js';
+import { scripted } from '../support/scripted.js';
 
 // The demo, end to end, in mock mode: Generic Bank's hand-written driver reads a balance; the vendor
 // ships its redesign and the same request escalates at the screen it does not know; the driver is
 // taken out of service and a repair case opens. The factory repairs it from the case (the
 // Supervisor and the Scout replaying the recording kept for a repair at this bank, through the
-// gateway), a person approves in the Console, the hazard check and probation run against the
-// redesigned bank, and the repaired version is promoted. The same request then reads the same
-// balance through the new notice and the new menu, on the new version. Onboarding a bank reaches
-// its review the same way. No key is used and nothing reaches a model.
+// gateway, from memory's knowledge pack) and writes what it taught to memory; a person approves in
+// the Console, the hazard check and probation run against the redesigned bank, and the repaired
+// version is promoted, which memory reads as the proof of the lesson the repair saw. The same
+// request then reads the same balance through the new notice and the new menu, on the new version.
+// Onboarding a bank reaches its review the same way. No key is used and nothing reaches a model.
 //
 // FACTORY_RECORD=1 records the scripted models through the gateway instead, and keeps each run's
 // recording in apps/factory/recordings, where `just onboard` and `just repair` replay it with no key.
@@ -64,197 +67,14 @@ let api: Awaited<ReturnType<typeof buildApi>>;
 let apiToken: () => Promise<string>;
 const store = memoryStore();
 const consoleApp = Fastify();
-
-/** The page as a tool result or an instruction shows it to the model. */
-type View = {
-  controls: { ref: string; role: string; name: string; options?: string[] }[];
-  texts: string[];
-};
-const pageOf = (text: string): View | undefined => {
-  try {
-    return JSON.parse(text.slice(text.lastIndexOf('\n') + 1)) as View;
-  } catch {
-    return undefined;
-  }
-};
-const has = (p: View, name: string) => p.controls.some((c) => c.name === name);
-const ref = (p: View, role: string | null, name?: string) => {
-  const c = p.controls.findLast(
-    (x) => (role === null || x.role === role) && (name === undefined || x.name === name),
-  );
-  if (!c) throw new Error(`no ${role ?? 'control'} ${name ?? ''} on ${JSON.stringify(p)}`);
-  return c.ref;
-};
-const lists = (p: View) => p.controls.filter((c) => c.options);
-const SEARCH = `Search for member ${MEMBERS.demo}.`;
-const FILL = 'Choose the first account to send from and the second to receive, then type 1.00.';
-type Use = { tool: string; input: Record<string, unknown> };
-
-/** The Scout's side of the script: what its model does for each instruction. */
-const PLANS: Record<string, ((p: View) => Use)[]> = {
-  'Sign in as the staff service account.': [
-    (p) => ({
-      tool: 'browser_type_credential',
-      input: { ref: ref(p, 'textbox'), credential: 'user_id' },
-    }),
-    (p) => ({
-      tool: 'browser_type_credential',
-      input: { ref: ref(p, 'password'), credential: 'password' },
-    }),
-    (p) => ({ tool: 'browser_click', input: { ref: ref(p, null, 'Sign In') } }),
-  ],
-  'Have the code sent.': [
-    (p) => ({ tool: 'browser_click', input: { ref: ref(p, null, 'Send code') } }),
-  ],
-  'Enter the code the bank sent.': [
-    (p) => ({ tool: 'browser_enter_code', input: { ref: ref(p, 'textbox') } }),
-    (p) => ({ tool: 'browser_click', input: { ref: ref(p, null, 'Verify') } }),
-  ],
-  'Press Continue to Online Banking.': [
-    (p) => ({ tool: 'browser_click', input: { ref: ref(p, null, 'Continue to Online Banking') } }),
-  ],
-  'Open the Menu.': [(p) => ({ tool: 'browser_click', input: { ref: ref(p, null, 'Menu ▾') } })],
-  'Open Member Lookup.': [
-    (p) => ({ tool: 'browser_click', input: { ref: ref(p, null, 'Member Lookup') } }),
-  ],
-  'Open Member Search.': [
-    (p) => ({ tool: 'browser_click', input: { ref: ref(p, null, 'Member Search') } }),
-  ],
-  [SEARCH]: [
-    (p) => ({ tool: 'browser_type', input: { ref: ref(p, 'textbox'), text: MEMBERS.demo } }),
-    (p) => ({ tool: 'browser_click', input: { ref: ref(p, null, 'Search') } }),
-  ],
-  'Open the member.': [(p) => ({ tool: 'browser_click', input: { ref: ref(p, null, 'Open') } })],
-  'Open Statements on the first account.': [
-    (p) => ({
-      tool: 'browser_click',
-      input: { ref: p.controls.find((c) => c.name === 'Statements')!.ref },
-    }),
-  ],
-  'Open Transfer Funds.': [
-    (p) => ({ tool: 'browser_click', input: { ref: ref(p, null, 'Transfer Funds') } }),
-  ],
-  [FILL]: [
-    (p) => ({ tool: 'browser_choose', input: { ref: lists(p)[0]!.ref, option: 2 } }),
-    (p) => ({ tool: 'browser_choose', input: { ref: lists(p)[1]!.ref, option: 3 } }),
-    (p) => ({ tool: 'browser_type', input: { ref: ref(p, 'textbox'), text: '1.00' } }),
-    (p) => ({ tool: 'browser_click', input: { ref: ref(p, null, 'Continue') } }),
-  ],
-};
-
-/** The Supervisor's side: the next step from the goal and the latest page, on either look. */
-function decide(goal: string, p: View): string {
-  if (p.controls.some((c) => c.role === 'password')) return 'Sign in as the staff service account.';
-  if (has(p, 'Send code')) return 'Have the code sent.';
-  if (has(p, 'Verify')) return 'Enter the code the bank sent.';
-  if (has(p, 'Continue to Online Banking')) return 'Press Continue to Online Banking.';
-  const summary = p.texts.some((t) => t.includes('Available balance'));
-  const search = has(p, 'Open')
-    ? 'Open the member.'
-    : has(p, 'Search')
-      ? SEARCH
-      : has(p, 'Member Lookup')
-        ? 'Open Member Lookup.'
-        : has(p, 'Menu ▾')
-          ? 'Open the Menu.'
-          : 'Open Member Search.';
-  if (goal.includes('balances')) return summary ? 'stop' : search;
-  if (goal.includes('statements')) {
-    if (has(p, 'Show')) return 'stop';
-    return summary ? 'Open Statements on the first account.' : search;
-  }
-  if (p.texts.includes('Review transfer')) return 'stop';
-  if (lists(p).length === 2) return FILL;
-  return summary ? 'Open Transfer Funds.' : search;
-}
-
-/**
- * The Supervisor's recommendation, from the run's frames: at onboarding, the bank's words, each on
- * the first frame that shows it, and a refusal it never made as a guess; at a repair, only what
- * changed, each on the frame of this run that shows it.
- */
-function recommending(text: string, repair: boolean, results: number) {
-  if (results) return { text: 'Recommended.' };
-  const frames = [...text.matchAll(/^(f\d+): (\{.*\})$/gm)].map(([, r, json]) => ({
-    ref: r!,
-    ...(JSON.parse(json!) as { controls: string[]; texts: string[] }),
-  }));
-  const where = (pred: (f: (typeof frames)[number]) => boolean, what: string) => {
-    const f = frames.find(pred);
-    if (!f) throw new Error(`no frame shows ${what}`);
-    return f.ref;
-  };
-  const control = (about: string, value: string): Claim => ({
-    about,
-    value,
-    basis: 'seen',
-    frames: [where((f) => f.controls.includes(value), value)],
-  });
-  const text_ = (about: string, value: string): Claim => ({
-    about,
-    value,
-    basis: 'seen',
-    frames: [where((f) => f.texts.some((t) => t.includes(value)), value)],
-  });
-  const claims = repair
-    ? [
-        control('words.memberSearch', 'Member Lookup'),
-        control('words.activity', 'History'),
-        control('words.menu', 'Menu ▾'),
-        control('words.dismiss', 'Continue to Online Banking'),
-        text_('screens.login.notice', "We've refreshed Online Banking"),
-        text_('screens.console.home', 'Open the Menu and choose'),
-      ]
-    : [
-        control('words.signIn', 'Sign In'),
-        control('words.memberSearch', 'Member Search'),
-        control('words.statements', 'Statements'),
-        control('words.transfer', 'Transfer Funds'),
-        control('words.continue', 'Continue'),
-        text_('screens.member.summary', 'Available balance'),
-        {
-          about: 'refusals.insufficient_funds',
-          value: 'The amount is more than the available balance.',
-          basis: 'guess',
-          frames: [where((f) => f.controls.includes('Continue'), 'the transfer form')],
-        } satisfies Claim,
-      ];
-  return { tool: 'recommend', input: { claims } };
-}
-
-/** Both roles' models, scripted: the Supervisor answers in its form, the Scout follows its plan. */
-function scripted() {
-  return fakeModels((_provider, r) => {
-    const said = r.items.flatMap((x) => ('user' in x ? [x.user] : []));
-    const results = r.items.filter((x) => 'result' in x).length;
-    if (r.system.includes('with the recommend tool'))
-      return recommending(said[0]!, r.system.includes('the bank has changed'), results);
-    if (r.system.startsWith('You are the Supervisor')) {
-      const text = said[0]!;
-      const goal = /^Goal: (.*)$/m.exec(text)![1]!;
-      const [, at, json] = /Latest frame, (f\d+):\n(.*)$/s.exec(text)!;
-      return {
-        text: JSON.stringify({
-          next: decide(goal, JSON.parse(json!) as View),
-          reason: `the page in ${at} shows where the Scout is`,
-          frames: [at],
-        }),
-      };
-    }
-    const at = r.items.findLastIndex((x) => 'user' in x && PLANS[x.user.split('\n')[0]!]);
-    const instruction = (r.items[at] as { user: string }).user;
-    const plan = PLANS[instruction.split('\n')[0]!]!;
-    const done = r.items.slice(at + 1).flatMap((x) => ('result' in x ? [x.result] : []));
-    const shown = done.map(pageOf).filter(Boolean).at(-1) ?? pageOf(instruction)!;
-    return done.length < plan.length ? plan[done.length]!(shown) : { text: 'Done.' };
-  });
-}
+let memory: Awaited<ReturnType<typeof memoryService>>;
 
 beforeAll(async () => {
-  [db, before, after] = await Promise.all([
+  [db, before, after, memory] = await Promise.all([
     controlDb(),
     liveBank('generic'),
     liveBank('generic', { redesign: true }),
+    memoryService(),
   ]);
   bank = before;
   await db.query('UPDATE "Bank" SET url = $1 WHERE id = $2', [bank.url, 'generic']);
@@ -264,7 +84,7 @@ beforeAll(async () => {
   factory = buildServer({
     gateway: gateway({
       ledger: sqlLedger(db),
-      upstream: RECORD ? live(scripted(), dir) : upstreamFor({}, RECORDINGS),
+      upstream: RECORD ? live(scripted('generic', MEMBERS.demo), dir) : upstreamFor({}, RECORDINGS),
     }),
     token: TOKEN,
     mode: RECORD ? 'live' : 'mock',
@@ -304,6 +124,7 @@ afterAll(async () => {
   await consoleApp.close();
   await before?.close();
   await after?.close();
+  await memory?.close();
   await db?.close();
   await rm(dir, { recursive: true, force: true });
 });
@@ -321,6 +142,7 @@ async function factoryRunAt(mode: Mode) {
       credentials: { operatorId: OPERATORS.service.id, password: PASSWORDS.service },
       answerKey: ANSWER_KEY,
       member: MEMBERS.demo,
+      memory: memoryClient(memory.factory),
     },
     { bank: 'generic', mode },
   );
@@ -335,6 +157,18 @@ async function factoryRunAt(mode: Mode) {
   }
   return out;
 }
+
+/** The lessons a run proposed or added its evidence to, each at its current version, seen first. */
+const lessonsOf = async (runId: string) =>
+  (
+    await memory.db.query<{ seen: boolean; state: string; role: string }>(
+      `SELECT v.seen, v.state::text AS state, v.role::text AS role
+         FROM "Lesson" l JOIN "LessonVersion" v ON v."lessonId" = l.id AND v.version = l.current
+        WHERE l.id IN (SELECT "lessonId" FROM "LessonVersion" WHERE "runId" = $1)
+        ORDER BY v.seen DESC`,
+      [runId],
+    )
+  ).rows;
 
 async function checkBalance() {
   const { runId } = await createRun(
@@ -476,8 +310,17 @@ describe('a bank redesigns, the crawl breaks, the factory repairs it', () => {
       payload: { reason: 'the new words are on the frames' },
     });
     expect(approved.json()).toEqual({ ok: true, status: 'approved' });
-    const v = await gate({ sql: db, sandbox: sandbox() }, recommendationId!);
+    const v = await gate(
+      { sql: db, sandbox: sandbox(), memory: memoryClient(memory.factory) },
+      recommendationId!,
+    );
     expect(v.state).toBe('promoted');
+    // Memory read the promotion from its probation runs: the lesson the repair saw is confirmed,
+    // and its guess, the onboarding's guess too, stays a proposal.
+    expect(await lessonsOf(runId)).toEqual([
+      expect.objectContaining({ seen: true, state: 'confirmed', role: 'system' }),
+      expect.objectContaining({ seen: false, state: 'proposed', role: 'factory' }),
+    ]);
     const banks = (
       await api.inject({ url: '/banks', headers: { authorization: `Bearer ${await apiToken()}` } })
     ).json<{ id: string; tasks: { task: string; crawlerVersion: string }[] }[]>();

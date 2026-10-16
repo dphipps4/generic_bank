@@ -1,10 +1,12 @@
 // The gate after a person's approval (plan, §10): the approved recommendation becomes a candidate
 // version, its profile runs the hazard check against the bank, and on probation two clean runs
-// promote it. A repaired version's promotion closes the bank's repair case. The profile checked is
-// the one the Runner will serve: the registry's, built from the same claims over the same base.
+// promote it. A repaired version's promotion closes the bank's repair case, and memory is told, so
+// its rules confirm what the probation runs bore out. The profile checked is the one the Runner
+// will serve: the registry's, built from the same claims over the same base.
 import { closeRepairCase, profileOf, type Sql } from '@gb/runs';
 import { attemptOn, hazardCheck, HEALTHY, judge, type Sandbox } from './hazard-check.js';
-import { candidate, checked, probationRun, type Version } from './lifecycle.js';
+import { candidate, checked, CLEAN_RUNS, probationRun, type Version } from './lifecycle.js';
+import { type Memory, sendPromotion } from './memory.js';
 
 /** Waits until a person decides the recommendation in the Console; true when approved. */
 export async function decided(
@@ -27,7 +29,7 @@ export async function decided(
 }
 
 export async function gate(
-  o: { sql: Sql; sandbox: Sandbox; log?: (line: string) => void },
+  o: { sql: Sql; sandbox: Sandbox; memory?: Memory; log?: (line: string) => void },
   recommendationId: string,
 ): Promise<Version> {
   const { sql, sandbox } = o;
@@ -57,6 +59,14 @@ export async function gate(
   if (v.state === 'promoted') {
     await closeRepairCase(sql, v.tenant, v.task);
     log(`v${v.version}: promoted; it serves ${v.task} at ${v.tenant}`);
+    // Memory's rules read the promotion from its probation runs. Its being down never undoes the
+    // promotion; the gate, run again, sends it again.
+    if (o.memory) {
+      const why = await sendPromotion(o.memory, sql, v, CLEAN_RUNS);
+      log(
+        why ? `  memory has not taken the promotion (${why}): run the gate again` : '  memory told',
+      );
+    }
   }
   return v;
 }

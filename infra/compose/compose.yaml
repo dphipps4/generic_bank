@@ -336,6 +336,7 @@ services:
 
   # A factory run (just onboard, just repair): the factory's own secrets, in the Runner's image for
   # its Chromium, run once and removed. Its models are reached only through the factory's gateway.
+  # It starts from memory's knowledge pack, so it waits for memory.
   factory-run:
     <<: *node
     image: ${GB_RUNNER_IMAGE}
@@ -344,4 +345,6 @@ services:
     entrypoint: ['node', 'apps/factory/dist/cli.js']
     mem_limit: 768m
     env_file: [../../config/app.env, ../../.run/env/factory.env]
+    environment: { MEMORY_URL: 'http://memory:${MEMORY_PORT}' }
     networks: [factory, app, world]
+    depends_on: { memory: { condition: service_healthy } }

@@ -1,4 +1,4 @@
-// The factory's commands, run as a one-off container beside the factory (just onboard, make
+// The factory's commands, run as a one-off container beside the factory (just onboard, just
 // repair):
 //   onboard <bank>   a build run at the bank, then the gate once a person approves its profile
 //   repair <bank>    a repair run from the bank's open repair case, then the same gate
@@ -15,6 +15,7 @@ import { Browser } from '@gb/screen';
 import { z } from 'zod';
 import { decided, gate } from './gate.js';
 import type { Sandbox } from './hazard-check.js';
+import { memoryClient } from './memory.js';
 import { ROLE_SETTINGS, rolesOf } from './models.js';
 import { factoryRun, type Mode } from './run.js';
 
@@ -36,10 +37,20 @@ const cfg = loadConfig(
       .regex(/^\d{8}$/)
       .default('40017732'),
     CONSOLE_PORT: z.coerce.number().int().default(8080),
+    MEMORY_URL: z.url().default('http://memory:8470'),
+    MEMORY_TOKEN_FACTORY: secret(),
+    MEMORY_SIGNING_KEY: secret(),
     ...ROLE_SETTINGS,
   },
   process.env,
-  ['FACTORY_GATEWAY_TOKEN', 'MINIO_ROOT_PASSWORD', 'ANSWER_SEAL_KEY', 'HAZARD_HMAC_KEY'],
+  [
+    'FACTORY_GATEWAY_TOKEN',
+    'MINIO_ROOT_PASSWORD',
+    'ANSWER_SEAL_KEY',
+    'HAZARD_HMAC_KEY',
+    'MEMORY_TOKEN_FACTORY',
+    'MEMORY_SIGNING_KEY',
+  ],
 );
 
 const [command, arg] = process.argv.slice(2);
@@ -56,6 +67,11 @@ const store = s3Store({
   secretKey: cfg.MINIO_ROOT_PASSWORD,
 });
 const credentials = { operatorId: '0412', password: cfg.BANK_SERVICE_PASSWORD };
+const memory = memoryClient({
+  url: cfg.MEMORY_URL,
+  token: cfg.MEMORY_TOKEN_FACTORY,
+  signingKey: cfg.MEMORY_SIGNING_KEY,
+});
 const log = (line: string) => console.log(line);
 const browser = await Browser.launch();
 
@@ -102,7 +118,7 @@ async function gateOf(recommendationId: string) {
       recommendationId,
     ])
   ).rows[0]!.tenant;
-  const v = await gate({ sql, sandbox: await sandboxAt(bank), log }, recommendationId);
+  const v = await gate({ sql, sandbox: await sandboxAt(bank), memory, log }, recommendationId);
   log(`version ${v.id} is ${v.state}`);
 }
 
@@ -120,6 +136,7 @@ try {
         credentials,
         answerKey: cfg.ANSWER_SEAL_KEY,
         member: cfg.FACTORY_MEMBER,
+        memory,
         log,
       },
       { bank: arg, mode: (command === 'onboard' ? 'build' : 'repair') as Mode },
