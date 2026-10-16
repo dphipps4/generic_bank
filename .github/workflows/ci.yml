@@ -122,8 +122,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # A pull request rebuilds an image only when it changes what goes into it; master and the
+      # nightly run build everything.
+      - name: What this change touches
+        id: touches
+        run: |
+          if [ "${{ github.event_name }}" != pull_request ]; then
+            echo "images=true" >> "$GITHUB_OUTPUT"; echo "tools=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          changed="$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")"
+          grep -qE '^(apps/|packages/|infra/docker/(node|runner)\.Dockerfile$|package(-lock)?\.json$|tsconfig)' <<<"$changed" \
+            && echo "images=true" >> "$GITHUB_OUTPUT" || echo "images=false" >> "$GITHUB_OUTPUT"
+          grep -qE '^(infra/docker/tools\.Dockerfile$|infra/scripts/|infra/docs/|docs/plan/)' <<<"$changed" \
+            && echo "tools=true" >> "$GITHUB_OUTPUT" || echo "tools=false" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@v3
+        if: steps.touches.outputs.images == 'true'
       - name: Build the Node image every service runs
+        if: steps.touches.outputs.images == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -135,16 +152,23 @@ jobs:
           cache-to: type=gha,mode=max
       # The default builder sees images in the local daemon, so the Runner builds on the one above.
       - name: Build the Runner's image (the same plus headless Chromium)
+        if: steps.touches.outputs.images == 'true'
         run: docker build --builder default -f infra/docker/runner.Dockerfile --build-arg BASE=generic-bank/node:ci -t generic-bank/runner:ci .
       # The secret scripts and the plan renderer run inside the tools image: prove they still do.
       - name: The tools image runs the scripts
+        if: steps.touches.outputs.tools == 'true'
         run: |
           docker build -f infra/docker/tools.Dockerfile -t generic-bank/tools:ci infra/docker
           docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/work" generic-bank/tools:ci bash -c \
             'source infra/scripts/lib.sh && sops --version && age --version && jq --version && node infra/docs/render-plan.cjs'
       # A secret baked into an image fails the build: gitleaks reads each image's whole filesystem.
       - name: No secrets in the images
-        run: infra/scripts/secrets-scan.sh image generic-bank/node:ci generic-bank/runner:ci generic-bank/tools:ci
+        if: steps.touches.outputs.images == 'true' || steps.touches.outputs.tools == 'true'
+        run: |
+          images=()
+          [ "${{ steps.touches.outputs.images }}" = true ] && images+=(generic-bank/node:ci generic-bank/runner:ci)
+          [ "${{ steps.touches.outputs.tools }}" = true ] && images+=(generic-bank/tools:ci)
+          infra/scripts/secrets-scan.sh image "${images[@]}"
       - name: Compose file is valid
         run: |
           mkdir -p .run/env
