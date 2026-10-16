@@ -8,7 +8,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Readable, Writable } from 'node:stream';
 import { Cdp, CdpError, CdpTimeout, type Transport } from './cdp.js';
-import { type Identity, identityCommands, MAC, macChrome } from './identity.js';
+import { clientHints, type Identity, identityCommands, MAC, macChrome } from './identity.js';
 
 /** Where Chrome is: CHROME_PATH, `just browser`'s install, or the Runner image's Debian chromium. */
 export function findChrome(root = process.cwd()): string {
@@ -475,8 +475,11 @@ export class Page {
       ['DOM.enable', {}],
       ['Network.enable', {}],
     );
-    if (this.options.headers)
-      commands.push(['Network.setExtraHTTPHeaders', { headers: this.options.headers }]);
+    const headers = {
+      ...this.options.headers,
+      ...(kind === 'window' ? clientHints(this.identity) : {}),
+    };
+    if (Object.keys(headers).length) commands.push(['Network.setExtraHTTPHeaders', { headers }]);
     commands.push(
       ['Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true }],
       ...(o.extra ?? []),
