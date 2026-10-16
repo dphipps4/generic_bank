@@ -153,8 +153,6 @@ up: env image
     @just backend console crawlers bank bank-more factory
     @just credentials
     @just urls
-    @# The first time only, the three places a person starts from, in the browser (never in CI).
-    @[[ -n "${CI:-}" || -f .run/opened ]] || { just open; mkdir -p .run; touch .run/opened; }
 
 # Open Swagger UI, the Console and the staff inbox in the browser
 [group('Run')]
