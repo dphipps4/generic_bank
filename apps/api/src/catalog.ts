@@ -249,7 +249,7 @@ export function openapi(): Record<string, unknown> {
         client: {
           type: 'oauth2',
           description:
-            'A client id and secret (the local one is in secrets/credentials.txt); Swagger UI gets the token.',
+            "The Task API's client id and secret, under Task API in secrets/credentials.txt (not a bank login); Swagger UI gets the token.",
           flows: { clientCredentials: { tokenUrl: '/oauth/token', scopes: {} } },
         },
       },

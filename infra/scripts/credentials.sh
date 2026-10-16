@@ -54,7 +54,7 @@ MinIO: the evidence store
   user            $(get MINIO_ROOT_USER "$local_env")
   password        $(get MINIO_ROOT_PASSWORD "$local_env")
 
-Task API
+Task API: Swagger UI's Authorize takes this client id and secret
   Swagger UI      http://localhost:${API_PORT:-8000}/docs
   client id       $(get API_LOCAL_CLIENT_ID "$local_env")
   client secret   $(get API_LOCAL_CLIENT_SECRET "$local_env")
