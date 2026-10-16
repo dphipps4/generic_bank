@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Everything GitHub's CI runs, on this machine, so a fork can check a change without Actions:
-# the checks, the whole suite, the long suite, the images it ships with their secret scan, the
-# compose file, and the history's secret scan. Slow (most of an hour) and heavy; just check is the
-# quick version.
+# the checks, the whole suite, the escalation and transfer-safety suites, the long suite, the images
+# it ships with their secret scan, the compose file, and the history's secret scan. Slow (most of an
+# hour) and heavy; just check is the quick version.
 source "$(dirname "$0")/lib.sh"
 set -e
 
@@ -16,10 +16,17 @@ npm run --silent typecheck
 npm run --silent lint
 npm run --silent depcruise
 
-info "The whole suite, then the long suite (two workers, so the machine stays usable)"
+info "The whole suite, the escalation and transfer-safety suites, the long suite (two workers at most)"
 [[ -x .run/browser/chrome ]] || [[ -n "${CHROME_PATH:-}" ]] || infra/scripts/browser.sh
-npx vitest run --maxWorkers=2
-npx vitest run --config vitest.long.config.ts --maxWorkers=1
+npx vitest run --maxWorkers=2 --exclude 'tests/escalation/**' --exclude 'tests/transfer/**'
+# In these suites and the long one, a skipped test is a failure: each must run as many as it has.
+npx vitest run tests/escalation tests/transfer --maxWorkers=2 \
+  --reporter=default --reporter=json --outputFile.json=.run/suites.json
+node infra/scripts/suite-ran.mjs .run/suites.json tests/escalation=9 tests/transfer=10
+npx vitest run --config vitest.long.config.ts --maxWorkers=1 \
+  --reporter=default --reporter=json --outputFile.json=.run/long.json
+node infra/scripts/suite-ran.mjs .run/long.json \
+  tests/long/swallowed-submit.test.ts=1 tests/long/transfer-swallowed.test.ts=1
 
 info "The images that ship, and no secret inside them"
 docker build -q -f infra/docker/node.Dockerfile -t generic-bank/node:ci . >/dev/null
