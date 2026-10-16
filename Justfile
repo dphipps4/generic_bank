@@ -15,9 +15,10 @@ set dotenv-path := ["config/app.env", "config/local.env"]
 alias doctor := requirements
 alias help := default
 
-# The compose project, and the image tags, are named after this folder, so a second copy has its
-# own containers, volumes and images. This folder, generic_bank, is the project generic-bank.
-project := `basename "$PWD" | tr 'A-Z_' 'a-z-' | tr -cd 'a-z0-9-'`
+# The compose project, and the image tags, are named after this folder and where it is (a short
+# hash of its full path), so every copy has its own containers, volumes and images, even two
+# folders with the same name: generic_bank here is the project generic-bank-1a2b.
+project := `d="$(pwd -P)"; n="$(basename "$d" | tr 'A-Z_' 'a-z-' | tr -cd 'a-z0-9-')"; echo "$n-$(printf '%s' "$d" | shasum | cut -c1-4)"`
 export GB_PROJECT := project
 export GB_IMAGE := "generic-bank/node:" + project
 export GB_RUNNER_IMAGE := "generic-bank/runner:" + project
