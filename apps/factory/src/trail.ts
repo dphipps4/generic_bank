@@ -90,26 +90,7 @@ export async function openTrail(o: {
     },
     has,
     async shown(ref) {
-      if (!has(ref)) return null;
-      const f = (
-        await sql.query<{ host: string; path: string; key: string }>(
-          `SELECT host, path, "screenModelKey" AS key FROM "TrailFrame" WHERE "runId" = $1 AND seq = $2`,
-          [runId, Number(ref.slice(1))],
-        )
-      ).rows[0];
-      const body = f && (await store.get(f.key));
-      if (!body) return null;
-      const m = JSON.parse(body.toString()) as {
-        title: string;
-        controls: { name: string }[];
-        texts: { text: string }[];
-      };
-      return {
-        page: `${f.host}${f.path}`,
-        title: m.title,
-        controls: m.controls.map((c) => c.name).filter(Boolean),
-        texts: m.texts.map((t) => t.text),
-      };
+      return has(ref) ? shownAt(sql, store, runId, Number(ref.slice(1))) : null;
     },
   };
 
@@ -117,4 +98,41 @@ export async function openTrail(o: {
     const n = /^f(\d{1,3})$/.exec(ref);
     return n !== null && Number(n[1]) >= 1 && Number(n[1]) <= frameSeq;
   }
+}
+
+/** What frame `seq` of a run shows, masked as it was stored: its page and its words. */
+async function shownAt(sql: Sql, store: FrameStore, runId: string, seq: number) {
+  const f = (
+    await sql.query<{ host: string; path: string; key: string }>(
+      `SELECT host, path, "screenModelKey" AS key FROM "TrailFrame" WHERE "runId" = $1 AND seq = $2`,
+      [runId, seq],
+    )
+  ).rows[0];
+  const body = f && (await store.get(f.key));
+  if (!body) return null;
+  const m = JSON.parse(body.toString()) as {
+    title: string;
+    controls: { name: string }[];
+    texts: { text: string }[];
+  };
+  return {
+    page: `${f.host}${f.path}`,
+    title: m.title,
+    controls: m.controls.map((c) => c.name).filter(Boolean),
+    texts: m.texts.map((t) => t.text),
+  } satisfies Shown;
+}
+
+/** Every stored frame of a run, in order: what a repair is shown of the run that failed. */
+export async function framesOf(sql: Sql, store: FrameStore, runId: string): Promise<Shown[]> {
+  const r = await sql.query<{ seq: number }>(
+    `SELECT seq FROM "TrailFrame" WHERE "runId" = $1 ORDER BY seq`,
+    [runId],
+  );
+  const out: Shown[] = [];
+  for (const { seq } of r.rows) {
+    const s = await shownAt(sql, store, runId, seq);
+    if (s) out.push(s);
+  }
+  return out;
 }

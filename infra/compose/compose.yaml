@@ -229,7 +229,14 @@ services:
     # 106 MB once. A cap on the JavaScript heap made no difference: the memory is not there.
     mem_limit: 128m
     env_file: [../../config/app.env, ../../.run/env/bank.env]
-    environment: { TENANT: generic, MALLOC_ARENA_MAX: '2', PORT: '8081', ADMIN_PORT: '9000' }
+    # BANK_REDESIGN: '1' turns on the vendor's redesign: a notice after sign-in, new names and the
+    # nav in a Menu, over the same ledger. Off when absent.
+    environment:
+      TENANT: generic
+      MALLOC_ARENA_MAX: '2'
+      PORT: '8081'
+      ADMIN_PORT: '9000'
+      # BANK_REDESIGN: '1'
     ports: ['127.0.0.1:${BANK_GENERIC_PORT}:8081', '127.0.0.1:${BANK_GENERIC_ADMIN_PORT}:9000']
     networks: [world, bankdb]
     depends_on: { bank-db: { condition: service_healthy } }
@@ -326,3 +333,15 @@ services:
           '-e',
           "fetch('http://127.0.0.1:8200/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
         ]
+
+  # A factory run (just onboard, just repair): the factory's own secrets, in the Runner's image for
+  # its Chromium, run once and removed. Its models are reached only through the factory's gateway.
+  factory-run:
+    <<: *node
+    image: ${GB_RUNNER_IMAGE}
+    profiles: [factory-run]
+    restart: 'no'
+    entrypoint: ['node', 'apps/factory/dist/cli.js']
+    mem_limit: 768m
+    env_file: [../../config/app.env, ../../.run/env/factory.env]
+    networks: [factory, app, world]

@@ -6,13 +6,13 @@
 // guess taken for a fact could be costly. A guess is kept, and shown to that person as a guess.
 import { randomBytes } from 'node:crypto';
 import { CODES } from '@gb/contracts';
-import { GENERIC_BANK } from '@gb/drivers';
+import { GENERIC_BANK, type Profile } from '@gb/drivers';
 import type { Sql } from '@gb/runs';
 import { normalize } from '@gb/screen';
 import { z } from 'zod';
 import { type Agent, turn } from './agent.js';
 import { type Tool, ToolRefusal } from './tools.js';
-import type { Trail } from './trail.js';
+import type { Shown, Trail } from './trail.js';
 
 const WORDS = Object.keys(GENERIC_BANK.words);
 const REFUSALS = Object.keys(CODES.business_outcome);
@@ -114,6 +114,21 @@ Mark a claim seen only when it is on every frame it cites. Anything no frame sho
 
 Call recommend once with every claim. If it is refused, correct what it says and call it again.`;
 
+const REPAIR = `You are the Supervisor, and the bank has changed: the bank's driver, which runs its approved profile, stopped at a screen it did not know. The Scout's run at the bank as it is now has reached its goals. Draft what changed in the bank's profile from the frames of this run, with the recommend tool.
+
+You are shown the profile as it is, the frames where the failing run stopped, and the frames of this run. Recommend only what changed: anything still true stays as it is and needs no claim. Each claim is one thing about the bank in its own words, exactly as on screen: its new word for a thing; words.menu for a control that must be opened to reach the places to go; for a page after sign-in that must be passed, the words that mark it (screens.login.notice) and its button (words.dismiss); the words that mark its home page (screens.console.home). Each cites the frames of this run that show it.
+
+Mark a claim seen only when it is on every frame it cites. Anything no frame shows is a guess: say so, and cite the frames it is inferred from. Never present a guess as seen: a person approves this, and a guess taken for a fact could be costly. A claim with no frame is refused.
+
+Call recommend once with every changed claim. If it is refused, correct what it says and call it again.`;
+
+/** What a repair starts from: the profile that serves, and where the failing run stopped. */
+export interface RepairOf {
+  profile: Pick<Profile, 'words' | 'refusals' | 'statementsKept' | 'screens'>;
+  /** The failing run's frames, in order: the last is where it stopped. */
+  failing: Shown[];
+}
+
 /**
  * The Supervisor drafts the run's recommendation from its frames, through the recommend tool.
  * Returns the claims kept, or null when the Supervisor did not get one past the tool.
@@ -126,25 +141,44 @@ export async function recommend(o: {
   bank: string;
   /** The goals the run reached. */
   goals: string[];
+  /** For a repair: the bank's profile as it is, and where the failing run stopped. */
+  repair?: RepairOf;
 }): Promise<Claim[] | null> {
   const frames: string[] = [];
   for (let i = 1; o.trail.has(`f${i}`); i++) {
     const s = await o.trail.shown(`f${i}`);
     if (s) frames.push(`f${i}: ${JSON.stringify(s)}`);
   }
+  const r = o.repair;
+  const was = r && {
+    words: r.profile.words,
+    screens: r.profile.screens ?? {},
+    refusals: r.profile.refusals,
+    statementsKept: r.profile.statementsKept,
+  };
   await turn(o.agent, {
-    system: SYSTEM,
+    system: r ? REPAIR : SYSTEM,
     say: [
       `Goals reached:\n${o.goals.map((g) => `- ${g}`).join('\n')}`,
+      ...(r
+        ? [
+            `The profile as it is:\n${JSON.stringify(was)}`,
+            `Where the failing run stopped, its last frames, the last one first:\n${r.failing
+              .slice(-3)
+              .reverse()
+              .map((s) => JSON.stringify(s))
+              .join('\n')}`,
+          ]
+        : []),
       `Frames of this run, each as its page and the words on it:\n${frames.join('\n')}`,
     ].join('\n\n'),
     tools: [recommendTool(o)],
     calls: 3,
     maxTokens: 16_000,
   });
-  const r = await o.sql.query<{ claims: Claim[] }>(
+  const kept = await o.sql.query<{ claims: Claim[] }>(
     `SELECT claims FROM "Recommendation" WHERE "factoryRunId" = $1`,
     [o.runId],
   );
-  return r.rows[0]?.claims ?? null;
+  return kept.rows[0]?.claims ?? null;
 }
