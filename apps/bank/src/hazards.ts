@@ -4,16 +4,19 @@ import { hash32, rng } from './rng.js';
 // "Stable UIs, but real runtime errors." Ambient hazards draw from a seeded stream on every
 // request; forced hazards are named in a signed header and nothing else happens.
 
+// Chances per page. A run loads about 20 pages, so the hazards that could stop one (all but a
+// harmless script error, a dialog, a promotion and a slow handoff) reach about 1 run in 240, before
+// the Runner recovers from any. Never on the transfer pages: there, hazards are forced only.
 export const AMBIENT = {
-  'js-error-harmless': 0.1,
-  'js-error-widget': 0.05,
-  'js-error-fatal': 0.02,
-  'service-unavailable': 0.03,
-  'confirm-dialog': 0.1,
-  promo: 0.1,
-  'record-in-use': 0.03,
-  'early-expiry': 0.02,
-  'slow-handoff': 0.05,
+  'js-error-harmless': 0.02,
+  'js-error-widget': 0.00005,
+  'js-error-fatal': 0.00002,
+  'service-unavailable': 0.0001,
+  'confirm-dialog': 0.01,
+  promo: 0.01,
+  'record-in-use': 0.00002,
+  'early-expiry': 0.00002,
+  'slow-handoff': 0.02,
 } as const;
 
 export const FORCED_ONLY = [
@@ -98,13 +101,14 @@ export function hazards(opts: HazardOptions) {
         };
       }
       const r = rng(hash32(seed, ++counter));
+      const transfer = path.includes('/transfer');
       // Enough to shuffle the order frames arrive in, not enough to slow a test down.
       const latency = scale === 0 ? 0 : r.int(0, 150);
       return {
         forced: false,
         on: (n) => {
           const rate = (AMBIENT as Record<string, number>)[n];
-          const hit = rate !== undefined && r.chance(Math.min(1, rate * scale));
+          const hit = rate !== undefined && !transfer && r.chance(Math.min(1, rate * scale));
           if (hit) opts.log(n, path, false);
           return hit;
         },

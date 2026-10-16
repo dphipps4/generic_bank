@@ -356,9 +356,12 @@ its activity (rows arrive late), its statements (a PDF in a new window) or a tra
 goes to a review page, then to a supervisor's approval if it's over the threshold, and ends with a
 confirmation number.
 
-Ambient hazards: up to 150 ms of latency on every response; script errors (harmless 10%,
-widget 5%, fatal 2%); a 503 at 3%; a confirmation dialog at 10%; a promotional page at 10%; an
-early session expiry at 2%. These happen only when forced: a swallowed submit or click, late rows,
+Ambient hazards, per page and never on the transfer pages: up to 150 ms of latency; a harmless
+script error at 2%; a confirmation dialog and a promotional page at 1% each; a slow sign-in
+handoff at 2%. Rarer, the ones that could stop a run: a 503 at 0.01%, a broken widget at 0.005%,
+and a fatal script error, a record in use and an early session expiry at 0.002% each. A run loads
+about 20 pages, so about 1 run in 240 meets one of those, before the Runner recovers from any.
+These happen only when forced: a swallowed submit or click, late rows,
 an injected instruction, an unknown screen, and permission, not-found and validation errors.
 
 ## Appendix B. The Task API
