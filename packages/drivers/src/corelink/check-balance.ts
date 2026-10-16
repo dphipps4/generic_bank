@@ -2,7 +2,7 @@
 // read one account's balances off its tile. The way to the member is the session's (session.ts);
 // this job handles only the summary, and a screen nobody knows stops the run.
 import { type ScreenModel, withText } from '@gb/screen';
-import { type DriverContext, type Outcome, stop, Stop } from '../sdk.js';
+import { type DriverContext, type Outcome, type Seen, stop, Stop } from '../sdk.js';
 import { next, onTheWay, startSession, unknown } from './session.js';
 
 export interface BalanceInput {
@@ -73,6 +73,15 @@ export function readTile(
   };
 }
 
+/**
+ * The member's summary with no tiles drawn: a page no signature knows, headed by this member's
+ * banner. The tiles come from a request of their own after the page draws; when that request fails
+ * (a 503 from the gateway, say), the page stays as it is, and a person would reload it.
+ */
+export function tilesUndrawn(s: Seen, memberId: string): boolean {
+  return s.screen === null && s.model.texts.some((t) => t.text.startsWith(`Member ${memberId} · `));
+}
+
 export async function checkBalance(
   ctx: DriverContext,
   input: BalanceInput,
@@ -83,11 +92,14 @@ export async function checkBalance(
     while (sess.counts.steps++ < 60) {
       const s = await next(sess);
       if (!s || (await onTheWay(sess, s, input.memberId))) continue;
-      if (s.screen !== 'member.summary') return await unknown(sess, s);
+      const undrawn = tilesUndrawn(s, input.memberId);
+      if (s.screen !== 'member.summary' && !undrawn) return await unknown(sess, s);
       // The summary's banner names the member too.
       const banner = s.model.texts.find((t) => /^Member \d+ · /.test(t.text));
       if (banner) ctx.learn([banner.text.replace(/^Member \d+ · /, '')]);
-      const tile = readTile(s.model, ctx.profile.accountWording, input.account);
+      const tile = undrawn
+        ? 'widget-broken'
+        : readTile(s.model, ctx.profile.accountWording, input.account);
       if (tile === 'no-such-account') {
         await sess.record('balance', s.screen, s.model, undefined, 'no such account');
         return stop('business_outcome', 'no_such_account');
