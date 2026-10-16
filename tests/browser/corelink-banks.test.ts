@@ -130,6 +130,17 @@ describe.each(['example', 'sample', 'placeholder'] as TenantId[])('CoreLink on %
         account: account.number.slice(-4),
         months: [month],
       });
+      console.log(
+        'BOT',
+        id,
+        JSON.stringify(
+          (
+            await bank.db.query(
+              "SELECT path, detail FROM hazard_events WHERE hazard = 'bot-screen'",
+            )
+          ).rows,
+        ),
+      );
       // The whole outcome, so a failure shows the driver's reason.
       if (outcome.status !== 'succeeded') expect(outcome).toEqual({ status: 'succeeded' });
       if (outcome.status !== 'succeeded') return;
