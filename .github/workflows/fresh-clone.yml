@@ -1,0 +1,75 @@
+name: fresh clone
+
+# What someone who forks this does, on a machine with nothing cached: install just, set up, start
+# everything, and check every service answers. Each step is timed in the run's summary, so a
+# slower full build shows as plainly as a broken one.
+on:
+  push:
+    branches: [master]
+  pull_request:
+    paths:
+      - 'Justfile'
+      - 'infra/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'config/app.env'
+      - '.github/workflows/fresh-clone.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fresh-clone-${{ github.event_name == 'pull_request' && github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  fresh-clone:
+    name: from a fresh clone, just setup and just up
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      # The runner's preinstalled SDKs leave less disk than the images and data need.
+      - name: Room for the images
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      - name: Install just
+        run: |
+          infra/scripts/bootstrap.sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: just setup
+        run: |
+          s=$(date +%s); just setup; e=$(date +%s)
+          echo "| just setup | $(( (e - s) / 60 )) min $(( (e - s) % 60 )) s |" >> "$RUNNER_TEMP/times.md"
+
+      - name: just up
+        run: |
+          s=$(date +%s); just up; e=$(date +%s)
+          echo "| just up | $(( (e - s) / 60 )) min $(( (e - s) % 60 )) s |" >> "$RUNNER_TEMP/times.md"
+
+      - name: Every service answers
+        run: |
+          set -a; source config/app.env; set +a
+          for url in \
+            "http://127.0.0.1:$API_PORT/healthz" \
+            "http://127.0.0.1:$CONSOLE_PORT/healthz" \
+            "http://127.0.0.1:$RUNNER_PORT/healthz" \
+            "http://127.0.0.1:$FACTORY_PORT/healthz" \
+            "http://127.0.0.1:$MEMORY_PORT/healthz" \
+            "http://127.0.0.1:$BANK_INBOX_PORT/healthz"; do
+            curl -fsS -o /dev/null --retry 5 --retry-delay 3 --retry-all-errors "$url" && echo "ok  $url" || { echo "FAIL $url"; exit 1; }
+          done
+          just ps
+
+      - name: Times
+        if: always()
+        run: |
+          { echo "### From a fresh clone"; echo; echo "| step | time |"; echo "|---|---|"; cat "$RUNNER_TEMP/times.md" 2>/dev/null
+            echo; echo "Images:"; echo; docker images --format '- {{.Repository}}:{{.Tag}} {{.Size}}' | grep -v '<none>'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Logs, when something failed
+        if: failure()
+        run: docker compose -f infra/compose/compose.yaml --env-file config/app.env -p "$(basename "$PWD" | tr 'A-Z_' 'a-z-' | tr -cd 'a-z0-9-')" --profile '*' logs --tail=80
