@@ -1744,16 +1744,19 @@ Each role is its own **pi** session ([pi.dev](https://pi.dev)). Each factory ste
 role's session file, runs one prompt-to-idle cycle, and saves it, so a crash costs at most one
 turn. Our code, not pi, owns:
 
-- **The model gateway:** an Anthropic-compatible metering endpoint in box D, pi's only route to
+- **The model gateway:** a metering endpoint in box D for each configured provider, pi's only route to
   the model. It checks the budget before every request, records tokens and cost, and refuses at
   a cap or an unknown price.
 - **The tool allowlist:** pi's tool-call hook asks our registry before every tool; a tool outside
   the role's list is vetoed, recorded, and the agent told why.
 - **The prompts:** reviewed files rendered by our loader ([Appendix O](#appendix-o-the-prompt-library)).
 
-Default models, set per role: Supervisor `claude-opus-5-5` at high effort (it reasons), Scout `claude-opus-5-5` at low effort (it navigates), small
-judgments `claude-haiku-4-5-20251001`. **Mock mode** replays recorded model responses through the
-same gateway.
+**Models are configuration.** Each role's provider, model and effort are set in config, so a
+deployment can run on another provider (OpenAI, for one) through pi without a code change. The
+defaults: Supervisor `claude-opus-5-5` at high effort (it reasons), Scout `claude-opus-5-5` at low
+effort (it navigates), small judgments `claude-haiku-4-5-20251001`. The gateway meters whichever
+provider is configured and refuses a model with no known price. **Mock mode** replays recorded
+model responses through the same gateway.
 
 ### M.7 Generated code
 

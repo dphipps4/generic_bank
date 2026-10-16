@@ -67,10 +67,10 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 
 | Element | Choice | Why |
 |---|---|---|
-| Agent harness | **pi** ([pi.dev](https://pi.dev)), one session per role | A prompt loop, a tool-call hook that can veto, a session file as checkpoint |
-| Model gateway | **@anthropic-ai/sdk** behind our Anthropic-compatible metering endpoint | The spend meter and caps sit where the model can't touch them |
-| Scout model | `claude-opus-5-5`, low effort | Navigates as the Supervisor directs; the cheapest Opus |
-| Supervisor model | `claude-opus-5-5`, high effort | Reasons over every frame and drafts the profile |
+| Agent harness | **pi** ([pi.dev](https://pi.dev)), one session per role | Switches model providers by configuration; a prompt loop, a tool-call hook that can veto, a session file as checkpoint |
+| Model gateway | Our metering endpoint, per configured provider (Anthropic by default, OpenAI possible) | The spend meter and caps sit where the model can't touch them |
+| Scout model (default; configurable) | `claude-opus-5-5`, low effort | Navigates as the Supervisor directs; the cheapest Opus |
+| Supervisor model (default; configurable) | `claude-opus-5-5`, high effort | Reasons over every frame and drafts the profile |
 | Small judgments | `claude-haiku-4-5-20251001` | Honesty checks on summaries, short classifications |
 | Mock mode | Recorded responses replayed by the gateway | A whole factory run without an API key |
 | Embeddings | **@huggingface/transformers** with **bge-small-en-v1.5** (384 dimensions, CPU) | In the Memory process, about 130 MB, no API cost |
