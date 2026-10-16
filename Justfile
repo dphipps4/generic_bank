@@ -307,7 +307,7 @@ ci:
 test-changed:
     @npx vitest run --changed origin/master --passWithNoTests
 
-# The PII suite: every task on banks 1 and 2, then everything they wrote searched for seeded values
+# The PII suite: a balance and a transfer on bank 1, then everything they wrote searched for seeded values
 [group('Quality')]
 test-pii:
     @npx vitest run tests/pii

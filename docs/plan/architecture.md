@@ -157,8 +157,8 @@ nothing acts.
 
 ### Failures in the bank
 
-Sign-in trouble either stops the run or asks for help. A wrong password stops it at once, a locked
-operator freezes the bank's sign-ins, and a sign-in code goes to a person. When the bank refuses
+Sign-in trouble either stops the run or asks for help. A wrong password or a locked operator stops
+it at once, and a sign-in code goes to a person. When the bank refuses
 something in its own words (no member, a closed member, insufficient funds, a restricted account),
 that's the answer the caller gets. If the bank is slow or briefly broken, the run waits or retries
 a read, then gives up with a result that says a retry may help. A page the run doesn't recognize
@@ -400,7 +400,7 @@ an injected instruction, an unknown screen, and permission, not-found and valida
 | Failure | Detected by | The system | The caller sees |
 |---|---|---|---|
 | Wrong password | sign-in error screen | stops; never submits again | `failed: bad_credentials`, not retryable |
-| Operator locked or rate limited | lock screen | stops; freezes the bank's sign-ins until a person clears them | `failed: operator_locked`, not retryable |
+| Operator locked or rate limited | lock screen | stops | `failed: operator_locked`, not retryable |
 | Staff code needed | code screen, with proof a code was sent | waits; opens a human task | `needs_human: awaiting_staff_code` |
 | Code rejected or expired | the bank's wording | one attempt per code; asks for a new one only if the bank offers | `awaiting_staff_code` again; `failed: bad_credentials` after three refused codes |
 | No member found, member closed | lookup result | stops | `business_outcome: no_such_member` / `member_closed` |
@@ -438,7 +438,7 @@ an injected instruction, an unknown screen, and permission, not-found and valida
 | The spend ledger unreadable | refuses the call (a model with no price counts as free) |
 | The same failure twice, or three turns without progress | stops and hands back |
 | A tool outside the role's list | refused, recorded, and the model told why |
-| A review not answered | a reminder at 24 hours; expires at 7 days |
+| A review not answered | waits in the Console for a person; reminders and expiry are Part 2 |
 | A regression on probation | builds again once; a second time, hands back |
 
 ## Appendix D. Memory's API
