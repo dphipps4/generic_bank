@@ -136,6 +136,9 @@ model LessonVersion {
   lessonId       String
   version        Int
   text           String
+  /// Why the advice holds, and the words that tell it applies; a curated lesson has them.
+  why            String?
+  signals        String[]
   area           String
   scenario       String?
   scope          Scope

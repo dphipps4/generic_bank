@@ -50,7 +50,7 @@ export class Refused extends Error {
 const GENESIS = '0'.repeat(64);
 
 /** JSON with keys sorted, so a value hashes the same after Postgres stores and returns it. */
-function canonical(v: unknown): string {
+export function canonical(v: unknown): string {
   if (Array.isArray(v)) return `[${v.map(canonical).join(',')}]`;
   if (v && typeof v === 'object')
     return `{${Object.keys(v)
