@@ -92,7 +92,7 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Element | Choice | Why |
 |---|---|---|
 | Source of truth | **Postgres records** | Every step, frame, guard decision and call is a row |
-| Logs | **pino** JSON (Fastify's logger), redacted and scrubbed, to stdout | Redaction is configuration, not discipline |
+| Logs | **pino** JSON (Fastify's logger), to stdout | They record requests, never member details; the PII scan searches them to prove it |
 | Traces (Part 2 of `GENERIC_BANK_PLAN.md`) | **OpenTelemetry**, one trace per run, **GenAI semantic conventions**; `just trace` and `just observe` (**Collector**, **Grafana Tempo**, **Loki**, **Grafana**) | Vendor-neutral; Tempo, LangSmith, Langfuse or Phoenix by configuration |
 | Metrics and cost | Postgres rows, such as each model call's cost, in the Console | No metrics stack |
 | Notifications | Console banner, log | A webhook, ntfy and paging are Part 2 |
