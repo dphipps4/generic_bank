@@ -27,6 +27,7 @@ export default defineConfig({
       '**/vitest*.config.*',
       'tsconfig*.json',
       'packages/db/prisma/**',
+      'apps/memory/prisma/**',
       'seeds/**',
       'config/**',
       'infra/**',

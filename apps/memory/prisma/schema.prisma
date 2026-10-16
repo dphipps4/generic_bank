@@ -1,0 +1,203 @@
+// Memory's own database (box B). Only the Memory service opens it, and it writes in plain SQL,
+// so this schema generates no client: it is the tables and their migrations.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("MEMORY_DATABASE_URL")
+}
+
+/// Who wrote an entry: each writer holds a token for one role.
+enum Role {
+  runner
+  factory
+  curator
+  system
+}
+
+enum RunKind {
+  task
+  factory
+}
+
+/// A run that promoted or demoted a driver carries the mark.
+enum Mark {
+  promoted
+  demoted
+}
+
+/// tenant: one bank; vendor: every bank on the same product; pattern: everywhere.
+enum Scope {
+  tenant
+  vendor
+  pattern
+}
+
+enum LessonState {
+  proposed
+  confirmed
+  disputed
+  retired
+}
+
+enum Confidence {
+  low
+  medium
+  high
+}
+
+enum CatalogKind {
+  rule
+  check
+  scenario
+  approach
+}
+
+/// An episode: one run, as the system settled it. The id is the run's own id.
+model Run {
+  id           String       @id
+  kind         RunKind
+  bank         String
+  vendor       String?
+  task         String?
+  driver       String?
+  outcome      String
+  mark         Mark?
+  startedAt    DateTime     @db.Timestamptz(3)
+  endedAt      DateTime?    @db.Timestamptz(3)
+  model        String?
+  /// The prompt versions the run used, by prompt id.
+  prompts      Json?
+  evidenceHash String?
+  recordedAt   DateTime     @default(now()) @db.Timestamptz(3)
+  attempts     Attempt[]
+  hypotheses   Hypothesis[]
+  facts        Fact[]
+
+  @@index([bank, startedAt])
+}
+
+/// One attempt of a run. An attempt cannot exist without its run.
+model Attempt {
+  runId        String
+  n            Int
+  outcome      String
+  /// A failure's signature, for finding the same failure elsewhere.
+  failure      String?
+  frames       String[]
+  evidenceHash String?
+  at           DateTime @db.Timestamptz(3)
+  run          Run      @relation(fields: [runId], references: [id])
+
+  @@id([runId, n])
+}
+
+/// What an agent believes but has not proven. Never served as truth.
+model Hypothesis {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  runId        String
+  bank         String
+  text         String
+  model        String?
+  prompts      Json?
+  evidenceHash String?
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  run          Run      @relation(fields: [runId], references: [id])
+}
+
+/// A typed claim proven by a promoted run. Bi-temporal: validAt and invalidAt bound when it held at
+/// the bank; createdAt and expiredAt bound when memory believed it. Closed, never deleted.
+model Fact {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bank      String
+  predicate String
+  object    String
+  runId     String
+  validAt   DateTime  @db.Timestamptz(3)
+  invalidAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  expiredAt DateTime? @db.Timestamptz(3)
+  run       Run       @relation(fields: [runId], references: [id])
+
+  @@index([bank, predicate])
+}
+
+/// A lesson is its versions; `current` is the version served (0 until one is). A version above it
+/// waits for approval.
+model Lesson {
+  id        String          @id
+  current   Int             @default(0)
+  createdAt DateTime        @default(now()) @db.Timestamptz(3)
+  versions  LessonVersion[]
+}
+
+model LessonVersion {
+  lessonId       String
+  version        Int
+  text           String
+  area           String
+  scenario       String?
+  scope          Scope
+  bank           String?
+  vendor         String?
+  state          LessonState
+  /// The banks where the lesson was retired while it holds elsewhere.
+  retiredAtBanks String[]
+  confidence     Confidence
+  /// Seen on the cited frames, or a guess.
+  seen           Boolean
+  /// What the lesson rests on: [{ run, frame, hash }].
+  evidence       Json
+  reason         String?
+  role           Role
+  runId          String?
+  model          String?
+  prompts        Json?
+  evidenceHash   String?
+  embedding      Unsupported("vector(384)")?
+  createdAt      DateTime                    @default(now()) @db.Timestamptz(3)
+  lesson         Lesson                      @relation(fields: [lessonId], references: [id])
+
+  @@id([lessonId, version])
+}
+
+/// The curated catalog: rules, checks, scenarios and approaches, each read at any version.
+model CatalogEntry {
+  kind     CatalogKind
+  key      String
+  current  Int              @default(0)
+  versions CatalogVersion[]
+
+  @@id([kind, key])
+}
+
+model CatalogVersion {
+  kind      CatalogKind
+  key       String
+  version   Int
+  body      Json
+  role      Role
+  reason    String?
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+  entry     CatalogEntry @relation(fields: [kind, key], references: [kind, key])
+
+  @@id([kind, key, version])
+}
+
+/// Every write appends one row, in the write's own transaction. Each row's hash covers its fields
+/// and the row before it, so changing any row breaks the chain from there.
+model ChangeLog {
+  seq      Int      @id
+  at       DateTime @db.Timestamptz(3)
+  role     Role
+  action   String
+  entity   String
+  entityId String
+  runId    String?
+  data     Json
+  prevHash String   @db.Char(64)
+  hash     String   @unique @db.Char(64)
+
+  @@index([entity, entityId])
+  @@index([runId])
+  @@index([at])
+}

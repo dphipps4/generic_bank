@@ -29,6 +29,9 @@ jobs:
       - run: npx prisma validate --schema packages/db/prisma/schema.prisma
         env:
           CONTROL_DATABASE_URL: postgresql://ci:ci@localhost:5432/control
+      - run: npx prisma validate --schema apps/memory/prisma/schema.prisma
+        env:
+          MEMORY_DATABASE_URL: postgresql://ci:ci@localhost:5432/memory
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run depcruise

@@ -89,13 +89,25 @@ services:
     networks: [app, data]
     healthcheck: { <<: *health, test: ['CMD', 'mc', 'ready', 'local'] }
 
+  # Memory's own schema, applied to its own database before the service starts.
+  memory-migrate:
+    <<: *node
+    restart: 'no'
+    command: ['npx', 'prisma', 'migrate', 'deploy', '--schema', 'apps/memory/prisma/schema.prisma']
+    mem_limit: 256m
+    env_file: [../../config/app.env, ../../.run/env/memory-migrate.env]
+    networks: [data]
+    depends_on: { postgres: { condition: service_healthy } }
+
   memory:
     <<: *node
     command: ['node', 'apps/memory/dist/main.js']
     mem_limit: 384m
     env_file: [../../config/app.env, ../../.run/env/memory.env]
     networks: [app, data]
-    depends_on: { postgres: { condition: service_healthy } }
+    depends_on:
+      postgres: { condition: service_healthy }
+      memory-migrate: { condition: service_completed_successfully }
     healthcheck:
       <<: *health
       test:
