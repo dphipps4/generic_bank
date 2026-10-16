@@ -1,5 +1,5 @@
 // Renders the plan (every Markdown file in docs/plan) as white-template HTML pages with a contents
-// sidebar, into .run/plan. Run by `make plan` inside the tools image, which provides marked.
+// sidebar, into .run/plan. Run by `just plan` inside the tools image, which provides marked.
 const fs = require('fs');
 const path = require('path');
 const { Marked } = require('marked');

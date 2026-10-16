@@ -4,7 +4,7 @@
 import { z } from 'zod';
 
 export const secret = () =>
-  z.string().min(32, 'must be at least 32 characters (run make setup to generate it)');
+  z.string().min(32, 'must be at least 32 characters (run just setup to generate it)');
 
 export class ConfigError extends Error {
   constructor(public readonly problems: string[]) {

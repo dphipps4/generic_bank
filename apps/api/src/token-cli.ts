@@ -1,4 +1,4 @@
-// make api-token: a fresh access token for Swagger UI or curl, for a local developer client that
+// just api-token: a fresh access token for Swagger UI or curl, for a local developer client that
 // is created the first time. Runs inside the API container, which holds the hashing key.
 import { loadConfig, secret } from '@gb/config';
 import { sql } from '@gb/db';
@@ -11,7 +11,7 @@ const cfg = loadConfig({
 });
 const db = sql(cfg.CONTROL_DATABASE_URL);
 const o = oauth(db, cfg.API_TOKEN_HASH_KEY);
-const NAME = 'Local developer (make api-token)';
+const NAME = 'Local developer (just api-token)';
 
 const found = await db.query<{ clientId: string }>(
   'SELECT "clientId" FROM "ApiClient" WHERE name = $1 AND "revokedAt" IS NULL LIMIT 1',
@@ -19,9 +19,9 @@ const found = await db.query<{ clientId: string }>(
 );
 const clientId =
   found.rows[0]?.clientId ??
-  (await o.createClient({ name: NAME, scopes: [...TASK_SCOPES], createdBy: 'make api-token' }))
+  (await o.createClient({ name: NAME, scopes: [...TASK_SCOPES], createdBy: 'just api-token' }))
     .clientId;
-const t = await o.issueDirect(clientId, 'make api-token');
+const t = await o.issueDirect(clientId, 'just api-token');
 console.error(
   `Client ${clientId}, scopes: ${t.scope}. The token below works for ${t.expires_in / 60} minutes.`,
 );

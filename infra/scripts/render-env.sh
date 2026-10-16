@@ -4,7 +4,7 @@
 # The ops file is never rendered for any service.
 source "$(dirname "$0")/lib.sh"
 in_tools "$@"
-for f in local factory; do [[ -f "$(secret_path "$f")" ]] || die "$(secret_path "$f") is missing; run make setup"; done
+for f in local factory; do [[ -f "$(secret_path "$f")" ]] || die "$(secret_path "$f") is missing; run just setup"; done
 mkdir -p .run/env && chmod 700 .run .run/env
 
 # All secrets an app may see, as one JSON object (ops excluded on purpose).
@@ -20,7 +20,7 @@ for svc in $(jq -r '.services | keys[]' infra/secrets/scope.json); do
   out=".run/env/$svc.env"
   umask 077
   {
-    echo "# Rendered by make env for $svc. Do not edit; do not commit."
+    echo "# Rendered by just env for $svc. Do not edit; do not commit."
     jq -r --arg s "$svc" --argjson m "$merged" '.services[$s][] as $e |
       ($e | split("=")) as $p | ($p[0]) as $name | ($p[1] // $p[0]) as $src |
       if ($m | has($src)) then "\($name)=\($m[$src])" else error("unknown secret \($src) for \($s)") end' infra/secrets/scope.json

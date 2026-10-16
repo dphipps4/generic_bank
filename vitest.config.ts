@@ -17,7 +17,7 @@ export default defineConfig({
   test: {
     include: ['apps/*/test/**/*.test.ts', 'packages/*/test/**/*.test.ts', 'tests/**/*.test.ts'],
     // The long suite runs on its own (vitest.long.config.ts): on every merge to master, and with
-    // make test-long.
+    // just test-long.
     exclude: ['**/node_modules/**', 'tests/long/**'],
     // With --changed, a change to any of these runs everything: tests read them as files (the
     // migrations, the seeds, the compose and secrets files), not through imports.

@@ -1,7 +1,7 @@
 // The hazard lab's door into the Task API (plan, §S.2): a task with the same input, scope and
 // registry checks as POST /tasks/:name, started with hazards forced on its run. It is mounted only
 // on a stack whose banks are forceable, and it is not in the agents' catalog: it is for people
-// reproducing an error path, from the Console's hazard lab or from `make try`.
+// reproducing an error path, from the Console's hazard lab or from `just try`.
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { HAZARDS, problem, TASKS, type TaskName } from '@gb/contracts';

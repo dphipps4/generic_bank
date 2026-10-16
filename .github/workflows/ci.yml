@@ -117,6 +117,13 @@ jobs:
           mkdir -p .run/env
           for s in $(jq -r '.services | keys[]' infra/secrets/scope.json); do touch ".run/env/$s.env"; done
           docker compose -f infra/compose/compose.yaml --env-file config/app.env -p generic-bank --profile '*' config -q
+      # Every step is a just recipe: install just the way a person does, and check the Justfile.
+      - name: The Justfile works
+        run: |
+          infra/scripts/bootstrap.sh
+          export PATH="$HOME/.local/bin:$PATH"
+          just --summary >/dev/null
+          just --dry-run up >/dev/null
 
   secrets:
     name: no secrets in history

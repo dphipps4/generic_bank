@@ -1,4 +1,4 @@
-// make memory-seed: the starting knowledge, through memory's door, as the curator. It fails unless
+// just memory-seed: the starting knowledge, through memory's door, as the curator. It fails unless
 // memory then serves every entry the manifest counts and the change log verifies.
 import { loadConfig, secret } from '@gb/config';
 import { z } from 'zod';

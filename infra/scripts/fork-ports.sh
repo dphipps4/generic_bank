@@ -6,7 +6,7 @@ OFFSET="${1:-10000}"
 [[ "$OFFSET" =~ ^[0-9]+$ ]] || die "OFFSET must be a number"
 [[ -f config/local.env ]] && die "config/local.env exists; edit it, or delete it and run this again"
 {
-  echo "# Written by make fork-ports: every published port moved by $OFFSET. Not committed."
+  echo "# Written by just fork-ports: every published port moved by $OFFSET. Not committed."
   grep -E '^[A-Z_]+_PORT=[0-9]+$' config/app.env | while IFS='=' read -r key port; do
     echo "$key=$((port + OFFSET))"
   done

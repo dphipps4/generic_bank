@@ -10,7 +10,7 @@
 <text class="sub" x="44" y="253">review and promote drivers</text>
 <rect x="250" y="34" width="500" height="494" rx="14" fill="none" stroke="#c9c4b8" stroke-width="1.3" stroke-dasharray="5 4"/>
 <text class="zone" x="268" y="58" fill="#6e6e6e">BOX A · APP · NO DURABLE DATA</text>
-<text class="tag" x="732" y="58" text-anchor="end">make backend · console · crawlers</text>
+<text class="tag" x="732" y="58" text-anchor="end">just backend · console · crawlers</text>
 <rect x="272" y="76" width="210" height="80" rx="9" fill="#e9f2ec" stroke="#8fb79c" stroke-width="1.5"/>
 <text class="ttl" x="286" y="102">Task API</text>
 <text class="sub" x="286" y="121">Fastify · zod contracts</text>
@@ -45,7 +45,7 @@
 <text class="sub" x="524" y="505">withheld if not provable</text>
 <rect x="790" y="34" width="420" height="494" rx="14" fill="none" stroke="#c9c4b8" stroke-width="1.3" stroke-dasharray="5 4"/>
 <text class="zone" x="808" y="58" fill="#6e6e6e">BOX B · DATA · NO PUBLIC ADDRESS</text>
-<text class="tag" x="1192" y="58" text-anchor="end">make data</text>
+<text class="tag" x="1192" y="58" text-anchor="end">just data</text>
 <rect x="812" y="76" width="376" height="80" rx="9" fill="#fdf6e3" stroke="#d8c07a" stroke-width="1.5"/>
 <text class="ttl" x="826" y="102">Postgres + pgvector</text>
 <text class="sub" x="826" y="121">control · workflow state · registry · memory schemas</text>
@@ -66,7 +66,7 @@
 <text class="sub" x="826" y="469">hash-chained change log</text>
 <rect x="250" y="572" width="500" height="300" rx="14" fill="none" stroke="#b7aed6" stroke-width="1.3" stroke-dasharray="5 4"/>
 <text class="zone" x="268" y="596" fill="#6f5fb0">BOX D · FACTORY · DISPOSABLE</text>
-<text class="tag" x="732" y="596" text-anchor="end">make factory</text>
+<text class="tag" x="732" y="596" text-anchor="end">just factory</text>
 <rect x="272" y="614" width="210" height="96" rx="9" fill="#f0eef6" stroke="#a9a0c4" stroke-width="1.5"/>
 <text class="ttl" x="286" y="640">Factory agent</text>
 <text class="sub" x="286" y="659">Operator writes the driver</text>
@@ -89,7 +89,7 @@
 <text class="sub" x="524" y="829">its own database</text>
 <rect x="790" y="572" width="420" height="300" rx="14" fill="none" stroke="#c4c4c4" stroke-width="1.3" stroke-dasharray="5 4"/>
 <text class="zone" x="808" y="596" fill="#6e6e6e">THE WORLD</text>
-<text class="tag" x="1192" y="596" text-anchor="end">make bank · bank-more</text>
+<text class="tag" x="1192" y="596" text-anchor="end">just bank · bank-more</text>
 <rect x="812" y="610" width="180" height="62" rx="9" fill="#f2f2f2" stroke="#b5b5b5" stroke-width="1.5"/>
 <text class="ttl" x="826" y="636">Generic Bank</text>
 <text class="sub" x="826" y="655">4.2 · :8081/corelink/</text>

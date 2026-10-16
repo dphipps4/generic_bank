@@ -266,7 +266,7 @@ export function oauth(sql: Sql, hashKey: string, now: () => Date = () => new Dat
 
     /**
      * Tokens for a client without a starting code, for an admin on the server itself
-     * (`make api-token`). Audited as issued by that admin.
+     * (`just api-token`). Audited as issued by that admin.
      */
     async issueDirect(clientId: string, by: string): Promise<Tokens> {
       const r = await sql.query<{ id: string; scopes: string[] }>(

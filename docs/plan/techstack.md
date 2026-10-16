@@ -82,7 +82,7 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 
 | Element | Choice | Why |
 |---|---|---|
-| Encrypted config in git | **SOPS** with **age** keys | Encrypted secrets reviewed like code; `make up` makes a local key |
+| Encrypted config in git | **SOPS** with **age** keys | Encrypted secrets reviewed like code; `just up` makes a local key |
 | Runtime config | **Environment variables** through a zod schema that fails closed | All values present, secrets 32+ characters, no duplicate tokens |
 | Credentials and device cookies | **HashiCorp Vault** (KV), dev mode locally | Fetched only at the moment of typing; never leave the Runner |
 
@@ -94,7 +94,7 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 |---|---|---|
 | Source of truth | **Postgres records** | Every step, frame, guard decision and call is a row |
 | Logs | **pino** JSON, redacted and scrubbed, to stdout and `.data/logs/` | Redaction is configuration, not discipline |
-| Traces (Part 2 of `GENERIC_BANK_PLAN.md`) | **OpenTelemetry**, one trace per run, **GenAI semantic conventions**; `make trace` and `make observe` (**Collector**, **Grafana Tempo**, **Loki**, **Grafana**) | Vendor-neutral; Tempo, LangSmith, Langfuse or Phoenix by configuration |
+| Traces (Part 2 of `GENERIC_BANK_PLAN.md`) | **OpenTelemetry**, one trace per run, **GenAI semantic conventions**; `just trace` and `just observe` (**Collector**, **Grafana Tempo**, **Loki**, **Grafana**) | Vendor-neutral; Tempo, LangSmith, Langfuse or Phoenix by configuration |
 | Metrics and cost | SQL views on the AdminJS dashboard | No metrics stack by default |
 | Notifications | Console banner, log, optional webhook | ntfy and paging are Part 2 |
 
@@ -122,5 +122,5 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Element | Choice | Why |
 |---|---|---|
 | Containers | **Docker** compose profiles (`default`, `factory`) | One command; a memory limit on every service |
-| Entry point | **make** | `up`, `demo`, `factory`, `try`, `requirements`, `down` |
+| Entry point | **just** | `up`, `demo`, `factory`, `try`, `requirements`, `down` |
 | Images | Node 22 slim; Debian's Chromium only where a browser runs | Small images |

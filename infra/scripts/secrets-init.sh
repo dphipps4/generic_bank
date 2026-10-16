@@ -74,12 +74,12 @@ while IFS= read -r line; do
     ok "$key is set"
   elif [[ "$how" == 'entered?' ]]; then
     warn "$key is blank, which is allowed. $about"
-    echo "    To enter it: ${B}make secrets-edit FILE=$f${N}, put the value after $key= and save."
+    echo "    To enter it: ${B}just secrets-edit $f${N}, put the value after $key= and save."
   else
     echo "  ${R}✗${N} $key is required and blank. $about"
-    echo "    Enter it: ${B}make secrets-edit FILE=$f${N}, put the value after $key= and save."
+    echo "    Enter it: ${B}just secrets-edit $f${N}, put the value after $key= and save."
     missing=1
   fi
 done < <(grep -v '^\s*#' infra/secrets/secrets.spec | grep -v '^\s*$')
 [[ $any == 1 ]] || ok "nothing to enter"
-[[ $missing == 0 ]] || die "Enter the values marked ✗ with sops, then run make setup again."
+[[ $missing == 0 ]] || die "Enter the values marked ✗ with sops, then run just setup again."

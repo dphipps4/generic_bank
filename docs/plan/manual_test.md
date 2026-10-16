@@ -13,21 +13,21 @@ Bank 4 works the same way and makes a good second run.
 
 | Part | You do | You see | What it proves |
 |---|---|---|---|
-| 1 | `make onboard BANK=sample` | the Scout and Supervisor working through bank 3; a recommendation in the Console | the factory learns a bank it has never seen, from evidence |
+| 1 | `just onboard sample` | the Scout and Supervisor working through bank 3; a recommendation in the Console | the factory learns a bank it has never seen, from evidence |
 | 2 | approve the recommendation | the hazard check, probation, then bank 3 in `GET /banks` | nothing serves customers until a person approves and the bank's own results agree |
 | 3 | one curl to check a balance | `200` with the balance | the crawler is plain deterministic code; no model runs |
 | 4 | turn on the redesign (one line) | bank 3's new look in the browser | a realistic vendor redesign |
 | 5 | the same curl | `409` escalated, `unknown_screen`; the frames show the new page | the old crawler fails safely: it stops and asks, it never guesses |
 | 6 | nothing | the driver demoted, a repair case in the Console | a fault takes the driver out of service on its own |
-| 7 | `make repair BANK=sample` | the agents on the redesigned bank; a new recommendation citing the new words | the factory reasons from what it sees and writes a new crawler |
+| 7 | `just repair sample` | the agents on the redesigned bank; a new recommendation citing the new words | the factory reasons from what it sees and writes a new crawler |
 | 8 | approve it | hazard check, probation, promoted | the same gate as the first time |
 | 9 | the same curl | `200` with the same balance | recovered, and deterministic again |
 
 ## Before you start
 
 ```sh
-make up                                          # everything, banks 3 and 4 and the factory included
-make secret-set FILE=factory KEY=ANTHROPIC_API_KEY  # the factory's agents need a real model for this
+just up                                          # everything, banks 3 and 4 and the factory included
+just secret-set factory ANTHROPIC_API_KEY  # the factory's agents need a real model for this
 ```
 
 With a key, each factory run spends real money: a few dollars, and never more than the cap of
@@ -41,7 +41,7 @@ bank's sign-in codes arrive. The logins are in `secrets/credentials.txt`; ACCESS
 ## Part 1: the factory learns bank 3
 
 ```sh
-make onboard BANK=sample
+just onboard sample
 ```
 
 The Scout signs in and clicks its way toward each goal (a balance, the transfer review page, the
@@ -69,7 +69,7 @@ curl -s http://localhost:8000/banks
 ## Part 3: a crawl that works
 
 ```sh
-TOKEN=$(make -s api-token 2>/dev/null)
+TOKEN=$(just api-token 2>/dev/null)
 curl -s -X POST http://localhost:8000/tasks/check-balance \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"bank":"sample","memberId":"40017732","account":"Everyday Checking"}'
@@ -91,7 +91,7 @@ waiting under its `environment`:
 Then restart bank 3:
 
 ```sh
-make bank-more
+just bank-more
 ```
 
 Look at bank 3 in the browser. After sign-in (and the terms page bank 3 already had) there's a new
@@ -124,7 +124,7 @@ browser opens.
 ## Part 7: the factory repairs it
 
 ```sh
-make repair BANK=sample
+just repair sample
 ```
 
 The same two agents go back to bank 3, starting from what they already know about it. The Scout
@@ -147,14 +147,14 @@ menu, and again no model in the run.
 
 ## Bank 4
 
-Do it again with bank 4: `make onboard BANK=placeholder`, then uncomment `BANK_REDESIGN: '1'` under
-`bank-placeholder` in compose, `make bank-more`, and `make repair BANK=placeholder`. Bank 4 signs
+Do it again with bank 4: `just onboard placeholder`, then uncomment `BANK_REDESIGN: '1'` under
+`bank-placeholder` in compose, `just bank-more`, and `just repair placeholder`. Bank 4 signs
 in with an authenticator code (the staff inbox shows it), and its pages are drawn differently from
 bank 3's, so the factory has a different redesign to work out.
 
 ## Putting it back
 
-Comment the `BANK_REDESIGN` line out again and run `make bank-more`. The redesigned driver now fails the old
+Comment the `BANK_REDESIGN` line out again and run `just bank-more`. The redesigned driver now fails the old
 look in the same safe way, which is a quick second demo of Part 5.
 
 ## If something goes wrong
@@ -165,4 +165,4 @@ look in the same safe way, which is a quick second demo of Part 5.
 | a run failed | the Console's Runs page, the run's Frames button |
 | the factory stopped | its run in the Console; the reason is the last step |
 | spending | each factory run stops at $25; the factory's Model calls table in the Console shows the cost |
-| a service is down | `make ps`; the health checks in ACCESS.md |
+| a service is down | `just ps`; the health checks in ACCESS.md |

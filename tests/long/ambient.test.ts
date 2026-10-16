@@ -4,7 +4,7 @@ import { MEMBERS, outcomeBank, run } from '../outcomes/support.js';
 
 // The long suite: Check Balance under the bank's ambient hazards, run after run, sitting through
 // the bank's real latency (a quarter of a second to nearly two on every response). It runs on every
-// merge to master and with make test-long, not on each pull request.
+// merge to master and with just test-long, not on each pull request.
 const env = outcomeBank({ profile: 'default' });
 
 describe('under the bank’s ambient hazards', () => {

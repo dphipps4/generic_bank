@@ -3,8 +3,8 @@
 #   app      box A to box B          data     box B only (no route out)
 #   world    the banks, reached by the runner (and later the factory's browser)
 #   bankdb   the banks and their own database only (no route out)
-#   factory  box D, created with `make factory`
-# Ports are published on 127.0.0.1 only. Run everything through make, which names the project
+#   factory  box D, created with `just factory`
+# Ports are published on 127.0.0.1 only. Run everything through just, which names the project
 # after its folder (a second copy in another folder is a separate stack).
 
 x-node: &node
@@ -67,7 +67,7 @@ services:
       - ../vault/vault.hcl:/vault/config/vault.hcl:ro
     networks: [app, data]
     # Checked over HTTP, not with the vault CLI: the CLI is a second copy of the Vault binary
-    # inside the same memory limit. 200 whether sealed or not; `make up` unseals it.
+    # inside the same memory limit. 200 whether sealed or not; `just up` unseals it.
     healthcheck:
       <<: *health
       test:
@@ -126,7 +126,7 @@ services:
           "fetch('http://127.0.0.1:8470/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
         ]
 
-  # The starting knowledge, through memory's own door as the curator (make memory-seed).
+  # The starting knowledge, through memory's own door as the curator (just memory-seed).
   memory-seed:
     <<: *node
     restart: 'no'

@@ -1,14 +1,14 @@
 # Access
 
-Everything you can open, call or poke once `make up` has run. `make up` starts the whole stack:
+Everything you can open, call or poke once `just up` has run. `just up` starts the whole stack:
 the data box, memory and its seed, the Task API, the Console, the crawler, all four banks, the
 staff inbox and the factory. Every port listens on this machine only (127.0.0.1).
 
-The logins are in `secrets/credentials.txt`, which `make up` writes from the encrypted secrets
-(run `make credentials` to write it again). It never leaves your machine and is never committed.
-Postgres isn't in it; read that with `make secrets-edit FILE=local`.
+The logins are in `secrets/credentials.txt`, which `just up` writes from the encrypted secrets
+(run `just credentials` to write it again). It never leaves your machine and is never committed.
+Postgres isn't in it; read that with `just secrets-edit local`.
 
-If you ran `make fork-ports` in a second copy, add its offset (10000 by default) to every port
+If you ran `just fork-ports` in a second copy, add its offset (10000 by default) to every port
 below.
 
 ## In a browser
@@ -22,8 +22,8 @@ below.
 | Recommendations (the factory's drafts) | http://localhost:8080/recommendations | the same |
 | Journal, Freezes | http://localhost:8080/journal, http://localhost:8080/freezes | the same |
 | Database tables (AdminJS) | http://localhost:8080/admin | the same |
-| Task API, Swagger UI | http://localhost:8000/docs | press Authorize, paste `make -s api-token` |
-| API reference, static | http://localhost:8099 | none (`make api-docs` serves it) |
+| Task API, Swagger UI | http://localhost:8000/docs | press Authorize, paste `just api-token` |
+| API reference, static | http://localhost:8099 | none (`just api-docs` serves it) |
 | Bank 1, Generic Bank (2003 frameset) | http://localhost:8081/corelink/ | operator `0412` and its password |
 | Bank 2, Example Credit Union | http://localhost:8082/ | the same |
 | Bank 3, Sample Savings Bank | http://localhost:8083/online/branch/ | the same |
@@ -43,7 +43,7 @@ and the inbox shows that app's current code too.
 
 | Service | Base URL | Auth |
 |---|---|---|
-| Task API | http://localhost:8000 | `Authorization: Bearer $(make -s api-token)` |
+| Task API | http://localhost:8000 | `Authorization: Bearer $(just api-token)` |
 | Task API, OpenAPI document | http://localhost:8000/openapi.json | none |
 | Task API, agent tools | http://localhost:8000/tools | none |
 | Bank admin API, banks 1 to 4 | http://localhost:9081 to 9084 | `Authorization: Bearer` the bank admin token |
@@ -108,7 +108,7 @@ Ask the Task API for a balance, then read the result. The run waits for a person
 sends a sign-in code: answer it in the Console inbox.
 
 ```sh
-TOKEN=$(make -s api-token 2>/dev/null)
+TOKEN=$(just api-token 2>/dev/null)
 curl -s -X POST http://localhost:8000/tasks/check-balance \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"bank":"generic","memberId":"40017732","account":"Everyday Checking"}'
@@ -130,7 +130,7 @@ A bank throws faults on its own now and then. To force one, sign a hazard header
 with the request; a bank only obeys a header signed with this machine's key.
 
 ```sh
-H=$(make -s hazard-header HAZARDS=service-unavailable)
+H=$(just hazard-header service-unavailable)
 curl -i -H "X-Hazards: $H" http://localhost:8081/corelink/     # 503, the gateway's error page
 ```
 
@@ -148,9 +148,9 @@ To watch the crawler meet a hazard and end in the result it should, run a whole 
 from the command line or from the Console's hazard lab:
 
 ```sh
-make try HAZARD=late-rows
-make try HAZARD=permission-denial
-make try HAZARD=swallowed-submit TASK=transfer
+just try late-rows
+just try permission-denial
+just try swallowed-submit transfer
 ```
 
 Each prints the run, the expected result and a link to the run in the Console, where the Frames
@@ -168,10 +168,10 @@ curl -s http://localhost:9081/members/40017732/balances -H "Authorization: Beare
 
 | Command | What it does |
 |---|---|
-| `make agent` | the demo agent: a member assistant that uses only the Task API's tools (mock mode with no key) |
-| `make try HAZARD=…` | one task under a forced hazard, with its expected result |
-| `make api-token` | a fresh Task API token, for Swagger UI or curl (15 minutes) |
-| `make api-docs` | writes and serves the API reference on port 8099 |
-| `make ps`, `make logs` | what's running, and its logs |
-| `make db-shell` | psql on the control database |
-| `make urls` | the main pages, printed |
+| `just agent` | the demo agent: a member assistant that uses only the Task API's tools (mock mode with no key) |
+| `just try …` | one task under a forced hazard, with its expected result |
+| `just api-token` | a fresh Task API token, for Swagger UI or curl (15 minutes) |
+| `just api-docs` | writes and serves the API reference on port 8099 |
+| `just ps`, `just logs` | what's running, and its logs |
+| `just db-shell` | psql on the control database |
+| `just urls` | the main pages, printed |

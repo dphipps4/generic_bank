@@ -1,5 +1,5 @@
 # gitleaks: the default rules, plus the few known false positives below, each by exact path.
-# make secrets-scan reads this, and so does CI's scan of every built image's filesystem.
+# just secrets-scan reads this, and so does CI's scan of every built image's filesystem.
 
 [extend]
 useDefault = true

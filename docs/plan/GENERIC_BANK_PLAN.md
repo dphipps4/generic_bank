@@ -28,7 +28,7 @@
 6. **An admin Console** showing every run, every masked screenshot, every agent decision, the
    approval inbox and each crawler's state.
 
-All TypeScript on Node, run on a laptop with docker-compose and make.
+All TypeScript on Node, run on a laptop with docker-compose and just.
 
 **The demo:** an AI agent asks for balances, statements and transfers. Banks 1 and 2 work end to
 end, transfers with a person's approval. The factory builds bank 2's crawler from what it learned
@@ -116,9 +116,9 @@ Error bodies are problem documents with the code, run id and retryability ([§D.
 After a `409`, a person resumes, finishes by hand or cancels, and the agent just asks again; a
 retry never starts a second run ([§D.8](#d8-escalate-resolve-retry)).
 
-**The demo agent.** `make agent` runs a member assistant on Claude, on pi, using only the API's
+**The demo agent.** `just agent` runs a member assistant on Claude, on pi, using only the API's
 tools ("what is my checking balance?", "move $200 to savings", "send me last month's
-statement"). Without a model key it plays a scripted conversation. `make setup` creates its
+statement"). Without a model key it plays a scripted conversation. `just setup` creates its
 OAuth2 client.
 
 ---
@@ -320,7 +320,7 @@ row tied to one run id, shown in the Console. Logs are JSON with the same id. De
 - Passwords and codes are typed by the system, never shown, logged or stored in the clear.
 - Everything personal is masked before it is written; an unprovable screenshot is withheld.
 - Page text is never an instruction.
-- `gitleaks` runs in `make check`, in CI over the whole history, and over every built image.
+- `gitleaks` runs in `just check`, in CI over the whole history, and over every built image.
 
 Each is enforced in code and proven by tests: [Appendix J](#appendix-j-guardrails), [Appendix U](#appendix-u-why-each-rule-exists).
 
@@ -329,11 +329,11 @@ Each is enforced in code and proven by tests: [Appendix J](#appendix-j-guardrail
 ## 14. Running it
 
 ```
-make setup     # once, after git clone
-make up        # the banks, the crawler, the Console, the back end, the data
-make demo      # Check Balance and Transfer Funds on banks 1 and 2
-make factory   # the factory; mock mode until you set ANTHROPIC_API_KEY
-make down
+just setup     # once, after git clone
+just up        # the banks, the crawler, the Console, the back end, the data
+just demo      # Check Balance and Transfer Funds on banks 1 and 2
+just factory   # the factory; mock mode until you set ANTHROPIC_API_KEY
+just down
 ```
 
 Configuration is `.env` (from `.env.example`) plus SOPS-encrypted files; the model key ships
@@ -387,10 +387,10 @@ ground under it does:
   through Better Stack's API, never clicks in its dashboard.
 - **Detection and alerting:** Falco, CrowdSec, Wazuh, Vector, and ntfy to a phone.
 - **Recovery:** encrypted, append-only backups, rebuild-and-restore, drilled.
-- **Export and import:** `make export` and `make import` move the whole system's state to a
-  fresh machine; `make memory-export` and `make memory-import` move Memory alone.
+- **Export and import:** `just export` and `just import` move the whole system's state to a
+  fresh machine; `just memory-export` and `just memory-import` move Memory alone.
 - **Traces:** every run is one OpenTelemetry trace, a span per step or phase, model calls in the
-  GenAI semantic conventions; `make trace RUN=…` reads one, and `make observe` adds the
+  GenAI semantic conventions; `just trace …` reads one, and `just observe` adds the
   Collector, Grafana Tempo, Loki and Grafana, with OpenTelemetry metrics beside the SQL views.
 - **CI:** signed, scanned images pinned by digest; SonarQube quality gate.
 
@@ -462,7 +462,7 @@ service's API stays TypeScript.
 
 **The move.** Part 1's tables map one to one onto the graph: episodes, hypotheses and lesson
 versions become nodes, facts become Graphiti edges, and the change log keeps its hash chain.
-`make memory-export` writes the bundle; the graph importer reads it, checks every hash, and
+`just memory-export` writes the bundle; the graph importer reads it, checks every hash, and
 replays the change log in order, so the graph's history starts where the tables' history
 ends.
 
@@ -707,7 +707,7 @@ logged to the bank's hazard log:
 | Slow hand-off | 5% of sign-ins | the callback page holds for 5 to 8 seconds |
 
 **Profiles:** `HAZARDS=default` (the rates above), `HAZARDS=gentle` (a quarter of every rate,
-fixed seed; used by `make demo`), `HAZARDS=harsh` (double).
+fixed seed; used by `just demo`), `HAZARDS=harsh` (double).
 
 **Forced mode** (tests and evals). A request with a signed `X-Hazards` header gets exactly the
 named hazards. It needs `HAZARDS_FORCEABLE=true` on the bank and a valid HMAC. Forced-only
@@ -801,7 +801,7 @@ crawler version serving each; `GET /tasks` lists the tasks with their input sche
 
 Inputs and results are zod schemas in `packages/contracts`, from which the OpenAPI document
 (`GET /openapi.json`, with examples for every status code of [§D.7](#d7-http-status-codes)) and
-the tool definitions are generated. `/docs` serves Swagger UI with bearer authorization; `make
+the tool definitions are generated. `/docs` serves Swagger UI with bearer authorization; `just
 docs` publishes a static reference. A test fails if the OpenAPI document, the tool definitions and
 the endpoints disagree.
 
@@ -918,7 +918,7 @@ Each description says what the tool does and never does (no money moves without 
 contract test fails on any difference between a tool and its endpoint. The agent calls the
 endpoint itself with its own access token.
 
-**The demo agent** (`apps/agent`, `make agent`) is a pi session on Claude
+**The demo agent** (`apps/agent`, `just agent`) is a pi session on Claude
 (`claude-haiku-4-5-20251001` by default) whose only tools are those of `GET /tools`. Its scripted
 conversation on banks 1 and 2 lists the banks, reads a balance, fetches a statement, requests a
 transfer that waits for approval and then confirms it, and explains a nonexistent account as a
@@ -1314,7 +1314,7 @@ drew a seeded value is covered in the stored frame.
      │
      ├──▶ records ──▶ Postgres ──▶ the Console's timelines        source of truth
      │
-     └──▶ JSON logs ──▶ stdout and .data/logs/*.jsonl            make logs
+     └──▶ JSON logs ──▶ stdout and .data/logs/*.jsonl            just logs
 ```
 
 `runId` and step travel on every row and log line.
@@ -1338,8 +1338,8 @@ and proposed, and spend against the caps.
 
 ### I.8 Locally, and later
 
-No extra containers: logs go to stdout and rotating JSON files, read with `make logs` and
-`make <group>-logs`. Traces and the Grafana stack are Part 2 ([§17](#17-goal)).
+No extra containers: logs go to stdout and rotating JSON files, read with `just logs` and
+`just logs <group>`. Traces and the Grafana stack are Part 2 ([§17](#17-goal)).
 
 ### I.9 Masking applies to telemetry too
 
@@ -1588,7 +1588,7 @@ Scenarios that a bank does not yet reproduce carry a proposed hazard, which is w
 and 4 get their extra trouble.
 
 The seed enters through Memory's own door, as the curator role, with one approval record for
-the whole set (`make memory-seed`), so every row passes the privacy screen and appears in the
+the whole set (`just memory-seed`), so every row passes the privacy screen and appears in the
 change log. Seeded lessons start as curated patterns; from then on the rules treat them like
 any other lesson. Facts are not seeded: they are written the first time the factory scouts and
 promotes a crawler for each bank.
@@ -1821,7 +1821,7 @@ never takes a raw string. `shared/invariants` comes first in every prompt.
 The files in `packages/prompts/` are the baseline. In the Console a person may edit or add a
 prompt: saving creates a **draft** (with author and reason) that no run uses; "Run evals" runs
 its cases under their own cap; "Activate" is offered only when they pass. Any version, or the git
-file, can be restored in one click. `make prompts-export` writes active versions back to the
+file, can be restored in one click. `just prompts-export` writes active versions back to the
 files for a pull request.
 
 ---
@@ -1834,7 +1834,7 @@ files for a pull request.
 | Bank | `apps/bank/test` | every page in all four banks, every hazard on and off, the ledger, statements, the markup dialects. |
 | Browser | `tests/browser` | the Runner against the real bank in Chromium. Skipped only if the browser cannot launch; CI fails on any skip. |
 | Outcomes | `tests/outcomes` | for each forced hazard and each seeded member case, the exact typed result. This table is the error taxonomy's proof. |
-| Long | `tests/long` | runs that sit through the banks' real ambient hazards for minutes: Check Balance, run after run. On every merge to master and every night, and with `make test-long`. |
+| Long | `tests/long` | runs that sit through the banks' real ambient hazards for minutes: Check Balance, run after run. On every merge to master and every night, and with `just test-long`. |
 | Escalation | `tests/escalation` | staff code, approval, supervisor code, reject, take-over, cancel and expiry, all driven through the Console API. |
 | Transfer safety | `tests/transfer` | swallowed submit, lost session while parked, grant mismatch (amount changed on screen), grant replay, duplicate detection. The bank ledger is the oracle: never two transfers for one grant. |
 | Trap matrix | `tests/guards` | every trap, every layer removed in turn, injected text changes no verdict, clean runs leave the state-change counter at zero. |
@@ -1847,7 +1847,7 @@ files for a pull request.
 runs the tests its change touches; changes to migrations, seeds, config, infrastructure or CI run
 them all. Every merge to master and every night run the whole suite in three parallel shards, the
 long suite, check-prompts, a compose job for bank, browser, outcomes, escalation, transfer,
-guards and PII, `gitleaks` over the history and every built image, and `npm audit`. `make check`
+guards and PII, `gitleaks` over the history and every built image, and `npm audit`. `just check`
 runs `gitleaks` over the history and uncommitted changes.
 
 **Rules:** fakes never return the answer under test; every guard has a test that it refuses;
@@ -1886,7 +1886,7 @@ seeds/
 tests/           browser, outcomes, escalation, transfer, guards, pii
 infra/           compose files, SOPS files, Vault seed, export and import scripts
 docs/            the documents the README links to (§Q.2)
-Makefile         the only entry point: every action is a make target (§S.1)
+Justfile         the only entry point: every action is a just recipe (§S.1)
 ```
 
 npm workspaces, TypeScript project references, ESM, Node 22.
@@ -1908,8 +1908,8 @@ documents.
 |---|---|
 | `README.md` | the one-paragraph framing, the picture, the reading order, links to everything below |
 | `docs/00-requirements.md` | the brief, point by point: every requirement, how we meet it, where, and the test or demo that proves it |
-| `docs/01-setup.md` | prerequisites, `git clone`, `make setup`, filling in `.env` values, SOPS and age keys, first `make up` |
-| `docs/02-running.md` | every make target, what each group starts, URLs and ports, `make demo`, `make try`, `make down` |
+| `docs/01-setup.md` | prerequisites, `git clone`, `just setup`, filling in `.env` values, SOPS and age keys, first `just up` |
+| `docs/02-running.md` | every just recipe, what each group starts, URLs and ports, `just demo`, `just try`, `just down` |
 | `docs/03-architecture.md` | the boxes, the diagrams, the data models, where the risky parts live |
 | `docs/04-tech-stack.md` | every technology choice and why |
 | `docs/05-the-bank.md` | CoreLink, the four banks, their differences, the hazards, the hazard lab |
@@ -1925,14 +1925,14 @@ documents.
 | `docs/15-prompts.md` | the prompt library, composition, checks and the writing standard |
 | `docs/16-from-80-to-100.md` | what AI produced, what changed and why, what was cut, what is still needed; with more time ([Part 2](#part-2-with-more-time)) |
 
-The Markdown is the source; `make docs` renders it as a website, published to **GitHub Pages** at
+The Markdown is the source; `just docs` renders it as a website, published to **GitHub Pages** at
 `https://dphipps4.github.io/generic_bank/` on every merge to `master`. Rendered HTML is never
 committed. The repository is the product: catalog, memory seed and prompts live in it, and
 nothing is hosted elsewhere.
 
 ### Q.3 Branches
 
-- **`master`** is the default branch and always releasable (`make up` and `make demo` work on
+- **`master`** is the default branch and always releasable (`just up` and `just demo` work on
   every commit).
 - Every change goes through a short-lived branch (`feat/…`, `fix/…`, `docs/…`, `chore/…`) and a
   pull request, where CI runs.
@@ -1946,9 +1946,9 @@ nothing is hosted elsewhere.
 ## Appendix R. Secrets and configuration
 
 - **`.env`** carries configuration into containers. `.env.example` is committed and documents
-  every variable; `make setup` copies it to `.env`, which is never committed.
+  every variable; `just setup` copies it to `.env`, which is never committed.
 - **SOPS** (with `age`) encrypts the committed secret files (`infra/secrets/local.sops.env` and
-  friends). `make setup` generates a local age key and random dev secrets; no key is committed.
+  friends). `just setup` generates a local age key and random dev secrets; no key is committed.
 - **`ANTHROPIC_API_KEY=`** ships blank, which means mock mode. Only the factory agent gets the
   key, never the Runner, the sandbox, the Console or the bank.
 - **Settings fail closed:** every required variable present, secrets at least 32 characters, no
@@ -1962,40 +1962,40 @@ nothing is hosted elsewhere.
 
 ## Appendix S. Running it
 
-### S.1 Everything through make
+### S.1 Everything through just
 
-| Target | What it does |
+| Recipe | What it does |
 |---|---|
-| `make requirements` | checks the Mac with explicit versions (macOS 14, Xcode command line tools, Docker Engine 27 and Compose 2.29 with 5 GB of memory, disk, ports) and fails, saying what to install, until every one is met; `make requirements-dev` adds Node 22 |
-| `make plan` | renders every document in `docs/plan` as HTML pages, in a container, and opens them |
-| `make setup` | once after `git clone`: `make requirements`, then generates the age key and dev secrets and builds the images; SOPS, age and jq run from a pinned tools image, so the Mac needs only Docker |
-| `make dev-setup` | once, to develop: Node dependencies, the Prisma client, Chromium for the browser tests |
-| `make up` | everything in the base stack: data, back end, console, crawlers, banks 1 and 2 |
-| `make down` | stops everything; volumes are kept |
-| `make data` | box B: Postgres, Vault, MinIO, Memory |
-| `make backend` | box A's back end: the Task API and workflows (needs `data`) |
-| `make console` | the AdminJS Console (needs `data`) |
-| `make crawlers` | the Runner, which drives the banks for tasks (needs `backend`) |
-| `make bank` | banks 1 and 2, the message inbox and `bank-db` |
-| `make bank-more` | banks 3 and 4, for crawling later (not part of `make up`, to save memory) |
-| `make factory` | box D: the factory agent, Scout browser and sandbox; live with a key, mock without |
-| `make <group>-down`, `make <group>-logs`, `make <group>-rebuild` | the same for any one group |
-| `make demo` | check balance and transfer on banks 1 and 2, printing each typed result |
-| `make agent` | the demo member-assistant agent, calling the REST API through its tool definitions (mock without a key) |
-| `make try TASK=… HAZARD=…` | any task under any forced hazard |
-| `make test`, `make test-browser`, `make test-pii`, `make evals` | the suites in [Appendix P](#appendix-p-tests) and the eval ladder |
-| `make check-prompts` | the prompt checker |
-| `make api-token` | creates a local API client (once) and prints a fresh access token for Swagger UI or `curl` |
-| `make api-docs` | writes `openapi.json` and the static API reference page from the contracts |
-| `make prompts-export` | writes the prompt versions activated in the Console back to `packages/prompts/` for a pull request |
-| `make docs` | renders `README.md` and `docs/` as the white-template website into `site/`; the same build publishes to GitHub Pages |
-| `make logs` | read the JSON logs from `.data/` |
-| `make memory-seed` | imports `seeds/memory/` into an empty Memory (part of the first `make up`) |
-| `make reset` | deletes volumes and starts again from the seed (asks first) |
+| `just requirements` | checks the Mac with explicit versions (macOS 14, git, just, Docker Engine 27 and Compose 2.29 with 5 GB of memory, disk, ports) and fails, saying what to install, until every one is met; `just requirements-dev` adds Node 22 |
+| `just plan` | renders every document in `docs/plan` as HTML pages, in a container, and opens them |
+| `just setup` | once after `git clone`: `just requirements`, then generates the age key and dev secrets and builds the images; SOPS, age and jq run from a pinned tools image, so the Mac needs only Docker |
+| `just dev-setup` | once, to develop: Node dependencies, the Prisma client, Chromium for the browser tests |
+| `just up` | everything in the base stack: data, back end, console, crawlers, banks 1 and 2 |
+| `just down` | stops everything; volumes are kept |
+| `just data` | box B: Postgres, Vault, MinIO, Memory |
+| `just backend` | box A's back end: the Task API and workflows (needs `data`) |
+| `just console` | the AdminJS Console (needs `data`) |
+| `just crawlers` | the Runner, which drives the banks for tasks (needs `backend`) |
+| `just bank` | banks 1 and 2, the message inbox and `bank-db` |
+| `just bank-more` | banks 3 and 4, for crawling later (not part of `just up`, to save memory) |
+| `just factory` | box D: the factory agent, Scout browser and sandbox; live with a key, mock without |
+| `just down <group>`, `just logs <group>`, `just rebuild <group>` | the same for one or more groups |
+| `just demo` | check balance and transfer on banks 1 and 2, printing each typed result |
+| `just agent` | the demo member-assistant agent, calling the REST API through its tool definitions (mock without a key) |
+| `just try <hazard> [task]` | any task under any forced hazard |
+| `just test`, `just test-browser`, `just test-pii`, `just evals` | the suites in [Appendix P](#appendix-p-tests) and the eval ladder |
+| `just check-prompts` | the prompt checker |
+| `just api-token` | creates a local API client (once) and prints a fresh access token for Swagger UI or `curl` |
+| `just api-docs` | writes `openapi.json` and the static API reference page from the contracts |
+| `just prompts-export` | writes the prompt versions activated in the Console back to `packages/prompts/` for a pull request |
+| `just docs` | renders `README.md` and `docs/` as the white-template website into `site/`; the same build publishes to GitHub Pages |
+| `just logs` | read the JSON logs from `.data/` |
+| `just memory-seed` | imports `seeds/memory/` into an empty Memory (part of the first `just up`) |
+| `just reset` | deletes volumes and starts again from the seed (asks first) |
 
 The Console is at `http://localhost:8080`, the banks at their URLs ([§C.1](#c1-one-product-four-banks)), the inbox at
-`:8089`. `make demo` pauses at the transfer approval and prints the Console link;
-`make demo AUTO_APPROVE=1` approves through the Console API.
+`:8089`. `just demo` pauses at the transfer approval and prints the Console link;
+`AUTO_APPROVE=1 just demo` approves through the Console API.
 
 **Mock mode** replays only the model responses of a recorded factory run; the browser, bank,
 evals and Console are live, with hazards off and the recording's seed.
@@ -2004,7 +2004,7 @@ evals and Console are live, with hazards off and the recording's seed.
 
 With `HAZARDS_FORCEABLE=true` (the local default), the Console's **Hazard lab** page lets an admin
 pick a tenant, member, task and hazards and start the run, carrying the signed hazard header.
-`make try` does the same from the command line. Every hazard in [§C.4](#c4-runtime-hazards) is one click away, with its
+`just try` does the same from the command line. Every hazard in [§C.4](#c4-runtime-hazards) is one click away, with its
 expected typed result.
 
 ### S.3 Fitting in 8 GB
@@ -2025,20 +2025,20 @@ virtual display.
 | `bank-generic`, `bank-example` | world | 128 MB each |
 | `bank-inbox` | world | 96 MB |
 | `bank-db` (small Postgres, `shared_buffers` 32 MB) | world | 128 MB |
-| **Base stack (`make up`)** | | **about 2.7 GB** |
-| `bank-sample`, `bank-placeholder` (`make bank-more`, later) | world | 128 MB each |
+| **Base stack (`just up`)** | | **about 2.7 GB** |
+| `bank-sample`, `bank-placeholder` (`just bank-more`, later) | world | 128 MB each |
 | `factory` (agent and model gateway) | D | 256 MB |
 | `operator-browser` | D | 768 MB |
 | `sandbox` (eval runner with its own Chromium), `bank-sandbox`, `sandbox-db` | D | 768 MB |
 | **With the factory running** | | **about 4.5 GB** |
 
-`make requirements` checks Docker's memory allowance first.
+`just requirements` checks Docker's memory allowance first.
 
 Networks: `edge` (published ports), `app` (A to B), `data` (B internal), `world` (banks;
 reachable from the Runner and the Scout browser), `factory` (D to A and B), `sandbox`
 (`internal: true`, no route out).
 
-Images are pinned by digest, and a preflight in `make up` and `make factory` refuses to start on
+Images are pinned by digest, and a preflight in `just up` and `just factory` refuses to start on
 version skew between boxes or a database not at the expected migration. Repeated log lines are
 rate-limited, and every container has disk and memory limits.
 
@@ -2155,7 +2155,7 @@ elsewhere are not repeated; these are the rest:
 | Secrets | SOPS with age; zod-parsed environment that fails closed; HashiCorp Vault (KV) |
 | Observability | Postgres records; pino logs; OpenTelemetry, Tempo, Loki and Grafana in Part 2 |
 | Quality | vitest, ESLint, Prettier, E0 rules on the TypeScript compiler API, dependency-cruiser, cspell, markdownlint, gitleaks, `npm audit`, GitHub Actions; SonarQube in Part 2 |
-| Packaging | Docker compose profiles (`default`, `factory`), make, Node 22 slim images (Chromium only in Runner, Scout browser and sandbox) |
+| Packaging | Docker compose profiles (`default`, `factory`), just, Node 22 slim images (Chromium only in Runner, Scout browser and sandbox) |
 
 Not used: a graph database in Part 1, Redis or any broker, Kubernetes, a model inside production
 tasks, a client framework in the bank.
@@ -2252,7 +2252,7 @@ linking each point of the brief it touches to the code and test that prove it.
 
 | # | Milestone | Done when |
 |---|---|---|
-| M0 | Skeleton: workspaces, compose with memory limits, auto-bootstrap of secrets, Prisma schema and first migration, AdminJS shell, CI, import boundaries | `make up` starts every service on an 8 GB laptop; CI green |
+| M0 | Skeleton: workspaces, compose with memory limits, auto-bootstrap of secrets, Prisma schema and first migration, AdminJS shell, CI, import boundaries | `just up` starts every service on an 8 GB laptop; CI green |
 | M1 | Bank 1: ledger, seed, staff sign-in, codes, inbox, member lookup, member summary, activity, statements, transfer, supervisor approval, framesets, nested tables, markup dialects, forced hazards | bank tests green |
 | M2 | Banks 2, 3 and 4, and ambient hazards: themes, labels, layout variants, URL bases, image text, account formats, bank 3's extra frame, bank 4's split transfer and popup results | all four banks seeded and browsable |
 | M3 | Screen package and the first driver: capture, fully-rendered wait, recognition, targeting, image fingerprints, the CoreLink driver with bank 1's profile written by hand, Task API with OAuth2 (clients, tokens, refresh) and its HTTP status codes, trail, masking, AdminJS run pages and the API clients page | `checkBalance` succeeds on bank 1 under ambient hazards; outcome tests green |
@@ -2262,5 +2262,5 @@ linking each point of the brief it touches to the code and test that prove it.
 | M7 | **Factory:** workflow, model gateway, tools, caps, scout (autocrawl), evals E0 to E4, review gate, probation, driver states in the Console, mock mode | **the factory onboards bank 2 as a profile, end to end, and it is promoted after probation** |
 | M8 | **Repair loop:** turn on bank 1's redesign (`BANK_REDESIGN`); runs fail; the driver is demoted; a repair case opens; a factory repair run fixes it | the repair is visible end to end in the Console |
 | M9 | Prompt library, `check-prompts`, prompt eval runner; Console complete ([Appendix G](#appendix-g-the-console)) | `check-prompts` green; every Console page exists |
-| M10 | README, diagram, the requirements report (every point of the brief, how we meet it, and links to the code and tests that prove it), the 80%-to-100% notes, a recorded factory run for mock mode | a reviewer can clone, `make up`, `make demo`, `make factory` in minutes |
+| M10 | README, diagram, the requirements report (every point of the brief, how we meet it, and links to the code and tests that prove it), the 80%-to-100% notes, a recorded factory run for mock mode | a reviewer can clone, `just up`, `just demo`, `just factory` in minutes |
 | **Submission** | | |

@@ -7,26 +7,27 @@ would. Behind it is a software factory where AI agents study a bank they haven't
 3 and 4, and write the crawler for it as plain deterministic code, so no model runs when a
 customer's task does.
 
-Everything runs locally with docker compose, and every step is a make target.
+Everything runs locally with docker compose, and every step is a [just](https://just.systems) recipe.
 
 ## Requirements (macOS)
 
-macOS 14 or newer; an 8 GB Mac is enough.
+macOS 14 or newer; an 8 GB Mac is enough. You need git to clone this, and
+[Docker Desktop](https://www.docker.com/products/docker-desktop/) (Engine 27+, Compose 2.29+),
+given 5 GB of memory. To develop, add [Node 22](https://nodejs.org/en/download) for the tests,
+the type checker and the linter.
 
 ```sh
-xcode-select --install          # git and make
-brew install --cask docker      # Docker Desktop (Engine 27+, Compose 2.29+); give it 5 GB of memory
-brew install node@22            # only to develop: the tests, the type checker and the linter
-make requirements               # checks all of the above, with versions, and fails until they are right
+infra/scripts/bootstrap.sh      # installs just, the pinned release, its checksum verified
+just requirements               # checks all of the above, with versions, and fails until they are right
 ```
 
-Nothing else is installed on the Mac. SOPS, age, jq, the plan renderer, Postgres, Vault, MinIO
-and Chromium all run in containers.
+No Xcode, no Homebrew, nothing else on the Mac. SOPS, age, jq, the plan renderer, Postgres,
+Vault, MinIO and Chromium all run in containers.
 
 ## Read the plan
 
 ```sh
-make plan                       # renders docs/plan as HTML pages and opens them
+just plan                       # renders docs/plan as HTML pages and opens them
 ```
 
 The pages are written to `.run/plan/`, rendered in a container, so this works before anything
@@ -35,14 +36,14 @@ else is set up.
 ## Run it
 
 ```sh
-make setup                      # once, after git clone: checks the Mac, creates secrets, builds the images
-make up                         # everything: data, memory, API, Console, crawler, all four banks, factory
-make help                       # every target
+just setup                      # once, after git clone: checks the Mac, creates secrets, builds the images
+just up                         # everything: data, memory, API, Console, crawler, all four banks, factory
+just                            # every recipe
 ```
 
-`make setup` generates every secret it can. A value someone else issues (today only the Claude
+`just setup` generates every secret it can. A value someone else issues (today only the Claude
 and OpenAI API keys, which may stay blank: the factory then runs in mock mode) is explained by
-`make setup` and entered with `make secrets-edit FILE=…`, which opens the encrypted file in sops.
+`just setup` and entered with `just secrets-edit …`, which opens the encrypted file in sops.
 
 Each factory role's model is set in `config/app.env`: `FACTORY_SCOUT_MODEL` and
 `FACTORY_SUPERVISOR_MODEL` (default `claude-opus-5-5`), `FACTORY_SCOUT_EFFORT` and
@@ -50,9 +51,9 @@ Each factory role's model is set in `config/app.env`: `FACTORY_SCOUT_MODEL` and
 `FACTORY_SUPERVISOR_PROVIDER` (default `anthropic`; `openai` is the other). A model with no
 price in `apps/factory/src/models.ts` is refused.
 
-`make up` starts everything there is: all four banks, the staff inbox, the factory and memory
+`just up` starts everything there is: all four banks, the staff inbox, the factory and memory
 included. Then **[ACCESS.md](ACCESS.md)** lists every page, API and health check you can reach,
-the logins (which `make up` writes to `secrets/credentials.txt`), and things to try, faults
+the logins (which `just up` writes to `secrets/credentials.txt`), and things to try, faults
 included.
 
 Try a fault:
@@ -67,21 +68,21 @@ Bank 1, the 2003 site, does not.
 
 ## A second copy, side by side
 
-Clone or fork into another folder and run `make fork-ports` there before `make setup`. The copy
+Clone or fork into another folder and run `just fork-ports` there before `just setup`. The copy
 is named after its folder, so it gets its own containers, volumes and images, and its ports are
 all moved up by 10000 (its Console is on http://localhost:18080).
 
 ## Develop
 
 ```sh
-make requirements-dev           # make requirements, plus Node 22
-make dev-setup                  # once: Node dependencies, the Prisma client, Chromium for the tests
-make check                      # the quick checks: types, lint, tests, import boundaries, secrets
-make ci                         # everything GitHub's CI runs, on this machine (slow); no Actions needed
-make api-docs                   # write the API reference from the contracts and open it in Chrome
+just requirements-dev           # just requirements, plus Node 22
+just dev-setup                  # once: Node dependencies, the Prisma client, Chromium for the tests
+just check                      # the quick checks: types, lint, tests, import boundaries, secrets
+just ci                         # everything GitHub's CI runs, on this machine (slow); no Actions needed
+just api-docs                   # write the API reference from the contracts and open it in Chrome
 ```
 
-CI on GitHub costs nothing for a public repository or its forks, and `make ci` runs the same
+CI on GitHub costs nothing for a public repository or its forks, and `just ci` runs the same
 jobs locally for anyone without it.
 
 ## Documents
