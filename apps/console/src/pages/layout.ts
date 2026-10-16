@@ -19,17 +19,21 @@ export const esc = (s: unknown) =>
   );
 
 const NAV: [href: string, label: string][] = [
+  ['/dashboard', 'Dashboard'],
   ['/inbox', 'Inbox'],
   ['/runs', 'Runs'],
   ['/recommendations', 'Recommendations'],
   ['/journal', 'Journal'],
   ['/freezes', 'Freezes'],
-  ['/admin', 'Data'],
+  ['/admin/resources/TaskRun', 'Data'],
 ];
+
+/** Whether the bar links this page. */
+export const inNav = (href: string) => NAV.some(([h]) => h === href);
 
 /** The hazard lab is in the bar only on a stack whose banks obey forced hazards. */
 export function showLabInNav() {
-  if (!NAV.some(([href]) => href === '/lab')) NAV.splice(4, 0, ['/lab', 'Hazard lab']);
+  if (!inNav('/lab')) NAV.splice(5, 0, ['/lab', 'Hazard lab']);
 }
 
 export function page(

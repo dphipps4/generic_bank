@@ -12,6 +12,7 @@ import { oauth } from '@gb/oauth';
 import { WORKFLOW } from '@gb/runs';
 import { apiClientActions, onceStore } from './api-clients.js';
 import { ADMIN_BAR_JS, showLabInNav } from './pages/layout.js';
+import { dashboardPages, landOnDashboard } from './pages/dashboard.js';
 import { freezePages } from './pages/freezes.js';
 import { inboxPages } from './pages/inbox.js';
 import { journalPages } from './pages/journal.js';
@@ -36,6 +37,9 @@ const cfg = loadConfig(
     ANSWER_SEAL_KEY: secret(),
     HAZARDS_FORCEABLE: z.enum(['true', 'false']).default('false'),
     API_URL: z.url().default('http://api:8000'),
+    // The host ports a browser reaches the Task API and the staff inbox on, for the Dashboard's links.
+    API_PORT: port(8000),
+    BANK_INBOX_PORT: port(8089),
   },
   process.env,
   [
@@ -79,7 +83,8 @@ const admin = new AdminJS({
 
 const app = Fastify({ logger: true });
 app.get('/healthz', async () => ({ ok: true, service: 'console' }));
-app.get('/', async (_req, reply) => reply.redirect('/inbox'));
+// Before AdminJS's routes, so its dashboard is never the page a person lands on.
+landOnDashboard(app);
 app.get('/console-bar.js', async (_req, reply) =>
   reply.type('application/javascript').send(ADMIN_BAR_JS),
 );
@@ -143,5 +148,11 @@ if (cfg.HAZARDS_FORCEABLE === 'true') {
   });
 }
 freezePages(app, { sql: control, whoIs });
+dashboardPages(app, {
+  sql: control,
+  whoIs,
+  apiPort: cfg.API_PORT,
+  inboxPort: cfg.BANK_INBOX_PORT,
+});
 
 await app.listen({ host: '0.0.0.0', port: cfg.CONSOLE_PORT });
