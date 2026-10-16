@@ -35,8 +35,6 @@ end, transfers with a person's approval; bank 2 checks balances. The factory lea
 mode from a recorded run; onboarding bank 2 live, end to end, is Part 2. Banks 3 and 4 are left
 for the factory to learn.
 
----
-
 ## 2. How it fits together
 
 ![Generic Bank: the shape in one picture](diagrams/system.svg)
@@ -55,8 +53,6 @@ The four banks stand in for the outside world; only the crawler talks to them.
 Risk sits in four places: the money-moving click (behind a person's grant), typing passwords
 (SOPS secrets only the Runner holds, never shown), masking (before anything is written), and
 agent-written profiles (a person approves each before it runs).
-
----
 
 ## 3. The agent's interface
 
@@ -119,8 +115,6 @@ Error bodies are problem documents with the code, run id and retryability ([§D.
 After a `409`, a person resumes, finishes by hand or cancels, and the agent just asks again; a
 retry never starts a second run ([§D.8](#d8-escalate-resolve-retry)).
 
----
-
 ## 4. The banking sites
 
 The product is **CoreLink Branch Console**, by a made-up vendor, Acme Core Systems. We use it
@@ -137,8 +131,6 @@ Nothing shows without their JavaScript. Nothing has an id. Some labels and butto
 of text, things go wrong at random, and each bank differs in labels, layout, account formats and
 supervisor threshold. Generic Bank looks like 2003. Each bank keeps its own ledger and generates
 statements from it. Details: [Appendix C](#appendix-c-generic-bank-the-target-product).
-
----
 
 ## 5. The crawler and its three jobs
 
@@ -166,8 +158,6 @@ Mac is kept as the reference. Banks 2, 3 and 4
 answer anything not shaped like a browser with "403 Access denied"; bank 1 checks nothing.
 Values: [§E.8](#e8-browser-identity-set-at-launch), [Appendix W](#appendix-w-browser-identity-reference).
 
----
-
 ## 6. Transfers need a person
 
 ![A transfer: prepared by automation, approved by a person, one click](diagrams/transfer.svg)
@@ -177,8 +167,6 @@ and approves, rejects or takes over. Approval creates a single-use grant tied to
 those accounts; the guard lets one click through with it, and only if the screen still matches. If
 the result is unclear, the crawler never presses again: it looks for its memo code in the
 account's history, then confirms or hands it to a person. Details: [Appendix F](#appendix-f-transfers-a-human-approved-activity).
-
----
 
 ## 7. The software factory
 
@@ -262,8 +250,6 @@ It starts with a cleaned set of rules, lessons and failure scenarios, so the fir
 a blank slate. In Part 2, memory moves onto a graph, Neo4j with Graphiti for the facts. The
 ideas stay the same. *[Read about memory on a graph.](#20-memory-on-a-graph-neo4j-and-graphiti)* Details: [Appendix K](#appendix-k-memory-how-the-agents-remember).
 
----
-
 ## 8. The Console: where people step in
 
 Our operations website, on **AdminJS** over the shared Postgres. A person comes to it when:
@@ -279,8 +265,6 @@ Every action is also an API call and needs a written reason. Nothing unmasked is
 Part 2 the Console also shows the read-only allowlist, the prompts (edits are drafts until their
 evals pass) and the memory. Details: [Appendix G](#appendix-g-the-console).
 
----
-
 ## 9. Reviewing the evidence
 
 Every run leaves a trail: a frame for every page it acts on, grabbed as soon as the page is ready
@@ -288,8 +272,6 @@ Every run leaves a trail: a frame for every page it acts on, grabbed as soon as 
 In the Console, a run's Frames button opens them in a popup, one at a time. Account numbers, amounts, names, emails,
 addresses and typed fields are covered with white boxes before a frame is stored. A frame that
 cannot be proven clean is withheld, with the reason. Details: [Appendix I](#appendix-i-evidence-redaction-and-observability).
-
----
 
 ## 10. Promotion and demotion
 
@@ -306,14 +288,10 @@ Each crawler, per bank and job, has one state, shown as a badge:
 Demotion is automatic: a crawler's first real fault demotes it, and the previous version serves
 if there is one. Bank faults (slowness, 503) do not count. Details: [Appendix L](#appendix-l-driver-lifecycle-and-the-repair-loop).
 
----
-
 ## 12. Seeing what happened
 
 Every step, screenshot, recovery, guard decision, model call, tool call and verdict is a database
 row tied to one run id, shown in the Console. Logs are JSON with the same id. Details: [Appendix I](#appendix-i-evidence-redaction-and-observability).
-
----
 
 ## 13. Keeping it safe
 
@@ -329,8 +307,6 @@ row tied to one run id, shown in the Console. Logs are JSON with the same id. De
 
 Each is enforced in code and proven by tests: [Appendix J](#appendix-j-guardrails), [Appendix U](#appendix-u-why-each-rule-exists).
 
----
-
 ## 14. Running it
 
 ```
@@ -343,8 +319,6 @@ just down
 
 Configuration is `config/app.env`, committed and not secret, plus the SOPS-encrypted secrets
 files `just setup` makes; the model key starts blank. It fits on an 8 GB laptop. Details: [Appendix S](#appendix-s-running-it).
-
----
 
 ## 15. Why this answers the brief
 
@@ -362,8 +336,6 @@ files `just setup` makes; the model key starts blank. It fits on an 8 GB laptop.
 # Part 2: with more time
 
 Not part of the submission; the README cites it under "what we would do with more time".
-
----
 
 ## 17. Goal
 
@@ -406,8 +378,6 @@ ground under it does:
 - **The factory, live:** onboarding banks 3 and 4 end to end with a real model and budget.
 - **The prompt library** with its checker, and **the Console complete.**
 - **Tests:** Part 2 adds the full hazard matrix, transfer safety under failure, every human path, a trap matrix, soak runs, and the factory and memory in depth.
-
----
 
 ## 20. Memory on a graph: Neo4j and Graphiti
 
@@ -487,8 +457,6 @@ ends.
 | Search | full-text plus pgvector | BM25 plus vectors, fused by rank |
 | Change log | hash-chained table | hash-chained nodes |
 
----
-
 ## 22. Scaling out
 
 - Runner workers scale horizontally, each with its own browser.
@@ -496,8 +464,6 @@ ends.
   only.
 - A concurrency limit per bank and a sign-in ledger shared by every runner.
 - Several factory boxes at once, one per bank, each with its own caps.
-
----
 
 ## 31. What else "more time" would buy
 
@@ -515,8 +481,6 @@ ends.
 ---
 
 # Appendices
-
----
 
 ## Appendix A. Principles
 
@@ -547,8 +511,6 @@ Code enforces each rule; prompts only repeat them.
 15. **Every run leaves a trail**, from its first step, whatever the outcome.
 16. **A clean hand-back beats a clever partial:** what is known, what is not, what would settle
     it.
-
----
 
 ## Appendix B. Architecture
 
@@ -584,8 +546,6 @@ can reach, sharing no code, database or network with our system.
 | `model_call` | factory run, role, model, prompt id and version, tokens in/out/cache, cost |
 | `eval_result` | factory run or driver version, rung, passed, details |
 | `repair_case`, `freeze`, `sign_in_attempt`, `audit_entry` | see [Appendix L](#appendix-l-driver-lifecycle-and-the-repair-loop) |
-
----
 
 ## Appendix C. Generic Bank: the target product
 
@@ -796,8 +756,6 @@ Staff and supervisor codes go to a fake phone and email inbox at `http://localho
 mailbox per bank, reachable by people and the test harness but **not by the Runner or the
 factory**. A code is always a human step; tests answer codes through the same Console API a
 person uses.
-
----
 
 ## Appendix D. Task API
 
@@ -1024,8 +982,6 @@ Problem details follow RFC 9457 (`application/problem+json`) with `code`, `runId
   it.
 - The inbox shows how long the agent has waited and how often it has asked.
 
----
-
 ## Appendix E. The Runner: driving a messy UI
 
 The Runner is the crawler. A **driver** is its knowledge of one product's screens; a **profile**
@@ -1142,8 +1098,6 @@ Screenshots are taken at the pixel ratio's inverse, so a picture keeps one pixel
 reference; the one known difference is where Chrome puts Accept-Language when its user agent is
 overridden.
 
----
-
 ## Appendix F. Transfers: a human-approved activity
 
 The automation prepares a transfer, a person approves it, and only then is it submitted.
@@ -1201,8 +1155,6 @@ filled again, and everything re-checked against the grant. The grant binds value
 - **Deadlines:** an unanswered human task ends the run `expired`.
 
 Every Console action is also an API call: `POST /human-tasks/:id/answer|approve|reject|take-over|cancel`.
-
----
 
 ## Appendix G. The Console
 
@@ -1273,8 +1225,6 @@ hours with no activity.
 A Console banner and the log (ntfy is Part 2). Each stuck run, each frozen tenant, and each
 approval waiting more than five minutes notifies once.
 
----
-
 ## Appendix H. The task runner
 
 **DBOS** runs each task as a durable workflow whose state lives in our Postgres, so tasks survive
@@ -1283,8 +1233,6 @@ anything open. Workflow code calls our own helpers in `packages/runs` (create a 
 person's answer, settle it). Side effects happen only in steps, a person's answer arrives as a message, and every
 wait has a deadline. A task is: prepare, wait for a person if needed, act, verify, settle. A factory
 run's workflow is in [§M.3](#m3-phases).
-
----
 
 ## Appendix I. Evidence, redaction and observability
 
@@ -1369,8 +1317,6 @@ In Part 2, SQL views over the records, on the Home, Health and Cost pages: task 
 recoveries by hazard, guard refusals by layer, human-task wait time, model tokens and spend by
 role.
 
----
-
 ## Appendix J. Guardrails
 
 All in `packages/guardrails`, which imports nothing from drivers, the Runner or the factory. Each
@@ -1433,8 +1379,6 @@ unchanged.
 
 A page's own background requests (analytics, feature flags, keep-alives) are refused quietly and
 logged. They never trip a guard; the guards that trip judge only controls a person can see.
-
----
 
 ## Appendix K. Memory: how the agents remember
 
@@ -1647,8 +1591,6 @@ belongs to this first domain.
 **Reference:** "Zep: A Temporal Knowledge Graph Architecture for Agent Memory."
 arXiv:2501.13956.
 
----
-
 ## Appendix L. Driver lifecycle and the repair loop
 
 A bank and task are available exactly when a promoted crawler exists. Promotion adds the bank to
@@ -1669,8 +1611,6 @@ means `404 task_not_available` before any browser opens.
 - **Sign-in ledger** (Part 2): every sign-in attempt is recorded and capped per member per day.
 
 Every transition writes a registry event and an audit entry, and appears in the Console.
-
----
 
 ## Appendix M. The software factory
 
@@ -1766,8 +1706,6 @@ the sandbox until approved at the review gate; before it ran, its sha256 would h
 bundle, it would be linted again (E0), and it would load in its own module scope, importing only
 the driver SDK.
 
----
-
 ## Appendix N. Evaluations
 
 ### N.1 The ladder
@@ -1790,8 +1728,6 @@ ran**; "could not run" is never a pass.
 Each prompt has a case file of inputs and expected properties. A runner scores each prompt
 version against the configured models, on demand and before any version bump, under its own
 spend cap.
-
----
 
 ## Appendix O. The prompt library
 
@@ -1855,8 +1791,6 @@ its cases under their own cap, and "Activate" is offered only when they pass. An
 file, can be restored in one click. `just prompts-export` writes active versions back to the
 files for a pull request.
 
----
-
 ## Appendix P. Tests
 
 | Suite | Where | What |
@@ -1885,8 +1819,6 @@ with nothing cached and every service must answer. The fifth runs `gitleaks` ove
 **Rules:** fakes never return the answer under test. Every guard has a test that it refuses.
 Tests use real-shaped data judged by the bank's ground truth. The fresh-clone job builds the
 real images and compose files.
-
----
 
 ## Appendix Q. Repository layout, documentation and branches
 
@@ -1958,8 +1890,6 @@ elsewhere.
   merges), no force pushes, no deletion, zero required approvals.
 - Conventional Commits; each pull request says what it proves and how.
 
----
-
 ## Appendix R. Secrets and configuration
 
 - **`config/app.env`** carries configuration into containers. It is committed and holds nothing
@@ -1975,8 +1905,6 @@ elsewhere.
 - **SOPS** holds every secret, the staff service account included; each service receives only
   its own (Vault comes in Part 2).
 - No cloud account, third-party sign-in, rotating secrets or intrusion detection locally.
-
----
 
 ## Appendix S. Running it
 
@@ -2054,8 +1982,6 @@ reachable from the Runner and the Scout browser), `bankdb` (the banks' database,
 Each image carries a hash of its source as a label, so `just up` rebuilds a stale image instead
 of running yesterday's code. Every container has a memory limit.
 
----
-
 ## Appendix T. How this answers the review
 
 ### T.1 System design
@@ -2116,8 +2042,6 @@ targeting, guardrails, masking or the trail.
 A two-page README leading with the problem and the cut lines, `architecture.md` with diagrams,
 and every README claim linked to its code and test.
 
----
-
 ## Appendix U. Why each rule exists
 
 > **Building the place where something is stored, leaving for later the step where it is
@@ -2148,8 +2072,6 @@ elsewhere are not repeated; these are the rest:
 | Every choice put to a person says what each option is for and costs | a decision blind to what it removes |
 | Report half-built work as "built, but nothing uses it yet" | storage reported live that nothing called |
 
----
-
 ## Appendix V. Technology stack
 
 | Area | Choice |
@@ -2171,8 +2093,6 @@ elsewhere are not repeated; these are the rest:
 
 Not used: a graph database in Part 1, Redis or any broker, Kubernetes, a model inside production
 tasks, a client framework in the bank.
-
----
 
 ## Appendix W. Browser identity reference
 
@@ -2254,8 +2174,6 @@ Accept: */*
 ```
 
 No `Accept-Language`, no `Sec-Fetch-*`, no client hints: banks 2, 3 and 4 refuse it on sight.
-
----
 
 ## Appendix X. Build order
 

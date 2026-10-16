@@ -3,8 +3,6 @@
 Every requirement in the take-home brief, in order. For each one: how the system meets it, where
 the plan covers it, and a proof a reviewer can run (a test suite, a just recipe or a demo step).
 
----
-
 ## 1. The environment the brief describes
 
 | The brief says | How we meet it | Where | Proof |

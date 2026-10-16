@@ -4,8 +4,6 @@
 > holds everything that lasts (Postgres, object storage, Memory). Box D is the software factory;
 > it's created for a session and destroyed after. The four banks are the outside world.
 
----
-
 ## Overview
 
 An AI agent asks for a typed task (check a balance, prepare a transfer, fetch statements) at a
@@ -24,8 +22,6 @@ once. When in doubt, a run stops.
   profile.
 - **Small.** One Postgres, a workflow library and AdminJS, all on an 8 GB laptop.
 
----
-
 ## System Architecture
 
 ![Generic Bank: the shape in one picture](diagrams/system.svg)
@@ -34,8 +30,6 @@ Box A holds no data of its own and can be rebuilt any time. Box B holds everythi
 reach out to anything. Box D runs code a model wrote and calls the model live. That's why it lasts
 one session and its sandbox has no way out at all. Only people and tests can read the fake staff
 inbox, so a sign-in code is always a human step.
-
----
 
 ## Generic Bank (the target)
 
@@ -54,8 +48,6 @@ words, so we can show the factory's repair at work.
 
 Appendix A puts the four banks side by side and walks through the screens a staff member sees.
 
----
-
 ## Task API and the workflow engine
 
 One typed task goes in, one durable workflow runs it, and one typed result comes out. Send the
@@ -67,8 +59,6 @@ prepares first: it signs in, asks a person for a code if the bank wants one, fin
 reads. Then it does the one step that matters and checks the result. When it needs a person, it
 waits (durably) until someone answers or the deadline passes. Appendix B lists the endpoints and
 every result a run can end in.
-
----
 
 ## The Runner
 
@@ -91,8 +81,6 @@ A **driver** is written once per vendor product, as a small state machine over n
 **profile** fills in one bank's words, account format and limits. Steps have time limits, and a
 run that takes too many steps without finishing stops as stuck.
 
----
-
 ## Transfers: approval and the one click
 
 ![A transfer: prepared by automation, approved by a person, one click](diagrams/transfer.svg)
@@ -111,8 +99,6 @@ reading it again, up to three times, if the bank gets in the way.
 Found once, the transfer succeeded; found twice or not at all, a person looks. If a run loses its
 browser while waiting, it signs in again and checks the review page against the grant before it
 presses.
-
----
 
 ## Guardrails
 
@@ -138,8 +124,6 @@ Credentials are SOPS secrets, given only to the Runner, the factory and the bank
 They're typed, and they never come back out. Sign-in pacing is Part 2. The guards judge the controls
 themselves, so instructions planted in a page's text change nothing. A guard error always stops the
 run, and a lint rule forbids catching one.
-
----
 
 ## How failures are handled
 
@@ -181,8 +165,6 @@ and recorded.
 
 Appendix C has every case: what notices it, what the system does, and what the caller sees.
 
----
-
 ## Evidence and PII removal
 
 **What the evidence is.** For every page a run reaches, the system keeps a picture of the page
@@ -209,8 +191,6 @@ member details. A test suite, the PII scan, runs a balance and a transfer on ban
 everything saved (every database row, file and log line) for the seeded personal details. One hit
 fails it.
 
----
-
 ## Observability
 
 What gets saved, all of it in Postgres and on this machine:
@@ -227,8 +207,6 @@ What gets saved, all of it in Postgres and on this machine:
 
 Every row and log line carries the run's id and its step, so either one leads to the other. The
 Console's pages read these records. Traces, `just trace` and `just observe` are Part 2.
-
----
 
 ## The Console
 
@@ -247,8 +225,6 @@ A driver moves through draft, candidate, probation and promoted. Faults in real 
 and the previous version takes over again. A guard trip freezes a bank until a person clears it.
 
 ![A driver's life: from draft to promoted, and back through repair](diagrams/driver-states.svg)
-
----
 
 ## The software factory
 
@@ -327,13 +303,9 @@ taught it.
 Agents ask questions mid-run with one tool, `memory_query`. People read memory in the Console,
 which uses the same API, so memory has one door. Appendix D has the API and its answers.
 
----
-
 ## Dependencies
 
 Every package and why it was chosen: [techstack.md](techstack.md).
-
----
 
 ## Known Limitations
 
@@ -341,8 +313,6 @@ Every package and why it was chosen: [techstack.md](techstack.md).
 - **Two browsers at a time,** so a transfer waiting for approval never holds up other tasks. That
   still fits an 8 GB laptop with Docker at 5.25 GB; concurrency is a setting.
 - **Hazards are ours.** Real vendors will have others.
-
----
 
 ## Appendix A. The four banks
 

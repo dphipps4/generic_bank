@@ -2,8 +2,6 @@
 
 Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and is nothing exotic.
 
----
-
 ## 1. Language and runtime
 
 | Element | Choice | Why |
@@ -12,8 +10,6 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Runtime | **Node 26** | Built-in `fetch`, test runner and watch mode |
 | Modules | **ESM** throughout | AdminJS and most libraries are ESM-only |
 | Monorepo | **npm workspaces**, TypeScript project references | Incremental builds, no extra tool |
-
----
 
 ## 2. Services and web
 
@@ -28,8 +24,6 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Statement PDFs | **pdf-lib** | Pure JavaScript; builds statements from the ledger on request |
 | Password hashing | **argon2** | The current recommendation |
 
----
-
 ## 3. Data
 
 | Element | Choice | Why |
@@ -39,16 +33,12 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Schemas | `control`, `memory`, workflow tables; the four banks' databases in a separate `bank-db` | One schema per owner; the bank shares nothing |
 | Object storage | **MinIO**, through our own small S3 client (AWS Signature Version 4) | Masked screenshots, screen models, run folders; the same code talks to S3 |
 
----
-
 ## 4. Orchestration
 
 | Element | Choice | Why |
 |---|---|---|
 | Durable workflows | **DBOS Transact** | A library on our Postgres, not a server: durable sleep, `send`/`recv` with timeouts for human answers, idempotent ids |
 | Scheduling (Part 2) | DBOS scheduled workflows | Probation checks, stuck-run sweeps, gate reminders |
-
----
 
 ## 5. Browser, perception and vision
 
@@ -60,8 +50,6 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Pictures of text | **Image fingerprints** (perceptual hashes), named once by the factory's vision model, kept in the bank's profile | Image-only buttons get names without reading pixels |
 | Image work | **Our own PNG code** in `packages/screen`, no image library | Masking boxes, fingerprints, the "fully rendered" frame check |
 | Vision model | Claude via the model gateway, **factory time only** | Judges each Scout step from the frame |
-
----
 
 ## 6. Models and the factory
 
@@ -75,8 +63,6 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Embeddings | **@huggingface/transformers** with **bge-small-en-v1.5** (384 dimensions, CPU) | Runs in the Memory process: about 130 MB, no API cost |
 | Prompt files (Part 2) | Markdown with YAML frontmatter; answers in **JSON Schema**, checked by **ajv** | Prompts are reviewed and versioned like code |
 
----
-
 ## 7. Secrets and configuration
 
 | Element | Choice | Why |
@@ -84,8 +70,6 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Encrypted config in git | **SOPS** with **age** keys | Encrypted secrets reviewed like code; `just setup` makes a local key |
 | Runtime config | **Environment variables** through a zod schema that fails closed | All values present, secrets 32+ characters, no duplicate tokens |
 | Credentials | **SOPS** secrets, rendered only to the Runner, the factory and the banks | Typed, never returned or logged; Vault in Part 2 |
-
----
 
 ## 8. Observability
 
@@ -96,8 +80,6 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Traces (Part 2 of `GENERIC_BANK_PLAN.md`) | **OpenTelemetry**, one trace per run, **GenAI semantic conventions**; `just trace` and `just observe` (**Collector**, **Grafana Tempo**, **Loki**, **Grafana**) | Vendor-neutral; Tempo, LangSmith, Langfuse or Phoenix by configuration |
 | Metrics and cost | Postgres rows, such as each model call's cost, in the Console | No metrics stack |
 | Notifications | Console banner, log | A webhook, ntfy and paging are Part 2 |
-
----
 
 ## 9. Quality: tests, lint and checks
 
@@ -112,8 +94,6 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Secret scanning | **gitleaks**, pinned image | Scans history and uncommitted changes |
 | Code quality (Part 2 of `GENERIC_BANK_PLAN.md`) | **SonarQube** (SonarQube Cloud, free for public repositories) | A quality gate on new code (coverage, duplication, hotspots, vulnerabilities) before merge |
 | CI | **GitHub Actions** | A first job reads what a pull request changed, and a docs-only change runs nothing else. Then typecheck, lint and import boundaries; the tests the change touches (every test on master); the factory's repair when it could break; a secrets scan; and setup and up on a fresh clone |
-
----
 
 ## 10. Packaging and running
 
