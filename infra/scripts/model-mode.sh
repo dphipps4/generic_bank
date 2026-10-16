@@ -6,5 +6,9 @@ set_keys="$(decrypt factory 2>/dev/null | grep -E '^(ANTHROPIC|OPENAI)_API_KEY=.
 case "$set_keys" in
   *ANTHROPIC_API_KEY*) echo "  ${G}Factory: live, on Claude${N} (ANTHROPIC_API_KEY is set)" ;;
   *OPENAI_API_KEY*) echo "  ${G}Factory: live, on OpenAI${N} (OPENAI_API_KEY is set)" ;;
-  *) echo "  ${Y}Factory: mock mode${N}, as no model key is set. For live runs: copy your key, then ${B}just secret-set factory ANTHROPIC_API_KEY${N}" ;;
+  *)
+    echo
+    echo "  ${R}✗ The factory needs a model key to work. Set ANTHROPIC_API_KEY or OPENAI_API_KEY:${N}"
+    echo "  ${R}  copy your key, then run: just secret-set factory ANTHROPIC_API_KEY${N}"
+    ;;
 esac
