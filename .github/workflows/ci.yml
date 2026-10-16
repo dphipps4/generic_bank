@@ -11,6 +11,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request's branch cancels the run it replaces. Master's runs all finish.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 # Memory's embedding runtime runs on CPU: npm ci fetches no GPU libraries for it.
 env:
   ONNXRUNTIME_NODE_INSTALL: skip
