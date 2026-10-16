@@ -1,6 +1,6 @@
 # Generic Bank: technology stack
 
-Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and is ordinary.
+Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and is nothing exotic.
 
 ---
 
@@ -19,13 +19,13 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 
 | Element | Choice | Why |
 |---|---|---|
-| HTTP framework | **Fastify** | Small, fast, schema-first; an AdminJS adapter |
-| Admin UI | **AdminJS** (`@adminjs/fastify`, `@adminjs/prisma`), its **design system** and React components | Lists, filters, relations, actions and roles generated from the Prisma models; custom pages (trail viewer, approval inbox, hazard lab, state badges) look native |
+| HTTP framework | **Fastify** | Small, fast, schema-first, and AdminJS has an adapter for it |
+| Admin UI | **AdminJS** (`@adminjs/fastify`, `@adminjs/prisma`), its **design system** and React components | Generates lists, filters, relations, actions and roles from the Prisma models; custom pages (trail viewer, approval inbox, hazard lab, state badges) look native |
 | API contracts | **zod** schemas in `packages/contracts` | One schema validates, types and documents every input, result and outcome code |
 | API documentation | **OpenAPI** from the zod contracts; **Swagger UI** at `/docs` via `@fastify/swagger`, also a static page | It can't drift from the code |
 | Agent interface | **Tool definitions generated from the zod contracts** (`GET /tools`); agents call REST directly | No adapter in between |
 | Bank pages | **Hand-written server templates and ES5 JavaScript** | Legacy on purpose: framesets, nested tables, inline handlers |
-| Statement PDFs | **pdf-lib** | Pure JavaScript; statements built from the ledger on request |
+| Statement PDFs | **pdf-lib** | Pure JavaScript; builds statements from the ledger on request |
 | Password hashing | **argon2** | The current recommendation |
 
 ---
@@ -67,13 +67,13 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 
 | Element | Choice | Why |
 |---|---|---|
-| Agent harness | **pi** ([pi.dev](https://pi.dev)), one session per role | Switches model providers by configuration; a prompt loop, a tool-call hook that can veto, a session file as checkpoint |
+| Agent harness | **pi** ([pi.dev](https://pi.dev)), one session per role | Switches model providers by configuration; gives us a prompt loop, a tool-call hook that can veto, and a session file as a checkpoint |
 | Model gateway | Our metering endpoint, per configured provider (Anthropic by default, OpenAI possible) | The spend meter and caps sit where the model can't touch them |
 | Scout model (default; configurable) | `claude-opus-5-5`, low effort | Navigates as the Supervisor directs; the cheapest Opus |
 | Supervisor model (default; configurable) | `claude-opus-5-5`, high effort | Reasons over every frame and drafts the profile |
 | Small judgments | `claude-haiku-4-5-20251001` | Honesty checks on summaries, short classifications |
 | Mock mode | Recorded responses replayed by the gateway | A whole factory run without an API key |
-| Embeddings | **@huggingface/transformers** with **bge-small-en-v1.5** (384 dimensions, CPU) | In the Memory process, about 130 MB, no API cost |
+| Embeddings | **@huggingface/transformers** with **bge-small-en-v1.5** (384 dimensions, CPU) | Runs in the Memory process: about 130 MB, no API cost |
 | Prompt files | Markdown with YAML frontmatter; answers in **JSON Schema**, checked by **ajv** | Prompts are reviewed and versioned like code |
 
 ---
@@ -108,10 +108,10 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Browser tests | vitest and our DevTools client against the real bank | The Runner's own browser |
 | Workflow tests | DBOS testing utilities, throwaway Postgres | Durable waits tested fast |
 | Lint and format | **ESLint** (typescript-eslint), **Prettier** | Ordinary |
-| Driver rules (E0) | Custom rules on the **TypeScript compiler API** | No CSS or id locators, page script, non-GET requests or model calls in drivers |
+| Driver rules (E0) | Custom rules on the **TypeScript compiler API** | Keeps CSS or id locators, page script, non-GET requests and model calls out of drivers |
 | Import boundaries | **dependency-cruiser** | Guardrails, evals and lint never import the Runner or factory; nothing imports the bank |
 | Spelling and prose | **cspell**, **markdownlint** | Clean prompts and docs |
-| Secret scanning | **gitleaks**, pinned image | History, uncommitted changes and every built image |
+| Secret scanning | **gitleaks**, pinned image | Scans history, uncommitted changes and every built image |
 | Code quality (Part 2 of `GENERIC_BANK_PLAN.md`) | **SonarQube** (SonarQube Cloud, free for public repositories) | A quality gate on new code (coverage, duplication, hotspots, vulnerabilities) before merge |
 | CI | **GitHub Actions** | Typecheck, lint, unit, `check-prompts`, then the compose suites (browser, outcome, escalation, transfer, guard, PII) |
 
