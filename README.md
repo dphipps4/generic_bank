@@ -11,10 +11,10 @@ Everything runs locally with docker compose, and every step is a [just](https://
 
 ## Requirements (macOS)
 
-macOS 14 or newer; an 8 GB Mac is enough. You need git to clone this, and
-[Docker Desktop](https://www.docker.com/products/docker-desktop/) (Engine 27+, Compose 2.29+),
-given 5 GB of memory. To develop, add [Node 22](https://nodejs.org/en/download) for the tests,
-the type checker and the linter.
+You need macOS 14 or newer, and an 8 GB Mac is enough. Install git to clone this, and
+[Docker Desktop](https://www.docker.com/products/docker-desktop/) (Engine 27+, Compose 2.29+)
+with 5 GB of memory set aside for it. To develop, add [Node 22](https://nodejs.org/en/download)
+for the tests, the type checker and the linter.
 
 ```sh
 infra/scripts/bootstrap.sh      # installs just, the pinned release, its checksum verified
@@ -32,8 +32,8 @@ renderer, Postgres, MinIO and Chromium all run in containers.
 just plan                       # renders docs/plan as HTML pages and opens them
 ```
 
-The pages are written to `.run/plan/`, rendered in a container, so this works before anything
-else is set up.
+The pages land in `.run/plan/`. A container renders them, so this works before anything else is
+set up.
 
 ## Run it
 
@@ -44,9 +44,10 @@ just all                        # start again from nothing: deletes the data and
 just                            # every recipe
 ```
 
-`just setup` generates every secret it can. A value someone else issues (today only the Claude
-and OpenAI API keys, which may stay blank: the factory then runs in mock mode) is explained by
-`just setup` and entered with `just secrets-edit …`, which opens the encrypted file in sops.
+`just setup` generates every secret it can. The only ones it can't are the Claude and OpenAI API
+keys, because someone else issues them. `just setup` explains them, and you enter them with
+`just secrets-edit …`, which opens the encrypted file in sops. Both can stay blank; the factory
+then runs in mock mode.
 
 Each factory role's model is set in `config/app.env`: `FACTORY_SCOUT_MODEL` and
 `FACTORY_SUPERVISOR_MODEL` (default `claude-opus-5-5`), `FACTORY_SCOUT_EFFORT` and
@@ -54,10 +55,9 @@ Each factory role's model is set in `config/app.env`: `FACTORY_SCOUT_MODEL` and
 `FACTORY_SUPERVISOR_PROVIDER` (default `anthropic`; `openai` is the other). A model with no
 price in `apps/factory/src/models.ts` is refused.
 
-`just up` starts everything there is: all four banks, the staff inbox, the factory and memory
-included. Then **[ACCESS.md](ACCESS.md)** lists every page, API and health check you can reach,
-the logins (which `just up` writes to `secrets/credentials.txt`), and things to try, faults
-included.
+`just up` starts everything: all four banks, the staff inbox, the factory and memory. From there,
+**[ACCESS.md](ACCESS.md)** lists every page, API and health check you can reach, the logins
+(`just up` writes them to `secrets/credentials.txt`), and things to try, faults included.
 
 Try a fault:
 
@@ -66,14 +66,14 @@ curl -i http://localhost:8082/             # HTTP/1.1 403 Forbidden ... Access d
 curl -i http://localhost:8081/corelink/    # HTTP/1.1 200 OK
 ```
 
-Banks 2 to 4 turn away anything not shaped like a browser, as a real bank's bot screen does.
-Bank 1, the 2003 site, does not.
+Banks 2 to 4 turn away anything that doesn't look like a browser, the way a real bank's bot
+screen does. Bank 1, the 2003 site, lets it through.
 
 ## Models
 
-Only the software factory and the demo agent call a model; the crawler that runs customer tasks
-never does. The factory's calls all go through its metering gateway, which enforces the spend
-caps ($25 a run, $150 a rolling week) and refuses a model it has no price for.
+Only the software factory and the demo agent call a model. The crawler that runs customer tasks
+never does. Every factory call goes through a metering gateway, which holds spending to the caps
+($25 a run, $150 a rolling week) and refuses any model it has no price for.
 
 | Role | What it does | Default model | Effort |
 |---|---|---|---|
@@ -82,15 +82,15 @@ caps ($25 a run, $150 a rolling week) and refuses a model it has no price for.
 | Demo agent | A member assistant whose only tools are the Task API's | `claude-opus-5-5` | default |
 
 With no API key, the factory and the demo agent run in **mock mode**: recorded or scripted
-answers stand in for the model, nothing reaches a model, and nothing is spent.
+answers stand in for the model, so nothing is sent to one and nothing is spent.
 
-To use a key, enter it once (it is stored encrypted with sops):
+To use a key, enter it once (sops keeps it encrypted):
 
 ```sh
 make secret-set FILE=factory KEY=ANTHROPIC_API_KEY
 ```
 
-To change a role's model or effort, set it in `config/local.env` (not committed), then
+To change a role's model or effort, set it in `config/local.env`, which isn't committed, then run
 `make factory`:
 
 ```sh
@@ -99,8 +99,9 @@ FACTORY_SUPERVISOR_EFFORT=high
 FACTORY_SCOUT_EFFORT=medium
 ```
 
-The agents run on [pi](https://pi.dev), which talks to many providers, so another provider is
-configuration, not code. To run a role on OpenAI, enter its key and name the provider and model:
+The agents run on [pi](https://pi.dev), which talks to many providers, so switching provider is a
+config change, not a code change. To run a role on OpenAI, enter the key, then name the provider
+and model:
 
 ```sh
 make secret-set FILE=factory KEY=OPENAI_API_KEY
@@ -111,14 +112,14 @@ FACTORY_SCOUT_PROVIDER=openai
 FACTORY_SCOUT_MODEL=<an OpenAI model id>
 ```
 
-Add the model's price to `apps/factory/src/models.ts` first: the gateway refuses any model it
-cannot meter.
+First add the model's price to `apps/factory/src/models.ts`, because the gateway refuses any
+model it can't meter.
 
 ## A second copy, side by side
 
 Clone or fork into another folder and run `just fork-ports` there before `just setup`. The copy
-is named after its folder, so it gets its own containers, volumes and images, and its ports are
-all moved up by 10000 (its Console is on http://localhost:18080).
+takes its folder's name, so it gets its own containers, volumes and images. Its ports all move up
+by 10000 (its Console is on http://localhost:18080).
 
 ## Develop
 
@@ -130,8 +131,8 @@ just ci                         # what GitHub's CI checks, on this machine; no A
 just api-docs                   # write the API reference from the contracts and open it in Chrome
 ```
 
-CI on GitHub costs nothing for a public repository or its forks, and `just ci` runs the same
-jobs locally for anyone without it.
+GitHub's CI is free for a public repository and its forks. If you don't have it, `just ci` runs
+the same jobs on your machine.
 
 ## Documents
 

@@ -1,14 +1,14 @@
 # M3: The crawler and the Task API
 
-The first time an agent gets a real answer from a bank. The Task API accepts an OAuth2-
-authenticated call, a durable run drives a real browser through Bank 1's console the way a
-person would, and the result comes back typed, with a masked trail anyone can review. The
+The first time an agent gets a real answer from a bank. The Task API takes a call authenticated
+with OAuth2, a durable run drives a real browser through Bank 1's console the way a person
+would, and the result comes back typed, with a masked trail anyone can review. The
 plan's [Appendix D](../plan/GENERIC_BANK_PLAN.md#appendix-d-task-api) and
 [Appendix E](../plan/GENERIC_BANK_PLAN.md#appendix-e-the-runner-driving-a-messy-ui) are the
 specification.
 
-The browser is driven over the DevTools Protocol by a small client of our own, not a browser
-automation library: nothing of ours runs inside the bank's pages, every call has its own
+A small client of our own drives the browser over the DevTools Protocol, instead of a browser
+automation library. That way nothing of ours runs inside the bank's pages, every call has its own
 timeout, and frames from another origin are read through their own sessions.
 
 | # | Pull request | What it adds | What proves it |

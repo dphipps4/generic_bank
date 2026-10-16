@@ -1,15 +1,14 @@
 # M2: Banks 2, 3 and 4
 
-One product, four banks. Bank 1 already works; this milestone makes the other three real, each
-different in the ways a vendor product deployed by many institutions really is: brand and
-labels, layout, URL shape, account wording, thresholds, the code step, text drawn as images,
-and failure modes of their own. All four come from the same code, started with a different
-tenant config. The plan's
+One product, four banks. Bank 1 comes from M1, and this milestone builds the other three. Each
+varies the way one vendor's product does from one institution to the next: brand and labels,
+layout, URL shape, account wording, thresholds, the code step, text drawn as images, and failure
+modes of its own. All four run the same code, each started with its own tenant config. The plan's
 [Appendix C](../plan/GENERIC_BANK_PLAN.md#appendix-c-generic-bank-the-target-product) is the
 specification.
 
-Banks 1 and 2 get working drivers in the submission. Banks 3 and 4 are for the factory to
-crawl later, so they carry trouble that banks 1 and 2 never show.
+Banks 1 and 2 get working drivers in the submission. Banks 3 and 4 are left for the factory to
+crawl, so they carry trouble that banks 1 and 2 never show.
 
 | # | Pull request | What it adds | What proves it |
 |---|---|---|---|

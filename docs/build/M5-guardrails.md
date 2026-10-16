@@ -1,11 +1,11 @@
 # M5: Guardrails
 
 Every action the crawler takes passes the guards before it reaches the browser. The allowlist
-names what each job may do, as *screen, verb, control*. The guards judge the control, the page,
-the member on screen and the request on the wire, and never what the page's text asks for.
-Anything else is refused, recorded with its rule and layer, and trips the guard: the bank is
-frozen and the run ends `escalated: guard_tripped`. Everything personal is masked before it is
-written, and the caller reads only our own fixed sentences. The plan's
+names what each job may do, as *screen, verb, control*, and anything else is refused, recorded
+with its rule and layer, and trips the guard: the bank is frozen and the run ends
+`escalated: guard_tripped`. The guards judge the control, the page, the member on screen and the
+request on the wire, never what the page's text asks for. Everything personal is masked before
+it's written, and the caller only ever reads our own fixed sentences. The plan's
 [§13](../plan/GENERIC_BANK_PLAN.md#13-keeping-it-safe) and
 [Appendix J](../plan/GENERIC_BANK_PLAN.md#appendix-j-guardrails) are the specification, with
 [§I.2](../plan/GENERIC_BANK_PLAN.md#i2-masking) and
@@ -15,11 +15,11 @@ written, and the caller reads only our own fixed sentences. The plan's
 
 The allowlist files, the approval grant and the freeze are in `packages/guardrails`; masking and
 withheld frames are in `packages/evidence`; the PII scan is `tests/pii`; the factory's Scout
-carries its own refusals ([§M.4](../plan/GENERIC_BANK_PLAN.md#m4-tools)). This sheet puts every
-other layer in front of every action the Runner takes, and proves them together.
+carries its own refusals ([§M.4](../plan/GENERIC_BANK_PLAN.md#m4-tools)). This sheet puts the
+remaining layers in front of every action the Runner takes and proves them together.
 
-The bank is the judge throughout. A trap is refused when the bank's state-change counter does not
-move, and a value is masked when nothing the runs wrote contains it.
+The bank is the judge throughout. A trap counts as refused when the bank's state-change counter
+doesn't move, and a value counts as masked when nothing the runs wrote contains it.
 
 | # | Pull request | What it adds | What proves it |
 |---|---|---|---|

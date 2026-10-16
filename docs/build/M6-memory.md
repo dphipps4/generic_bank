@@ -1,14 +1,14 @@
 # M6: Memory
 
 Memory is the factory's guardrails, learned from its own runs. It lives in Postgres, in its own
-`memory` database with pgvector, behind one service that alone opens it. Every writer holds a
-token for one role, and memory refuses any write outside it: the factory proposes, memory's own
-rules confirm, and a person approves anything meant to hold everywhere. A lesson is one to three
-sentences of advice that cites the frames of the run it came from, carries a confidence, and
-says whether it was seen on those frames or is a guess. The Supervisor reads memory before it
-reasons, through the knowledge pack and `memory_query`, and records what the run taught at the
-end, through `record_lesson`. Memory starts from the cleaned set in `seeds/memory/`, loaded
-through its own door. The plan's
+`memory` database with pgvector, behind a single service, the only thing that opens it.
+Every writer holds a token for one role, and memory refuses any write outside it: the factory
+proposes, memory's own rules confirm, and a person approves anything meant to hold everywhere. A
+lesson is one to three sentences of advice. It cites the frames of the run it came from, carries
+a confidence, and says whether it was seen on those frames or is a guess. The Supervisor reads
+memory through the knowledge pack and `memory_query` before it reasons, and at the end records
+what the run taught through `record_lesson`. Memory starts from the cleaned set in
+`seeds/memory/`, loaded through the same single door. The plan's
 [Appendix K](../plan/GENERIC_BANK_PLAN.md#appendix-k-memory-how-the-agents-remember) is the
 specification, with [§K.5](../plan/GENERIC_BANK_PLAN.md#k5-guardrails) for who may write what,
 [§K.10](../plan/GENERIC_BANK_PLAN.md#k10-the-starting-knowledge) for the seed and
