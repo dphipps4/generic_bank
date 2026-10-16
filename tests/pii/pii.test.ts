@@ -183,7 +183,8 @@ beforeAll(async () => {
     store,
     sealKey: SEAL,
     answerKey: ANSWER_KEY,
-    humanDeadlineMs: 120_000,
+    // The suite answers a person's tasks within a second; 20 seconds unanswered means it never will.
+    humanDeadlineMs: 20_000,
     credentials: async () => ({ operatorId: OPERATORS.service.id, password: PASSWORDS.service }),
   };
   const lookedUp = new Set<string>();
@@ -207,6 +208,7 @@ beforeAll(async () => {
           });
           const { status, code } = done.json() as { status: string; code?: string };
           asked.push({ bank: b.id, task, runId, ending: code ?? status });
+          if (status !== 'succeeded') throw new Error(await whyNot(runId, task, code ?? status));
         } else {
           expect(r.json().code, `${task} on ${b.id}`).toBe('task_not_available');
           asked.push({ bank: b.id, task, runId: null, ending: 'task_not_available' });
@@ -232,6 +234,24 @@ afterAll(async () => {
   await Promise.all([...banks.values()].map((b) => b.close()));
   await db?.close();
 });
+
+/** Why a run did not succeed, in a line a person can act on: its last steps and its tasks for a person. */
+async function whyNot(runId: string, task: TaskName, ending: string): Promise<string> {
+  const steps = await db.query<{ screen: string | null; name: string; outcome: string | null }>(
+    `SELECT screen, name, outcome FROM "Step" WHERE "runId" = $1 ORDER BY seq DESC LIMIT 3`,
+    [runId],
+  );
+  const tasks = await db.query<{ kind: string; status: string }>(
+    `SELECT kind, status FROM "HumanTask" WHERE "runId" = $1 ORDER BY "openedAt"`,
+    [runId],
+  );
+  const last = steps.rows
+    .reverse()
+    .map((r) => `${r.screen ?? 'unknown'} (${r.name}${r.outcome ? `: ${r.outcome}` : ''})`)
+    .join(', then ');
+  const people = tasks.rows.map((t) => `${t.kind} ${t.status}`).join(', ') || 'none';
+  return `${task} run ${runId} ended ${ending}. Last steps: ${last || 'none'}. Tasks for a person: ${people}.`;
+}
 
 /** A place the picture test found covered, for the last test to draw over. */
 let covered: { img: Image; box: Box } | undefined;
