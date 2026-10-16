@@ -42,7 +42,7 @@ export interface Action {
   key?: SpecialKey;
   /** What is typed (never a secret), or the option chosen. */
   text?: string;
-  /** Typed from the vault by its own path (`typeSecret`), never as text a driver holds. */
+  /** Typed from a stored secret by its own path (`typeSecret`), never as text a driver holds. */
   secret?: boolean;
 }
 
@@ -186,7 +186,7 @@ export async function type(page: Page, field: Control, text: string) {
 }
 
 /**
- * Types a credential from the vault: the one way a stored secret reaches a field. The guard is told
+ * Types a stored credential: the one way a stored secret reaches a field. The guard is told
  * it is a secret, and refuses it anywhere but a field the allowlist marks secret.
  */
 export async function typeSecret(page: Page, field: Control, secret: string) {

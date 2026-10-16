@@ -26,7 +26,7 @@ new_value() {
   case "$1" in
     hex) random_hex ;;
     password) random_password ;;
-    vault | entered | 'entered?') printf '' ;;
+    entered | 'entered?') printf '' ;;
     *) die "unknown kind $1" ;;
   esac
 }

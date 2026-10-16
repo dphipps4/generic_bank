@@ -51,9 +51,9 @@
 <text class="sub" x="826" y="121">control · workflow state · registry · memory schemas</text>
 <text class="sub" x="826" y="137">one Prisma schema per owner</text>
 <rect x="812" y="176" width="376" height="80" rx="9" fill="#fdecec" stroke="#d99b9b" stroke-width="1.5"/>
-<text class="ttl" x="826" y="202">Vault</text>
-<text class="sub" x="826" y="221">staff service account per bank, workstation cookies</text>
-<text class="sub" x="826" y="237">typed at the moment of use, never returned</text>
+<text class="ttl" x="826" y="202">Secrets · SOPS</text>
+<text class="sub" x="826" y="221">encrypted files; each service gets only its own</text>
+<text class="sub" x="826" y="237">staff passwords to the Runner alone, never returned</text>
 <rect x="812" y="276" width="376" height="80" rx="9" fill="#fdf6e3" stroke="#d8c07a" stroke-width="1.5"/>
 <text class="ttl" x="826" y="302">MinIO</text>
 <text class="sub" x="826" y="321">masked frames, screen models, run folders</text>

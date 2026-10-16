@@ -4,7 +4,7 @@
 source "$(dirname "$0")/lib.sh"
 in_tools "$@"
 FILE="${1:-}" KEY="${2:-}"
-[[ -n "$FILE" && -n "$KEY" ]] || die "usage: just secret-rotate local|ops|factory NAME"
+[[ -n "$FILE" && -n "$KEY" ]] || die "usage: just secret-rotate local|factory NAME"
 how="$(awk -v f="$FILE" -v k="$KEY" '$1==f && $2==k {print $3}' infra/secrets/secrets.spec)"
 [[ -n "$how" ]] || die "$KEY is not a $FILE secret in infra/secrets/secrets.spec"
 case "$how" in

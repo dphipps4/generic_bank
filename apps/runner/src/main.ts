@@ -60,7 +60,7 @@ registerTaskWorkflow(
     store,
     sealKey: cfg.RUN_SEAL_KEY,
     answerKey: cfg.ANSWER_SEAL_KEY,
-    // The staff service account: the same operator at every bank here; from Vault in the plan.
+    // The staff service account: the same operator at every bank, from the Runner's secrets.
     // The supervisor is the one whose approval code a person reads over a transfer's threshold.
     credentials: async () => ({
       operatorId: '0412',

@@ -9,7 +9,6 @@ in_tools "$@"
 set -a; source config/app.env; [[ -f config/local.env ]] && source config/local.env; set +a
 
 local_env="$(decrypt local)"
-ops_env="$(decrypt ops 2>/dev/null || true)"
 get() { grep "^$1=" <<<"$2" | head -1 | cut -d= -f2-; }
 
 out=secrets/credentials.txt
@@ -34,9 +33,6 @@ Bank admin API (each bank's :90xx port), header Authorization: Bearer <token>
 MinIO (evidence store)        http://localhost:${MINIO_CONSOLE_PORT:-9001}
   user                        $(get MINIO_ROOT_USER "$local_env")
   password                    $(get MINIO_ROOT_PASSWORD "$local_env")
-
-Vault                         http://localhost:${VAULT_PORT:-8201}/ui
-  root token                  $(get VAULT_ROOT_TOKEN "$ops_env")
 
 Task API (Swagger UI)         http://localhost:${API_PORT:-8000}/docs
   access token                just api-token (a fresh one, valid 15 minutes)

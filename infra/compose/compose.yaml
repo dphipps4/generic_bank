@@ -34,7 +34,6 @@ networks:
 
 volumes:
   postgres-data: {}
-  vault-data: {}
   minio-data: {}
   bank-db-data: {}
   memory-models: {}
@@ -51,34 +50,6 @@ services:
       - ../postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks: [app, data]
     healthcheck: { <<: *health, test: ['CMD', 'pg_isready', '-U', 'postgres'] }
-
-  vault:
-    image: hashicorp/vault:1.21
-    restart: unless-stopped
-    mem_limit: 128m
-    # The image's entrypoint loads every file in /vault/config for `server`. SKIP_SETCAP stops it
-    # rewriting the Vault binary's capabilities at startup, which alone exceeds a small memory
-    # limit; memory locking is disabled in vault.hcl, so the capability is not needed.
-    command: ['server']
-    environment: { VAULT_ADDR: 'http://127.0.0.1:8200', SKIP_SETCAP: 'true' }
-    ports: ['127.0.0.1:${VAULT_PORT}:8200']
-    volumes:
-      - vault-data:/vault/file
-      - ../vault/vault.hcl:/vault/config/vault.hcl:ro
-    networks: [app, data]
-    # Checked over HTTP, not with the vault CLI: the CLI is a second copy of the Vault binary
-    # inside the same memory limit. 200 whether sealed or not; `just up` unseals it.
-    healthcheck:
-      <<: *health
-      test:
-        [
-          'CMD',
-          'wget',
-          '-q',
-          '-O',
-          '/dev/null',
-          'http://127.0.0.1:8200/v1/sys/health?uninitcode=200&sealedcode=200&standbyok=true',
-        ]
 
   minio:
     image: cgr.dev/chainguard/minio:latest

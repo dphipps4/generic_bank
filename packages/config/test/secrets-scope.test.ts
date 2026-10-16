@@ -1,5 +1,5 @@
-// Least privilege, enforced: the operator-only file reaches no service, the factory-only
-// secrets reach only the factory, and every secret a service asks for exists.
+// Least privilege, enforced: the factory-only secrets reach only the factory, and every secret
+// a service asks for exists.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
@@ -17,12 +17,6 @@ const fileOf = new Map(spec.map(([file, key]) => [key, file]));
 const source = (entry: string) => entry.split('=').at(-1)!;
 
 describe('secrets scope', () => {
-  it('gives no service an operator-only secret', () => {
-    for (const [svc, keys] of Object.entries(scope.services)) {
-      for (const k of keys) expect(fileOf.get(source(k)), `${svc}: ${k}`).not.toBe('ops');
-    }
-  });
-
   it('gives factory-only secrets to the factory alone', () => {
     for (const [svc, keys] of Object.entries(scope.services)) {
       if (svc === 'factory') continue;

@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # Render one env file per service into .run/env/, from config/app.env (not secret) and the
 # SOPS files, giving each service only the secrets infra/secrets/scope.json allows it.
-# The ops file is never rendered for any service.
 source "$(dirname "$0")/lib.sh"
 in_tools "$@"
 for f in local factory; do [[ -f "$(secret_path "$f")" ]] || die "$(secret_path "$f") is missing; run just setup"; done
 mkdir -p .run/env && chmod 700 .run .run/env
 
-# All secrets an app may see, as one JSON object (ops excluded on purpose).
+# All secrets an app may see, as one JSON object.
 all="$( { decrypt local; decrypt factory; } | jq -Rnc '
   [inputs | select(test("^[^#][^=]*=")) | capture("^(?<key>[^=]+)=(?<value>.*)$")] | from_entries')"
 

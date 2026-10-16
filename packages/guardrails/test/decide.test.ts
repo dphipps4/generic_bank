@@ -182,11 +182,11 @@ describe('the allowlist', () => {
     });
   });
 
-  it('types the operator’s credentials only from the vault', () => {
+  it('types the operator’s credentials only from a stored secret', () => {
     expect(decide('check-balance', 'sign_in', 'type', 'Password')).toEqual({
       allowed: false,
       layer: 'secret typing',
-      rule: '"Password" is typed only from the vault',
+      rule: '"Password" is typed only from a stored secret',
     });
     expect(decide('check-balance', 'sign_in', 'type', 'Password', { secret: true })).toEqual({
       allowed: true,

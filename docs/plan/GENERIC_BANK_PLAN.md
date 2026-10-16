@@ -43,15 +43,15 @@ on bank 1. Banks 3 and 4 are left for the factory to learn.
 Three boxes ([§B.1](#b1-the-three-boxes)):
 
 - **Box A, the app:** Task API, Console, task runner, crawler. Keeps nothing.
-- **Box B, the data:** Postgres, Vault for staff passwords, object storage for masked
-  screenshots, Memory. Reaches nothing.
+- **Box B, the data:** Postgres, object storage for masked screenshots, Memory. Reaches
+  nothing. Staff passwords are SOPS secrets that only the Runner receives.
 - **Box D, the factory:** the agents and their browser, created per factory session and thrown
   away after. Its sandbox, where untested crawlers run, has no route out.
 
 The four banks stand in for the outside world; only the crawler talks to them.
 
 Risk sits in four places: the money-moving click (behind a person's grant), typing passwords
-(from Vault at the moment of typing, never shown), masking (before anything is written), and
+(SOPS secrets only the Runner holds, never shown), masking (before anything is written), and
 agent-written code (sandbox only, until a person approves it).
 
 ---
@@ -369,7 +369,8 @@ ground under it does:
   and destroyed after.
 - **Access:** no public SSH; Tailscale only; people sign in with Google (Console roles from
   Google groups, four-eyes approvals).
-- **Secrets:** Vault with dynamic, short-lived, rotated credentials.
+- **Secrets:** Vault in place of SOPS for the staff credentials and the trusted-workstation
+  cookies, read at the moment of typing, with dynamic, short-lived, rotated credentials.
 - **Encryption** at rest and in flight everywhere, keys in Vault; banks 2 to 4 on real HTTPS.
 - **Workflows** move from DBOS to Temporal behind the same interface.
 - **Ids:** every object in the model hierarchy has a UUID as its id (runs, steps, frames, human
@@ -380,7 +381,7 @@ ground under it does:
 - **Real Chrome on real Macs,** so every fingerprint field is genuine.
 - **Health from outside:** each service keeps its bare `/healthz` for its own container, and
   adds a second endpoint that an outside monitor calls. It checks what the service needs to do
-  its job (Postgres, Vault, MinIO, memory, each bank it drives), each check with a short
+  its job (Postgres, MinIO, memory, each bank it drives), each check with a short
   timeout, and answers 503 naming every check that failed.
 - **Uptime and a status page:** Better Stack checks every public URL every five minutes and
   publishes a status page. The list of monitors is a reviewed file in the repository, synced
@@ -546,7 +547,7 @@ Locally, each box is a set of containers on its own docker network.
 | Box | Runs | Holds | May reach |
 |---|---|---|---|
 | **A, app** | Task API, Console, workflow engine, Runner (one headless browser per active task) | Nothing durable. Browser sessions live only in memory for the life of a task. | Box B; the bank sites. Published: the Console/API port only. |
-| **B, data** | Postgres (with pgvector), Vault, MinIO, the Memory service | Everything durable: runs, trails, journal, registry, memory, staff credentials (Vault), evidence (MinIO). Only masked data outside Vault. | Nothing outbound. No published ports. |
+| **B, data** | Postgres (with pgvector), MinIO, the Memory service | Everything durable: runs, trails, journal, registry, memory, evidence (MinIO). Only masked data. | Nothing outbound. No published ports. |
 | **D, disposable factory** | Factory agent, Scout browser, sealed evaluation sandbox with its own throwaway bank | Nothing. Each factory run's folder is uploaded to box B before the box may be torn down. | Box A's API (to submit candidates), box B's Memory and evidence store, the bank sites. The sandbox has no route out at all. |
 
 The **bank sites** are "the world": a separate network only the Runner and the Scout browser
@@ -793,7 +794,7 @@ person uses.
 | `POST /tasks/download-statements` | `tenant`, `memberId`, `account`, `months[]` | one entry per month: a stored statement reference, or "not available" with the bank's wording |
 
 `memberId` is the bank's member number. The system signs in as the bank's **staff service
-account** (credentials in Vault); no member credentials exist anywhere. A task call returns `202`
+account** (its credentials are SOPS secrets); no member credentials exist anywhere. A task call returns `202`
 with a run id; `GET /tasks/:id?wait=30` long-polls. Every call carries an OAuth2 access token
 ([§D.6](#d6-oauth2-clients-tokens-and-refresh)). `bank` is checked against the registry on every
 call. `GET /banks` returns each bank's id, brand, product version, and supported tasks with the
@@ -881,7 +882,6 @@ the secret store or the spend meter cannot be consulted, the action does not hap
 | Stall (no step, no navigation for 3 minutes) | the watchdog saves a final frame and ends the run | `escalated: stuck` |
 | Nobody answers a human task | the deadline ends the run | `expired` |
 | Postgres down | the API answers 503; running workflows pause and resume when it returns | HTTP 503 on new calls |
-| Vault down | no secret can be typed, so the run stops before sign-in | `failed: unavailable`, retryable |
 | MinIO down | frames are held on the runner's disk (at most 60 a run) and uploaded when it returns; if they cannot be kept, they are withheld with the reason | nothing |
 | Memory down | runs continue; their episodes wait in an outbox. The factory will not start a run without its knowledge pack | nothing for tasks |
 | Masking cannot prove a frame clean | the frame is withheld; the run continues | nothing |
@@ -1401,7 +1401,7 @@ them.
 | **Member scope** | The staff service account can reach every member, so every screen the Runner acts on must show the member number the task named. An action on a screen showing a different member, or no member where one is expected, is refused and trips the guard. |
 | **Approval grant** | The single-use key for the one money-moving click ([Appendix F](#appendix-f-transfers-a-human-approved-activity)). |
 | **Guard trip** | Ends the run `escalated: guard_tripped`, writes a journal row, freezes the tenant and notifies. Guard errors always propagate: a lint rule forbids catching them. |
-| **Secret typing** | The Runner types credentials from Vault and never returns them. Plain typing of any text that equals or contains a stored secret is refused. |
+| **Secret typing** | The Runner types credentials from its secrets and never returns them. Plain typing of any text that equals or contains a stored secret is refused. |
 | **Injected instructions** | Handled structurally: guards judge controls and pages, never what page text asks for. A test checks that every guard verdict is identical with and without injected text. |
 | **Sign-in pacing** | A ledger caps sign-ins per member per day and paces them. It fails closed if unreadable. |
 | **Caps for models** | Spend per run and per week, turns, live sign-ins, active hours, failed checks, in one file with no imports. A run's input can lower a cap, never raise it. The meter checks before every model call and fails closed on an unreadable ledger or an unknown price. |
@@ -1892,7 +1892,7 @@ packages/
 seeds/
   memory/        the sanitized starting knowledge: rules, checks, lessons, scenarios, approaches
 tests/           browser, outcomes, escalation, transfer, guards, pii
-infra/           compose files, SOPS files, Vault seed, export and import scripts
+infra/           compose files, SOPS files, export and import scripts
 docs/            the documents the README links to (§Q.2)
 Justfile         the only entry point: every action is a just recipe (§S.1)
 ```
@@ -1961,9 +1961,8 @@ nothing is hosted elsewhere.
   key, never the Runner, the sandbox, the Console or the bank.
 - **Settings fail closed:** every required variable present, secrets at least 32 characters, no
   two tokens equal.
-- **Vault** holds each bank's staff service account and the trusted-workstation cookies, with file
-  storage on a volume, seeded from the banks' seed on first start. The Runner reads a credential
-  only at the moment of typing it.
+- **SOPS** holds every secret, the staff service account included; each service receives only
+  its own (Vault comes in Part 2).
 - No cloud account, third-party sign-in, rotating secrets or intrusion detection locally.
 
 ---
@@ -1980,7 +1979,7 @@ nothing is hosted elsewhere.
 | `just dev-setup` | once, to develop: Node dependencies, the Prisma client, Chromium for the browser tests |
 | `just up` | everything in the base stack: data, back end, console, crawlers, banks 1 and 2 |
 | `just down` | stops everything; volumes are kept |
-| `just data` | box B: Postgres, Vault, MinIO, Memory |
+| `just data` | box B: Postgres, MinIO, Memory |
 | `just backend` | box A's back end: the Task API and workflows (needs `data`) |
 | `just console` | the AdminJS Console (needs `data`) |
 | `just crawlers` | the Runner, which drives the banks for tasks (needs `backend`) |
@@ -2024,7 +2023,6 @@ virtual display.
 | Service | Box | Limit |
 |---|---|---|
 | `postgres` (pgvector; databases `control`, `memory`, and the workflow engine's tables) | B | 384 MB |
-| `vault` (file storage on a volume) | B | 128 MB |
 | `minio` | B | 128 MB |
 | `memory` (with the in-process embedder) | B | 384 MB |
 | `api` (Task API and workflows) | A | 192 MB |
@@ -2160,7 +2158,7 @@ elsewhere are not repeated; these are the rest:
 | Models | pi per role; `@anthropic-ai/sdk` behind our metering endpoint; `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-4-5-20251001` |
 | Embeddings | `@huggingface/transformers` with `bge-small-en-v1.5` (384 dimensions, CPU, about 130 MB) |
 | Prompts | Markdown with YAML frontmatter; JSON Schema answers validated with ajv |
-| Secrets | SOPS with age; zod-parsed environment that fails closed; HashiCorp Vault (KV) |
+| Secrets | SOPS with age; zod-parsed environment that fails closed |
 | Observability | Postgres records; pino logs; OpenTelemetry, Tempo, Loki and Grafana in Part 2 |
 | Quality | vitest, ESLint, Prettier, E0 rules on the TypeScript compiler API, dependency-cruiser, cspell, markdownlint, gitleaks, `npm audit`, GitHub Actions; SonarQube in Part 2 |
 | Packaging | Docker compose profiles (`default`, `factory`), just, Node 22 slim images (Chromium only in Runner, Scout browser and sandbox) |

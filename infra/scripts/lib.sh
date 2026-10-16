@@ -5,7 +5,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 ROOT="$(pwd)"
 SOPS_KEY_FILE="${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}"
 export SOPS_AGE_KEY_FILE="$SOPS_KEY_FILE"
-SECRET_FILES=(local ops factory)
+SECRET_FILES=(local factory)
 secret_path() { echo "config/$1.secrets.enc.env"; }
 
 if [[ -t 1 ]]; then B=$'\e[1m'; G=$'\e[32m'; Y=$'\e[33m'; R=$'\e[31m'; D=$'\e[2m'; N=$'\e[0m'; else B= G= Y= R= D= N=; fi
