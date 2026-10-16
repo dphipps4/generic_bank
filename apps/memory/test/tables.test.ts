@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { openMemory, ReadOnly, type Memory, type Verdict } from '../src/memory.js';
 import { buildServer } from '../src/server.js';
-import { emptyDb, memoryDb, MIGRATIONS, migrations } from './db.js';
+import { emptyDb, memoryDb, MIGRATIONS, migrations, testDoor, TOKENS } from './db.js';
 
 type TestDb = Awaited<ReturnType<typeof memoryDb>>;
 
@@ -166,19 +166,21 @@ describe('the change log', () => {
 
   it('serves the history and its verification', async () => {
     const memory = openMemory(db);
-    const app = buildServer({ db, memory });
-    const one = await app.inject({ url: '/history?entity=Run&id=run-2' });
+    const app = buildServer({ db, memory, door: testDoor() });
+    const get = (url: string) =>
+      app.inject({ url, headers: { authorization: `Bearer ${TOKENS.curator}` } });
+    const one = await get('/history?entity=Run&id=run-2');
     expect(one.json().changes).toEqual([
       expect.objectContaining({ seq: 2, entity: 'Run', entityId: 'run-2', runId: 'run-2' }),
     ]);
-    const all = await app.inject({ url: '/history?since=2000-01-01T00:00:00Z&limit=3' });
+    const all = await get('/history?since=2000-01-01T00:00:00Z&limit=3');
     expect(all.json().changes.map((c: { seq: number }) => c.seq)).toEqual([1, 2, 3]);
-    expect((await app.inject({ url: '/history?limit=0' })).statusCode).toBe(400);
+    expect((await get('/history?limit=0')).statusCode).toBe(400);
 
-    expect((await app.inject({ url: '/history/verify' })).json()).toEqual({ ok: true, rows: 4 });
+    expect((await get('/history/verify')).json()).toEqual({ ok: true, rows: 4 });
     expect((await app.inject({ url: '/healthz' })).json()).toMatchObject({ readOnly: false });
     await db.query(`UPDATE "ChangeLog" SET action = 'facts' WHERE seq = 3`);
-    expect((await app.inject({ url: '/history/verify' })).json()).toEqual({
+    expect((await get('/history/verify')).json()).toEqual({
       ok: false,
       rows: 4,
       brokenAt: 3,
