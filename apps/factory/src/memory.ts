@@ -106,7 +106,7 @@ export function memoryQueryTool(memory: Memory, at: At, served: Map<string, stri
   return {
     name: 'memory_query',
     description:
-      'Asks memory what the factory knows: at most eight lessons and scenarios, and three facts about this bank. Read-only.',
+      'Asks memory what the factory knows: at most eight lessons and scenarios, and three facts about this site. Read-only.',
     input: Input,
     async run(input) {
       const { question } = Input.parse(input);
@@ -161,7 +161,7 @@ export const Lesson = z.object({
   scope: z
     .enum(['tenant', 'vendor', 'pattern'])
     .describe(
-      'tenant: true of this bank; vendor: of every bank on its product; pattern: everywhere',
+      'tenant: true of this site; vendor: of every site on its product; pattern: everywhere',
     ),
   confidence: z.enum(['low', 'medium', 'high']),
   basis: z
@@ -212,9 +212,9 @@ export function recordLessonTool(trail: Trail, kept: Lesson[]): Tool {
   };
 }
 
-const LESSONS = `You are the Supervisor, and the run at this bank has ended. Write down what it taught, for the factory's next runs at this bank and at banks like it.
+const LESSONS = `You are the Supervisor, and the run at this site has ended. Write down what it taught, for the factory's next runs at this site and at sites like it.
 
-Record each lesson with record_lesson: one to three sentences of advice, stated generally, with no names, numbers, codes or page data; its area; its scope (tenant: true of this bank; vendor: of every bank on the same product; pattern: everywhere); a confidence; the frames of this run that show it; and whether it was seen on them or is a guess. A lesson with no frame of this run is refused. Record only what the run taught.
+Record each lesson with record_lesson: one to three sentences of advice, stated generally, with no names, numbers, codes or page data; its area; its scope (tenant: true of this site; vendor: of every site on the same product; pattern: everywhere); a confidence; the frames of this run that show it; and whether it was seen on them or is a guess. A lesson with no frame of this run is refused. Record only what the run taught.
 
 Then answer with the lessons memory served that the run relied on, by id, and those it contradicted, each with why in one line and the frames of this run that show it.`;
 
