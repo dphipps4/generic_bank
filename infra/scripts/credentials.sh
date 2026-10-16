@@ -28,13 +28,17 @@ The four banks' staff sites. Each asks for the same two logins, under its own na
   Sample Savings Bank (bank 3)     "Staff number"  http://localhost:${BANK_SAMPLE_PORT:-8083}/online/branch/
   Placeholder Federal CU (bank 4)  "User"          http://localhost:${BANK_PLACEHOLDER_PORT:-8084}/cu/ib/
 
-  teller (does the work)           ${BANK_OPERATOR_ID}    password  $(get BANK_SERVICE_PASSWORD "$local_env")
-  supervisor (approves big ones)   ${BANK_SUPERVISOR_ID}     password  $(get BANK_SUPERVISOR_PASSWORD "$local_env")
-  sign-in codes                    http://localhost:${BANK_INBOX_PORT:-8089} (the staff inbox)
+  Teller, who does the work
+    username  ${BANK_OPERATOR_ID}
+    password  $(get BANK_SERVICE_PASSWORD "$local_env")
+  Supervisor, who approves large transfers
+    username  ${BANK_SUPERVISOR_ID}
+    password  $(get BANK_SUPERVISOR_PASSWORD "$local_env")
+  Sign-in codes arrive in the staff inbox: http://localhost:${BANK_INBOX_PORT:-8089}
 
 The banks' admin API, header Authorization: Bearer <token>
-  ports                            ${BANK_GENERIC_ADMIN_PORT:-9081} to ${BANK_PLACEHOLDER_ADMIN_PORT:-9084}, banks 1 to 4
-  token                            $(get BANK_ADMIN_TOKEN "$local_env")
+  ports                       ${BANK_GENERIC_ADMIN_PORT:-9081} to ${BANK_PLACEHOLDER_ADMIN_PORT:-9084}, banks 1 to 4
+  token                       $(get BANK_ADMIN_TOKEN "$local_env")
 
 MinIO (evidence store)        http://localhost:${MINIO_CONSOLE_PORT:-9001}
   user                        $(get MINIO_ROOT_USER "$local_env")
