@@ -80,7 +80,7 @@ it, and a proof a reviewer can run (a test suite, a make target or a demo step).
 
 | The brief says | How we meet it | Where |
 |---|---|---|
-| **About a working day; no gold-plating; say what more time would buy** | The core comes first in the build order; Part 2 is the more-time answer | [§16](GENERIC_BANK_PLAN.md#16-build-order), [§17](GENERIC_BANK_PLAN.md#17-goal) |
+| **About a working day; no gold-plating; say what more time would buy** | The core comes first in the build order; Part 2 is the more-time answer | [Appendix X](GENERIC_BANK_PLAN.md#appendix-x-build-order), [§17](GENERIC_BANK_PLAN.md#17-goal) |
 | **AI tools welcome; be honest about what was generated and what changed** | A document of its own, and every README claim links to its proof | [§T.4](GENERIC_BANK_PLAN.md#t4-from-80-to-100) |
 | **Language and stack are your call; defend the choice** | TypeScript on Node throughout, each choice with its reason and alternatives | [Appendix V](GENERIC_BANK_PLAN.md#appendix-v-technology-stack) |
 | **Land on an answer; bring opinions** | One strong design, no open questions | the whole plan |
