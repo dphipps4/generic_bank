@@ -83,6 +83,23 @@ describe('a transfer run', () => {
     expect(h.browsers.length - launched).toBe(1);
   }, 180_000);
 
+  it('when the bank swallows the submit, reads the history and never presses again', async () => {
+    // The bank posts the transfer, then answers with a page that never finishes, or a 502.
+    const { runId, memoToken } = await h.start({ amountCents: 4_200, memo: 'swallowed' });
+    const done = h.execute(runId, { headers: h.bank.forced(['swallowed-submit']) });
+    expect(await h.act(await h.approval(runId), 'approve')).toBe(200);
+    expect(await done).toMatchObject({ status: 'succeeded' });
+    expect(await resultOf(h.db, runId)).toMatchObject({
+      status: 'succeeded',
+      data: { confirmation: memoToken, seenInHistory: true },
+    });
+    // No confirmation ever came: the history found it. One press, one posting, by the bank's ledger.
+    const journal = await h.journalOf(runId);
+    expect(journal.some((l) => l.intent === 'read the confirmation')).toBe(false);
+    expect(journal.filter((l) => l.action === 'pressed')).toHaveLength(1);
+    expect(await h.postings(memoToken)).toBe(1);
+  }, 180_000);
+
   it('never makes up a memo token: a run created without one stops before any browser opens', async () => {
     const { runId } = await createRun(
       h.db,
