@@ -4,7 +4,8 @@
 # extension needs it (plan, §E.8). The Runner's container uses Debian's chromium (infra/docker).
 source "$(dirname "$0")/lib.sh"
 info "Chrome for Testing"
-out="$(npx --yes @puppeteer/browsers@2 install chrome@stable --path .run/browser 2>&1 | tail -1)"
-bin="${out#* }"
-[[ -x "$bin" ]] || die "install failed: $out"
+out="$(npx --yes @puppeteer/browsers@2 install chrome@stable --path .run/browser 2>&1)" || die "install failed: $out"
+# Found on disk rather than read from the installer's output, which npm 11 can swallow on a first run.
+bin="$(find .run/browser/chrome -type f \( -name chrome -o -name 'Google Chrome for Testing' \) -perm -u+x 2>/dev/null | head -1)"
+[[ -n "$bin" ]] || die "install failed: no Chrome under .run/browser ($out)"
 ok "$bin"
