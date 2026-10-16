@@ -94,9 +94,10 @@ tools:
 secrets-init:
     @{{scripts}}/secrets-init.sh
 
-# Render one env file per service into .run/env/ (least privilege)
+# Render one env file per service into .run/env/ (least privilege), after adding any secret the
+# spec has gained since the files were made (never changing a value that exists)
 [group('Secrets (SOPS + age)')]
-env:
+env: secrets-init
     @{{scripts}}/render-env.sh
 
 # Edit secrets (in vi, in the tools image): just secrets-edit local|ops|factory
