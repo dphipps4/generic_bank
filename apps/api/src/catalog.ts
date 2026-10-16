@@ -409,7 +409,10 @@ export function openapi(): Record<string, unknown> {
             },
           },
           responses: {
-            '200': { description: 'An access token (15 minutes) and a refresh token (30 days).' },
+            '200': {
+              description:
+                'An access token (8 hours for client credentials, 15 minutes otherwise) and a refresh token (30 days).',
+            },
             '400': { description: 'invalid_grant' },
             '401': { description: 'invalid_client' },
           },

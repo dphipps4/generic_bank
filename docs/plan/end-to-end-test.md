@@ -76,7 +76,7 @@ TOKEN=$(just api-token)
 echo ${#TOKEN}
 ```
 
-You should see `48`: a token that lasts 15 minutes. Run it again whenever a call answers `401`.
+You should see `48`: a token that lasts 8 hours. Run it again whenever a call answers `401`.
 
 To try each call in Swagger UI as well, open http://localhost:8000/docs once, press **Authorize**
 and, under `client`, enter the client id and secret from `secrets/credentials.txt` (the Task API
@@ -224,7 +224,7 @@ running.
 
 | You see | What it means | What to do |
 |---|---|---|
-| `401` from the API | the token expired (15 minutes) | `TOKEN=$(just api-token)` |
+| `401` from the API | the token expired (after 8 hours) | `TOKEN=$(just api-token)` |
 | a run ends `expired` | nobody answered its code in time; codes last 5 minutes | start the task again and answer sooner |
 | a run ends `409` with `escalated` | the crawler met a screen it doesn't know, and stopped rather than guess | the Console Inbox has an **Escalation** with its frames; **Resume** or **Cancel** it |
 | a run ends `409` with `guard_tripped`, then that bank answers `404 task_not_available` | a safety check stopped a run and froze the bank | clear it on the Console's **Freezes** page, with a reason |

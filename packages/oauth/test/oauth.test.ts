@@ -56,7 +56,7 @@ describe('clients', () => {
     await o().ensureClient(local);
     await o().ensureClient(local);
     const t = await o().clientCredentials(local.clientId, local.clientSecret);
-    expect(t).toMatchObject({ token_type: 'Bearer', expires_in: 900, scope: 'tasks:read' });
+    expect(t).toMatchObject({ token_type: 'Bearer', expires_in: 28_800, scope: 'tasks:read' });
     expect(await o().authenticate(t.access_token)).toMatchObject({ clientId: 'local-client' });
     await expect(o().clientCredentials(local.clientId, 'y'.repeat(48))).rejects.toThrow(
       /not valid/,

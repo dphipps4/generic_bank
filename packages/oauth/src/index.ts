@@ -22,6 +22,8 @@ export const isScope = (s: string) =>
   (TASK_SCOPES as readonly string[]).includes(s) || /^bank:[a-z][a-z0-9-]{1,30}$/.test(s);
 
 export const ACCESS_TTL_MS = 15 * 60_000;
+/** A program's own token (client credentials), as curl and Swagger UI use: a working day. */
+export const CLIENT_ACCESS_TTL_MS = 8 * 3_600_000;
 export const REFRESH_TTL_MS = 30 * 86_400_000;
 export const CODE_TTL_MS = 24 * 3_600_000;
 
@@ -102,6 +104,7 @@ export function oauth(sql: Sql, hashKey: string, now: () => Date = () => new Dat
     scopes: string[],
     clientId: string,
     action: string,
+    accessTtlMs = ACCESS_TTL_MS,
   ): Promise<Tokens> {
     const t = now().getTime();
     const access = secretOf('gbat');
@@ -114,7 +117,7 @@ export function oauth(sql: Sql, hashKey: string, now: () => Date = () => new Dat
         familyId,
         hash(access),
         scopes,
-        new Date(t + ACCESS_TTL_MS),
+        new Date(t + accessTtlMs),
         id(),
         hash(refresh),
         new Date(t + REFRESH_TTL_MS),
@@ -124,7 +127,7 @@ export function oauth(sql: Sql, hashKey: string, now: () => Date = () => new Dat
     return {
       access_token: access,
       token_type: 'Bearer',
-      expires_in: ACCESS_TTL_MS / 1000,
+      expires_in: accessTtlMs / 1000,
       refresh_token: refresh,
       scope: scopes.join(' '),
     };
@@ -181,7 +184,7 @@ export function oauth(sql: Sql, hashKey: string, now: () => Date = () => new Dat
         familyId,
         c.id,
       ]);
-      return issue(familyId, c.scopes, clientId, 'token.issued');
+      return issue(familyId, c.scopes, clientId, 'token.issued', CLIENT_ACCESS_TTL_MS);
     },
 
     /**
