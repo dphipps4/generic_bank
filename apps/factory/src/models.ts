@@ -1,17 +1,17 @@
 // Each role's provider, model and effort, read from the factory's settings, and the prices the
 // meter charges (plan §M.6). A model with no price here is refused.
-import type Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 
 export const ROLE_NAMES = ['scout', 'supervisor', 'lessons'] as const;
 export type Role = (typeof ROLE_NAMES)[number];
 export const isRole = (r: string): r is Role => (ROLE_NAMES as readonly string[]).includes(r);
 
-export const PROVIDERS = ['anthropic'] as const;
+export const PROVIDERS = ['anthropic', 'openai'] as const;
+export type Provider = (typeof PROVIDERS)[number];
 export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 
 export interface RoleModel {
-  provider: (typeof PROVIDERS)[number];
+  provider: Provider;
   model: string;
   effort: (typeof EFFORTS)[number];
 }
@@ -54,19 +54,31 @@ export interface Price {
 }
 
 // Cache writes are charged at the one-hour rate, the dearer of the two, so the meter never
-// counts low.
+// counts low. A model of another provider (OpenAI, for one) goes here the same way, at its
+// maker's prices, before a role is set to it.
 export const PRICES: Readonly<Record<string, Price>> = {
   'claude-opus-5-5': { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 8 },
 };
 
-export const priceOf = (model: unknown): Price | undefined =>
-  typeof model === 'string' && Object.hasOwn(PRICES, model) ? PRICES[model] : undefined;
+export const priceOf = (
+  model: unknown,
+  prices: Readonly<Record<string, Price>> = PRICES,
+): Price | undefined =>
+  typeof model === 'string' && Object.hasOwn(prices, model) ? prices[model] : undefined;
 
-export function costUsd(price: Price, usage: Anthropic.Usage): number {
+/** What a call used, in tokens, whichever provider answered. `input` is the uncached input. */
+export interface Usage {
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+}
+
+export function costUsd(price: Price, u: Usage): number {
   const millionths =
-    usage.input_tokens * price.input +
-    (usage.cache_creation_input_tokens ?? 0) * price.cacheWrite +
-    (usage.cache_read_input_tokens ?? 0) * price.cacheRead +
-    usage.output_tokens * price.output;
+    u.input * price.input +
+    u.cacheWrite * price.cacheWrite +
+    u.cacheRead * price.cacheRead +
+    u.output * price.output;
   return millionths / 1e6;
 }

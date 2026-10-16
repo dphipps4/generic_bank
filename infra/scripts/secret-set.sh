@@ -15,7 +15,7 @@ FILE="${1:-}" KEY="${2:-}" FROM="${3:-}"
 [[ "$KEY" =~ ^[A-Z][A-Z0-9_]*$ ]] || die "KEY must look like AN_ENV_NAME"
 target="$(secret_path "$FILE")"
 [[ -f "$target" ]] || die "$target does not exist; run make setup"
-if [[ "$FILE" == "local" && "$KEY" =~ ^(VAULT_[A-Z_]+|ANTHROPIC_API_KEY|OPENROUTER_API_KEY|FACTORY_[A-Z_]+)$ ]]; then
+if [[ "$FILE" == "local" && "$KEY" =~ ^(VAULT_[A-Z_]+|ANTHROPIC_API_KEY|OPENAI_API_KEY|OPENROUTER_API_KEY|FACTORY_[A-Z_]+)$ ]]; then
   die "$KEY must never be in the local file; use FILE=ops or FILE=factory"
 fi
 from_clipboard=0

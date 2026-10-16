@@ -41,13 +41,13 @@ make help                       # every target
 ```
 
 `make setup` generates every secret it can. A value someone else issues (today only the Claude
-API key, which may stay blank: the factory then runs in mock mode) is explained by `make setup`
-and entered with `make secrets-edit FILE=…`, which opens the encrypted file in sops.
+and OpenAI API keys, which may stay blank: the factory then runs in mock mode) is explained by
+`make setup` and entered with `make secrets-edit FILE=…`, which opens the encrypted file in sops.
 
 Each factory role's model is set in `config/app.env`: `FACTORY_SCOUT_MODEL` and
 `FACTORY_SUPERVISOR_MODEL` (default `claude-opus-5-5`), `FACTORY_SCOUT_EFFORT` and
 `FACTORY_SUPERVISOR_EFFORT` (default `low` and `high`), and `FACTORY_SCOUT_PROVIDER` and
-`FACTORY_SUPERVISOR_PROVIDER` (default `anthropic`, the one provider accepted). A model with no
+`FACTORY_SUPERVISOR_PROVIDER` (default `anthropic`; `openai` is the other). A model with no
 price in `apps/factory/src/models.ts` is refused.
 
 `make up` starts everything there is: all four banks, the staff inbox, the factory and memory
