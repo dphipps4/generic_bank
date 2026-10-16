@@ -11,6 +11,9 @@
     "@anthropic-ai/sdk": "^0.135.0",
     "@gb/config": "*",
     "@gb/db": "*",
+    "@gb/evidence": "*",
+    "@gb/runs": "*",
+    "@gb/screen": "*",
     "fastify": "^5.6.0",
     "zod": "^4.1.0"
   }
