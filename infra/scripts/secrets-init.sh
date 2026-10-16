@@ -88,7 +88,7 @@ while IFS= read -r line; do
 done < <(grep -v '^\s*#' infra/secrets/secrets.spec | grep -v '^\s*$')
 if [[ $model == 0 ]]; then
   warn "No model key is set, so the factory runs in mock mode."
-  echo "    To use Claude: copy your key, then ${B}just secret-set factory ANTHROPIC_API_KEY${N} (or OPENAI_API_KEY for OpenAI)."
+  echo "    To use Claude: ${B}just secret-set factory ANTHROPIC_API_KEY${N}, which asks for the key (or OPENAI_API_KEY for OpenAI)."
 fi
 [[ $any == 1 ]] || ok "nothing to enter"
 [[ $missing == 0 ]] || die "Enter the values marked ✗ with just secret-set, then run just setup again."

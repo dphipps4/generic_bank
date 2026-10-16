@@ -9,6 +9,6 @@ case "$set_keys" in
   *)
     echo
     echo "  ${R}✗ The factory needs a model key to work. Set ANTHROPIC_API_KEY or OPENAI_API_KEY:${N}"
-    echo "  ${R}  copy your key, then run: just secret-set factory ANTHROPIC_API_KEY${N}"
+    echo "  ${R}  run: just secret-set factory ANTHROPIC_API_KEY (it asks for the key)${N}"
     ;;
 esac

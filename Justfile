@@ -106,7 +106,7 @@ env: secrets-init
 secrets-edit file="local":
     @{{scripts}}/tool.sh sops config/{{file}}.secrets.enc.env
 
-# Set one secret unseen: just secret-set factory ANTHROPIC_API_KEY [path]
+# Set one secret unseen; it asks for the value: just secret-set factory ANTHROPIC_API_KEY [clipboard|path]
 [group('Secrets (SOPS + age)')]
 secret-set file key from="":
     @{{scripts}}/secret-set.sh "{{file}}" "{{key}}" "{{from}}"

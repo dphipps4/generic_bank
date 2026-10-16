@@ -45,9 +45,9 @@ just help                       # every recipe, grouped, with what each does
 ```
 
 `just setup` generates every secret it can. The only ones it can't are the Claude and OpenAI API
-keys, because someone else issues them. `just setup` explains them, and you enter one with
-`just secret-set factory ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`). Both can stay blank; the
-factory then runs in mock mode.
+keys, because someone else issues them. `just setup` explains them. Run `just secret-set factory
+ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`) and paste the key when it asks; what you paste stays
+hidden. Both can stay blank; the factory then runs in mock mode.
 
 Each factory role's model is set in one place, `config/app.env`: `FACTORY_SCOUT_MODEL` and
 `FACTORY_SUPERVISOR_MODEL`, `FACTORY_SCOUT_EFFORT` and `FACTORY_SUPERVISOR_EFFORT`, and
@@ -81,10 +81,12 @@ rolling week).
 With no API key, the factory runs in **mock mode**: recorded answers stand in for the model, so
 nothing is sent to one and nothing is spent.
 
-To use a key, enter it once (sops keeps it encrypted):
+To use a key, enter it once (sops keeps it encrypted). It asks for the key, then `just factory`
+restarts the factory with it:
 
 ```sh
 just secret-set factory ANTHROPIC_API_KEY
+just factory
 ```
 
 To change a role's model or effort, edit it in `config/app.env`, then run `just factory`:
