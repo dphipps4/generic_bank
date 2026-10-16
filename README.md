@@ -42,6 +42,12 @@ make help                       # every target
 API key, which may stay blank: the factory then runs in mock mode) is explained by `make setup`
 and entered with `make secrets-edit FILE=…`, which opens the encrypted file in sops.
 
+Each factory role's model is set in `config/app.env`: `FACTORY_SCOUT_MODEL` and
+`FACTORY_SUPERVISOR_MODEL` (default `claude-opus-5-5`), `FACTORY_SCOUT_EFFORT` and
+`FACTORY_SUPERVISOR_EFFORT` (default `low` and `high`), and `FACTORY_SCOUT_PROVIDER` and
+`FACTORY_SUPERVISOR_PROVIDER` (default `anthropic`, the one provider accepted). A model with no
+price in `apps/factory/src/models.ts` is refused.
+
 Then open the Console at http://localhost:8080 (sign in as `admin@generic-bank.local`; the
 password is printed by `make console-password`).
 

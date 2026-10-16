@@ -1714,7 +1714,7 @@ A closed set:
 |---|---|---|
 | `browser_open` | Scout | allowed hosts only; never a host the model proposes |
 | `browser_look` | both | masked screenshot plus screen model |
-| `browser_click`, `browser_type`, `browser_press`, `browser_scroll`, `browser_wait` | Scout | by control reference; keys from a fixed set; typing refuses secrets |
+| `browser_click`, `browser_type`, `browser_choose`, `browser_press`, `browser_scroll`, `browser_wait` | Scout | by control reference; keys from a fixed set; typing refuses secrets; never the bank's submit for a transfer |
 | `browser_type_credential` | Scout | field name only (`user_id` or `password`); the server types the value |
 | `browser_enter_code` | Scout | only after the bank proved it sent a code; the person's code never reaches the model |
 | `recommend` | Supervisor | the profile; each claim cites frames of this run and is marked seen or guess; refused without a frame |

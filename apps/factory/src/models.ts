@@ -1,16 +1,49 @@
-// Each role's model and effort, and the prices the meter charges (plan §M.6). Opus 5.5 always
-// thinks; effort sets how much.
+// Each role's provider, model and effort, read from the factory's settings, and the prices the
+// meter charges (plan §M.6). A model with no price here is refused.
 import type Anthropic from '@anthropic-ai/sdk';
+import { z } from 'zod';
 
-export const ROLES = {
-  scout: { model: 'claude-opus-5-5', effort: 'low' },
-  supervisor: { model: 'claude-opus-5-5', effort: 'high' },
-  // The Supervisor writing the lessons: the only calls that may spend the reserve.
-  lessons: { model: 'claude-opus-5-5', effort: 'high' },
-} as const;
+export const ROLE_NAMES = ['scout', 'supervisor', 'lessons'] as const;
+export type Role = (typeof ROLE_NAMES)[number];
+export const isRole = (r: string): r is Role => (ROLE_NAMES as readonly string[]).includes(r);
 
-export type Role = keyof typeof ROLES;
-export const isRole = (r: string): r is Role => Object.hasOwn(ROLES, r);
+export const PROVIDERS = ['anthropic'] as const;
+export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+
+export interface RoleModel {
+  provider: (typeof PROVIDERS)[number];
+  model: string;
+  effort: (typeof EFFORTS)[number];
+}
+export type Roles = Readonly<Record<Role, RoleModel>>;
+
+/** The settings, for loadConfig. The Supervisor reasons, so it thinks harder than the Scout. */
+export const ROLE_SETTINGS = {
+  FACTORY_SCOUT_PROVIDER: z.enum(PROVIDERS).default('anthropic'),
+  FACTORY_SCOUT_MODEL: z.string().min(1).default('claude-opus-5-5'),
+  FACTORY_SCOUT_EFFORT: z.enum(EFFORTS).default('low'),
+  FACTORY_SUPERVISOR_PROVIDER: z.enum(PROVIDERS).default('anthropic'),
+  FACTORY_SUPERVISOR_MODEL: z.string().min(1).default('claude-opus-5-5'),
+  FACTORY_SUPERVISOR_EFFORT: z.enum(EFFORTS).default('high'),
+};
+type Settings = z.infer<z.ZodObject<typeof ROLE_SETTINGS>>;
+
+/** Each role's model from the settings. Writing the lessons is the Supervisor's work. */
+export function rolesOf(s: Settings): Roles {
+  const supervisor: RoleModel = {
+    provider: s.FACTORY_SUPERVISOR_PROVIDER,
+    model: s.FACTORY_SUPERVISOR_MODEL,
+    effort: s.FACTORY_SUPERVISOR_EFFORT,
+  };
+  const scout: RoleModel = {
+    provider: s.FACTORY_SCOUT_PROVIDER,
+    model: s.FACTORY_SCOUT_MODEL,
+    effort: s.FACTORY_SCOUT_EFFORT,
+  };
+  return { scout, supervisor, lessons: supervisor };
+}
+
+export const DEFAULT_ROLES: Roles = rolesOf(z.object(ROLE_SETTINGS).parse({}));
 
 /** US dollars per million tokens. A model with no price here is refused. */
 export interface Price {

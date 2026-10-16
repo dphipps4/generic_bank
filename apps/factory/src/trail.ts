@@ -14,8 +14,13 @@ export interface Trail {
   step(
     s: { name: string; action?: string; outcome?: string },
     model: ScreenModel | null,
-  ): Promise<Frame | null>;
+  ): Promise<Seen | null>;
+  /** Whether a frame reference, such as f3, names a stored frame of this run. */
+  has(ref: string): boolean;
 }
+
+/** A frame and its reference, or a null reference when it was not stored. */
+export type Seen = Frame & { ref: string | null };
 
 export async function openTrail(o: {
   sql: Sql;
@@ -53,7 +58,7 @@ export async function openTrail(o: {
       since = Date.now();
       if (!model) return null;
       const f = frameOf(model, policy, { step: stepSeq, at: now() });
-      if (frameSeq >= MAX_FRAMES) return f;
+      if (frameSeq >= MAX_FRAMES) return { ...f, ref: null };
       try {
         const base = `runs/${runId}/${String(frameSeq + 1).padStart(3, '0')}`;
         if (f.image) await store.put(`${base}.png`, f.image, 'image/png');
@@ -67,10 +72,15 @@ export async function openTrail(o: {
           path: f.path,
         });
         frameSeq++;
+        return { ...f, ref: `f${frameSeq}` };
       } catch {
         // A capture failure is recorded by its absence and never breaks the run.
+        return { ...f, ref: null };
       }
-      return f;
+    },
+    has(ref) {
+      const n = /^f(\d{1,3})$/.exec(ref);
+      return n !== null && Number(n[1]) >= 1 && Number(n[1]) <= frameSeq;
     },
   };
 }

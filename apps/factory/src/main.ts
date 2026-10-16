@@ -5,6 +5,7 @@ import { sql } from '@gb/db';
 import { z } from 'zod';
 import { gateway } from './gateway.js';
 import { sqlLedger } from './ledger.js';
+import { ROLE_SETTINGS, rolesOf } from './models.js';
 import { buildServer } from './server.js';
 import { upstreamFor } from './upstream.js';
 
@@ -15,11 +16,12 @@ const cfg = loadConfig(
     FACTORY_GATEWAY_TOKEN: secret(),
     CONTROL_DATABASE_URL: z.string().startsWith('postgresql://'),
     FACTORY_RECORDINGS: z.string().default('apps/factory/recordings'),
+    ...ROLE_SETTINGS,
   },
   process.env,
   ['ANTHROPIC_API_KEY', 'FACTORY_GATEWAY_TOKEN'],
 );
-const upstream = upstreamFor(cfg.ANTHROPIC_API_KEY, cfg.FACTORY_RECORDINGS);
+const upstream = upstreamFor(cfg.ANTHROPIC_API_KEY, cfg.FACTORY_RECORDINGS, rolesOf(cfg));
 const mode = upstream.spends ? 'live' : 'mock';
 const app = buildServer({
   gateway: gateway({ ledger: sqlLedger(sql(cfg.CONTROL_DATABASE_URL)), upstream }),
