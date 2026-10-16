@@ -65,6 +65,10 @@ echo ${#TOKEN}
 
 You should see `48`: a token that lasts 15 minutes. Run it again whenever a call answers `401`.
 
+To try each call in Swagger UI as well, open http://localhost:8000/docs once, press **Authorize**
+and, under `client`, enter the client id and secret from `secrets/credentials.txt` (the Task API
+section). Swagger UI keeps you signed in, and each step below links to its call, ready to try.
+
 ## 6. A balance on bank 1
 
 ```sh
@@ -72,6 +76,8 @@ curl -s -X POST http://localhost:8000/tasks/check-balance \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"bank":"generic","memberId":"40017732","account":"Everyday Checking"}'
 ```
+
+Or in Swagger UI: [`POST /tasks/check-balance`](http://localhost:8000/docs#/tasks/check_balance).
 
 You should see the run start: `{"runId":"r_…","task":"check-balance","status":"running"}`.
 Copy the `runId`.
@@ -87,6 +93,8 @@ Type the six digits into the Console and press **Enter code**. Then read the res
 ```sh
 curl -s "http://localhost:8000/tasks/<runId>?wait=30" -H "Authorization: Bearer $TOKEN"
 ```
+
+Or in Swagger UI: [`GET /tasks/{runId}`](http://localhost:8000/docs#/tasks/get_task).
 
 You should see `"status":"succeeded"` with the balance, for example
 `"currentCents":4123165,"availableCents":4114358`. The account label is masked
@@ -109,6 +117,8 @@ curl -s -X POST http://localhost:8000/tasks/check-balance \
   -d '{"bank":"example","memberId":"40017732","account":"7255"}'
 ```
 
+Or in Swagger UI: [`POST /tasks/check-balance`](http://localhost:8000/docs#/tasks/check_balance).
+
 This bank emails its code: in the staff inbox it's under **Example Credit Union**, to
 `teller0412@example.bank.localhost`. Enter it in the Console as before, then read the result.
 You should see `succeeded`, for example `"availableCents":3705167`, and the bank's own admin
@@ -121,6 +131,8 @@ curl -s -X POST http://localhost:8000/tasks/transfer \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"bank":"generic","memberId":"40017732","from":"Everyday Checking","to":"Rainy Day Savings","amountCents":2500,"memo":"rent","idempotencyKey":"try-transfer-0001"}'
 ```
+
+Or in Swagger UI: [`POST /tasks/transfer`](http://localhost:8000/docs#/tasks/transfer).
 
 1. **The sign-in code.** Enter it in the Console as before.
 2. **The approval.** The crawler fills in the transfer, stops on the bank's review page and waits.
@@ -156,6 +168,8 @@ curl -s -X POST http://localhost:8000/tasks/download-statements \
   -d '{"bank":"generic","memberId":"40017732","account":"Everyday Checking","months":["2026-09"]}'
 ```
 
+Or in Swagger UI: [`POST /tasks/download-statements`](http://localhost:8000/docs#/tasks/download_statements).
+
 After its sign-in code, the result lists each month with a `statement` id such as
 `st_…_2026-09`. Fetch it:
 
@@ -164,13 +178,14 @@ curl -s -o statement.pdf http://localhost:8000/statements/<statement> -H "Author
 open statement.pdf
 ```
 
+Or in Swagger UI: [`GET /statements/{ref}`](http://localhost:8000/docs#/tasks/get_statement).
+
 You should see the bank's PDF statement for that month.
 
 ## 11. Swagger UI
 
-Open http://localhost:8000/docs and press **Authorize**. Under `client`, enter the client id and
-secret from `secrets/credentials.txt` (the Task API section) and press **Authorize**. Open
-`GET /banks`, press **Try it out**, then **Execute**.
+In Swagger UI, open [`GET /banks`](http://localhost:8000/docs#/catalog/list_banks), press
+**Try it out**, then **Execute**.
 
 You should see `200` and the four banks, with the tasks each one serves: bank 1 all three, bank 2
 Check Balance, banks 3 and 4 none yet.

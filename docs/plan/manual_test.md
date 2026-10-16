@@ -48,8 +48,11 @@ curl -s -X POST http://localhost:8000/tasks/check-balance \
   -d '{"bank":"generic","memberId":"40017732","account":"Everyday Checking"}'
 ```
 
+Or in Swagger UI: [`POST /tasks/check-balance`](http://localhost:8000/docs#/tasks/check_balance). Press **Authorize** first and enter the client id and secret from `secrets/credentials.txt`.
+
 When it asks, answer the sign-in code in the Console inbox; the code is in the staff inbox. Then
-read the run with `curl -s http://localhost:8000/tasks/<runId> -H "Authorization: Bearer $TOKEN"`.
+read the run with `curl -s http://localhost:8000/tasks/<runId> -H "Authorization: Bearer $TOKEN"`,
+or in Swagger UI with [`GET /tasks/{runId}`](http://localhost:8000/docs#/tasks/get_task).
 You get `200` and the balance. No model ran: the driver is code, and the run's `driverVersionId`
 in the Console names the version that served it.
 
@@ -124,6 +127,8 @@ step, the repair case closes, and bank 1's check-balance is back in `GET /banks`
 ```sh
 curl -s http://localhost:8000/banks -H "Authorization: Bearer $TOKEN"
 ```
+
+Or in Swagger UI: [`GET /banks`](http://localhost:8000/docs#/catalog/list_banks).
 
 If you approve after the command has ended, `just gate <recommendation id>` runs the gate on
 its own.

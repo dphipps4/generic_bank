@@ -92,7 +92,9 @@ export async function buildServer(opts: {
   await app.register(swagger, { mode: 'static', specification: { document: openapi() as never } });
   await app.register(swaggerUi, {
     routePrefix: '/docs',
-    uiConfig: { persistAuthorization: false, tryItOutEnabled: true },
+    // A link to /docs#/tasks/check_balance opens that call; Authorize lasts across page loads,
+    // so each link in the docs lands signed in (a token lasts 15 minutes).
+    uiConfig: { deepLinking: true, persistAuthorization: true, tryItOutEnabled: true },
   });
   const now = opts.now ?? Date.now;
   app.decorateRequest('caller', null);
