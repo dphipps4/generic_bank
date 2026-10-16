@@ -307,8 +307,7 @@ same. *[Read about memory on a graph.](#20-memory-on-a-graph-neo4j-and-graphiti)
 ## 12. Seeing what happened
 
 Every step, screenshot, recovery, guard decision, model call, tool call and verdict is a database
-row tied to one run id, shown in the Console. Logs are JSON with the same id; traces are
-OpenTelemetry. Details: [Appendix I](#appendix-i-evidence-redaction-and-observability).
+row tied to one run id, shown in the Console. Logs are JSON with the same id. Details: [Appendix I](#appendix-i-evidence-redaction-and-observability).
 
 ---
 
@@ -405,6 +404,9 @@ ground under it does:
 - **Recovery:** encrypted, append-only backups, rebuild-and-restore, drilled.
 - **Export and import:** `make export` and `make import` move the whole system's state to a
   fresh machine; `make memory-export` and `make memory-import` move Memory alone.
+- **Traces:** every run is one OpenTelemetry trace, a span per step or phase, model calls in the
+  GenAI semantic conventions; `make trace RUN=…` reads one, and `make observe` adds the
+  Collector, Grafana Tempo, Loki and Grafana, with OpenTelemetry metrics beside the SQL views.
 - **CI:** signed, scanned images pinned by digest; SonarQube quality gate.
 
 ---
@@ -1319,64 +1321,51 @@ run's workflow is in [§M.3](#m3-phases).
 objects, logs) for every seeded secret and personal value, and checks that every place the bank
 drew a seeded value is covered in the stored frame.
 
-### I.4 Three signals, one id
+### I.4 Two signals, one id
 
 ```text
   api · console · runner · memory · factory
-     │  every row, log line and span carries  runId · traceId · step
+     │  every row and log line carries  runId · step
      │
      ├──▶ records ──▶ Postgres ──▶ the Console's timelines        source of truth
      │
-     ├──▶ JSON logs ──▶ stdout and .data/logs/*.jsonl            make logs
-     │
-     └──▶ OpenTelemetry spans ──▶ .data/traces/*.jsonl           make trace RUN=…
-                                └─▶ OTLP ─▶ Collector ─▶ Tempo (traces) · Loki (logs)
-                                                       └─▶ Grafana     make observe
+     └──▶ JSON logs ──▶ stdout and .data/logs/*.jsonl            make logs
 ```
 
-Each run is one OpenTelemetry trace; `runId`, trace id and step travel on every row, log line
-and span.
+`runId` and step travel on every row and log line.
 
 | Signal | Where it lives | What it is for |
 |---|---|---|
 | **Records** | Postgres, box B | the source of truth: runs, steps, frames, journal, human tasks, model calls, tool calls, evals, registry events |
 | **Logs** | JSON lines on each container's stdout, kept in rotating files under `.data/logs/` | what each process was doing, in order, for debugging the system itself |
-| **Traces** | OpenTelemetry spans, written to `.data/traces/` by default, or sent to a collector | the shape and timing of a run: where the time went, which step failed, what waited on whom |
 
 ### I.5 What the crawler did
 
 For a task run the Console shows every step, frame, recovery (with its hazard), guard decision,
-network event ([§I.1](#i1-what-every-run-writes)), journal row and human task. Its trace has a
-span per step, with child spans for the wait, recognition, targeting, the action and each guard
-check.
+network event ([§I.1](#i1-what-every-run-writes)), journal row and human task.
 
 ### I.6 What the agent did
 
 For a factory run: every model call (role, model, prompt id and version, input, output and cached
 tokens, cost, latency), every tool call (masked arguments, compact result, any veto), every
 Supervisor verdict with its frame, every eval rung, the lessons served, relied on, contradicted
-and proposed, and spend against the caps. Its trace has a span per phase; model-call spans follow
-the OpenTelemetry **GenAI semantic conventions**, so LangSmith, Langfuse or Phoenix could read
-them later by configuration.
+and proposed, and spend against the caps.
 
 ### I.8 Locally, and later
 
-By default no extra containers: logs to stdout and rotating JSON files, traces to JSON files;
-`make logs`, `make <group>-logs`, `make trace RUN=<runId>`. `make observe` adds an OpenTelemetry
-Collector, **Grafana Tempo**, **Loki** and **Grafana** (about 600 MB, off by default), and the
-Console links each run to its trace.
+No extra containers: logs go to stdout and rotating JSON files, read with `make logs` and
+`make <group>-logs`. Traces and the Grafana stack are Part 2 ([§17](#17-goal)).
 
 ### I.9 Masking applies to telemetry too
 
-Logs and spans are masked like everything else; span attributes never carry a field value,
-credential, code, account number, amount or name, and frames are referenced by key. A test runs
-a task under every hazard and scans the log and trace files for every seeded value.
+Logs are masked like everything else, and frames are referenced by key. A test runs a task under
+every hazard and scans the log files for every seeded value.
 
 ### I.10 Metrics
 
-SQL views over the records (Home, Health and Cost pages), plus OpenTelemetry metrics when the
-collector runs: task duration, outcomes by code, recoveries by hazard, guard refusals by layer,
-human-task wait time, model tokens and spend by role.
+SQL views over the records, on the Home, Health and Cost pages: task duration, outcomes by code,
+recoveries by hazard, guard refusals by layer, human-task wait time, model tokens and spend by
+role.
 
 ---
 
@@ -1864,7 +1853,7 @@ files for a pull request.
 | Escalation | `tests/escalation` | staff code, approval, supervisor code, reject, take-over, cancel and expiry, all driven through the Console API. |
 | Transfer safety | `tests/transfer` | swallowed submit, lost session while parked, grant mismatch (amount changed on screen), grant replay, duplicate detection. The bank ledger is the oracle: never two transfers for one grant. |
 | Trap matrix | `tests/guards` | every trap, every layer removed in turn, injected text changes no verdict, clean runs leave the state-change counter at zero. |
-| PII | `tests/pii` | scans everything runs wrote (database rows, objects, log files and trace files) for seeded secrets and personal values. |
+| PII | `tests/pii` | scans everything runs wrote (database rows, objects and log files) for seeded secrets and personal values. |
 | Factory | `apps/factory/test` | workflow phases with a fake browser and mock model, caps, the meter, the tool veto, doneness, probation. |
 | Memory | `apps/memory/test` | screens, merge, confirm, dispute, retire, widen, return, demote, pack budget, chain verification. |
 | Prompts | `packages/prompts/test` | the checker, the loader, schemas. |
@@ -1943,7 +1932,7 @@ documents.
 | `docs/07-runner-and-perception.md` | the screen model, the fully-rendered wait, recognition, targeting, drivers and profiles (the crawlers) |
 | `docs/08-transfers-and-approvals.md` | the approval grant, the one click, the swallowed-submit protocol |
 | `docs/09-console.md` | every Console page, roles, state markers, the inbox |
-| `docs/10-observability.md` | records, logs and traces; what the crawler did and what the agent did; `make observe` |
+| `docs/10-observability.md` | records and logs; what the crawler did and what the agent did |
 | `docs/11-guardrails-and-safety.md` | every guard layer, masking, the trap matrix, the PII scan |
 | `docs/12-memory.md` | what memory keeps, the learning rules, the knowledge pack, autocrawl, export and import |
 | `docs/13-factory.md` | roles, phases, tools, caps, mock mode, probation, the repair loop |
@@ -2015,8 +2004,7 @@ nothing is hosted elsewhere.
 | `make api-docs` | writes `openapi.json` and the static API reference page from the contracts |
 | `make prompts-export` | writes the prompt versions activated in the Console back to `packages/prompts/` for a pull request |
 | `make docs` | renders `README.md` and `docs/` as the white-template website into `site/`; the same build publishes to GitHub Pages |
-| `make logs`, `make trace RUN=…` | read the JSON logs, or one run's trace, from `.data/` |
-| `make observe` | starts the OpenTelemetry Collector, Grafana Tempo, Loki and Grafana (about 600 MB; off by default) |
+| `make logs` | read the JSON logs from `.data/` |
 | `make memory-seed` | imports `seeds/memory/` into an empty Memory (part of the first `make up`) |
 | `make reset` | deletes volumes and starts again from the seed (asks first) |
 
@@ -2089,7 +2077,7 @@ rate-limited, and every container has disk and memory limits.
 - Waiting is "fully rendered", never network idle ([§E.2](#e2-fully-rendered-not-network-idle)), with step limits and a watchdog ([§E.7](#e7-time-limits-and-the-stall-watchdog)).
 - Targeting re-checks and re-targets; every action verifies the next screen ([§E.4](#e4-targeting)).
 - Every failure is tabled ([§D.4](#d4-how-failures-are-handled)); the outcome suite and the hazard lab prove them ([Appendix P](#appendix-p-tests), [§S.2](#s2-the-hazard-lab)).
-- Records, logs and traces share one run id ([§I.4](#i4-three-signals-one-id)).
+- Records and logs share one run id ([§I.4](#i4-two-signals-one-id)).
 
 ### T.3 Human-in-the-loop escalation
 
@@ -2180,7 +2168,7 @@ elsewhere are not repeated; these are the rest:
 | Embeddings | `@huggingface/transformers` with `bge-small-en-v1.5` (384 dimensions, CPU, about 130 MB) |
 | Prompts | Markdown with YAML frontmatter; JSON Schema answers validated with ajv |
 | Secrets | SOPS with age; zod-parsed environment that fails closed; HashiCorp Vault (KV) |
-| Observability | Postgres records; pino logs; OpenTelemetry with GenAI conventions; file exporters; on demand, Collector, Tempo, Loki, Grafana |
+| Observability | Postgres records; pino logs; OpenTelemetry, Tempo, Loki and Grafana in Part 2 |
 | Quality | vitest, ESLint, Prettier, E0 rules on the TypeScript compiler API, dependency-cruiser, cspell, markdownlint, gitleaks, `npm audit`, GitHub Actions; SonarQube in Part 2 |
 | Packaging | Docker compose profiles (`default`, `factory`), make, Node 22 slim images (Chromium only in Runner, Scout browser and sandbox) |
 
