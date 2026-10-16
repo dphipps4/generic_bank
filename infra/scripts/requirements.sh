@@ -62,12 +62,12 @@ if [[ $DEV == 1 ]]; then
   info "To develop"
   if command -v node >/dev/null; then
     n="$(node --version | sed 's/^v//')"
-    if [[ "${n%%.*}" == 22 ]] && version_ge "$n" 22.19; then ok "Node $n (22.19 or newer within 22)"
-    else bad "Node $n: Node 22 (22.19 or newer) is needed: the Node 22 installer from nodejs.org"; fi
+    if version_ge "$n" 26.0; then ok "Node $n (26 or newer)"
+    else bad "Node $n: Node 26 or newer is needed: the Node 26 installer from nodejs.org"; fi
     p="$(npm --version 2>/dev/null)"
-    version_ge "${p:-0}" 10.0 && ok "npm $p (10 or newer)" || bad "npm ${p:-missing}: 10 or newer comes with Node 22"
+    version_ge "${p:-0}" 10.0 && ok "npm $p (10 or newer)" || bad "npm ${p:-missing}: 10 or newer comes with Node 26"
   else
-    bad "Node is missing: the Node 22 installer from nodejs.org"
+    bad "Node is missing: the Node 26 installer from nodejs.org"
   fi
 fi
 
