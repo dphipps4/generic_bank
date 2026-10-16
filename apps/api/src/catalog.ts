@@ -194,6 +194,26 @@ const AGAIN = {
   ),
 };
 
+/** A request that works on a fresh stack, so Swagger UI's Try it out starts from it. */
+const EXAMPLES: Record<Task, Record<string, unknown>> = {
+  'check-balance': { bank: 'generic', memberId: '40017732', account: 'Everyday Checking' },
+  transfer: {
+    bank: 'generic',
+    memberId: '40017732',
+    from: 'Everyday Checking',
+    to: 'Rainy Day Savings',
+    amountCents: 2500,
+    memo: 'rent',
+    idempotencyKey: 'try-transfer-0001',
+  },
+  'download-statements': {
+    bank: 'generic',
+    memberId: '40017732',
+    account: 'Everyday Checking',
+    months: ['2026-09'],
+  },
+};
+
 export function openapi(): Record<string, unknown> {
   const taskPaths = Object.fromEntries(
     (Object.keys(TASKS) as Task[]).map((t) => [
@@ -205,7 +225,7 @@ export function openapi(): Record<string, unknown> {
           security: [{ bearer: [] }, { client: [] }],
           requestBody: {
             required: true,
-            content: { 'application/json': { schema: schema(TASKS[t]) } },
+            content: { 'application/json': { schema: schema(TASKS[t]), example: EXAMPLES[t] } },
           },
           responses: {
             '202': {
@@ -354,7 +374,9 @@ export function openapi(): Record<string, unknown> {
                 schema: {
                   type: 'object',
                   properties: {
-                    grant_type: { enum: ['authorization_code', 'refresh_token'] },
+                    grant_type: {
+                      enum: ['client_credentials', 'authorization_code', 'refresh_token'],
+                    },
                     client_id: { type: 'string' },
                     client_secret: { type: 'string' },
                     code: { type: 'string' },

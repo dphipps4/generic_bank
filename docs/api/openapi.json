@@ -424,6 +424,11 @@
                   "account"
                 ],
                 "additionalProperties": false
+              },
+              "example": {
+                "bank": "generic",
+                "memberId": "40017732",
+                "account": "Everyday Checking"
               }
             }
           }
@@ -564,6 +569,15 @@
                   "idempotencyKey"
                 ],
                 "additionalProperties": false
+              },
+              "example": {
+                "bank": "generic",
+                "memberId": "40017732",
+                "from": "Everyday Checking",
+                "to": "Rainy Day Savings",
+                "amountCents": 2500,
+                "memo": "rent",
+                "idempotencyKey": "try-transfer-0001"
               }
             }
           }
@@ -748,6 +762,14 @@
                   "months"
                 ],
                 "additionalProperties": false
+              },
+              "example": {
+                "bank": "generic",
+                "memberId": "40017732",
+                "account": "Everyday Checking",
+                "months": [
+                  "2026-09"
+                ]
               }
             }
           }
@@ -1007,6 +1029,7 @@
                 "properties": {
                   "grant_type": {
                     "enum": [
+                      "client_credentials",
                       "authorization_code",
                       "refresh_token"
                     ]
