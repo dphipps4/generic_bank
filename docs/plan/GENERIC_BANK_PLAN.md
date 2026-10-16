@@ -30,9 +30,10 @@
 
 All TypeScript on Node, run on a laptop with docker-compose and just.
 
-**The demo:** an AI agent asks for balances, statements and transfers. Banks 1 and 2 work end to
-end, transfers with a person's approval. The factory builds bank 2's crawler from what it learned
-on bank 1. Banks 3 and 4 are left for the factory to learn.
+**The demo:** curl or Swagger UI asks for balances, statements and transfers. Bank 1 works end to
+end, transfers with a person's approval; bank 2 checks balances. The factory learns a bank in mock
+mode from a recorded run; onboarding bank 2 live, end to end, is Part 2. Banks 3 and 4 are left
+for the factory to learn.
 
 ---
 
@@ -44,15 +45,16 @@ Three boxes ([§B.1](#b1-the-three-boxes)):
 
 - **Box A, the app:** Task API, Console, task runner, crawler. Keeps nothing.
 - **Box B, the data:** Postgres, object storage for masked screenshots, Memory. Reaches
-  nothing. Staff passwords are SOPS secrets that only the Runner receives.
-- **Box D, the factory:** the agents and their browser, created per factory session and thrown
-  away after. Its sandbox, where untested crawlers run, has no route out.
+  nothing. Staff passwords are SOPS secrets that only the Runner, the factory and the banks
+  receive.
+- **Box D, the factory:** the agents and their browser, created per factory run and thrown away
+  after. It writes profiles, not code; a sandbox for generated code is Part 2.
 
 The four banks stand in for the outside world; only the crawler talks to them.
 
 Risk sits in four places: the money-moving click (behind a person's grant), typing passwords
 (SOPS secrets only the Runner holds, never shown), masking (before anything is written), and
-agent-written code (sandbox only, until a person approves it).
+agent-written profiles (a person approves each before it runs).
 
 ---
 
@@ -85,7 +87,7 @@ directly. OpenAPI and a Swagger page at `/docs` document it ([§D.1](#d1-tasks),
 
 ```json
 { "runId": "r_8f2c", "status": "succeeded",
-  "data": { "account": "Checking ending in 7890", "availableCents": 123456,
+  "data": { "accountLabel": "Account ending in ****", "availableCents": 123456,
             "currentCents": 130010, "asOf": "2026-10-14T18:02:11Z" } }
 
 { "runId": "r_91aa", "status": "needs_human", "code": "awaiting_approval",
@@ -98,7 +100,8 @@ makes a second transfer.
 
 **OAuth2.** An admin creates an API client per agent in the Console. The agent trades a one-time
 code for an access token (15 minutes) and a refresh token (30 days) and keeps refreshing.
-Reusing a spent refresh token cancels all the client's tokens ([§D.6](#d6-oauth2-clients-tokens-and-refresh)).
+Reusing a spent refresh token cancels all the client's tokens. On this machine, `just setup` also
+makes a local client that gets its token by client credentials ([§D.6](#d6-oauth2-clients-tokens-and-refresh)).
 
 **The HTTP status tells the agent what to do:**
 
@@ -126,7 +129,7 @@ through one staff login per bank, never as a member.
 | Bank | Address | Role in the demo |
 |---|---|---|
 | Generic Bank | `localhost:8081/corelink/` | crawler written by hand |
-| Example Credit Union | `localhost:8082/` | crawler built by the factory |
+| Example Credit Union | `localhost:8082/` | Check Balance, a profile written by hand |
 | Sample Savings Bank | `localhost:8083/online/branch/` | for the factory, later |
 | Placeholder Federal Credit Union | `127.0.0.1:8084/cu/ib/` | for the factory, later |
 
@@ -158,7 +161,8 @@ these jobs. Details: [Appendix D](#appendix-d-task-api), [Appendix E](#appendix-
 
 The crawler shows one consistent identity, **Chrome on an Apple-silicon Mac**. It is set before
 any page script runs and never changes within a session. The browser's own controls set most of
-it; a small extension of ours, which never reads the page, sets the rest. A test compares the browser field by field with a capture from a real Mac. Banks 2, 3 and 4
+it; a small extension of ours, which never reads the page, sets the rest. A capture from a real
+Mac is kept as the reference. Banks 2, 3 and 4
 answer anything not shaped like a browser with "403 Access denied"; bank 1 checks nothing.
 Values: [§E.8](#e8-browser-identity-set-at-launch), [Appendix W](#appendix-w-browser-identity-reference).
 
@@ -192,8 +196,8 @@ The approved profile is then run against the bank with each hazard forced, and m
 outcome table's result for each. Two clean real runs on probation earn promotion. Build sheet:
 [M7](../build/M7-factory.md).
 
-No agent tool moves money, runs script in a page or reaches an unknown site; agent code runs only
-in the sandbox until approved. Without an API key the factory replays a recorded run (mock mode).
+No agent tool moves money, runs script in a page or reaches an unknown site; the factory writes
+profiles, not code, and each is approved before it runs. Without an API key the factory replays a recorded run (mock mode).
 Only the factory spends money on models: **$25 per run and $150 per rolling week**, with turns,
 sign-ins and hours capped too, all in code ([§M.5](#m5-caps-in-code)).
 
@@ -268,12 +272,12 @@ Our operations website, on **AdminJS** over the shared Postgres. A person comes 
 - **the bank sent a staff code** (the crawler cannot read the inbox, by design)
 - **the crawler is stuck** on an unknown screen or an unclear transfer: take over or cancel
 - **the crawler generator is stuck:** a factory run hands back what it knows, what it does not,
-  and what would settle it
+  and what would settle it (Part 2; in Part 1 a stuck factory run ends `failed`)
 - **a new crawler is ready for review:** approve for probation or reject
 
-Every action is also an API call and needs a written reason. Nothing unmasked is shown. The
-Console also shows the read-only allowlist, the prompts (edits are drafts until their evals
-pass) and the memory. Details: [Appendix G](#appendix-g-the-console).
+Every action is also an API call and needs a written reason. Nothing unmasked is shown. In
+Part 2 the Console also shows the read-only allowlist, the prompts (edits are drafts until their
+evals pass) and the memory. Details: [Appendix G](#appendix-g-the-console).
 
 ---
 
@@ -299,8 +303,8 @@ Each crawler, per bank and job, has one state, shown as a badge:
 - **frozen:** a guard tripped; nothing runs for that bank until a person clears it
 - **stuck:** a run has gone quiet too long
 
-Demotion is automatic. A crawler with fewer than two clean runs since promotion is demoted
-on its first real fault; otherwise it takes two faults in a row. Bank faults (slowness, 503) do not count. Details: [Appendix L](#appendix-l-driver-lifecycle-and-the-repair-loop).
+Demotion is automatic: a crawler's first real fault demotes it, and the previous version serves
+if there is one. Bank faults (slowness, 503) do not count. Details: [Appendix L](#appendix-l-driver-lifecycle-and-the-repair-loop).
 
 ---
 
@@ -556,7 +560,7 @@ Locally, each box is a set of containers on its own docker network.
 |---|---|---|---|
 | **A, app** | Task API, Console, workflow engine, Runner (one headless browser per active task) | Nothing durable. Browser sessions live only in memory for the life of a task. | Box B; the bank sites. Published: the Console/API port only. |
 | **B, data** | Postgres (with pgvector), MinIO, the Memory service | Everything durable: runs, trails, journal, registry, memory, evidence (MinIO). Only masked data. | Nothing outbound. No published ports. |
-| **D, disposable factory** | Factory agent, Scout browser, sealed evaluation sandbox with its own throwaway bank | Nothing. Each factory run's folder is uploaded to box B before the box may be torn down. | Box A's API (to submit candidates), box B's Memory and evidence store, the bank sites. The sandbox has no route out at all. |
+| **D, disposable factory** | The factory's gateway, and per run the agents and the Scout's browser (a sealed sandbox for generated code is Part 2) | Nothing. A run's frames and records go to box B as it runs. | Box B's Postgres, Memory and evidence store (over `app`), the bank sites. |
 
 The **bank sites** are "the world": a separate network only the Runner and the Scout browser
 can reach, sharing no code, database or network with our system.
@@ -568,10 +572,10 @@ can reach, sharing no code, database or network with our system.
 | `task_run` | id, task, tenant, inputs (masked), idempotency key, status, result (typed), driver version, started, settled |
 | `step` | run, seq, name, screen recognized, action, outcome, started, ms |
 | `trail_frame` | run, seq, step, screenshot key or withheld reason, screen model key, host, path, at |
-| `human_task` | run, kind (staff code, approval, take-over), status, context (masked), opened, answered, by, deadline |
+| `human_task` | run, kind (staff code, approval, supervisor code, escalation), status, context (masked), opened, answered, by, deadline |
 | `api_client` | client id, secret hash, name, scopes, created by, revoked at |
 | `oauth_token` | client, kind (code, access, refresh), token hash, family, scopes, expires, used or revoked at |
-| `prompt_version` | prompt id, version, body, status (draft, active, retired), eval results, author, reason |
+| `prompt_version` (Part 2) | prompt id, version, body, status (draft, active, retired), eval results, author, reason |
 | `approval_grant` | human task, run, from ref, to ref, amount, memo token, nonce, expires, used at |
 | `journal_entry` | run, seq, intent, action, result, prev hash, row hash (append-only, hash-chained) |
 | `driver` / `driver_version` | tenant × task, version, sha256, kind (profile or code), state, source run |
@@ -590,15 +594,15 @@ can reach, sharing no code, database or network with our system.
 One fictional vendor product, **CoreLink Branch Console** by **Acme Core Systems**, the staff
 console member-services employees use (the brief's "a legacy member-servicing console"). Our
 system acts as an employee, through one staff service account per institution, never as the
-member. Banks 1 and 2 have working drivers in the submission; banks 3 and 4 are variants kept for
-the factory to crawl later.
+member. Bank 1 has all three tasks and bank 2 checks balances in the submission; banks 3 and 4
+are variants kept for the factory to crawl later.
 
 | | Bank 1 | Bank 2 | Bank 3 (later) | Bank 4 (later) |
 |---|---|---|---|---|
 | Brand | **Generic Bank** | **Example Credit Union** | **Sample Savings Bank** | **Placeholder Federal Credit Union** |
 | Product version | CoreLink 4.2 | CoreLink 4.3 | CoreLink 4.3, locally customized | CoreLink 4.4, the next vendor release |
 | URL | `http://localhost:8081/corelink/` | `http://localhost:8082/` | `http://localhost:8083/online/branch/` | `http://127.0.0.1:8084/cu/ib/` |
-| Driver in the submission | yes, written by hand | yes, written by the factory as a profile | no: crawled later | no: crawled later |
+| Driver in the submission | yes, written by hand | Check Balance, a profile written by hand | no: crawled later | no: crawled later |
 | Layout | banner, nav frame on the left, main frame | banner, tab strip frame across the top (from another origin), main frame | as bank 2, with an extra "notices" frame on the right | no frameset on the console: a drop-down menu bar, with the sign-in form inside an iframe from another origin |
 | Styling | **2003, and proud of it:** gray beveled buttons, Verdana at 10px, blue underlined links, a scrolling marquee of notices, an animated "NEW!" GIF, spacer GIFs, outset table borders, and "Best viewed in Internet Explorer at 800×600" in the footer | teal and beige, sans-serif, larger type | maroon and cream, small dense type | flat gray, a "modernized" skin over the same tables |
 | Sign-in labels | "Operator ID", "Password", "Sign In" | "Username", "Passcode", "Log In" | "Staff number", "PIN", "Enter" | "User", "Password", "Continue" |
@@ -640,7 +644,7 @@ popup result list). Where that happens, the tenant escalates until the driver le
    member's record is in use by another operator." (a classic back-office runtime error);
    "Member status: Closed." (closed member).
 7. **Member summary.** The main frame's banner now reads "Member 40017732 · A. Sample", which the
-   member-scope guard checks on every screen ([Appendix J](#appendix-j-guardrails)). Below it, the view staff consoles
+   member-scope guard checks on every screen in Part 2 ([Appendix J](#appendix-j-guardrails)). Below it, the view staff consoles
    share with consumer portals: one tile per account with nickname, "Account ending in NNNN",
    available balance, current balance, and "Activity" and "Statements" buttons. The tile table
    re-renders once shortly after it first appears.
@@ -693,8 +697,9 @@ dialect:
   itself.)
 - **Different URLs:** each bank has its own port, base path and host form; drivers take every URL
   from the tenant profile or a link on screen.
-- **Stable over time:** markup comes from a build seed. A `BANK_UI_VERSION` knob simulates a
-  vendor upgrade (relabeled fields, moved buttons) to exercise the repair loop.
+- **Stable over time:** markup comes from a build seed, and `BANK_UI_VERSION` reshuffles it.
+  `BANK_REDESIGN` simulates a vendor upgrade (new words, a new layout) to exercise the repair
+  loop.
 
 ### C.4 Runtime hazards
 
@@ -776,7 +781,8 @@ Each bank has its own Postgres database (`bank_generic`, `bank_example`, `bank_s
 - `transfers` (with memo, confirmation number, status)
 - `one_time_codes`, `sessions`, `hazard_events`
 
-`npm run seed` builds each bank from a fixed seed: one staff service account (a senior teller),
+Each bank seeds its own database on first start, from a fixed seed: one staff service account
+(a senior teller, `teller0412`),
 a supervisor, about 25 members with two to four accounts each, twelve months of history. The
 members cover an IRA that cannot transfer, a near-zero balance, a restricted account, a closed
 member, and member numbers that do not exist. Names are obviously fictional.
@@ -799,9 +805,9 @@ person uses.
 
 | Task | Input | Success result |
 |---|---|---|
-| `POST /tasks/check-balance` | `tenant`, `memberId`, `account` (last four digits or nickname) | available and current balance in cents, as-of time, masked account label |
-| `POST /tasks/transfer` | `tenant`, `memberId`, `from`, `to`, `amountCents`, `memo?`, `idempotencyKey` | confirmation number, transfer as read back from the account's history |
-| `POST /tasks/download-statements` | `tenant`, `memberId`, `account`, `months[]` | one entry per month: a stored statement reference, or "not available" with the bank's wording |
+| `POST /tasks/check-balance` | `bank`, `memberId`, `account` (last four digits or nickname) | available and current balance in cents, as-of time, masked account label |
+| `POST /tasks/transfer` | `bank`, `memberId`, `from`, `to`, `amountCents`, `memo?`, `idempotencyKey` | confirmation number, transfer as read back from the account's history |
+| `POST /tasks/download-statements` | `bank`, `memberId`, `account`, `months[]` | one entry per month: a stored statement reference, or "not available" with the bank's wording |
 
 `memberId` is the bank's member number. The system signs in as the bank's **staff service
 account** (its credentials are SOPS secrets); no member credentials exist anywhere. A task call returns `202`
@@ -812,8 +818,8 @@ crawler version serving each. `GET /tasks` lists the tasks with their input sche
 
 Inputs and results are zod schemas in `packages/contracts`. The OpenAPI document
 (`GET /openapi.json`, with examples for every status code of [§D.7](#d7-http-status-codes)) and
-the tool definitions are generated from them. `/docs` serves Swagger UI with bearer authorization; `just
-docs` publishes a static reference. A test fails if the OpenAPI document, the tool definitions and
+the tool definitions are generated from them. `/docs` serves Swagger UI with OAuth2
+authorization; `just api-docs` writes the OpenAPI document and serves the reference page locally. A test fails if the OpenAPI document, the tool definitions and
 the endpoints disagree.
 
 ### D.2 The result
@@ -832,8 +838,8 @@ Every run ends in exactly one of these:
 | `cancelled` | Stopped by a person or the caller | | nothing |
 
 Each non-success result carries a `code`, a `retryable` flag, a fixed customer-safe `message`
-and a `runId`. A filter replaces any message carrying raw page text, selectors, stack traces or
-internal hosts with one of three canned sentences, and logs the original.
+and a `runId`. In Part 2, a filter replaces any message carrying raw page text, selectors, stack
+traces or internal hosts with one of three canned sentences, and logs the original.
 
 ### D.3 Recoverable conditions
 
@@ -865,7 +871,7 @@ the secret store or the spend meter cannot be consulted, the action does not hap
 
 | Failure | Detected by | The system | The caller sees | Recorded |
 |---|---|---|---|---|
-| Wrong password | sign-in error screen | stops; never submits again | `failed: bad_credentials`, not retryable | step, frame, sign-in ledger |
+| Wrong password | sign-in error screen | stops; never submits again | `failed: bad_credentials`, not retryable | step, frame |
 | Operator locked or rate limited | lock screen | stops; freezes sign-ins for that bank until a person clears them | `failed: operator_locked`, not retryable | step, frame, freeze |
 | Staff code needed | code screen with proof a code was sent | parks; opens a human task | `needs_human: awaiting_staff_code` | human task |
 | Code rejected or expired | the bank's own wording | reports it; one attempt per code; asks for a new code only if the bank offers to send one | `needs_human` again, or `failed` after three rounds | human task, step |
@@ -889,10 +895,10 @@ the secret store or the spend meter cannot be consulted, the action does not hap
 | Failure | The system | The caller sees |
 |---|---|---|
 | Worker or browser crash mid-run | the workflow resumes at its last completed step; a lost browser means a fresh sign-in and a return to the same screen. A crash between a submit's journaled intent and its result sends the run straight to the history check; it never clicks again | nothing, or `escalated: ambiguous_outcome` |
-| Stall (no step, no navigation for 3 minutes) | the watchdog saves a final frame and ends the run | `escalated: stuck` |
+| Stall (no step, no navigation for 3 minutes) | in Part 2, a watchdog saves a final frame and ends the run; in Part 1 every page wait has its own limit | `escalated: stuck` |
 | Nobody answers a human task | the deadline ends the run | `expired` |
 | Postgres down | the API answers 503; running workflows pause and resume when it returns | HTTP 503 on new calls |
-| MinIO down | frames are held on the runner's disk (at most 60 a run) and uploaded when it returns; if they cannot be kept, they are withheld with the reason | nothing |
+| MinIO down | a frame that cannot be stored is missing from the trail; the run carries on | nothing |
 | Memory down | runs continue; their episodes wait in an outbox. The factory will not start a run without its knowledge pack | nothing for tasks |
 | Masking cannot prove a frame clean | the frame is withheld; the run continues | nothing |
 | No promoted driver for the bank and task | refused before any browser opens | `failed: no_driver`, not retryable |
@@ -905,7 +911,8 @@ the secret store or the spend meter cannot be consulted, the action does not hap
 |---|---|
 | Model API error or timeout | retries with backoff inside the run's caps; then hands back |
 | A cap reached (spend, turns, sign-ins, hours) | stops and hands back; a run can lower a cap, never raise it |
-| Spend ledger unreadable, or a model with no known price | refuses the call; fails closed |
+| Spend ledger unreadable | refuses the call; fails closed |
+| A model with no known price | its calls count as free |
 | The same failure twice, or three turns without progress | ends the build loop and hands back |
 | A tool call outside the role's allowlist | vetoed, recorded, and the model is told why |
 | An eval rung could not run | never a pass; the run reports "could not run" |
@@ -963,6 +970,9 @@ a client on the Console's "API clients" page (name, scopes, creator). The `clien
   missing scope.
 - Token requests are rate-limited per client, and every token issued, refreshed or revoked
   writes an audit entry.
+- **On this machine:** `just setup` makes a local client whose id and secret are SOPS secrets.
+  It gets its tokens with `grant_type=client_credentials`, so no one-time code is needed.
+  `just api-token` prints an access token, and Swagger UI's Authorize uses the same client.
 
 ### D.7 HTTP status codes
 
@@ -1104,9 +1114,10 @@ A **catalog** maps `(tenant, task)` to the promoted driver version (none means
 
 ### E.7 Time limits and the stall watchdog
 
-Each step has a time limit (sign-in 2 minutes, a page 45 seconds, a download 60 seconds per
-statement). A watchdog ends a run with no step and no navigation for 3 minutes, saves a final
-frame, and reports `escalated: stuck`. It stands down while a run waits for a person.
+Each wait has a time limit: a page gets up to a minute to finish loading, and activity rows
+and a statement download get 30 seconds each. In Part 2, a watchdog ends a run with no step and
+no navigation for 3 minutes, saves a final frame, and reports `escalated: stuck`; it stands down
+while a run waits for a person.
 
 ### E.8 Browser identity, set at launch
 
@@ -1127,9 +1138,9 @@ before its first page:
   bar and the Dock, 8 GB of device memory, and Web Share.
 
 Screenshots are taken at the pixel ratio's inverse, so a picture keeps one pixel per CSS pixel.
-A browser test compares the headers a bank receives and the values page scripts see with
-`tests/fixtures/browser/mac-chrome.json`; the one known difference is where Chrome puts
-Accept-Language when its user agent is overridden.
+`tests/fixtures/browser/mac-chrome.json` holds the headers and values a real Mac shows, as the
+reference; the one known difference is where Chrome puts Accept-Language when its user agent is
+overridden.
 
 ---
 
@@ -1195,14 +1206,13 @@ Every Console action is also an API call: `POST /human-tasks/:id/answer|approve|
 
 ## Appendix G. The Console
 
-The Console is **AdminJS** on the control app's Fastify server (`apps/control`), over the
-control database's **Prisma** models. That gives every model lists, filters, search, detail
-pages, relations, actions and role-based access. Custom components: the **trail viewer** (masked thumbnails, step, screen
-and outcome, an "only the interesting parts" toggle), the **state badge**
-([§G.3](#g3-state-markers)), the **approval inbox** over `human_task`, **reasoned actions**
-(promote, roll back, freeze, unfreeze require a written reason), the **memory pages** (through the
-Memory API; the Console never opens Memory's tables), and the **dashboard** and **cost** charts
-from SQL views.
+The Console is **AdminJS** on its own Fastify server (`apps/console`), over the control
+database's **Prisma** models. That gives every model lists, filters, search, detail pages,
+relations and role-based access. Beside it, our own pages: the **inbox** over `human_task`, each
+**run** with its masked frames, the **journal** with Verify, **freezes** cleared with a reason,
+**recommendations** approved or rejected with their frames, **API clients**, and the **hazard
+lab**. The memory pages, the dashboard and cost charts, and the rest of the table below are the
+Console complete, in Part 2.
 
 ### G.1 Rules for every page
 
@@ -1269,8 +1279,8 @@ approval waiting more than five minutes notifies once.
 
 **DBOS** runs each task as a durable workflow whose state lives in our Postgres, so tasks survive
 restarts and wait for people (minutes for an approval, weeks for probation) without holding
-anything open. Workflow code calls our own interface (`startRun`, `waitForHuman`, `sleep`,
-`step`). Side effects happen only in steps, a person's answer arrives as a message, and every
+anything open. Workflow code calls our own helpers in `packages/runs` (create a run, wait for a
+person's answer, settle it). Side effects happen only in steps, a person's answer arrives as a message, and every
 wait has a deadline. A task is: prepare, wait for a person if needed, act, verify, settle. A factory
 run's workflow is in [§M.3](#m3-phases).
 
@@ -1287,7 +1297,7 @@ run's workflow is in [§M.3](#m3-phases).
   breaks the run.
 - **Steps:** name, recognized screen, action, outcome, timing.
 - **The journal:** intent before every action, result after, hash-chained, append-only.
-- **Network events:** method, host, path, status, duration. No bodies, no query strings.
+- **Network events** (Part 2): method, host, path, status, duration. No bodies, no query strings.
 - **The run folder** (factory runs): every file listed in a manifest of path, size and sha256,
   written last.
 
@@ -1304,11 +1314,11 @@ run's workflow is in [§M.3](#m3-phases).
 - **Withheld frames:** if a frame's screen model could not be read, or a known value appears
   outside a covered box, the frame is **withheld**: stored as a placeholder with the reason,
   never as an image.
-- **Text and logs:** structured JSON logs (`pino`) with redaction of known keys, then a final
-  scrubbing pass with the known values and patterns before anything leaves the process.
+- **Text and logs:** Fastify's JSON logs carry ids, never values; the PII suite scans them for
+  every seeded value.
 - **Results and errors:** customer-safe messages only.
 
-`tests/pii` runs each task once on bank 1, scans everything written (database rows, MinIO
+`tests/pii` runs a balance and a transfer on bank 1, scans everything written (database rows, MinIO
 objects, logs) for every seeded secret and personal value, and checks that every place the bank
 drew a seeded value is covered in the stored frame.
 
@@ -1320,7 +1330,7 @@ drew a seeded value is covered in the stored frame.
      │
      ├──▶ records ──▶ Postgres ──▶ the Console's timelines        source of truth
      │
-     └──▶ JSON logs ──▶ stdout and .data/logs/*.jsonl            just logs
+     └──▶ JSON logs ──▶ each container's stdout                   just logs
 ```
 
 `runId` and step travel on every row and log line.
@@ -1328,7 +1338,7 @@ drew a seeded value is covered in the stored frame.
 | Signal | Where it lives | What it is for |
 |---|---|---|
 | **Records** | Postgres, box B | the source of truth: runs, steps, frames, journal, human tasks, model calls, tool calls, evals, registry events |
-| **Logs** | JSON lines on each container's stdout, kept in rotating files under `.data/logs/` | what each process was doing, in order, for debugging the system itself |
+| **Logs** | JSON lines on each container's stdout, kept by Docker | what each process was doing, in order, for debugging the system itself |
 
 ### I.5 What the crawler did
 
@@ -1344,7 +1354,7 @@ and proposed, and spend against the caps.
 
 ### I.8 Locally, and later
 
-No extra containers: logs go to stdout and rotating JSON files, read with `just logs` and
+No extra containers: logs go to each container's stdout, read with `just logs` and
 `just logs <group>`. Traces and the Grafana stack are Part 2 ([§17](#17-goal)).
 
 ### I.9 Masking applies to telemetry too
@@ -1355,7 +1365,7 @@ hazard is Part 2.
 
 ### I.10 Metrics
 
-SQL views over the records, on the Home, Health and Cost pages: task duration, outcomes by code,
+In Part 2, SQL views over the records, on the Home, Health and Cost pages: task duration, outcomes by code,
 recoveries by hazard, guard refusals by layer, human-task wait time, model tokens and spend by
 role.
 
@@ -1369,7 +1379,7 @@ layer is tested on its own.
 ### J.1 The allowlist, written down
 
 One file per job in `packages/guardrails/allowlists/`, as *screen, verb, control*. The guard
-enforces it and the Console renders it. Anything else is refused before the browser and recorded
+enforces it, and in Part 2 the Console renders it. Anything else is refused before the browser and recorded
 with the rule and layer.
 
 | Job | Screen | Allowed |
@@ -1414,7 +1424,7 @@ them.
 | **Caps for models** | Spend per run and per week, turns, live sign-ins, active hours, failed checks, in one file with no imports. A run's input can lower a cap, never raise it. The meter checks before every model call and fails closed on an unreadable ledger; a model with no price counts as free. |
 | **Tool allowlist** | A closed set of capabilities per role ([§M.4](#m4-tools)). No money capability exists. No tool runs script in a page. |
 | **Code rules** | Lint rules: a guard error is never caught, and a catch around an action rethrows what it does not handle. |
-| **Network** | Compose networks enforce who can reach whom. The sandbox has no route out. |
+| **Network** | Compose networks enforce who can reach whom; the data network is internal. A sandbox with no route out is Part 2. |
 
 **Proof:** the guard's decision and grant tests (`packages/guardrails/test`), and the PII suite.
 In Part 2, the trap matrix runs every money trap and injected instruction on both tenants with
@@ -1568,7 +1578,8 @@ cannot forge one.
 **An agent** asks with `memory_query`: at most eight items, at most three facts per answer.
 Most of what a run needs arrives in the knowledge pack, so mid-run questions are the exception.
 
-**A person** reads memory in the Console. It shows lessons with their state, scope, evidence and
+**A person** reads memory in the Console, in Part 2; in Part 1, through the Memory API with the
+curator's token. The Console shows lessons with their state, scope, evidence and
 where they have been seen; facts with their valid and closed times; episodes; the change log,
 with a button that verifies the chain; and a **knowledge-pack preview** for any bank, showing
 exactly what the factory's agents would be given. The Console reads and writes through the
@@ -1644,19 +1655,18 @@ A bank and task are available exactly when a promoted crawler exists. Promotion 
 `GET /banks`, and demotion falls back to the previous version. A freeze, or no crawler at all,
 means `404 task_not_available` before any browser opens.
 
-- **Promotion** needs two clean probation runs within 30 days, one with a fresh sign-in and one
-  on a trusted workstation, verified against the bank's own data. At most four probation
-  attempts. Probation finds the candidate by version id, never by name.
-- **Demotion** is automatic: with fewer than two clean runs since promotion, the first driver
-  fault demotes; otherwise it takes two faults in a row. The previous version
-  serves again.
+- **Promotion** needs two clean probation runs in a row, after the candidate passes the hazard
+  check. At most four probation runs, and then it is a candidate again. Probation finds the
+  candidate by version id, never by name.
+- **Demotion** is automatic: the first driver fault demotes, and the previous version serves
+  again if there is one.
 - **Faults:** an `app_error` or a 503 is the bank's; a driver fault is an unknown screen, a
   targeting failure, or a wrong result.
-- **Repair cases** open after repeated driver faults, one per tenant × task: the factory's repair
-  queue.
+- **Repair cases** open at the first driver fault, one per tenant × task, and count each fault
+  after: the factory's repair queue.
 - **Freezes** follow any guard trip and block every run and factory sign-in for that tenant until
   a person clears them with a reason.
-- **Sign-in ledger:** every sign-in attempt is recorded and capped per member per day.
+- **Sign-in ledger** (Part 2): every sign-in attempt is recorded and capped per member per day.
 
 Every transition writes a registry event and an audit entry, and appears in the Console.
 
@@ -1667,8 +1677,7 @@ Every transition writes a registry event and an audit entry, and appears in the 
 ### M.1 What it does
 
 Given a tenant and a task, the factory produces a driver version: a **profile** for a known
-vendor, **driver code** for a new one, stored as a versioned bundle with a sha256 in the
-registry. **Build** mode starts from the vendor's driver and the knowledge pack; **repair** mode
+vendor (driver code for a new vendor is Part 2), stored with a sha256 in the registry. **Build** mode starts from the vendor's driver and the knowledge pack; **repair** mode
 from a repair case and the failing runs' trails.
 
 ### M.2 Roles
@@ -1682,8 +1691,9 @@ from a repair case and the failing runs' trails.
 
 ### M.3 Phases
 
-`INTAKE` → `SCOUT` (autocrawl, read-only) → `BUILD` ⇄ `OFFLINE EVAL` (E0 to E3) →
-`LIVE VERIFY` (E4) → `LESSONS` → `REVIEW GATE` → `PROBATION` (E5) → `DONE`
+`SCOUT` (autocrawl, read-only, after intake fetches the knowledge pack) → `RECOMMEND` →
+`LESSONS` → `REVIEW GATE`; once a person approves, the hazard check (E2), then `PROBATION` (E5).
+The offline rungs and live verification between them are Part 2.
 
 - **Stall rule:** the same failure signature twice, or no progress for three turns, ends the build
   loop with a hand-back.
@@ -1703,14 +1713,15 @@ A closed set:
 |---|---|---|
 | `browser_open` | Scout | allowed hosts only; never a host the model proposes |
 | `browser_look` | both | masked screenshot plus screen model |
-| `browser_click`, `browser_type`, `browser_choose`, `browser_press`, `browser_scroll`, `browser_wait` | Scout | by control reference; keys from a fixed set; typing refuses secrets; never the bank's submit for a transfer |
+| `browser_click`, `browser_type`, `browser_choose`, `browser_press`, `browser_wait` | Scout | by control reference; keys from a fixed set; typing refuses secrets; never the bank's submit for a transfer |
 | `browser_type_credential` | Scout | field name only (`user_id` or `password`); the server types the value |
 | `browser_enter_code` | Scout | only after the bank proved it sent a code; the person's code never reaches the model |
 | `recommend` | Supervisor | the profile; each claim cites frames of this run and is marked seen or guess; refused without a frame |
-| `run_evals` | Supervisor | the profile against each forced hazard; results compacted for the model |
-| `memory_query`, `catalog_lookup` | both | read-only |
+| `memory_query` | both | read-only |
 | `record_lesson` | Supervisor | one to three sentences, a confidence, citing frames this run showed |
-| `evidence_read`, `frames` | both | masked frames and step records of this run |
+
+The hazard check runs after a person approves, not as a tool. `run_evals`, `catalog_lookup`,
+`evidence_read` and `frames` are Part 2.
 
 No tool moves money, runs page script, makes its own non-GET request, or reaches a host outside
 the allowlist. Factory work on transfers stops at the review page.
@@ -1736,23 +1747,24 @@ turn. Our code, not pi, owns:
 
 - **The model gateway:** a metering endpoint in box D for each configured provider, pi's only route to
   the model. It checks the budget before every request, records tokens and cost, and refuses at
-  a cap or an unknown price.
+  a cap; a model with no known price counts as free.
 - **The tool allowlist:** pi's tool-call hook asks our registry before every tool; a tool outside
   the role's list is vetoed, recorded, and the agent told why.
 - **The prompts:** reviewed files rendered by our loader ([Appendix O](#appendix-o-the-prompt-library)).
 
 **Models are configuration.** Each role's provider, model and effort are set in config, so a
-deployment can run on another provider (OpenAI, for one) through pi without a code change. The
-defaults: Supervisor `claude-opus-5-5` at high effort (it reasons), Scout `claude-opus-5-5` at low
-effort (it navigates), small judgments `claude-haiku-4-5-20251001`. The gateway meters whichever
-provider is configured and refuses a model with no known price. **Mock mode** replays recorded
+deployment can run on another provider (OpenAI, for one) through pi without a code change. They
+live only in `config/app.env`: Supervisor `claude-opus-5-5` at high effort (it reasons, and writes
+the lessons), Scout `claude-sonnet-5-5` at low effort (it navigates). The gateway meters whichever
+provider is configured. **Mock mode** replays recorded
 model responses through the same gateway.
 
 ### M.7 Generated code
 
-Candidate code runs only in the sandbox until approved at the review gate. Before it runs, its
-sha256 must match the bundle, it is linted again (E0), and it loads in its own module scope,
-importing only the driver SDK. Every factory run records the sha of the code it ran.
+In Part 2. The factory writes profiles, which are data. Generated driver code would run only in
+the sandbox until approved at the review gate; before it ran, its sha256 would have to match the
+bundle, it would be linted again (E0), and it would load in its own module scope, importing only
+the driver SDK.
 
 ---
 
@@ -1769,8 +1781,9 @@ importing only the driver SDK. Every factory run records the sha of the code it 
 | **E4** live verify | It works on the real tenant | Ambient hazards on; one fresh sign-in, one trusted workstation. |
 | **E5** probation | It works in production | [Appendix L](#appendix-l-driver-lifecycle-and-the-repair-loop). |
 
-A rung passes only if every check passed **and it actually ran**; "could not run" is its own exit
-code. The eval CLI prints one JSON object, and an exit code that disagrees with it is not a pass.
+Part 1 has E2, the hazard check (`apps/factory/src/hazard-check.ts`), and E5, probation. E0, E1,
+E3 and E4, and an eval CLI, are Part 2. A rung passes only if every check passed **and it actually
+ran**; "could not run" is never a pass.
 
 ### N.2 Prompt evals
 
@@ -1781,6 +1794,9 @@ spend cap.
 ---
 
 ## Appendix O. The prompt library
+
+All of this appendix is Part 2 (M9). In Part 1 each role's prompt lives beside its code in
+`apps/factory/src`.
 
 ### O.1 Contents
 
@@ -1846,18 +1862,20 @@ files for a pull request.
 | Suite | Where | What |
 |---|---|---|
 | Unit | `packages/*/test`, `apps/*/test` | pure logic: recognition scoring, label geometry, masking, guards, caps, memory rules, result mapping. `vitest`. |
-| Bank | `apps/bank/test` | every page in all four banks, every hazard on and off, the ledger, statements, the markup dialects. |
-| Browser | `tests/browser` | the Runner against the real bank in Chromium. Skipped only if the browser cannot launch; CI fails on any skip. |
+| Bank | `apps/bank/test` | the ledger, every forced hazard on the page that shows it, and a balance, transfer and statement by hand through the redesign on all four banks. |
+| Browser | `tests/browser` | the Runner against bank 2 in Chromium, and the factory's repair of bank 1. |
+| Runs | `tests/runs` | a balance and statements end to end, a transfer approved and posted once, a swallowed submit found in the history, and the recorder. |
 | Outcomes | `tests/outcomes` | one business outcome, one recoverable condition and one hard failure from the outcome table, each its exact typed result. |
 | Escalation | `tests/escalation` | an unknown screen escalates; a person resumes it through the Console API, and the run finishes. |
 | Guard | `packages/guardrails/test` | the allowlist refuses what it does not list, and the submit without a grant; every end-to-end run goes through the guard. |
 | PII | `tests/pii` | scans everything runs wrote (database rows, objects and log files) for seeded secrets and personal values. |
 | Factory | `apps/factory/test` | workflow phases with a fake browser and mock model, caps, the meter, the tool veto, doneness, probation. |
 | Memory | `apps/memory/test` | screens, merge, confirm, dispute, retire, widen, return, demote, pack budget, chain verification. |
-| Prompts | `packages/prompts/test` | the checker, the loader, schemas. |
+| Prompts (Part 2) | `packages/prompts/test` | the checker, the loader, schemas. |
 
-**CI** (GitHub Actions) has five jobs. The first runs typecheck, lint and the import
-boundaries. The second runs the tests: a pull request runs the ones its change touches, a merge to
+**CI** (GitHub Actions) first asks GitHub which files a pull request changed. A change to docs
+alone (`docs/`, Markdown, HTML, the license) runs nothing more. Otherwise five jobs run. The first
+runs typecheck, lint and the import boundaries. The second runs the tests: a pull request runs the ones its change touches, a merge to
 master runs them all, and the first failure stops the run. The third runs the factory's repair on
 a machine of its own, on a pull request only when the change touches the factory, the drivers or
 the screen code. The fourth is a fresh clone, where `just setup` and `just up` run on a machine
@@ -1865,10 +1883,8 @@ with nothing cached and every service must answer. The fifth runs `gitleaks` ove
 `just check` runs `gitleaks` over the history and uncommitted changes.
 
 **Rules:** fakes never return the answer under test. Every guard has a test that it refuses.
-Tests use real-shaped data judged by the bank's ground truth. CI builds the real images and
-compose files, and fails on any skipped or missing suite. Deploy workflows have path filters.
-Secret scanning catches secrets written as sentences, and CI checks that every imported file is
-tracked by git.
+Tests use real-shaped data judged by the bank's ground truth. The fresh-clone job builds the
+real images and compose files.
 
 ---
 
@@ -1884,21 +1900,20 @@ apps/
   runner/        task runner: browser lifecycle, step clock, evidence capture (the crawlers)
   memory/        Memory service
   factory/       factory workflows, model gateway, tools
-  agent/         the demo member-assistant agent on pi, calling the REST API as tools
 packages/
   contracts/     zod schemas: tasks, results, outcome codes, events
   screen/        capture, screen model, image fingerprints, fully-rendered wait, recognition, targeting
   drivers/       driver SDK; corelink/ driver; bank profiles
-  guardrails/    task allowlists, session guard, member scope, grants, secret typing, caps, tools
-  evidence/      trail frames, masking pipeline, journal, manifests
-  lint/          E0 rules
-  evals/         ladder E0 to E6, CLI
-  prompts/       library, loader, checker, eval runner
-  db/            Prisma schema, migrations and seed for the control database
+  guardrails/    task allowlists, the guard on every action, grants, secret typing
+  evidence/      trail frames and the masking pipeline
+  runs/          runs, steps, frames, the journal, human tasks, the driver registry
+  oauth/         API clients and tokens
+  config/        settings that fail closed
+  db/            Prisma schema and migrations for the control database
 seeds/
   memory/        the sanitized starting knowledge: rules, checks, lessons, scenarios, approaches
 tests/           browser, outcomes, escalation, runs, pii
-infra/           compose files, SOPS files, export and import scripts
+infra/           compose files, Dockerfiles, scripts, the secrets spec
 docs/            the documents the README links to (§Q.2)
 Justfile         the only entry point: every action is a just recipe (§S.1)
 ```
@@ -1908,10 +1923,8 @@ npm workspaces, TypeScript project references, ESM, Node 26.
 **Import boundaries**, enforced by `dependency-cruiser` in CI:
 
 - Nothing imports `apps/bank`. The bank is reached only over HTTP.
-- `guardrails`, `evidence`, `evals` and `lint` never import `runner`, `drivers` or `factory`.
-- `drivers` may import only the driver SDK, `screen` and `contracts`.
-- `factory` reaches `evals` only through its CLI.
-- Generated driver code may import only the driver SDK.
+- `guardrails` and `evidence` never import `runner`, `drivers` or `factory`.
+- `drivers` may import only `screen` and `contracts`.
 
 ### Q.2 Documentation: a short README and the documents it links
 
@@ -1975,15 +1988,15 @@ elsewhere.
 | `just plan` | renders every document in `docs/plan` as HTML pages, in a container, and opens them |
 | `just setup` | once after `git clone`: `just requirements`, then generates the age key and dev secrets and builds the images; SOPS, age and jq run from a pinned tools image, so the Mac needs only Docker |
 | `just dev-setup` | once, to develop: Node dependencies, the Prisma client, Chromium for the browser tests |
-| `just up` | everything in the base stack: data, back end, console, crawlers, banks 1 and 2 |
+| `just up` | everything: data, memory's seed, back end, console, crawlers, all four banks and the factory's gateway |
 | `just down` | stops everything; volumes are kept |
 | `just data` | box B: Postgres, MinIO, Memory |
 | `just backend` | box A's back end: the Task API and workflows (needs `data`) |
 | `just console` | the AdminJS Console (needs `data`) |
 | `just crawlers` | the Runner, which drives the banks for tasks (needs `backend`) |
 | `just bank` | banks 1 and 2, the message inbox and `bank-db` |
-| `just bank-more` | banks 3 and 4, for crawling later (not part of `just up`, to save memory) |
-| `just factory` | box D: the factory agent, Scout browser and sandbox; live with a key, mock without |
+| `just bank-more` | banks 3 and 4, for crawling later |
+| `just factory` | box D's gateway; `just onboard <bank>` and `just repair <bank>` start a factory run, live with a key, mock without |
 | `just down <group>`, `just logs <group>`, `just rebuild <group>` | the same for one or more groups |
 | `just try <hazard> [task]` | any task under any forced hazard |
 | `just test`, `just test-changed`, `just test-pii` | every test, only the tests a change touches, and the PII suite ([Appendix P](#appendix-p-tests)) |
@@ -1991,9 +2004,9 @@ elsewhere.
 | `just api-token` | prints an access token from the local API client that `just setup` makes (OAuth2 client credentials) |
 | `just api-docs` | writes `openapi.json` and the static API reference page from the contracts |
 | `just prompts-export` (Part 2) | writes the prompt versions activated in the Console back to `packages/prompts/` for a pull request |
-| `just logs` | read the JSON logs from `.data/` |
-| `just memory-seed` | imports `seeds/memory/` into an empty Memory (part of the first `just up`) |
-| `just reset` | deletes volumes and starts again from the seed (asks first) |
+| `just logs` | follows the containers' JSON logs |
+| `just memory-seed` | imports `seeds/memory/` into Memory (part of `just up`; a second time writes nothing) |
+| `just reset` | stops everything and deletes the volumes; the next `just up` starts from the seed |
 
 The Console is at `http://localhost:8080`, the banks at their URLs ([§C.1](#c1-one-product-four-banks)), the inbox at
 `:8089`. To try the Task API, follow the curl and Swagger UI steps at the end of `ACCESS.md`; a
@@ -2012,36 +2025,34 @@ expected typed result.
 ### S.3 Fitting in 8 GB
 
 Target: an 8 GB laptop, Docker Desktop with 5 GB. Every container has a memory limit. By default
-there is one browser at a time (`RUNNER_CONCURRENCY=1`), started on demand. It's full Chromium in
-modern headless mode, with no virtual display.
+there are two browsers at a time (`RUNNER_CONCURRENCY=2`), so a transfer waiting for approval
+never holds up other tasks. Each is started on demand: full Chromium in modern headless mode,
+with no virtual display.
 
 | Service | Box | Limit |
 |---|---|---|
 | `postgres` (pgvector; databases `control`, `memory`, and the workflow engine's tables) | B | 384 MB |
 | `minio` | B | 128 MB |
-| `memory` (with the in-process embedder) | B | 384 MB |
+| `memory` (with the in-process embedder) | B | 512 MB |
 | `api` (Task API and workflows) | A | 192 MB |
 | `console` (AdminJS, bundled at build time) | A | 256 MB |
-| `runner` (plus one headless Chromium) | A | 768 MB |
-| `bank-generic`, `bank-example` | world | 128 MB each |
+| `runner` (plus up to two headless Chromium) | A | 1536 MB |
+| `bank-generic`, `bank-example`, `bank-sample`, `bank-placeholder` | world | 128 MB each |
 | `bank-inbox` | world | 96 MB |
 | `bank-db` (small Postgres, `shared_buffers` 32 MB) | world | 128 MB |
-| **Base stack (`just up`)** | | **about 2.7 GB** |
-| `bank-sample`, `bank-placeholder` (`just bank-more`, later) | world | 128 MB each |
-| `factory` (agent and model gateway) | D | 256 MB |
-| `operator-browser` | D | 768 MB |
-| `sandbox` (eval runner with its own Chromium), `bank-sandbox`, `sandbox-db` | D | 768 MB |
-| **With the factory running** | | **about 4.5 GB** |
+| `factory` (the model gateway) | D | 256 MB |
+| **Everything `just up` starts** | | **about 3.9 GB** |
+| `factory-run` (one factory run: the agents and the Scout's browser) | D | 768 MB |
+| **With a factory run going** | | **about 4.7 GB** |
 
 `just requirements` checks Docker's memory allowance first.
 
 Networks: `edge` (published ports), `app` (A to B), `data` (B internal), `world` (banks;
-reachable from the Runner and the Scout browser), `factory` (D to A and B), `sandbox`
-(`internal: true`, no route out).
+reachable from the Runner and the Scout browser), `bankdb` (the banks' database, internal),
+`factory` (the factory's gateway and its runs, which reach box B over `app`).
 
-Images are pinned by digest, and a preflight in `just up` and `just factory` refuses to start if
-the boxes' versions disagree or the database isn't at the expected migration. Repeated log lines are
-rate-limited, and every container has disk and memory limits.
+Each image carries a hash of its source as a label, so `just up` rebuilds a stale image instead
+of running yesterday's code. Every container has a memory limit.
 
 ---
 
@@ -2060,15 +2071,15 @@ rate-limited, and every container has disk and memory limits.
 
 - Every bank error is a named screen ([§E.3](#e3-screen-recognition)).
 - Business outcomes, recoverable conditions and hard failures are kept apart ([§D.2](#d2-the-result), [§D.3](#d3-recoverable-conditions)).
-- Waiting is "fully rendered", never network idle ([§E.2](#e2-fully-rendered-not-network-idle)), with step limits and a watchdog ([§E.7](#e7-time-limits-and-the-stall-watchdog)).
+- Waiting is "fully rendered", never network idle ([§E.2](#e2-fully-rendered-not-network-idle)), with a limit on every wait; the watchdog is Part 2 ([§E.7](#e7-time-limits-and-the-stall-watchdog)).
 - Targeting re-checks and re-targets; every action verifies the next screen ([§E.4](#e4-targeting)).
 - Every failure is tabled ([§D.4](#d4-how-failures-are-handled)); the outcome suite and the hazard lab prove them ([Appendix P](#appendix-p-tests), [§S.2](#s2-the-hazard-lab)).
 - Records and logs share one run id ([§I.4](#i4-two-signals-one-id)).
 
 ### T.3 Human-in-the-loop escalation
 
-- **Detected:** unknown or doubly matched screen, stall, exhausted recoveries, ambiguous submit,
-  guard trip ([§D.2](#d2-the-result), [§E.7](#e7-time-limits-and-the-stall-watchdog), [§F.2](#f2-the-swallowed-submit-protocol)).
+- **Detected:** unknown or doubly matched screen, a wait past its limit, exhausted recoveries,
+  ambiguous submit, guard trip ([§D.2](#d2-the-result), [§E.7](#e7-time-limits-and-the-stall-watchdog), [§F.2](#f2-the-swallowed-submit-protocol)).
 - **Escalated** to the Console inbox with the masked trail and a deadline ([§F.3](#f3-codes-and-other-human-steps)).
 - **Proved** by the escalation suite, through the API ([Appendix P](#appendix-p-tests)).
 
@@ -2145,18 +2156,18 @@ elsewhere are not repeated; these are the rest:
 |---|---|
 | Language and runtime | TypeScript (strict), Node 26, ESM, npm workspaces with project references |
 | Services | Fastify everywhere; zod contracts with OpenAPI and Swagger UI (`@fastify/swagger`); tool definitions from the same contracts |
-| Console | AdminJS with `@adminjs/fastify` and `@adminjs/prisma`, custom React components |
+| Console | AdminJS with `@adminjs/fastify` and `@adminjs/prisma`, beside our own server-rendered pages |
 | Bank | hand-written server templates and ES5, `pdf-lib`, argon2 |
 | Data | PostgreSQL 16 with pgvector; Prisma (vector columns via `$queryRaw`); MinIO through the AWS S3 SDK |
-| Workflows | DBOS Transact, including scheduled workflows (probation checks, stuck-run sweeps, gate reminders) |
-| Browser and perception | Our own DevTools Protocol client driving full Chromium; CDP `DOMSnapshot`, accessibility tree and screenshots; `sharp` for masking, fingerprints and frame comparison |
-| Models | pi per role; `@anthropic-ai/sdk` behind our metering endpoint; `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-4-5-20251001` |
+| Workflows | DBOS Transact; scheduled workflows (probation checks, stuck-run sweeps, gate reminders) in Part 2 |
+| Browser and perception | Our own DevTools Protocol client driving full Chromium; CDP `DOMSnapshot`, accessibility tree and screenshots; our own PNG code for masking, fingerprints and frame comparison |
+| Models | pi per role; `@anthropic-ai/sdk` behind our metering endpoint; `claude-opus-5-5` and `claude-sonnet-5-5`, set in `config/app.env` |
 | Embeddings | `@huggingface/transformers` with `bge-small-en-v1.5` (384 dimensions, CPU, about 130 MB) |
-| Prompts | Markdown with YAML frontmatter; JSON Schema answers validated with ajv |
+| Prompts | in Part 2, Markdown with YAML frontmatter and JSON Schema answers validated with ajv |
 | Secrets | SOPS with age; zod-parsed environment that fails closed |
-| Observability | Postgres records; pino logs; OpenTelemetry, Tempo, Loki and Grafana in Part 2 |
-| Quality | vitest, ESLint, Prettier, E0 rules on the TypeScript compiler API, dependency-cruiser, cspell, markdownlint, gitleaks, `npm audit`, GitHub Actions; SonarQube in Part 2 |
-| Packaging | Docker compose profiles (`default`, `factory`), just, Node 26 slim images (Chromium only in Runner, Scout browser and sandbox) |
+| Observability | Postgres records; Fastify's JSON logs; OpenTelemetry, Tempo, Loki and Grafana in Part 2 |
+| Quality | vitest, ESLint, Prettier, dependency-cruiser, gitleaks, GitHub Actions; E0 rules, cspell, markdownlint and SonarQube in Part 2 |
+| Packaging | Docker compose profiles (`more-banks`, `factory`, `factory-run`, `seed`), just, Node 26 slim Debian images (Chromium only in the Runner's image, which a factory run also uses) |
 
 Not used: a graph database in Part 1, Redis or any broker, Kubernetes, a model inside production
 tasks, a client framework in the bank.
@@ -2219,7 +2230,7 @@ Intl timezone                   the timezone of the network exit
 Part 1 presents every row above ([§E.8](#e8-browser-identity-set-at-launch)), matched to a
 MacBook Air (M1).
 
-### W.4 The usual mistakes, each a failing test
+### W.4 The usual mistakes
 
 ```text
 accept-language with doubled weights     en-US,en;q=0.9;q=0.9
@@ -2260,7 +2271,7 @@ linking each point of the brief it touches to the code and test that prove it.
 | M4 | The browser's fingerprint (Chrome on a Mac, set at launch; banks 2 to 4 refuse anything not a browser), then human steps: inbox, codes, transfer preparation, approval grant, submit, swallowed-submit protocol, the tool definitions, `downloadStatements`, hazard lab | escalation suite and transfer tests green; the transfer-safety suite in Part 2 |
 | M5 | The guard on every action and the PII scan (the rest of the guardrails in Part 2) | the guard's tests and the PII suite green |
 | M6 | Memory service | memory's own tests green; the memory suite in Part 2 |
-| M7 | **Factory:** workflow, model gateway, tools, caps, scout (autocrawl), evals E0 to E4, review gate, probation, driver states in the Console, mock mode | **a profile passes the hazard check and is promoted after two clean probation runs; onboarding bank 2 end to end is Part 2** |
+| M7 | **Factory:** workflow, model gateway, tools, caps, scout (autocrawl), the hazard check (E2), review gate, probation, driver states in the Console, mock mode | **a profile passes the hazard check and is promoted after two clean probation runs; onboarding bank 2 end to end is Part 2** |
 | M8 | **Repair loop:** turn on bank 1's redesign (`BANK_REDESIGN`); runs fail; the driver is demoted; a repair case opens; a factory repair run fixes it | the repair is visible end to end in the Console |
 | M9 (Part 2) | Prompt library, `check-prompts`, prompt eval runner; Console complete ([Appendix G](#appendix-g-the-console)) | `check-prompts` green; every Console page exists |
 | M10 | README, diagram, the requirements report (every point of the brief, how we meet it, and links to the code and tests that prove it), the 80%-to-100% notes, a recorded factory run for mock mode | a reviewer can clone, `just setup`, `just up` and try the Task API from `ACCESS.md` in minutes |
