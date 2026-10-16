@@ -36,6 +36,17 @@ export class ReadOnly extends Error {
   }
 }
 
+/** A write memory will not make, and why: 409 when what it needs is missing or already held. */
+export class Refused extends Error {
+  constructor(
+    readonly status: 400 | 404 | 409,
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
 const GENESIS = '0'.repeat(64);
 
 /** JSON with keys sorted, so a value hashes the same after Postgres stores and returns it. */
@@ -117,6 +128,20 @@ export function openMemory(db: Db, opts: { onBroken?: (v: Verdict) => void } = {
     async write(role: Role, action: string, fn: (tx: Query) => Promise<Entry>): Promise<Change> {
       if (readOnly) throw new ReadOnly();
       return db.serializable(async (tx) => append(tx, role, action, await fn(tx)));
+    },
+
+    /** The same, for a write that may find nothing to change: then `fn` returns null and nothing,
+     *  not even a change-log row, is written. */
+    async writeIf(
+      role: Role,
+      action: string,
+      fn: (tx: Query) => Promise<Entry | null>,
+    ): Promise<Change | null> {
+      if (readOnly) throw new ReadOnly();
+      return db.serializable(async (tx) => {
+        const e = await fn(tx);
+        return e ? append(tx, role, action, e) : null;
+      });
     },
 
     /** Recompute the chain from the first row. The first row that does not hold is reported. */

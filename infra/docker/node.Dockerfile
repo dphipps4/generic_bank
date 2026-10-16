@@ -20,7 +20,11 @@ COPY apps/console/package.json apps/console/
 COPY apps/factory/package.json apps/factory/
 COPY apps/memory/package.json apps/memory/
 COPY apps/runner/package.json apps/runner/
-RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
+# The embedding runtime runs on CPU: no GPU libraries are fetched for it, and only this
+# platform's are kept.
+ENV ONNXRUNTIME_NODE_INSTALL=skip
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund \
+  && rm -rf node_modules/onnxruntime-node/bin/napi-v6/darwin node_modules/onnxruntime-node/bin/napi-v6/win32
 COPY tsconfig.base.json tsconfig.json ./
 COPY packages packages
 COPY apps apps
@@ -31,5 +35,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 COPY --from=build --chown=node:node /app /app
+# Memory's embedding model is kept here, in a volume that takes this directory's owner.
+RUN mkdir /models && chown node:node /models
 ENV NODE_ENV=production ADMIN_JS_SKIP_BUNDLE=true
 USER node
