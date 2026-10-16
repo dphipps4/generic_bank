@@ -48,10 +48,11 @@ else
     || bad "docker buildx is missing (update Docker Desktop)"
   mem=$(docker info --format '{{.MemTotal}}')
   gib=$(awk "BEGIN{printf \"%.1f\", $mem/1073741824}")
-  if awk "BEGIN{exit !($mem < 4500000000)}"; then
-    bad "Docker has ${gib} GiB of memory: give it 5 GB (Docker Desktop, Settings, Resources)"
+  # Docker reports a little under its setting, so the line sits below 5.25 GB.
+  if awk "BEGIN{exit !($mem < 4800000000)}"; then
+    bad "Docker has ${gib} GiB of memory: give it 5.25 GB (Docker Desktop, Settings, Resources)"
   else
-    ok "Docker has ${gib} GiB of memory (5 GB on an 8 GB laptop)"
+    ok "Docker has ${gib} GiB of memory (5.25 GB or more on an 8 GB laptop)"
   fi
   free=$(df -k . | awk 'NR==2{print int($4/1048576)}')
   [[ "$free" -ge 15 ]] && ok "${free} GiB of disk free (15 or more)" \

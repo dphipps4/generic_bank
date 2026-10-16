@@ -339,7 +339,7 @@ Every package and why it was chosen: [techstack.md](techstack.md).
 
 - **Web only.** Desktop and terminal capture would plug into the same screen-model seam.
 - **Two browsers at a time,** so a transfer waiting for approval never holds up other tasks. That
-  still fits an 8 GB laptop with Docker at 5 GB; concurrency is a setting.
+  still fits an 8 GB laptop with Docker at 5.25 GB; concurrency is a setting.
 - **Hazards are ours.** Real vendors will have others.
 
 ---

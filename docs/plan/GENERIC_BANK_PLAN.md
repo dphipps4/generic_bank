@@ -1984,7 +1984,7 @@ elsewhere.
 
 | Recipe | What it does |
 |---|---|
-| `just requirements` | checks the Mac with explicit versions (macOS 14, git, just, Docker Engine 27 and Compose 2.29 with 5 GB of memory, disk, ports) and fails, saying what to install, until every one is met; `just requirements-dev` adds Node 26 |
+| `just requirements` | checks the Mac with explicit versions (macOS 14, git, just, Docker Engine 27 and Compose 2.29 with 5.25 GB of memory, disk, ports) and fails, saying what to install, until every one is met; `just requirements-dev` adds Node 26 |
 | `just plan` | renders every document in `docs/plan` as HTML pages, in a container, and opens them |
 | `just setup` | once after `git clone`: `just requirements`, then generates the age key and dev secrets and builds the images; SOPS, age and jq run from a pinned tools image, so the Mac needs only Docker |
 | `just dev-setup` | once, to develop: Node dependencies, the Prisma client, Chromium for the browser tests |
@@ -2024,7 +2024,7 @@ expected typed result.
 
 ### S.3 Fitting in 8 GB
 
-Target: an 8 GB laptop, Docker Desktop with 5 GB. Every container has a memory limit. By default
+Target: an 8 GB laptop, Docker Desktop with 5.25 GB. Every container has a memory limit. By default
 there are two browsers at a time (`RUNNER_CONCURRENCY=2`), so a transfer waiting for approval
 never holds up other tasks. Each is started on demand: full Chromium in modern headless mode,
 with no virtual display.
