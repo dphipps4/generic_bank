@@ -39,7 +39,7 @@ export interface Context {
   secret?: boolean;
   /** What is typed as plain text. */
   typed?: string;
-  /** The stored secrets (the operator's credentials): plain text that holds one is refused. */
+  /** The stored secrets (the operator's password, never the username): plain text that holds one is refused. */
   secrets?: readonly string[];
   /** The bank's names for the listed controls. */
   names?: Names;

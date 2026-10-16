@@ -103,7 +103,8 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
   const guarded = runGuard({
     job: run.task as (typeof JOBS)[number],
     profile,
-    secrets: [creds.password, creds.operatorId],
+    // Only the password. A username is not a secret: the bank prints it on every page.
+    secrets: [creds.password],
   });
   // A resumed run carries on its trail after the steps and frames it already has.
   let { step: stepSeq, frame: frameSeq } = await trailEnd(deps.sql, runId);

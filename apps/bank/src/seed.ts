@@ -14,9 +14,9 @@ export interface SeedSecrets {
 
 /** The staff accounts every bank starts with. */
 export const OPERATORS = {
-  service: { id: '0412', name: 'Operator 0412', role: 'senior teller', limit: 1_000_000 },
-  supervisor: { id: '0901', name: 'Supervisor 0901', role: 'supervisor', limit: 5_000_000 },
-  locked: { id: '0388', name: 'Operator 0388', role: 'teller', limit: 300_000 },
+  service: { id: 'teller0412', name: 'Operator 0412', role: 'senior teller', limit: 1_000_000 },
+  supervisor: { id: 'super0901', name: 'Supervisor 0901', role: 'supervisor', limit: 5_000_000 },
+  locked: { id: 'teller0388', name: 'Operator 0388', role: 'teller', limit: 300_000 },
 } as const;
 
 /** Members with a known story. Everyone else is ordinary. */
@@ -167,8 +167,8 @@ export async function seed(db: Db, t: Tenant, secrets: SeedSecrets, now: Date): 
         o.name,
         o.role,
         key === 'locked',
-        `+1 555 01${o.id}`,
-        `op${o.id}@${t.id}.bank.localhost`,
+        `+1 555 01${o.id.replace(/\D/g, '')}`,
+        `${o.id}@${t.id}.bank.localhost`,
         o.limit,
       ],
     );

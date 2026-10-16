@@ -23,8 +23,8 @@ Console (admin UI)            http://localhost:${CONSOLE_PORT:-8080}
   password                    $(get CONSOLE_ADMIN_PASSWORD "$local_env")
 
 Bank staff sign-in (every bank's console)
-  operator 0412 (teller)      $(get BANK_SERVICE_PASSWORD "$local_env")
-  operator 0901 (supervisor)  $(get BANK_SUPERVISOR_PASSWORD "$local_env")
+  teller0412 (teller)         $(get BANK_SERVICE_PASSWORD "$local_env")
+  super0901 (supervisor)      $(get BANK_SUPERVISOR_PASSWORD "$local_env")
   staff codes                 http://localhost:${BANK_INBOX_PORT:-8089} (the staff phone and inbox)
 
 Bank admin API (each bank's :90xx port), header Authorization: Bearer <token>
