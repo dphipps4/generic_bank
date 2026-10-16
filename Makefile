@@ -268,7 +268,7 @@ clean: ## Remove build output (dist, tsbuildinfo, .run)
   console-password build build-nc image up down restart ps urls data backend console crawlers bank \
   bank-more factory migrate logs vault-status db-shell check test test-changed test-pii test-long typecheck lint format boundaries secrets-scan \
   demo try evals check-prompts memory-seed memory-export memory-import export import trace observe \
-  docs reset clean
+  docs reset clean agent
 
 # group name -> variable holding its services (data -> DATA, bank-more -> BANK_MORE)
 group = $(shell echo $(1) | tr 'a-z-' 'A-Z_')
@@ -283,3 +283,10 @@ api-docs: ## Write the API reference from the contracts, serve it and open it in
 api-token: ## A fresh access token for Swagger UI or curl (15 minutes)
 	@$(COMPOSE) exec -T api node apps/api/dist/token-cli.js
 
+
+agent: backend ## The demo agent: a member assistant on the configured model, using only the API's tools (scripted without ANTHROPIC_API_KEY)
+	@mkdir -p .run/agent
+	@client="$$($(COMPOSE) exec -T api node apps/api/dist/agent-client-cli.js)" && tty="$$([ -t 0 ] && echo -t)" && \
+	  docker run --rm -i $$tty --init --network $(GB_PROJECT)_app -v "$(CURDIR)/.run/agent:/app/.run/agent" \
+	    -e AGENT_CLIENT="$$client" -e API_URL=http://api:8000 -e AGENT_PROVIDER -e AGENT_MODEL -e ANTHROPIC_API_KEY \
+	    $(GB_IMAGE) node apps/agent/dist/main.js
