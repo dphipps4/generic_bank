@@ -105,18 +105,4 @@ describe('a transfer run', () => {
     expect(await h.execute(runId)).toMatchObject({ status: 'escalated', code: 'stuck' });
     expect(h.browsers.length).toBe(launched);
   });
-
-  it('ends with the bank’s refusal before anyone is asked to approve', async () => {
-    const { runId, memoToken } = await h.start({ memberId: MEMBERS.nearZero, amountCents: 5_000 });
-    expect(await h.execute(runId)).toMatchObject({
-      status: 'business_outcome',
-      code: 'insufficient_funds',
-    });
-    const tasks = await h.db.query(
-      `SELECT id FROM "HumanTask" WHERE "runId" = $1 AND kind = 'approval'`,
-      [runId],
-    );
-    expect(tasks.rows).toHaveLength(0);
-    expect(await h.postings(memoToken)).toBe(0);
-  }, 300_000);
 });

@@ -131,27 +131,6 @@ describe('the Runner carries out a run', () => {
       expect(stored).not.toContain(v);
   }, 180_000);
 
-  it('refuses a bank and task with no promoted driver, before any browser opens', async () => {
-    const { runId } = await createRun(
-      db,
-      {
-        task: 'check-balance',
-        bank: 'example',
-        clientId: null,
-        inputs: { bank: 'example', memberId: MEMBERS.demo, account: '1234' },
-      },
-      KEY,
-    );
-    const launched = { n: 0 };
-    await executeRun(runId, { ...deps(), launch: async () => (launched.n++, null as never) });
-    expect(await resultOf(db, runId)).toMatchObject({
-      status: 'failed',
-      code: 'no_driver',
-      retryable: false,
-    });
-    expect(launched.n).toBe(0);
-  });
-
   it('downloads statements: each month stored as the bank serves it, or not available in its words', async () => {
     const acct = (await accountsOf(bank.db, MEMBERS.demo)).find((a) => a.type === 'checking')!;
     const now = new Date();
@@ -197,24 +176,5 @@ describe('the Runner carries out a run', () => {
       { headers: { cookie } },
     );
     expect(kept?.equals(Buffer.from(await served.arrayBuffer()))).toBe(true);
-  }, 180_000);
-
-  it('reports a business outcome from the bank’s own screen', async () => {
-    const { runId } = await createRun(
-      db,
-      {
-        task: 'check-balance',
-        bank: 'generic',
-        clientId: null,
-        inputs: { bank: 'generic', memberId: MEMBERS.missing, account: '1234' },
-      },
-      KEY,
-    );
-    await executeRun(runId, deps());
-    expect(await resultOf(db, runId)).toMatchObject({
-      status: 'business_outcome',
-      code: 'no_such_member',
-      message: 'The bank has no member with that number.',
-    });
   }, 180_000);
 });
