@@ -19,13 +19,10 @@ env:
 
 jobs:
   check:
-    name: typecheck, lint, test, boundaries
+    name: typecheck, lint, boundaries
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          # The whole history, so a pull request's tests can be chosen by what it changed.
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 26
@@ -41,17 +38,36 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run depcruise
+
+  # The tests, split three ways by file. A pull request runs the tests its change touches; a change
+  # to migrations, seeds, config, infrastructure or CI runs them all (vitest.config.ts,
+  # forceRerunTriggers). A merge to master runs the whole suite.
+  tests:
+    name: tests (${{ matrix.shard }} of 3)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The whole history, so a pull request's tests can be chosen by what it changed.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run db:generate
       - name: Headless Chromium for the browser tests
         run: infra/scripts/browser.sh
-      # A pull request runs the tests its change touches; a change to migrations, seeds, config,
-      # infrastructure or CI runs them all (vitest.config.ts, forceRerunTriggers). A merge to master
-      # runs the whole suite.
       - name: The tests this change touches
         if: github.event_name == 'pull_request'
-        run: npx vitest run --changed origin/${{ github.base_ref }} --passWithNoTests
+        run: npx vitest run --changed origin/${{ github.base_ref }} --shard=${{ matrix.shard }}/3 --passWithNoTests
       - name: The whole suite
         if: github.event_name != 'pull_request'
-        run: npx vitest run
+        run: npx vitest run --shard=${{ matrix.shard }}/3 --passWithNoTests
 
   secrets:
     name: no secrets in history
