@@ -135,7 +135,7 @@ describe('the recorder', () => {
       store: memoryStore(),
       sealKey: KEY,
       answerKey: 'q'.repeat(40),
-      credentials: async () => ({ operatorId: '0412', password: 'p'.repeat(16) }),
+      credentials: async () => ({ operatorId: 'teller0412', password: 'p'.repeat(16) }),
     });
     expect(ending).toEqual({ status: 'failed', code: 'no_driver', retryable: false });
     expect(await resultOf(control, runId)).toMatchObject({

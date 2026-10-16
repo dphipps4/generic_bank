@@ -39,7 +39,7 @@ describe('CoreLink on example', () => {
     const g = runGuard({
       job: 'check-balance',
       profile,
-      secrets: [PASSWORDS.service, OPERATORS.service.id],
+      secrets: [PASSWORDS.service],
     });
     guardActions(page, g.guard);
     const steps: StepRecord[] = [];

@@ -321,7 +321,7 @@ describe('intake', () => {
           factoryUrl: 'http://127.0.0.1:9',
           gatewayToken: TOKEN,
           roles: DEFAULT_ROLES,
-          credentials: { operatorId: '0412', password: 'p'.repeat(20) },
+          credentials: { operatorId: 'teller0412', password: 'p'.repeat(20) },
           answerKey: 'q'.repeat(40),
           member: '40017732',
           memory: unreachable,

@@ -28,6 +28,7 @@ const cfg = loadConfig(
     MINIO_ROOT_USER: z.string().min(3),
     MINIO_ROOT_PASSWORD: secret(),
     BANK_SERVICE_PASSWORD: z.string().min(16),
+    BANK_OPERATOR_ID: z.string().min(8),
     ANSWER_SEAL_KEY: secret(),
     HAZARD_HMAC_KEY: secret(),
     BANK_ADMIN_TOKEN: secret(),
@@ -66,7 +67,7 @@ const store = s3Store({
   accessKey: cfg.MINIO_ROOT_USER,
   secretKey: cfg.MINIO_ROOT_PASSWORD,
 });
-const credentials = { operatorId: '0412', password: cfg.BANK_SERVICE_PASSWORD };
+const credentials = { operatorId: cfg.BANK_OPERATOR_ID, password: cfg.BANK_SERVICE_PASSWORD };
 const memory = memoryClient({
   url: cfg.MEMORY_URL,
   token: cfg.MEMORY_TOKEN_FACTORY,

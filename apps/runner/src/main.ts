@@ -21,6 +21,8 @@ const cfg = loadConfig(
     MINIO_ROOT_USER: z.string().min(3),
     MINIO_ROOT_PASSWORD: secret(),
     BANK_SERVICE_PASSWORD: z.string().min(16),
+    BANK_OPERATOR_ID: z.string().min(8),
+    BANK_SUPERVISOR_ID: z.string().min(8),
     HAZARDS_FORCEABLE: z.enum(['true', 'false']).default('false'),
     HAZARD_HMAC_KEY: secret().optional(),
     MEMORY_URL: z.url(),
@@ -63,9 +65,9 @@ registerTaskWorkflow(
     // The staff service account: the same operator at every bank, from the Runner's secrets.
     // The supervisor is the one whose approval code a person reads over a transfer's threshold.
     credentials: async () => ({
-      operatorId: '0412',
+      operatorId: cfg.BANK_OPERATOR_ID,
       password: cfg.BANK_SERVICE_PASSWORD,
-      supervisorId: '0901',
+      supervisorId: cfg.BANK_SUPERVISOR_ID,
     }),
   },
   forceable ? cfg.HAZARD_HMAC_KEY : undefined,
