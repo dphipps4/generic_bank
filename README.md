@@ -40,6 +40,7 @@ else is set up.
 ```sh
 just setup                      # once, after git clone: checks the Mac, creates secrets, builds the images
 just up                         # everything: data, memory, API, Console, crawler, all four banks, factory
+just all                        # start again from nothing: deletes the data, rebuilds the images, starts everything
 just                            # every recipe
 ```
 

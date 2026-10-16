@@ -360,6 +360,16 @@ secrets-scan:
 browser:
     @{{scripts}}/browser.sh
 
+# Rebuild everything from scratch: build output, every volume and the images, then start it all. Asks first.
+[group('Housekeeping')]
+[confirm('This deletes every database, Vault and object store volume, and rebuilds every image. Continue?')]
+all:
+    @rm -rf apps/*/dist packages/*/dist
+    @find . -name '*.tsbuildinfo' -not -path './node_modules/*' -delete
+    @{{compose}} --profile '*' down -v
+    @just build-nc
+    @just up
+
 # Delete all local data (volumes) and start again from nothing. Asks first.
 [group('Housekeeping')]
 [confirm('This deletes every database, Vault and object store volume. Continue?')]
