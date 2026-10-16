@@ -98,6 +98,9 @@ export async function prepareTransfer(
           if (own.length !== 1)
             return stop('escalated', 'unknown_screen', 'the summary has no transfer of its own');
           await click(page, own[0]!);
+          // A form opened from the summary is blank, even after an outage sent the run back here.
+          filled.accounts = false;
+          filled.amount = false;
           await sess.record('transfer', s.screen, s.model, 'opened the transfer form');
           break;
         }
