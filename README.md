@@ -137,6 +137,8 @@ the same jobs on your machine.
   appendices for every part of the system.
 - [The requirements report](docs/plan/REQUIREMENTS.md): every point of the brief, how it is met,
   and the code and tests that prove it.
+- [From 80% to 100%](docs/plan/80-to-100.md): what AI wrote, what we changed or threw away, and
+  what running this unattended still needs.
 - [The architecture](docs/plan/architecture.md): the boxes, the data, and where the risky parts
   live.
 - [The technology choices](docs/plan/techstack.md): each tool, why it was chosen, and what it was
