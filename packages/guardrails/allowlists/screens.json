@@ -1,0 +1,17 @@
+{
+  "about": "The screens the lists name, and the recognized screens each one covers. A recognized screen not named here is its own; an unrecognized one is unknown, and nothing is allowed on it but what a list allows on any screen.",
+  "screens": {
+    "sign_in": ["login.signin", "login.welcome_back", "login.session_ended"],
+    "staff_code": [
+      "login.code_choose",
+      "login.code_enter",
+      "login.code_wrong",
+      "login.code_expired"
+    ],
+    "notice": ["login.terms", "login.notice"],
+    "promo": ["dialog.promo"],
+    "home": ["console.home"],
+    "member.search": ["member.search", "member.results", "member.in_use"],
+    "supervisor_approval": ["transfer.supervisor"]
+  }
+}

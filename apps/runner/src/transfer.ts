@@ -16,7 +16,7 @@ import {
   type TransferInput,
 } from '@gb/drivers';
 import { maskText } from '@gb/evidence';
-import { consumeGrant, type TransferValues } from '@gb/guardrails';
+import { consumeGrant, type GrantCheck, type TransferValues } from '@gb/guardrails';
 import {
   approvalOf,
   awaitDecision,
@@ -50,6 +50,8 @@ export interface TransferRun {
   lastFrame(): { runId: string; seq: number } | undefined;
   /** Asks a person for a code; throws if the task is cancelled or expires. */
   ask(kind: 'supervisor_code', prompt: string): Promise<string>;
+  /** Hands the guard the grant check, which alone lets it allow the money-moving press. */
+  granted?(g: GrantCheck): void;
   deadline(): Date;
   pollMs?: number;
 }
@@ -152,6 +154,7 @@ async function prepareAndSubmit(r: TransferRun, input: TransferInput): Promise<E
         runId: r.runId,
         screen: valuesOf(seen, input.memoToken),
       });
+      r.granted?.(g);
       return g.ok ? { ok: true } : { ok: false, reason: g.reason };
     },
     journal: async (line) => void (await journal(r.sql, r.runId, line)),

@@ -3,13 +3,18 @@
 // can reach in and change a verdict.
 export {
   ALLOWLISTS,
+  ANY,
   type Context,
   decide,
   type Entry,
+  GuardError,
   JOBS,
   type Layer,
   MONEY_SCREENS,
   MONEY_WORDS,
+  type Names,
+  NEVER,
+  screenOf,
   type Verb,
   VERBS,
   type Verdict,

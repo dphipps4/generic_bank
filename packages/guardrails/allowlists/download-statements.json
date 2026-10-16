@@ -5,6 +5,10 @@
     { "screen": "member.summary", "verb": "press", "control": "Statements" },
     { "screen": "statements", "verb": "choose", "control": "Account" },
     { "screen": "statements", "verb": "read", "control": "Page" },
-    { "screen": "statements", "verb": "press", "control": "Statement" }
+    { "screen": "statements", "verb": "press", "control": "View more" },
+    { "screen": "statements", "verb": "press", "control": "Menu" },
+    { "screen": "statements", "verb": "press", "control": "Statement" },
+    { "screen": "statement.viewer", "verb": "press", "control": "Download" },
+    { "screen": "statement.viewer", "verb": "press", "control": "Back to statements" }
   ]
 }

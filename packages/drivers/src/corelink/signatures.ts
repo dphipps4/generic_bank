@@ -64,6 +64,8 @@ export function signatures(p: Profile): Signature[] {
       requires: [w.memberNumber],
       forbids: [...ERRORS_ON_SEARCH, 'to begin'],
     },
+    // Search results in a window of their own, at a bank that opens one.
+    { id: 'member.results', requires: ['Search results'], controls: [{ name: 'Open' }] },
     { id: 'member.no_such_member', requires: ['No member found with that number'] },
     { id: 'member.closed', requires: ['Member status: Closed'] },
     { id: 'member.in_use', requires: ['record is in use by another operator'] },

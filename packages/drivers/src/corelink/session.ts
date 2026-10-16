@@ -11,6 +11,7 @@ import {
   type ScreenModel,
   TargetError,
   type,
+  typeSecret,
 } from '@gb/screen';
 import { type DriverContext, type Seen, see, stop } from '../sdk.js';
 import { signatures } from './signatures.js';
@@ -99,7 +100,7 @@ export async function next(sess: Session): Promise<Seen | null> {
 }
 
 /** A drop-down menu's title, drawn with a downward arrow after it. */
-const MENU = /\s[▾▼]$/;
+export const MENU = /\s[▾▼]$/;
 
 /**
  * Presses the control with one of these names. One that sits in a closed drop-down menu is found
@@ -176,9 +177,10 @@ export async function onTheWay(sess: Session, s: Seen, memberId: string): Promis
         stop('failed', 'bad_credentials', 'signed in three times without getting in');
       counts.codeRounds = 0;
       const creds = await ctx.credentials();
+      // The credentials go in by the secret path only: the guard refuses them as plain text.
       if (s.screen !== 'login.welcome_back')
-        await type(page, field(s.model, w.operatorId), creds.operatorId);
-      await type(page, field(s.model, w.password), creds.password);
+        await typeSecret(page, field(s.model, w.operatorId), creds.operatorId);
+      await typeSecret(page, field(s.model, w.password), creds.password);
       await click(page, button(s.model, w.signIn));
       await sess.record(
         'sign in',

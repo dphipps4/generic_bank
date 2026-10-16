@@ -25,12 +25,39 @@ export type Layer = 'task allowlist' | 'element' | 'approval grant' | 'secret ty
 
 export type Verdict = { allowed: true } | { allowed: false; rule: string; layer: Layer };
 
+/**
+ * A bank's own names for the controls the lists name: "Sign In" may be drawn "Log In". The list's
+ * name always counts too. A pattern is for a control the product draws with names of its own (a
+ * drop-down menu's title).
+ */
+export type Names = Readonly<Record<string, readonly (string | RegExp)[]>>;
+
 export interface Context {
   /** What consumeGrant returned for this click, for a money-moving press. */
   grant?: GrantCheck;
   /** The Runner is typing a value from the vault, not text it was given. */
   secret?: boolean;
+  /** What is typed as plain text. */
+  typed?: string;
+  /** The stored secrets (the operator's credentials): plain text that holds one is refused. */
+  secrets?: readonly string[];
+  /** The bank's names for the listed controls. */
+  names?: Names;
 }
+
+/** A refusal, thrown. It trips the guard; nothing may catch it to carry on (plan, §J.2). */
+export class GuardError extends Error {
+  constructor(
+    readonly layer: Layer,
+    readonly rule: string,
+  ) {
+    super(`refused by the ${layer} guard: ${rule}`);
+    this.name = 'GuardError';
+  }
+}
+
+/** The screen an entry names when it holds on every screen, an unknown one too. */
+export const ANY = 'any';
 
 export const JOBS = [
   'check-balance',
@@ -72,10 +99,57 @@ export const MONEY_SCREENS: ReadonlySet<string> = new Set([
   'supervisor_approval',
 ]);
 
-const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
+/** Never on any list (plan, §J.1): refused on every screen, whatever a bank calls its controls. */
+export const NEVER = [
+  'Pay now',
+  'Add payee',
+  'Change address',
+  'Waive fee',
+  'Enroll in eStatements',
+  'Close account',
+  'Admin',
+  'Reports',
+] as const;
+
+const norm = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/\s*:\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 const moneyish = (screen: string, control: string) =>
   MONEY_WORDS.test(control) || (MONEY_SCREENS.has(screen) && norm(control) === 'continue');
+
+/** A click presses a button or opens a link, and a bank draws either: the list's press or open allows it. */
+const CLICK: ReadonlySet<Verb> = new Set(['press', 'open']);
+const sameVerb = (a: Verb, b: Verb) => a === b || (CLICK.has(a) && CLICK.has(b));
+
+const named = (e: Entry, control: string, names: Names = {}) =>
+  [e.control, ...(names[e.control] ?? [])].some((n) =>
+    typeof n === 'string' ? norm(n) === norm(control) : n.test(control.trim()),
+  );
+
+/** Whether plain text holds a stored secret; a secret too short to tell apart is not looked for. */
+const holdsSecret = (text: string, secrets: readonly string[]) =>
+  secrets.some((s) => s.length >= 4 && text.includes(s));
+
+const SCREENS = (
+  JSON.parse(readFileSync(join(dir, 'screens.json'), 'utf8')) as {
+    screens: Record<string, string[]>;
+  }
+).screens;
+
+/**
+ * The screen the lists name for a screen as a driver recognizes it: a recognized screen named in
+ * screens.json is the list's screen it belongs to, one not named there is its own, and one not
+ * recognized is unknown, where nothing is allowed but what holds on any screen.
+ */
+export function screenOf(recognized: string | null): string {
+  if (!recognized) return 'unknown';
+  for (const [screen, ids] of Object.entries(SCREENS)) if (ids.includes(recognized)) return screen;
+  return recognized;
+}
 
 /** Whether the job may take this action on this screen, and if not, which rule and layer refuse. */
 export function decide(
@@ -85,10 +159,21 @@ export function decide(
   control: string,
   ctx: Context = {},
 ): Verdict {
-  const entry = ALLOWLISTS[job]?.find(
-    (e) => e.screen === screen && e.verb === verb && norm(e.control) === norm(control),
-  );
   const what = `${job} does not ${verb} "${control}" on ${screen}`;
+  if (NEVER.some((n) => norm(control).startsWith(norm(n))))
+    return { allowed: false, layer: 'element', rule: `"${control}" is never on any list` };
+  if (ctx.typed !== undefined && holdsSecret(ctx.typed, ctx.secrets ?? []))
+    return {
+      allowed: false,
+      layer: 'secret typing',
+      rule: `plain text for "${control}" holds a stored secret`,
+    };
+  const entry = ALLOWLISTS[job]?.find(
+    (e) =>
+      (e.screen === screen || e.screen === ANY) &&
+      sameVerb(e.verb, verb) &&
+      named(e, control, ctx.names),
+  );
   if (!entry) {
     if (moneyish(screen, control))
       return {
@@ -103,6 +188,12 @@ export function decide(
       allowed: false,
       layer: 'secret typing',
       rule: `"${entry.control}" is typed only from the vault`,
+    };
+  if (!entry.secret && ctx.secret === true)
+    return {
+      allowed: false,
+      layer: 'secret typing',
+      rule: `a secret is typed only into a field the list marks secret, not "${entry.control}"`,
     };
   if (entry.money && !isConsumedGrant(ctx.grant))
     return {

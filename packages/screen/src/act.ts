@@ -1,7 +1,9 @@
 // Acting like a person (plan, §E.4): the real mouse and keyboard, at a control's center in page
 // coordinates. Right before a click the screen is read again and the same control must still be
 // there; if it moved (tiles that re-render), it is found again, up to twice. Typing is key by key,
-// and every key comes from a fixed set.
+// and every key comes from a fixed set. A page given a guard asks it first, every time, with the
+// fresh reading: a click, a key, a typed field or a choice the guard refuses never reaches the
+// browser.
 import type { Page } from './browser.js';
 import { type Control, readScreen, type ScreenModel } from './model.js';
 import { normalize } from './recognize.js';
@@ -28,6 +30,40 @@ const SPECIAL = {
 } as const;
 export type SpecialKey = keyof typeof SPECIAL;
 export const SPECIAL_KEYS = Object.keys(SPECIAL) as [SpecialKey, ...SpecialKey[]];
+
+/** One action, as the guard judges it: on the screen as read right before the browser would act. */
+export interface Action {
+  /** A click on a link opens it; any other click presses. */
+  verb: 'press' | 'open' | 'type' | 'choose';
+  /** The control acted on, from the fresh reading; null for a key pressed on its own. */
+  control: Control | null;
+  model: ScreenModel;
+  /** The key pressed on its own. */
+  key?: SpecialKey;
+  /** What is typed (never a secret), or the option chosen. */
+  text?: string;
+  /** Typed from the vault by its own path (`typeSecret`), never as text a driver holds. */
+  secret?: boolean;
+}
+
+/** Throws to refuse. */
+export type Guard = (a: Action) => void | Promise<void>;
+
+const guards = new WeakMap<Page, Guard>();
+
+/**
+ * Puts a guard in front of every action on this page, and on every window it opens. A page has one
+ * guard, for good.
+ */
+export function guardActions(page: Page, guard: Guard) {
+  if (guards.has(page)) throw new Error('this page already has its guard');
+  guards.set(page, guard);
+}
+
+const guardOf = (page: Page | null): Guard | undefined =>
+  page ? (guards.get(page) ?? guardOf(page.opener)) : undefined;
+
+const ask = async (page: Page, a: Action) => await guardOf(page)?.(a);
 
 const center = (c: Control) => ({
   x: Math.round(c.box.x + c.box.w / 2),
@@ -72,22 +108,31 @@ async function mouse(
   });
 }
 
-/** Clicks a control, re-reading the screen first. Returns the control actually clicked. */
-export async function click(
+/**
+ * Finds a control again on a fresh reading and asks the guard about it, then presses the mouse on
+ * it. Returns the control actually clicked.
+ */
+async function reach(
   page: Page,
   target: Control,
-  o: { retargets?: number } = {},
+  retargets: number,
+  action: (c: Control, m: ScreenModel) => Action,
 ): Promise<Control> {
   let c = target;
-  for (let attempt = 0; attempt <= (o.retargets ?? 2); attempt++) {
-    let again = findAgain(await readScreen(page), c);
+  for (let attempt = 0; attempt <= retargets; attempt++) {
+    let m = await readScreen(page);
+    let again = findAgain(m, c);
     // The page may be redrawing (a frame still loading): wait for it to settle, then look once more.
-    if (!again) again = findAgain((await waitFullyRendered(page, { limitMs: 30_000 })).model, c);
+    if (!again) {
+      m = (await waitFullyRendered(page, { limitMs: 30_000 })).model;
+      again = findAgain(m, c);
+    }
     if (!again) throw new ActError(`the ${c.role} "${c.name}" is no longer on the screen`);
     if (!again.enabled) throw new ActError(`the ${c.role} "${c.name}" is disabled`);
     const moved = Math.abs(again.box.x - c.box.x) > 2 || Math.abs(again.box.y - c.box.y) > 2;
     c = again;
-    if (moved && attempt < (o.retargets ?? 2)) continue; // it moved: read once more before trusting it
+    if (moved && attempt < retargets) continue; // it moved: read once more before trusting it
+    await ask(page, action(c, m));
     const { x, y } = center(c);
     await mouse(page, 'mouseMoved', x, y);
     await mouse(page, 'mousePressed', x, y);
@@ -98,7 +143,26 @@ export async function click(
   throw new ActError(`the ${target.role} "${target.name}" kept moving`);
 }
 
+/** Clicks a control, re-reading the screen first. Returns the control actually clicked. */
+export function click(
+  page: Page,
+  target: Control,
+  o: { retargets?: number } = {},
+): Promise<Control> {
+  return reach(page, target, o.retargets ?? 2, (control, model) => ({
+    verb: control.role === 'link' ? 'open' : 'press',
+    control,
+    model,
+  }));
+}
+
+/** Presses one key on its own, in whatever has the focus. */
 export async function press(page: Page, key: SpecialKey) {
+  await ask(page, { verb: 'press', control: null, model: await readScreen(page), key });
+  await stroke(page, key);
+}
+
+async function stroke(page: Page, key: SpecialKey) {
   const code = SPECIAL[key];
   await page.call('Input.dispatchKeyEvent', {
     type: 'rawKeyDown',
@@ -118,12 +182,30 @@ export async function press(page: Page, key: SpecialKey) {
 
 /** Types into a field, key by key, after clicking it. A field that already holds a value is cleared. */
 export async function type(page: Page, field: Control, text: string) {
+  await typeInto(page, field, text, false);
+}
+
+/**
+ * Types a credential from the vault: the one way a stored secret reaches a field. The guard is told
+ * it is a secret, and refuses it anywhere but a field the allowlist marks secret.
+ */
+export async function typeSecret(page: Page, field: Control, secret: string) {
+  await typeInto(page, field, secret, true);
+}
+
+async function typeInto(page: Page, field: Control, text: string, secret: boolean) {
   for (const ch of text)
     if (!KEYS.test(ch)) throw new ActError('a character outside the allowed keys');
-  await click(page, field);
+  await reach(page, field, 2, (control, model) => ({
+    verb: 'type',
+    control,
+    model,
+    // A secret is never handed on, not even to the guard.
+    ...(secret ? { secret } : { text }),
+  }));
   if (field.hasValue) {
-    await press(page, 'End');
-    for (let i = 0; i < 64; i++) await press(page, 'Backspace');
+    await stroke(page, 'End');
+    for (let i = 0; i < 64; i++) await stroke(page, 'Backspace');
   }
   await keys(page, text);
 }
@@ -170,10 +252,15 @@ export async function choose(page: Page, list: Control, option: string | ((o: st
     prefix += ch;
     if (options.filter((o) => normalize(o).startsWith(normalize(prefix))).length === 1) break;
   }
-  await click(page, list);
-  await press(page, 'Escape');
+  await reach(page, list, 2, (control, model) => ({
+    verb: 'choose',
+    control,
+    model,
+    text: wanted,
+  }));
+  await stroke(page, 'Escape');
   await keys(page, prefix);
-  await press(page, 'Tab');
+  await stroke(page, 'Tab');
   await page.settle();
   const after = (await readScreen(page)).controls.find(
     (c) => c.backendNodeId === list.backendNodeId,

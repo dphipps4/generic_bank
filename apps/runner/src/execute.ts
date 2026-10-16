@@ -28,10 +28,13 @@ import {
   ActError,
   Browser,
   CdpTimeout,
+  guardActions,
   type Page,
   type ScreenModel,
   TargetError,
 } from '@gb/screen';
+import { JOBS } from '@gb/guardrails';
+import { runGuard } from './guard.js';
 import { keepStatements } from './statements.js';
 import { runTransfer, type TransferTask } from './transfer.js';
 
@@ -60,7 +63,8 @@ export interface RunDeps {
 /** At most this many frames per run (plan, §I.1); the last step always gets one. */
 const MAX_FRAMES = 60;
 
-const TASKS = new Set(['check-balance', 'download-statements', 'transfer']);
+/** The jobs a run can be: each has its allowlist. */
+const TASKS = new Set<string>(JOBS);
 
 export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> {
   const now = deps.now ?? (() => new Date());
@@ -95,6 +99,12 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
     creds.password,
     creds.operatorId,
   ];
+  // Every action on every page the run opens passes the job's guard first.
+  const guarded = runGuard({
+    job: run.task as (typeof JOBS)[number],
+    profile,
+    secrets: [creds.password, creds.operatorId],
+  });
   // A resumed run carries on its trail after the steps and frames it already has.
   let { step: stepSeq, frame: frameSeq } = await trailEnd(deps.sql, runId);
   let pictured: { step: number; frame: number } | null = null;
@@ -168,6 +178,7 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
     await browser?.close().catch(() => undefined);
     browser = await launch();
     page = await browser.newPage();
+    guardActions(page, guarded.guard);
     if (deps.headers) await page.call('Network.setExtraHTTPHeaders', { headers: deps.headers });
     return { ctx: contextOf(page), fresh: true };
   };
@@ -188,6 +199,7 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
             lastFrame: () =>
               pictured?.step === stepSeq ? { runId, seq: pictured.frame } : undefined,
             ask: askPerson,
+            granted: guarded.granted,
             deadline,
             ...(deps.pollMs ? { pollMs: deps.pollMs } : {}),
           })
@@ -217,6 +229,10 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
   } finally {
     await (browser as Browser | null)?.close();
   }
+  // A refusal ends the run as a trip, whatever the driver made of the error: the bank is frozen
+  // with the refusal's layer and rule when the run settles.
+  const trip = guarded.tripped();
+  if (trip) ending = { status: 'escalated', code: 'guard_tripped', guard: trip };
   await settleRun(deps.sql, runId, ending);
   // A screen the driver does not know is the driver's fault, never the bank's: it is taken out of
   // service, and a repair case opens (plan, Appendix L). A hazard forced in the lab is the bank

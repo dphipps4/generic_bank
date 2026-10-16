@@ -7,6 +7,7 @@ import {
   decide,
   type GrantCheck,
   JOBS,
+  screenOf,
   VERBS,
 } from '../src/index.js';
 import { approvedRun, REVIEW } from './support.js';
@@ -52,7 +53,10 @@ describe('the allowlist', () => {
     for (const job of JOBS)
       for (const e of ALLOWLISTS[job])
         expect(
-          decide(job, e.screen, e.verb, e.control, { grant, secret: true }),
+          decide(job, e.screen, e.verb, e.control, {
+            grant,
+            ...(e.secret ? { secret: true } : {}),
+          }),
           `${job}: ${e.verb} "${e.control}" on ${e.screen}`,
         ).toEqual({ allowed: true });
   });
@@ -87,9 +91,62 @@ describe('the allowlist', () => {
     });
     expect(decide('transfer', 'member.summary', 'open', 'Admin')).toEqual({
       allowed: false,
-      layer: 'task allowlist',
-      rule: 'transfer does not open "Admin" on member.summary',
+      layer: 'element',
+      rule: '"Admin" is never on any list',
     });
+    expect(decide('transfer', 'member.summary', 'open', 'Activity ▾')).toEqual({
+      allowed: false,
+      layer: 'task allowlist',
+      rule: 'transfer does not open "Activity ▾" on member.summary',
+    });
+  });
+
+  it('knows a bank’s own names for the listed controls, but never for a trap', () => {
+    const names = { 'Sign In': ['Log In'], Menu: [/\s▾$/], 'Transfer Funds': ['Pay now'] };
+    expect(decide('check-balance', 'sign_in', 'press', 'Log In', { names })).toEqual({
+      allowed: true,
+    });
+    expect(decide('check-balance', 'sign_in', 'press', 'Log In')).toMatchObject({
+      allowed: false,
+    });
+    expect(decide('check-balance', 'home', 'press', 'Members ▾', { names })).toEqual({
+      allowed: true,
+    });
+    // A profile that names a trap as the transfer's way in lets nothing through.
+    expect(decide('transfer', 'member.summary', 'open', 'Pay now', { names })).toMatchObject({
+      allowed: false,
+      layer: 'element',
+    });
+  });
+
+  it('takes a click as pressing or opening, as the bank draws it', () => {
+    expect(decide('transfer', 'member.summary', 'press', 'Transfer Funds')).toEqual({
+      allowed: true,
+    });
+    expect(decide('download-statements', 'member.summary', 'open', 'Statements')).toEqual({
+      allowed: true,
+    });
+    expect(decide('transfer', 'transfer.form', 'type', 'Continue')).toMatchObject({
+      allowed: false,
+    });
+  });
+
+  it('lets a notice drawn over any page be dismissed, and nothing else on an unknown one', () => {
+    for (const job of JOBS) {
+      expect(decide(job, 'unknown', 'press', 'Dismiss')).toEqual({ allowed: true });
+      expect(decide(job, 'unknown', 'press', 'Search')).toMatchObject({
+        allowed: false,
+        layer: 'task allowlist',
+      });
+    }
+  });
+
+  it('maps the screens a driver recognizes to the screens the lists name', () => {
+    expect(screenOf('login.welcome_back')).toBe('sign_in');
+    expect(screenOf('login.code_expired')).toBe('staff_code');
+    expect(screenOf('transfer.supervisor')).toBe('supervisor_approval');
+    expect(screenOf('member.summary')).toBe('member.summary');
+    expect(screenOf(null)).toBe('unknown');
   });
 
   it('refuses what is on another job’s list', () => {
@@ -134,6 +191,26 @@ describe('the allowlist', () => {
     expect(decide('check-balance', 'sign_in', 'type', 'Password', { secret: true })).toEqual({
       allowed: true,
     });
+  });
+
+  it('types a secret nowhere else, and no plain text that holds one', () => {
+    expect(
+      decide('check-balance', 'member.search', 'type', 'Member number', { secret: true }),
+    ).toMatchObject({ allowed: false, layer: 'secret typing' });
+    const secrets = ['p'.repeat(12)];
+    expect(
+      decide('transfer', 'transfer.form', 'type', 'Memo', {
+        secrets,
+        typed: `GBX 7Q4M ${'p'.repeat(12)}`,
+      }),
+    ).toEqual({
+      allowed: false,
+      layer: 'secret typing',
+      rule: 'plain text for "Memo" holds a stored secret',
+    });
+    expect(
+      decide('transfer', 'transfer.form', 'type', 'Memo', { secrets, typed: 'GBX 7Q4M rent' }),
+    ).toEqual({ allowed: true });
   });
 
   it('refuses a money-moving press with no grant, or with one written by hand', () => {
