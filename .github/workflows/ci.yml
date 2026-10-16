@@ -62,18 +62,49 @@ jobs:
           key: chrome-${{ runner.os }}-${{ hashFiles('infra/scripts/browser.sh') }}
       - name: Headless Chromium for the browser tests
         run: '[ -d .run/browser/chrome ] || infra/scripts/browser.sh'
-      # The factory's repair drives the bank end to end, so it runs alone after the rest.
       - name: The tests this change touches
         if: github.event_name == 'pull_request'
         run: npx vitest run --changed origin/${{ github.base_ref }} --passWithNoTests --bail=1 --exclude tests/browser/repair.test.ts
-      - name: The factory's repair, if this change touches it
-        if: github.event_name == 'pull_request'
-        run: npx vitest run tests/browser/repair.test.ts --changed origin/${{ github.base_ref }} --passWithNoTests
       - name: The whole suite
         if: github.event_name != 'pull_request'
         run: npx vitest run --bail=1 --exclude tests/browser/repair.test.ts
-      - name: The factory's repair
-        if: github.event_name != 'pull_request'
+
+  # The factory's repair drives the bank end to end for minutes, so it has a machine of its own,
+  # beside the other tests. A pull request runs it only when it changes the factory, the drivers,
+  # the screen code or the test itself; a merge to master always does.
+  repair:
+    name: the factory's repair
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Does this change touch the repair
+        id: touches
+        run: |
+          if [ "${{ github.event_name }}" != pull_request ] || git diff --name-only "origin/${{ github.base_ref }}...HEAD" \
+              | grep -qE '^(apps/factory/|packages/drivers/|packages/screen/|tests/browser/repair\.test\.ts$)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.touches.outputs.run == 'true'
+        with:
+          node-version: 26
+          cache: npm
+      - if: steps.touches.outputs.run == 'true'
+        run: npm ci --no-audit --no-fund && npm run db:generate
+      - uses: actions/cache@v4
+        if: steps.touches.outputs.run == 'true'
+        with:
+          path: .run/browser
+          key: chrome-${{ runner.os }}-${{ hashFiles('infra/scripts/browser.sh') }}
+      - name: Headless Chromium
+        if: steps.touches.outputs.run == 'true'
+        run: '[ -d .run/browser/chrome ] || infra/scripts/browser.sh'
+      - name: The repair test
+        if: steps.touches.outputs.run == 'true'
         run: npx vitest run tests/browser/repair.test.ts
 
   secrets:
