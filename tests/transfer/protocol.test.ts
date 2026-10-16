@@ -1,13 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { GENERIC_BANK, pressIntent } from '../../packages/drivers/src/index.js';
 import { journal, resultOf } from '../../packages/runs/src/index.js';
-import { type Harness, stallsAt, transferHarness, until } from './transfer-harness.js';
+import { type Harness, stallsAt, transferHarness, until } from '../runs/transfer-harness.js';
 
 // The swallowed-submit protocol (plan, §F.2, §D.4): the submit is never retried blindly. An unclear
 // result reads the history; a run that resumes after its journaled submit goes to the history and
 // never to the button; a run that lost its browser while parked signs in fresh and checks the
 // screen against the grant. The bank's ledger is the judge: never two postings for one grant. The
-// swallowed submit itself, which waits out the bank's endless "Processing" page, is in tests/long.
+// swallowed submit itself, which waits out the bank's endless "Processing" page, is in
+// tests/long/transfer-swallowed.test.ts.
 
 let h: Harness;
 beforeAll(async () => {
