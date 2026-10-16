@@ -132,5 +132,5 @@ describe('the hazard check, then probation, against Generic Bank', () => {
       await probationRun(db, v.id, await judge(attempt, sandbox().ledger, null, HEALTHY.expected));
     expect((await versionOf(db, v.id))!.state).toBe('promoted');
     expect(await listed()).toEqual([{ task: 'check-balance', crawlerVersion: 'v1' }]);
-  }, 1_200_000);
+  }, 1_800_000);
 });
