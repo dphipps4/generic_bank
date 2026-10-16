@@ -77,6 +77,11 @@ beforeAll(async () => {
       return s.end(
         `<title>Near</title><p>Review transfer</p><form method="post" action="/submit"><input type="submit" value="Confirm"></form><form method="post" action="/continue"><input type="submit" value="Continue"></form>`,
       );
+    // Send code asks the bank for a sign-in code; Send money moves money.
+    if (q.url === '/send')
+      return s.end(
+        `<title>Near</title><p>Where should we send your code?</p><form method="post" action="/money"><input type="submit" value="Send money"></form><form method="post" action="/code"><input type="submit" value="Send code"></form>`,
+      );
     if (q.url === '/review')
       return s.end(
         `<title>Near</title><p>Review transfer</p><form method="post" action="/submit"><input type="image" src="/confirm.png"></form><form method="post" action="/preview"><input type="image" src="/confirm.png" alt="Preview"></form>`,
@@ -274,6 +279,23 @@ describe('the Scout’s tools', () => {
     // Continue only leads to the review page, and stays allowed.
     expect(
       read(await s.call('scout', 'browser_click', { ref: refOf(p, 'button', 'Continue') })).page
+        .texts,
+    ).toContain('Posted.');
+    expect(posts).toBe(before + 1);
+    await page.close();
+  }, 120_000);
+
+  it('on the transfer path, presses Send code but never Send money', async () => {
+    const { page, s } = await newScout('scout-send', `${nearUrl}send`, lastCode, []);
+    const before = posts;
+    s.onTransferPath(true);
+    const p = read(await s.call('scout', 'browser_open', {})).page;
+    await expect(
+      s.call('scout', 'browser_click', { ref: refOf(p, 'button', 'Send money') }),
+    ).rejects.toThrow(/could move money/);
+    expect(posts).toBe(before);
+    expect(
+      read(await s.call('scout', 'browser_click', { ref: refOf(p, 'button', 'Send code') })).page
         .texts,
     ).toContain('Posted.');
     expect(posts).toBe(before + 1);

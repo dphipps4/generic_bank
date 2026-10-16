@@ -55,8 +55,10 @@ export interface Latest {
   view: ReturnType<typeof view>;
 }
 
-// Words that move money, for every bank, on the transfer path. "Continue" only reaches the review.
-const MONEY = /\b(confirm|submit|send|pay|authori[sz]e|approve|transfer now)\b/i;
+// Words that move money, for every bank, on the transfer path. "Continue" only reaches the review,
+// and "Send" alone is the bank sending a code.
+const MONEY =
+  /\b(confirm|submit|send\s+(money|payment|funds|transfer)|pay|authori[sz]e|approve|transfer\s+now)\b/i;
 
 // The bank says it sent a code, or asks for one from the authenticator app.
 const CODE_SENT =
