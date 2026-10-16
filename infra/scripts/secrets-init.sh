@@ -62,8 +62,10 @@ done
 
 info "Secrets you enter"
 # A value someone else issues (an API key) cannot be generated. Each is explained here and entered
-# by a person with sops; setup does not go on while a required one is blank.
-missing=0 any=0
+# by a person with just secret-set; setup does not go on while a required one is blank.
+# The model keys are one choice: whichever is set is reported, a blank one is not.
+MODEL_KEYS=" ANTHROPIC_API_KEY OPENAI_API_KEY "
+missing=0 any=0 model=0
 while IFS= read -r line; do
   read -r f key how _ <<<"$line"
   [[ "$how" == entered || "$how" == 'entered?' ]] || continue
@@ -72,14 +74,21 @@ while IFS= read -r line; do
   value="$(decrypt "$f" | grep -E "^${key}=" | tail -1 | cut -d= -f2-)"
   if [[ -n "$value" ]]; then
     ok "$key is set"
+    if [[ "$MODEL_KEYS" == *" $key "* ]]; then model=1; fi
+  elif [[ "$MODEL_KEYS" == *" $key "* ]]; then
+    continue
   elif [[ "$how" == 'entered?' ]]; then
     warn "$key is blank, which is allowed. $about"
-    echo "    To enter it: ${B}just secrets-edit $f${N}, put the value after $key= and save."
+    echo "    To enter it: copy it, then ${B}just secret-set $f $key${N} (it reads the clipboard, never shows it)."
   else
     echo "  ${R}✗${N} $key is required and blank. $about"
-    echo "    Enter it: ${B}just secrets-edit $f${N}, put the value after $key= and save."
+    echo "    Enter it: copy it, then ${B}just secret-set $f $key${N} (it reads the clipboard, never shows it)."
     missing=1
   fi
 done < <(grep -v '^\s*#' infra/secrets/secrets.spec | grep -v '^\s*$')
+if [[ $model == 0 ]]; then
+  warn "No model key is set, so the factory and the demo agent run in mock mode."
+  echo "    To use Claude: copy your key, then ${B}just secret-set factory ANTHROPIC_API_KEY${N} (or OPENAI_API_KEY for OpenAI)."
+fi
 [[ $any == 1 ]] || ok "nothing to enter"
-[[ $missing == 0 ]] || die "Enter the values marked ✗ with sops, then run just setup again."
+[[ $missing == 0 ]] || die "Enter the values marked ✗ with just secret-set, then run just setup again."
