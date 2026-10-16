@@ -222,6 +222,9 @@ check: ## Everything CI runs: typecheck, lint, tests, import boundaries, secrets
 test: ## The whole suite (what CI runs on every merge to master)
 	@npx vitest run
 
+ci: ## Everything GitHub's CI runs, here (slow: most of an hour): checks, both suites, images, secrets
+	@$(SCRIPTS)/ci.sh
+
 test-changed: ## Only the tests your uncommitted and unmerged changes touch
 	@npx vitest run --changed origin/master --passWithNoTests
 
