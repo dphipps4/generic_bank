@@ -232,10 +232,10 @@ secrets-scan: ## Secrets (gitleaks, in its pinned image): the whole history and 
 
 demo evals check-prompts memory-seed memory-export memory-import export import trace observe docs: ## Not built yet: each says which milestone brings it
 	@case "$@" in \
-	  demo) m=M4 ;; evals) m=M7 ;; check-prompts) m=M9 ;; \
-	  memory-seed|memory-export|memory-import) m=M6 ;; export|import) m=M6 ;; \
-	  trace|observe) m=M5 ;; docs) m=M10 ;; esac; \
-	echo "make $@ is not built yet: it arrives in milestone $$m."; exit 1
+	  demo) m="milestone M4" ;; evals) m="milestone M7" ;; check-prompts) m="milestone M9" ;; \
+	  memory-seed) m="milestone M6" ;; memory-export|memory-import|export|import) m="Part 2" ;; \
+	  trace|observe) m="milestone M5" ;; docs) m="milestone M10" ;; esac; \
+	echo "make $@ is not built yet: it arrives in $$m."; exit 1
 
 ##@ Housekeeping
 
