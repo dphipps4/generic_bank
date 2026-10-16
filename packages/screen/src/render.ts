@@ -1,11 +1,12 @@
 // When a page is ready to read and act on (plan, §E.2), never "network idle": legacy pages poll,
 // stream and keep connections open. A screen the caller recognizes, with something enabled to press
 // and nothing saying it is still loading, is ready once its frames have loaded and two readings
-// 300 ms apart have the same layout; no picture comparison is needed. (Framesets finish drawing
-// at their load event, and legacy scripts redraw a page just after it first appears.) Otherwise a page is ready when every frame has loaded, two readings 700 ms apart
-// show the same picture and structure, and there is something to act on. A still page that is no
-// screen the caller knows is handed back after a while as it is, so an unknown screen is reported
-// rather than waited on; a page that is still loading is waited on up to the limit (3 minutes).
+// 300 ms apart have the same layout; no picture comparison is needed (framesets finish drawing at
+// their load event, and legacy scripts redraw a page just after it first appears). Otherwise a
+// page is ready when every frame has loaded, two readings 700 ms apart show the same picture and
+// structure, and there is something to act on. A loaded, usable page that is no screen the caller
+// knows comes back as it is after 10 seconds, still or not, so an unknown screen is reported
+// rather than waited on; only a page that is still loading is waited on up to the limit (3 min).
 import type { Page } from './browser.js';
 import { readScreen, type ScreenModel } from './model.js';
 import { decodePng, type Image, sameOutside } from './png.js';
@@ -68,7 +69,7 @@ export async function waitFullyRendered(
   let prev: { image: Image; key: string } | null = null;
   let last: ScreenModel | null = null;
   let reason = 'not read yet';
-  let stillSince: number | null = null;
+  let usableSince: number | null = null;
   let readyKey: string | null = null;
   while (Date.now() - start < limit) {
     // A dialog freezes the page, screenshots included: hand it back to the caller to answer.
@@ -119,9 +120,9 @@ export async function waitFullyRendered(
       sameOutside(prev.image, image, model.animated);
     if (still && signals.length === 0 && actionable && complete)
       return { model, rendered: true, waitedMs: Date.now() - start };
-    // Still, loaded and usable, but no screen the caller knows: after 20 s it is what it is.
-    stillSince = still && signals.length === 0 && actionable ? (stillSince ?? Date.now()) : null;
-    if (stillSince !== null && Date.now() - stillSince >= 20_000)
+    // Loaded and usable, but no screen the caller knows: after 10 s it is what it is.
+    usableSince = signals.length === 0 && actionable ? (usableSince ?? Date.now()) : null;
+    if (usableSince !== null && Date.now() - usableSince >= 10_000)
       return { model, rendered: true, waitedMs: Date.now() - start };
     reason =
       signals[0] ??
