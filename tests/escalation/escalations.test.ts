@@ -155,5 +155,5 @@ describe('an escalation, as the agent and a person see it', () => {
     expect(steps[0]!.name).toBe('unknown');
     expect(steps.map((s) => s.seq)).toEqual(steps.map((_, i) => i + 1));
     expect(steps.map((s) => s.name)).toContain('balance');
-  }, 180_000);
+  }, 120_000);
 });

@@ -73,5 +73,5 @@ describe('CoreLink on example', () => {
     } finally {
       await page.close();
     }
-  }, 180_000);
+  }, 120_000);
 });

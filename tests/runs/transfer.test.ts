@@ -81,7 +81,7 @@ describe('a transfer run', () => {
     expect(await verifyJournal(h.db, runId)).toMatchObject({ ok: true, entries: 4 });
     // The browser was held while parked: one browser, one sign-in.
     expect(h.browsers.length - launched).toBe(1);
-  }, 300_000);
+  }, 180_000);
 
   it('never makes up a memo token: a run created without one stops before any browser opens', async () => {
     const { runId } = await createRun(

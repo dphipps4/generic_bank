@@ -39,16 +39,12 @@ jobs:
       - run: npm run lint
       - run: npm run depcruise
 
-  # The tests, split three ways by file. A pull request runs the tests its change touches; a change
-  # to migrations, seeds, config, infrastructure or CI runs them all (vitest.config.ts,
-  # forceRerunTriggers). A merge to master runs the whole suite.
+  # A pull request runs the tests its change touches; a change to migrations, seeds or the files
+  # tests read runs them all (vitest.config.ts, forceRerunTriggers). A merge to master runs the
+  # whole suite. The first failure stops the run.
   tests:
-    name: tests (${{ matrix.shard }} of 3)
+    name: tests
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,14 +56,25 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run db:generate
+      - uses: actions/cache@v4
+        with:
+          path: .run/browser
+          key: chrome-${{ runner.os }}-${{ hashFiles('infra/scripts/browser.sh') }}
       - name: Headless Chromium for the browser tests
-        run: infra/scripts/browser.sh
+        run: '[ -d .run/browser/chrome ] || infra/scripts/browser.sh'
+      # The factory's repair drives the bank end to end, so it runs alone after the rest.
       - name: The tests this change touches
         if: github.event_name == 'pull_request'
-        run: npx vitest run --changed origin/${{ github.base_ref }} --shard=${{ matrix.shard }}/3 --passWithNoTests
+        run: npx vitest run --changed origin/${{ github.base_ref }} --passWithNoTests --bail=1 --exclude tests/browser/repair.test.ts
+      - name: The factory's repair, if this change touches it
+        if: github.event_name == 'pull_request'
+        run: npx vitest run tests/browser/repair.test.ts --changed origin/${{ github.base_ref }} --passWithNoTests
       - name: The whole suite
         if: github.event_name != 'pull_request'
-        run: npx vitest run --shard=${{ matrix.shard }}/3 --passWithNoTests
+        run: npx vitest run --bail=1 --exclude tests/browser/repair.test.ts
+      - name: The factory's repair
+        if: github.event_name != 'pull_request'
+        run: npx vitest run tests/browser/repair.test.ts
 
   secrets:
     name: no secrets in history
