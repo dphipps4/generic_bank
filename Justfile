@@ -49,7 +49,7 @@ default:
 requirements:
     @{{scripts}}/requirements.sh
 
-# The same, plus Node 22 for developing and running the tests
+# The same, plus Node 26 for developing and running the tests
 [group('Start here')]
 requirements-dev:
     @{{scripts}}/requirements.sh --dev

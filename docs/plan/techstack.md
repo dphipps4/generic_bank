@@ -9,7 +9,7 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Element | Choice | Why |
 |---|---|---|
 | Language | **TypeScript** (strict) | One language everywhere; types carry the task contract end to end |
-| Runtime | **Node 22 LTS** | Built-in `fetch`, test runner and watch mode |
+| Runtime | **Node 26** | Built-in `fetch`, test runner and watch mode |
 | Modules | **ESM** throughout | AdminJS and most libraries are ESM-only |
 | Monorepo | **npm workspaces**, TypeScript project references | Incremental builds, no extra tool |
 
@@ -123,4 +123,4 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 |---|---|---|
 | Containers | **Docker** compose profiles (`default`, `factory`) | One command; a memory limit on every service |
 | Entry point | **just** | `up`, `demo`, `factory`, `try`, `requirements`, `down` |
-| Images | Node 22 slim; Debian's Chromium only where a browser runs | Small images |
+| Images | Node 26 slim; Debian's Chromium only where a browser runs | Small images |

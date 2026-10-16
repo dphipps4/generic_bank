@@ -13,7 +13,7 @@ Everything runs locally with docker compose, and every step is a [just](https://
 
 You need macOS 14 or newer, and an 8 GB Mac is enough. Install git to clone this, and
 [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Engine 27+, Compose 2.29+)
-with 5 GB of memory set aside for it. To develop, add [Node 22](https://nodejs.org/en/download)
+with 5 GB of memory set aside for it. To develop, add [Node 26](https://nodejs.org/en/download)
 for the tests, the type checker and the linter.
 
 ```sh
@@ -124,7 +124,7 @@ by 10000 (its Console is on http://localhost:18080).
 ## Develop
 
 ```sh
-just requirements-dev           # just requirements, plus Node 22
+just requirements-dev           # just requirements, plus Node 26
 just dev-setup                  # once: Node dependencies, the Prisma client, Chromium for the tests
 just check                      # the quick checks: types, lint, tests, import boundaries, secrets
 just ci                         # what GitHub's CI checks, on this machine; no Actions needed

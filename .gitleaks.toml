@@ -4,7 +4,7 @@
 [extend]
 useDefault = true
 
-# Node's own V8 header in the base image (node:22-bookworm-slim): `kApiTaggedSize = ...` is a
+# Node's own V8 header in the base image (node:26-bookworm-slim): `kApiTaggedSize = ...` is a
 # C++ constant whose name contains "Api", not a key.
 [[allowlists]]
 description = "Node's V8 header in the base image"

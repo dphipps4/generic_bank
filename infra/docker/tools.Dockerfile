@@ -2,7 +2,7 @@
 # The tools a Mac would otherwise need from Homebrew: SOPS and age for the secrets files, jq and
 # openssl for the scripts, and Node with marked for the plan's HTML pages. Built on the same Debian
 # base as every other image here, so its layers are shared and the host needs only Docker.
-FROM node:22-bookworm-slim
+FROM node:26-bookworm-slim
 ARG TARGETARCH
 # SOPS from its own release (Debian's is older than `sops set --value-stdin`), checked against the
 # release's checksums.

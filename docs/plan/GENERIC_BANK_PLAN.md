@@ -1903,7 +1903,7 @@ docs/            the documents the README links to (§Q.2)
 Justfile         the only entry point: every action is a just recipe (§S.1)
 ```
 
-npm workspaces, TypeScript project references, ESM, Node 22.
+npm workspaces, TypeScript project references, ESM, Node 26.
 
 **Import boundaries**, enforced by `dependency-cruiser` in CI:
 
@@ -1979,7 +1979,7 @@ nothing is hosted elsewhere.
 
 | Recipe | What it does |
 |---|---|
-| `just requirements` | checks the Mac with explicit versions (macOS 14, git, just, Docker Engine 27 and Compose 2.29 with 5 GB of memory, disk, ports) and fails, saying what to install, until every one is met; `just requirements-dev` adds Node 22 |
+| `just requirements` | checks the Mac with explicit versions (macOS 14, git, just, Docker Engine 27 and Compose 2.29 with 5 GB of memory, disk, ports) and fails, saying what to install, until every one is met; `just requirements-dev` adds Node 26 |
 | `just plan` | renders every document in `docs/plan` as HTML pages, in a container, and opens them |
 | `just setup` | once after `git clone`: `just requirements`, then generates the age key and dev secrets and builds the images; SOPS, age and jq run from a pinned tools image, so the Mac needs only Docker |
 | `just dev-setup` | once, to develop: Node dependencies, the Prisma client, Chromium for the browser tests |
@@ -2154,7 +2154,7 @@ elsewhere are not repeated; these are the rest:
 
 | Area | Choice |
 |---|---|
-| Language and runtime | TypeScript (strict), Node 22 LTS, ESM, npm workspaces with project references |
+| Language and runtime | TypeScript (strict), Node 26, ESM, npm workspaces with project references |
 | Services | Fastify everywhere; zod contracts with OpenAPI and Swagger UI (`@fastify/swagger`); tool definitions from the same contracts |
 | Console | AdminJS with `@adminjs/fastify` and `@adminjs/prisma`, custom React components |
 | Bank | hand-written server templates and ES5, `pdf-lib`, argon2 |
@@ -2167,7 +2167,7 @@ elsewhere are not repeated; these are the rest:
 | Secrets | SOPS with age; zod-parsed environment that fails closed |
 | Observability | Postgres records; pino logs; OpenTelemetry, Tempo, Loki and Grafana in Part 2 |
 | Quality | vitest, ESLint, Prettier, E0 rules on the TypeScript compiler API, dependency-cruiser, cspell, markdownlint, gitleaks, `npm audit`, GitHub Actions; SonarQube in Part 2 |
-| Packaging | Docker compose profiles (`default`, `factory`), just, Node 22 slim images (Chromium only in Runner, Scout browser and sandbox) |
+| Packaging | Docker compose profiles (`default`, `factory`), just, Node 26 slim images (Chromium only in Runner, Scout browser and sandbox) |
 
 Not used: a graph database in Part 1, Redis or any broker, Kubernetes, a model inside production
 tasks, a client framework in the bank.
