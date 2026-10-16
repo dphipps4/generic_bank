@@ -11,7 +11,7 @@ import { gateway } from '../../apps/factory/src/gateway.js';
 import { memoryClient } from '../../apps/factory/src/memory.js';
 import type { Sandbox } from '../../apps/factory/src/hazard-check.js';
 import { sqlLedger } from '../../apps/factory/src/ledger.js';
-import { DEFAULT_ROLES } from '../../apps/factory/src/models.js';
+import { DEFAULT_ROLES } from '../../apps/factory/test/fakes.js';
 import type { Claim } from '../../apps/factory/src/recommend.js';
 import { factoryRun, type Mode } from '../../apps/factory/src/run.js';
 import { buildServer } from '../../apps/factory/src/server.js';

@@ -8,12 +8,11 @@ import { join } from 'node:path';
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ConfigError, loadConfig } from '../../../packages/config/src/index.js';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import { CAPS } from '../src/caps.js';
 import { gateway, worstCaseUsd } from '../src/gateway.js';
 import { sqlLedger, type Ledger } from '../src/ledger.js';
-import { DEFAULT_ROLES, PRICES, type Provider, ROLE_SETTINGS, rolesOf } from '../src/models.js';
+import { PRICES, type Provider } from '../src/models.js';
 import { buildServer } from '../src/server.js';
 import { live, upstreamFor, type Upstream } from '../src/upstream.js';
 
@@ -231,11 +230,8 @@ describe('the model gateway', () => {
     expect((await first).statusCode).toBe(200);
   });
 
-  it('refuses a model with no known price, server tools, an unknown run and a bad token', async () => {
+  it('refuses server tools, an unknown run and a bad token', async () => {
     const post = factory(live({ anthropic: fakeModel() }, dir));
-    const fable = await post('run1', 'scout', ask({ model: 'claude-fable-5-1' }));
-    expect(fable.statusCode).toBe(400);
-    expect(fable.json().error.message).toBe('no known price for model claude-fable-5-1');
     const search = ask({ tools: [{ type: 'web_search_20260209', name: 'web_search' }] });
     expect((await post('run1', 'scout', search)).statusCode).toBe(400);
     expect((await post('nope', 'scout', ask())).statusCode).toBe(404);
@@ -363,33 +359,6 @@ describe('mock mode', () => {
   });
 });
 
-describe('each role’s model', () => {
-  const settings = (env: Record<string, string>) => rolesOf(loadConfig(ROLE_SETTINGS, env));
-
-  it('defaults to Opus 5.5, thinking hard for the Supervisor and lightly for the Scout', () => {
-    expect(settings({})).toEqual(DEFAULT_ROLES);
-    expect(DEFAULT_ROLES.scout).toEqual({
-      provider: 'anthropic',
-      model: 'claude-opus-5-5',
-      effort: 'low',
-    });
-    expect(DEFAULT_ROLES.supervisor.effort).toBe('high');
-    expect(DEFAULT_ROLES.lessons).toEqual(DEFAULT_ROLES.supervisor);
-  });
-
-  it('comes from the settings: Anthropic or OpenAI, and no other provider', () => {
-    const roles = settings({
-      FACTORY_SUPERVISOR_EFFORT: 'max',
-      FACTORY_SCOUT_PROVIDER: 'openai',
-      FACTORY_SCOUT_MODEL: 'gpt-test',
-    });
-    expect(roles.supervisor.effort).toBe('max');
-    expect(roles.lessons.effort).toBe('max');
-    expect(roles.scout).toEqual({ provider: 'openai', model: 'gpt-test', effort: 'low' });
-    expect(() => settings({ FACTORY_SCOUT_PROVIDER: 'google' })).toThrow(ConfigError);
-  });
-});
-
 describe('the OpenAI route', () => {
   const openai = (ledger?: Ledger) =>
     factory(live({ anthropic: fakeModel(), openai: fakeOpenAI() }, dir), ledger, 'openai');
@@ -411,16 +380,13 @@ describe('the OpenAI route', () => {
     ]);
   });
 
-  it('checks the budget before the call, and refuses a model with no price or a server tool', async () => {
+  it('checks the budget before the call, and refuses a server tool', async () => {
     const post = openai();
     await spent('run1', 23.5);
     // 64,000 output tokens could cost $0.64 at $10 a million: past the $0.50 left before the lessons.
     const big = await post('run1', 'scout', chat({ max_completion_tokens: 64_000 }));
     expect(big.statusCode).toBe(402);
     expect(big.json().error.type).toBe('billing_error');
-    const unpriced = await post('run1', 'scout', chat({ model: 'gpt-unknown' }));
-    expect(unpriced.statusCode).toBe(400);
-    expect(unpriced.json().error.message).toBe('no known price for model gpt-unknown');
     expect(
       (await post('run1', 'scout', chat({ max_completion_tokens: undefined }))).statusCode,
     ).toBe(400);

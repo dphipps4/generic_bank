@@ -286,16 +286,6 @@ api-token:
 api-docs:
     @npx tsc -b && node apps/api/dist/openapi-cli.js > docs/api/openapi.json && echo "  wrote docs/api/openapi.json"
     @node infra/scripts/serve-docs.mjs docs/api $API_DOCS_PORT
-
-# The demo agent: a member assistant on the configured model, using only the API's tools (scripted without ANTHROPIC_API_KEY)
-[group('Run')]
-agent: backend
-    @mkdir -p .run/agent
-    @client="$({{compose}} exec -T api node apps/api/dist/agent-client-cli.js)"; tty="$([[ -t 0 ]] && echo -t || true)"; \
-      docker run --rm -i $tty --init --network {{project}}_app -v "$PWD/.run/agent:/app/.run/agent" \
-        -e AGENT_CLIENT="$client" -e API_URL=http://api:8000 -e AGENT_PROVIDER -e AGENT_MODEL -e ANTHROPIC_API_KEY \
-        $GB_IMAGE node apps/agent/dist/main.js
-
 # The quick checks: typecheck, lint, tests, import boundaries, secrets
 [group('Quality')]
 check:

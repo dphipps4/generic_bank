@@ -6,10 +6,10 @@ and the one thing the crawler never does without a person: move money. A person 
 codes in the Console, not a script. The crawler prepares a transfer and parks it on the bank's
 review page, a person approves it, and it's submitted once under a single-use grant. If the
 result is unclear, the crawler reads the account's history and never presses the button again.
-Statements come back as stored documents, the demo agent holds a whole conversation through the
-API's own tools, and every error path is one click away in the hazard lab. The plan's
+Statements come back as stored documents, and every error path is one click away in the hazard
+lab. The plan's
 [Appendix F](../plan/GENERIC_BANK_PLAN.md#appendix-f-transfers-a-human-approved-activity),
-[§D.5](../plan/GENERIC_BANK_PLAN.md#d5-tools-for-agents-and-the-demo-agent),
+[§D.5](../plan/GENERIC_BANK_PLAN.md#d5-tools-for-agents),
 [§D.8](../plan/GENERIC_BANK_PLAN.md#d8-escalate-resolve-retry) and
 [§S.2](../plan/GENERIC_BANK_PLAN.md#s2-the-hazard-lab) are the specification, with
 [§5.1](../plan/GENERIC_BANK_PLAN.md#51-the-browsers-fingerprint-chrome-on-a-mac) and
@@ -34,7 +34,6 @@ transfer happened once: it counts the bank's postings and its state-change count
 | 12 | **Escalations** | Resume, Finish by hand and Cancel from the inbox; the escalation id and `resolvable` in the problem details; a guard trip freezes the bank until a person clears it on the Freezes page | the agent sees `409`, then `200` after Resume, `200 handed_off` after Finish by hand, `410` after Cancel |
 | 13 | **Download Statements** | The driver for Generic Bank, each requested month stored as a document, "not available" in the bank's words, `POST /tasks/download-statements`, and the statement fetched by its reference with `tasks:statements` | the stored PDF is the bank's own for that month; a month the bank does not have is "not available" |
 | 14 | **The tools, complete** | Every task as a tool, each description saying what it never does; tool results carry an error flag for every status but success, hand-off and waiting | the tools, the endpoints and the OpenAPI document never disagree |
-| 15 | **The demo agent** | `apps/agent` and `just agent`: a member assistant on Claude in a pi session, whose only tools are the ones `GET /tools` returns; without a key, a scripted mock makes the same calls | the mock conversation runs end to end against the real API, and its transfer waits for a person |
-| 16 | **The hazard lab** | A Console page for admins when hazards are forceable: bank, member, task and hazards, with the expected result beside each; `just try` from the command line | the lab and the outcome table read the same list of hazards and results |
-| 17 | **The escalation suite** | `tests/escalation`: an unknown screen escalates; a person resumes it through the Console API, and the run finishes | the suite is green and CI fails if it is skipped |
-| 18 | **The transfer-safety suite** (Part 2) | Swallowed submit, lost session while parked, the amount changed on screen, grant replay, duplicate detection | never two postings for one grant, by the bank's ledger |
+| 15 | **The hazard lab** | A Console page for admins when hazards are forceable: bank, member, task and hazards, with the expected result beside each; `just try` from the command line | the lab and the outcome table read the same list of hazards and results |
+| 16 | **The escalation suite** | `tests/escalation`: an unknown screen escalates; a person resumes it through the Console API, and the run finishes | the suite is green and CI fails if it is skipped |
+| 17 | **The transfer-safety suite** (Part 2) | Swallowed submit, lost session while parked, the amount changed on screen, grant replay, duplicate detection | never two postings for one grant, by the bank's ledger |

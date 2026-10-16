@@ -209,6 +209,10 @@ function differs(a: unknown, b: unknown, path: string): string | null {
   return path || 'the request';
 }
 
+/** A request without its model's name: a recording replays whichever model config/app.env names. */
+const modelless = (r: unknown) =>
+  r && typeof r === 'object' ? { ...(r as Record<string, unknown>), model: undefined } : r;
+
 /** Mock mode: each request must be the next one in the run's recording, which answers it. */
 export function replay(recordings: string): Upstream {
   const runs = new Map<string, { calls: Recorded[]; next: number }>();
@@ -241,7 +245,7 @@ export function replay(recordings: string): Upstream {
           ? `the role (${role}, recorded ${call.role})`
           : call.provider !== provider
             ? `the provider (${provider}, recorded ${call.provider})`
-            : differs(unpictured(call.request), unpictured(request), '');
+            : differs(modelless(unpictured(call.request)), modelless(unpictured(request)), '');
       if (where)
         throw new Refusal(
           400,

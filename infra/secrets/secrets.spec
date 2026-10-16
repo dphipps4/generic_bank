@@ -23,7 +23,7 @@ local   HAZARD_HMAC_KEY          hex
 local   BANK_ADMIN_TOKEN         hex
 local   BANK_SERVICE_PASSWORD    password
 local   BANK_SUPERVISOR_PASSWORD password
-factory ANTHROPIC_API_KEY        entered?  -- A Claude API key, from console.anthropic.com under Settings, API keys. Only the software factory and the demo agent use it; left blank, both run in mock mode.
+factory ANTHROPIC_API_KEY        entered?  -- A Claude API key, from console.anthropic.com under Settings, API keys. Only the software factory uses it; left blank, it runs in mock mode.
 factory OPENAI_API_KEY           entered?  -- An OpenAI API key, from platform.openai.com under API keys. Only a factory role set to the openai provider uses it, so blank is fine on Claude. With neither key, the factory runs in mock mode.
 local   MEMORY_TOKEN_FACTORY     hex
 factory FACTORY_GATEWAY_TOKEN    hex

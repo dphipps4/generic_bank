@@ -81,7 +81,7 @@ factory's contract test, so a newly promoted bank simply appears: no new endpoin
 /tasks/check-balance` and its siblings start a task; `GET /tasks/:id?wait=30` waits for it.
 `GET /tools` returns tool definitions generated from the same types, so an agent calls the API
 directly. OpenAPI and a Swagger page at `/docs` document it ([§D.1](#d1-tasks),
-[§D.5](#d5-tools-for-agents-and-the-demo-agent)).
+[§D.5](#d5-tools-for-agents)).
 
 ```json
 { "runId": "r_8f2c", "status": "succeeded",
@@ -115,11 +115,6 @@ Reusing a spent refresh token cancels all the client's tokens ([§D.6](#d6-oauth
 Error bodies are problem documents with the code, run id and retryability ([§D.7](#d7-http-status-codes)).
 After a `409`, a person resumes, finishes by hand or cancels, and the agent just asks again; a
 retry never starts a second run ([§D.8](#d8-escalate-resolve-retry)).
-
-**The demo agent.** `just agent` runs a member assistant on Claude, on pi, using only the API's
-tools ("what is my checking balance?", "move $200 to savings", "send me last month's
-statement"). Without a model key it plays a scripted conversation. `just setup` creates its
-OAuth2 client.
 
 ---
 
@@ -912,7 +907,7 @@ the secret store or the spend meter cannot be consulted, the action does not hap
 | Review gate not answered | one reminder at 24 hours; expires at 7 days |
 | A regression on probation | reopens the build once; a second regression hands back |
 
-### D.5 Tools for agents, and the demo agent
+### D.5 Tools for agents
 
 `GET /tools` returns the API as JSON-schema tool definitions, generated from the zod contracts:
 
@@ -928,12 +923,6 @@ Each description says what the tool does and never does (no money moves without 
 contract test fails on any difference between a tool and its endpoint. The agent calls the
 endpoint itself with its own access token.
 
-**The demo agent** (`apps/agent`, `just agent`) is a pi session on Claude
-(`claude-haiku-4-5-20251001` by default) whose only tools are those of `GET /tools`. Its scripted
-conversation on banks 1 and 2 lists the banks, reads a balance and fetches a statement. Then it
-requests a transfer, waits for the approval and confirms it. It also explains a nonexistent
-account as a business outcome. Without a model key, a scripted mock plays the agent's side through the same
-tool calls.
 
 ### D.6 OAuth2: clients, tokens and refresh
 
@@ -1996,7 +1985,6 @@ nothing is hosted elsewhere.
 | `just factory` | box D: the factory agent, Scout browser and sandbox; live with a key, mock without |
 | `just down <group>`, `just logs <group>`, `just rebuild <group>` | the same for one or more groups |
 | `just demo` | check balance and transfer on banks 1 and 2, printing each typed result |
-| `just agent` | the demo member-assistant agent, calling the REST API through its tool definitions (mock without a key) |
 | `just try <hazard> [task]` | any task under any forced hazard |
 | `just test`, `just test-browser`, `just test-pii`, `just evals` | the suites in [Appendix P](#appendix-p-tests) and the eval ladder |
 | `just check-prompts` | the prompt checker |
@@ -2270,7 +2258,7 @@ linking each point of the brief it touches to the code and test that prove it.
 | M1 | Bank 1: ledger, seed, staff sign-in, codes, inbox, member lookup, member summary, activity, statements, transfer, supervisor approval, framesets, nested tables, markup dialects, forced hazards | bank tests green |
 | M2 | Banks 2, 3 and 4, and ambient hazards: themes, labels, layout variants, URL bases, image text, account formats, bank 3's extra frame, bank 4's split transfer and popup results | all four banks seeded and browsable |
 | M3 | Screen package and the first driver: capture, fully-rendered wait, recognition, targeting, image fingerprints, the CoreLink driver with bank 1's profile written by hand, Task API with OAuth2 (clients, tokens, refresh) and its HTTP status codes, trail, masking, AdminJS run pages and the API clients page | `checkBalance` succeeds on bank 1 under ambient hazards; outcome tests green |
-| M4 | The browser's fingerprint (Chrome on a Mac, set at launch; banks 2 to 4 refuse anything not a browser), then human steps: inbox, codes, transfer preparation, approval grant, submit, swallowed-submit protocol, the tool definitions and the demo agent, `downloadStatements`, hazard lab | escalation and transfer-safety suites green |
+| M4 | The browser's fingerprint (Chrome on a Mac, set at launch; banks 2 to 4 refuse anything not a browser), then human steps: inbox, codes, transfer preparation, approval grant, submit, swallowed-submit protocol, the tool definitions, `downloadStatements`, hazard lab | escalation and transfer-safety suites green |
 | M5 | Guardrails complete, trap matrix, PII scan, customer-safe messages | guards and PII suites green |
 | M6 | Memory service | memory suite green |
 | M7 | **Factory:** workflow, model gateway, tools, caps, scout (autocrawl), evals E0 to E4, review gate, probation, driver states in the Console, mock mode | **the factory onboards bank 2 as a profile, end to end, and it is promoted after probation** |

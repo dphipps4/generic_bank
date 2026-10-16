@@ -61,12 +61,6 @@ export function gateway(opts: {
     request: Request,
   ): Promise<Reply> {
     const price = priceOf(request.model, prices);
-    if (!price)
-      throw new Refusal(
-        400,
-        'invalid_request_error',
-        `no known price for model ${String(request.model)}`,
-      );
     const max = maxTokensOf(request);
     if (!Number.isInteger(max) || (max as number) < 1)
       throw new Refusal(400, 'invalid_request_error', 'max_tokens is required');
