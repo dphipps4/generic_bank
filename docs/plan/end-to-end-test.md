@@ -12,6 +12,16 @@ Once the stack is up, `just open` opens three tabs:
 | Console | http://localhost:8080 | lands on the Dashboard; a person answers sign-in codes and approves transfers in Inbox, and follows each run in Runs |
 | Staff inbox | http://localhost:8089 | the simulated phone and email inbox: every sign-in code the banks send their staff arrives here |
 
+The four banks' staff sites. Each takes the teller's login from `secrets/credentials.txt`, under
+its own name for the field:
+
+| Bank | Address | The login field |
+|---|---|---|
+| Generic Bank (bank 1) | http://localhost:8081/corelink/ | Operator ID |
+| Example Credit Union (bank 2) | http://localhost:8082/ | Username |
+| Sample Savings Bank (bank 3) | http://localhost:8083/online/branch/ | Staff number |
+| Placeholder Federal Credit Union (bank 4) | http://localhost:8084/cu/ib/ | User |
+
 ## 1. Check the Mac
 
 ```sh
