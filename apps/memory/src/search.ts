@@ -17,14 +17,20 @@ export function fuse(...rankings: string[][]): string[] {
 /** A question as a full-text query matching any of its words. Stop words drop out. */
 export const anyWord = (q: string) => (q.toLowerCase().match(/[a-z0-9]+/g) ?? []).join(' | ');
 
+/** A fact's words: `has_screen` and `statements.list` read as words. */
+export const FACT_TEXT = `to_tsvector('english', translate(predicate || ' ' || object, '._', '  '))`;
+
 /** How far down each list is read before fusing. */
 const DEPTH = 100;
 
 /** The lessons memory serves a bank ($1) of a vendor ($2): each at its current version, never
- *  retired there, and a pattern only once confirmed. A version waiting for approval is not served. */
+ *  retired there, and a pattern only once confirmed (a confirmed pattern since disputed is served,
+ *  with its reason). A version waiting for approval is not served. */
 export const SERVED = `FROM "Lesson" l JOIN "LessonVersion" v ON v."lessonId" = l.id AND v.version = l.current
   WHERE v.state <> 'retired' AND NOT ($1 = ANY(COALESCE(v."retiredAtBanks", '{}')))
-    AND CASE v.scope WHEN 'pattern' THEN v.state <> 'proposed'
+    AND CASE v.scope WHEN 'pattern' THEN v.state = 'confirmed' OR (v.state = 'disputed' AND EXISTS (
+                       SELECT 1 FROM "LessonVersion" p WHERE p."lessonId" = l.id AND p.version < l.current
+                         AND p.scope = 'pattern' AND p.state = 'confirmed'))
                      WHEN 'vendor' THEN v.vendor = $2
                      ELSE v.bank = $1 END`;
 

@@ -3,14 +3,14 @@
 // nothing is written.
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import type { Query } from './db.js';
 import type { Write } from './door.js';
 import { asVector, type Embed } from './embed.js';
 import { Refused, type Memory } from './memory.js';
+import { demote, promote, runOf } from './rules.js';
 import type { WriteHandler } from './server.js';
+import { addVersion, currentOf, SAME_LESSON } from './versions.js';
 
-/** A proposal at least this similar to a held lesson in the same scope adds to that lesson. */
-export const SAME_LESSON = 0.95;
+export { SAME_LESSON };
 
 const Id = z.string().min(1).max(128);
 const Hash = z.string().regex(/^[\da-f]{64}$/, 'a sha256, in hex');
@@ -78,24 +78,14 @@ const Proposal = z.strictObject({
 
 const ReliedOn = z.strictObject({ runId: Id, lessonIds: z.array(Id).min(1).max(100) });
 
-async function runOf(tx: Query, id: string) {
-  const run = (
-    await tx.query<{ bank: string; vendor: string | null }>(
-      `SELECT bank, vendor FROM "Run" WHERE id = $1`,
-      [id],
-    )
-  ).rows[0];
-  if (!run) throw new Refused(409, 'no_run', `memory holds no run ${id}`);
-  return run;
-}
-
 const json = (v: unknown) => (v === undefined ? null : JSON.stringify(v));
 
 export function episodes(memory: Memory, embed: Embed): Partial<Record<Write, WriteHandler>> {
   return {
+    // A run that promoted or demoted a driver sets off memory's rules, in the same transaction.
     async 'episodes/runs'(body, role) {
       const r = Run.parse(body);
-      const c = await memory.write(role, 'episodes/runs', async (tx) => {
+      const [c, ...ruled] = await memory.writeAll(role, 'episodes/runs', async (tx) => {
         const added = await tx.query(
           `INSERT INTO "Run" (id, kind, bank, vendor, task, driver, outcome, mark, "startedAt", "endedAt", model, prompts, "evidenceHash")
            VALUES ($1, $2::"RunKind", $3, $4, $5, $6, $7, $8::"Mark", $9, $10, $11, $12::jsonb, $13)
@@ -117,9 +107,12 @@ export function episodes(memory: Memory, embed: Embed): Partial<Record<Write, Wr
           ],
         );
         if (!added.rows.length) throw new Refused(409, 'run_exists', `run ${r.id} is recorded`);
-        return { entity: 'Run', entityId: r.id, runId: r.id, data: r };
+        const entry = { entity: 'Run', entityId: r.id, runId: r.id, data: r };
+        if (!r.mark) return [entry];
+        const run = await runOf(tx, r.id);
+        return [entry, ...(r.mark === 'promoted' ? await promote(tx, run) : await demote(tx, run))];
       });
-      return { run: r.id, seq: c.seq };
+      return { run: r.id, seq: c!.seq, ruled: ruled.length };
     },
 
     async 'episodes/attempts'(body, role) {
@@ -181,40 +174,29 @@ export function episodes(memory: Memory, embed: Embed): Partial<Record<Write, Wr
         const provenance = [role, p.runId, p.model ?? null, json(p.prompts), p.evidenceHash];
 
         if (near && near.similarity >= SAME_LESSON) {
-          const version =
-            (
-              await tx.query<{ v: number }>(
-                `SELECT max(version)::int AS v FROM "LessonVersion" WHERE "lessonId" = $1`,
-                [near.lessonId],
-              )
-            ).rows[0]!.v + 1;
-          await tx.query(
-            `INSERT INTO "LessonVersion" ("lessonId", version, text, why, signals, area, scenario, scope, bank, vendor, state,
-               "retiredAtBanks", confidence, seen, evidence, reason, role, "runId", model, prompts, "evidenceHash", embedding)
-             SELECT "lessonId", $3, text, why, signals, area, scenario, scope, bank, vendor, state, "retiredAtBanks",
-               confidence, seen OR $4, evidence || $5::jsonb, 'a near-duplicate proposal added its evidence',
-               $6::"Role", $7, $8, $9::jsonb, $10, embedding
-             FROM "LessonVersion" WHERE "lessonId" = $1 AND version = $2`,
-            [
-              near.lessonId,
-              near.version,
-              version,
-              p.seen,
-              JSON.stringify([citation]),
-              ...provenance,
-            ],
-          );
-          await tx.query(`UPDATE "Lesson" SET current = $2 WHERE id = $1`, [
-            near.lessonId,
-            version,
-          ]);
+          // A disputed lesson keeps the reason it is disputed; a version waiting for a person
+          // stays waiting, above this one.
+          const held = (await currentOf(tx, near.lessonId))!;
+          const { version, carried } = await addVersion(tx, held, {
+            seen: held.seen || p.seen,
+            evidence: [...held.evidence, citation],
+            reason:
+              held.state === 'disputed' && held.reason
+                ? held.reason
+                : 'a near-duplicate proposal added its evidence',
+            role,
+            runId: p.runId,
+            model: p.model ?? null,
+            prompts: p.prompts,
+            evidenceHash: p.evidenceHash,
+          });
           Object.assign(out, { lesson: near.lessonId, version, merged: true });
           const similarity = Math.round(near.similarity * 1e4) / 1e4;
           return {
             entity: 'Lesson',
             entityId: near.lessonId,
             runId: p.runId,
-            data: { version, merged: true, similarity, citation, text: p.text },
+            data: { version, carried, merged: true, similarity, citation, text: p.text },
           };
         }
 

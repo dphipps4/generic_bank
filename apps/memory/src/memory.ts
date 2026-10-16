@@ -13,6 +13,10 @@ export interface Entry {
   entityId: string;
   runId?: string | null;
   data: unknown;
+  /** Who made this change and what it was, when not the write itself: memory's own rules, run
+   *  by a write, record their changes as the system. */
+  role?: Role;
+  action?: string;
 }
 
 export interface Change {
@@ -90,8 +94,8 @@ export function openMemory(db: Db, opts: { onBroken?: (v: Verdict) => void } = {
     const row = {
       seq: (head?.seq ?? 0) + 1,
       at: new Date(),
-      role,
-      action,
+      role: e.role ?? role,
+      action: e.action ?? action,
       entity: e.entity,
       entityId: e.entityId,
       runId: e.runId ?? null,
@@ -106,8 +110,8 @@ export function openMemory(db: Db, opts: { onBroken?: (v: Verdict) => void } = {
       [
         row.seq,
         row.at,
-        role,
-        action,
+        row.role,
+        row.action,
         row.entity,
         row.entityId,
         row.runId,
@@ -141,6 +145,21 @@ export function openMemory(db: Db, opts: { onBroken?: (v: Verdict) => void } = {
       return db.serializable(async (tx) => {
         const e = await fn(tx);
         return e ? append(tx, role, action, e) : null;
+      });
+    },
+
+    /** The same, for a write that changes several entries: one change-log row each, in order.
+     *  When `fn` returns none, nothing is written. */
+    async writeAll(
+      role: Role,
+      action: string,
+      fn: (tx: Query) => Promise<Entry[]>,
+    ): Promise<Change[]> {
+      if (readOnly) throw new ReadOnly();
+      return db.serializable(async (tx) => {
+        const changes: Change[] = [];
+        for (const e of await fn(tx)) changes.push(await append(tx, role, action, e));
+        return changes;
       });
     },
 

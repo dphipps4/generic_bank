@@ -9,8 +9,8 @@ const SECRET_KEY =
   /^(password|passcode|passwd|pin|otp|one[-_]?time[-_]?code|code|cookies?|set[-_]?cookie|token|access[-_]?token|refresh[-_]?token|secret|api[-_]?key|authorization|ssn|screenshot|image|png|html|dom)$/i;
 
 // Ids, hashes and times are structure, checked by each write's own shape; they are skipped when
-// they look like one.
-const STRUCTURAL_KEY = /^(id|run|frame|frames|hash|.*Id|.*Ids|.*Hash|.*At)$/;
+// they look like one. A curated entry's key is its id: a lesson a run proposed is keyed by a UUID.
+const STRUCTURAL_KEY = /^(id|key|run|frame|frames|hash|.*Id|.*Ids|.*Hash|.*At)$/;
 const STRUCTURAL_VALUE = /^[\w.:/+-]{1,128}$/;
 
 const VALUE: [reason: string, pattern: RegExp][] = [
