@@ -55,6 +55,51 @@ curl -i http://localhost:8081/corelink/    # HTTP/1.1 200 OK
 Banks 2 to 4 turn away anything not shaped like a browser, as a real bank's bot screen does.
 Bank 1, the 2003 site, does not.
 
+## Models
+
+Only the software factory and the demo agent call a model; the crawler that runs customer tasks
+never does. The factory's calls all go through its metering gateway, which enforces the spend
+caps ($25 a run, $150 a rolling week) and refuses a model it has no price for.
+
+| Role | What it does | Default model | Effort |
+|---|---|---|---|
+| Scout | Navigates the bank, one simple step at a time | `claude-opus-5-5` | low |
+| Supervisor | Looks at every frame, reasons, directs the Scout, drafts the bank's profile | `claude-opus-5-5` | high |
+| Demo agent | A member assistant whose only tools are the Task API's | `claude-opus-5-5` | default |
+
+With no API key, the factory and the demo agent run in **mock mode**: recorded or scripted
+answers stand in for the model, nothing reaches a model, and nothing is spent.
+
+To use a key, enter it once (it is stored encrypted with sops):
+
+```sh
+make secret-set FILE=factory KEY=ANTHROPIC_API_KEY
+```
+
+To change a role's model or effort, set it in `config/local.env` (not committed), then
+`make factory`:
+
+```sh
+FACTORY_SUPERVISOR_MODEL=claude-opus-5-5
+FACTORY_SUPERVISOR_EFFORT=high
+FACTORY_SCOUT_EFFORT=medium
+```
+
+The agents run on [pi](https://pi.dev), which talks to many providers, so another provider is
+configuration, not code. To run a role on OpenAI, enter its key and name the provider and model:
+
+```sh
+make secret-set FILE=factory KEY=OPENAI_API_KEY
+```
+
+```sh
+FACTORY_SCOUT_PROVIDER=openai
+FACTORY_SCOUT_MODEL=<an OpenAI model id>
+```
+
+Add the model's price to `apps/factory/src/models.ts` first: the gateway refuses any model it
+cannot meter.
+
 ## A second copy, side by side
 
 Clone or fork into another folder and run `make fork-ports` there before `make setup`. The copy
