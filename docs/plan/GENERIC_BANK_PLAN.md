@@ -1049,7 +1049,7 @@ is recognized, a control on it is visible and enabled, nothing says it is still 
 
 Failing that, it is ready when two screenshots 700 ms apart match and so does the layout
 structure. A loaded, usable page that matches no known screen is handed back as an unknown
-screen after 2 seconds, whether it is still or not. A page that is still loading gets up to a
+screen after 10 seconds, whether it is still or not. A page that is still loading gets up to a
 minute.
 
 Signed in means a recognized signed-in screen, never a missing password field. Every browser

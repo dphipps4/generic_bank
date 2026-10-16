@@ -118,6 +118,10 @@ export class Browser {
     const width = o.width ?? 1280;
     const height = o.height ?? 900;
     const bin = findChrome();
+    // In the stack the banks are plain HTTP on Docker's network, where Chrome would leave out the
+    // headers every real browser sends (Sec-Fetch-*), and banks 2 to 4 would turn it away.
+    const secureOrigins =
+      o.secureOrigins ?? (process.env.BANK_ORIGINS ?? '').split(',').filter(Boolean);
     const child = spawn(
       bin,
       [
@@ -153,8 +157,8 @@ export class Browser {
         '--force-color-profile=scrgb-linear',
         // Chrome on a Mac has Web Bluetooth; on Linux it sits behind this switch.
         '--enable-blink-features=WebBluetooth',
-        ...(o.secureOrigins?.length
-          ? [`--unsafely-treat-insecure-origin-as-secure=${o.secureOrigins.join(',')}`]
+        ...(secureOrigins.length
+          ? [`--unsafely-treat-insecure-origin-as-secure=${secureOrigins.join(',')}`]
           : []),
         ...(process.platform === 'linux'
           ? [
