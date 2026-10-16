@@ -142,4 +142,8 @@ the same jobs on your machine.
   live.
 - [The technology choices](docs/plan/techstack.md): each tool, why it was chosen, and what it was
   chosen over.
+- [The end-to-end test](docs/plan/end-to-end-test.md): a fresh clone through all three tasks,
+  step by step, with what you should see at each.
+- [The repair demo](docs/plan/manual_test.md): a bank redesigns, the crawler breaks, and the
+  factory repairs it.
 - [The build sheets](docs/build/): each milestone's pull requests, in order.
