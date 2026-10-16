@@ -17,6 +17,16 @@ export interface Trail {
   ): Promise<Seen | null>;
   /** Whether a frame reference, such as f3, names a stored frame of this run. */
   has(ref: string): boolean;
+  /** What a stored frame of this run shows, masked: its page and its words; null for any other. */
+  shown(ref: string): Promise<Shown | null>;
+}
+
+/** A frame's page and the words on it: its title, its controls' names and its text. */
+export interface Shown {
+  page: string;
+  title: string;
+  controls: string[];
+  texts: string[];
 }
 
 /** A frame and its reference, or a null reference when it was not stored. */
@@ -78,9 +88,33 @@ export async function openTrail(o: {
         return { ...f, ref: null };
       }
     },
-    has(ref) {
-      const n = /^f(\d{1,3})$/.exec(ref);
-      return n !== null && Number(n[1]) >= 1 && Number(n[1]) <= frameSeq;
+    has,
+    async shown(ref) {
+      if (!has(ref)) return null;
+      const f = (
+        await sql.query<{ host: string; path: string; key: string }>(
+          `SELECT host, path, "screenModelKey" AS key FROM "TrailFrame" WHERE "runId" = $1 AND seq = $2`,
+          [runId, Number(ref.slice(1))],
+        )
+      ).rows[0];
+      const body = f && (await store.get(f.key));
+      if (!body) return null;
+      const m = JSON.parse(body.toString()) as {
+        title: string;
+        controls: { name: string }[];
+        texts: { text: string }[];
+      };
+      return {
+        page: `${f.host}${f.path}`,
+        title: m.title,
+        controls: m.controls.map((c) => c.name).filter(Boolean),
+        texts: m.texts.map((t) => t.text),
+      };
     },
   };
+
+  function has(ref: string) {
+    const n = /^f(\d{1,3})$/.exec(ref);
+    return n !== null && Number(n[1]) >= 1 && Number(n[1]) <= frameSeq;
+  }
 }

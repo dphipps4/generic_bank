@@ -262,6 +262,23 @@ model FactoryRun {
   lastActivityAt DateTime     @default(now())
   modelCalls     ModelCall[]
   evals          EvalResult[]
+  recommendation Recommendation?
+}
+
+// The Supervisor's recommendation (plan, §M.4): the bank's profile drafted from the run's frames.
+// Each claim cites frames of the run and is marked seen or guess; a person approves or rejects it,
+// and a guess is approved only when the person ticks it.
+model Recommendation {
+  id           String     @id @default(cuid())
+  factoryRunId String     @unique
+  factoryRun   FactoryRun @relation(fields: [factoryRunId], references: [id])
+  tenant       String
+  claims       Json
+  status       String     @default("open")
+  createdAt    DateTime   @default(now())
+  decidedBy    String?
+  decidedAt    DateTime?
+  reason       String?
 }
 
 model ModelCall {

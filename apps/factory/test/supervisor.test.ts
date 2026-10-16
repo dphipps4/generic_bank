@@ -74,6 +74,7 @@ function setUp(provider: Provider, startedAt?: Date, at = app) {
       return null;
     },
     has: (ref) => ref === 'f1',
+    shown: async () => null,
   };
   const call = vi.fn(async () => ({ text: 'waited 1 s.\n{}' }));
   const scout = {

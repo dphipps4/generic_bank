@@ -21,6 +21,7 @@ export const esc = (s: unknown) =>
 const NAV: [href: string, label: string][] = [
   ['/inbox', 'Inbox'],
   ['/runs', 'Runs'],
+  ['/recommendations', 'Recommendations'],
   ['/journal', 'Journal'],
   ['/freezes', 'Freezes'],
   ['/admin', 'Data'],
@@ -28,7 +29,7 @@ const NAV: [href: string, label: string][] = [
 
 /** The hazard lab is in the bar only on a stack whose banks obey forced hazards. */
 export function showLabInNav() {
-  if (!NAV.some(([href]) => href === '/lab')) NAV.splice(3, 0, ['/lab', 'Hazard lab']);
+  if (!NAV.some(([href]) => href === '/lab')) NAV.splice(4, 0, ['/lab', 'Hazard lab']);
 }
 
 export function page(
@@ -58,6 +59,7 @@ tr:last-child td{border-bottom:0}a{color:var(--accent)}code{font:12px ui-monospa
 .pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600;background:#eef1f4;color:var(--soft)}
 .succeeded{background:#e6f4ec;color:var(--ok)}.business_outcome{background:#fdf3e1;color:var(--warn)}.failed{background:#fbe9e9;color:var(--bad)}
 .escalated{background:#f3eaf8;color:var(--esc)}.needs_human,.running{background:#e9f1fa;color:var(--accent)}
+.seen{background:#e6f4ec;color:var(--ok)}.guess{background:#fdf3e1;color:var(--warn)}section.card{margin:0 0 22px}section.card h2{text-transform:none;letter-spacing:0}label.tick{font-size:13px;color:var(--warn);white-space:nowrap}
 .facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}.fact{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
 .fact span{display:block;font-size:12px;color:var(--soft)}
 .frames-pop{width:min(1200px,96vw);max-height:94vh;padding:0;border:1px solid var(--line);border-radius:8px}.frames-pop::backdrop{background:rgba(0,0,0,.4)}
