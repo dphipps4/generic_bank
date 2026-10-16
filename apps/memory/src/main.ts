@@ -8,6 +8,7 @@ import { catalogRoutes, curated } from './curated.js';
 import { door } from './door.js';
 import { localEmbedder } from './embed.js';
 import { episodes } from './episodes.js';
+import { knowledgeRoutes } from './knowledge.js';
 import { openMemory } from './memory.js';
 import { buildServer } from './server.js';
 
@@ -52,6 +53,7 @@ const app = buildServer({
   logger: true,
 });
 catalogRoutes(app, db);
+knowledgeRoutes(app, db, embed);
 await memory.verify();
 await embed('ready');
 await app.listen({ host: '0.0.0.0', port: cfg.MEMORY_PORT });
