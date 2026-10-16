@@ -7,7 +7,8 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { Query } from './db.js';
 import type { Embed } from './embed.js';
-import { anyWord, failureSearch, fuse, searchLessons, SERVED } from './search.js';
+import { factsAt } from './facts.js';
+import { anyWord, FACT_TEXT, failureSearch, fuse, searchLessons, SERVED } from './search.js';
 
 export const TIERS = [
   'patterns',
@@ -15,6 +16,7 @@ export const TIERS = [
   'tenant',
   'proposed',
   'disputed',
+  'facts',
   'recent',
   'recurring',
   'drivers',
@@ -98,9 +100,6 @@ const CONFIDENCE = { high: 0, medium: 1, low: 2 };
 const FAILURES = `SELECT a.failure, count(DISTINCT a."runId")::int AS runs,
     array_agg(DISTINCT r.bank ORDER BY r.bank) AS banks, max(a.at) AS "lastAt"`;
 
-/** A fact's words: `has_screen` and `statements.list` read as words. */
-const FACT_TEXT = `to_tsvector('english', translate(predicate || ' ' || object, '._', '  '))`;
-
 export function knowledgeRoutes(app: FastifyInstance, db: Query, embed: Embed) {
   const rankFailures = failureSearch(embed);
 
@@ -181,13 +180,16 @@ export function knowledgeRoutes(app: FastifyInstance, db: Query, embed: Embed) {
       tenant: [],
       proposed: [],
       disputed: [],
+      facts: (await factsAt(db, { bank: p.bank, at: new Date(), limit: 50 })).map(
+        ({ predicate, object, validAt }) => ({ predicate, object, validAt }),
+      ),
       recent: await recent(p.bank, 5),
       recurring: at.vendor ? await recurring(at.vendor, 5) : [],
       drivers: await drivers(at),
     };
     for (const l of rows) candidates[tierOf(l)].push(lessonItem(l));
 
-    // The episodes and drivers are few, and fit first; the lessons fill what is left, tier by
+    // The facts, episodes and drivers are few, and fit first; the lessons fill what is left, tier by
     // tier, in rank order. What does not fit is counted, so the run knows to ask.
     const tiers = Object.fromEntries(TIERS.map((t) => [t, [] as unknown[]])) as Record<
       Tier,
@@ -195,7 +197,7 @@ export function knowledgeRoutes(app: FastifyInstance, db: Query, embed: Embed) {
     >;
     const omitted: Partial<Record<Tier, number>> = {};
     let size = 0;
-    const fill = ['recent', 'recurring', 'drivers', ...TIERS.slice(0, 5)] as Tier[];
+    const fill = [...TIERS.slice(5), ...TIERS.slice(0, 5)];
     for (const t of fill)
       for (const item of candidates[t]) {
         const cost = JSON.stringify(item).length;
