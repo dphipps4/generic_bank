@@ -111,7 +111,7 @@ async function agentApi(): Promise<Api> {
   return connect(apiUrl, c, saveTo);
 }
 
-/** The configured model, as `make agent` reads it from config/app.env. */
+/** The configured model, as `just agent` reads it from config/app.env. */
 const { AGENT_MODEL } = agentConfig({ ...appEnv(), AGENT_CLIENT: '{}' });
 
 /** The mock in the configured model's place, keeping every request the tool runner sent it. */
@@ -135,7 +135,7 @@ const until = async <T>(read: () => Promise<T | undefined> | T | undefined, ms =
   }
 };
 
-/** config/app.env, as make reads it. */
+/** config/app.env, as just reads it. */
 function appEnv(): Record<string, string> {
   const text = readFileSync(new URL('../../config/app.env', import.meta.url), 'utf8');
   return Object.fromEntries(

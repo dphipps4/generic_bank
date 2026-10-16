@@ -7,7 +7,7 @@ deliberately legacy markup, with forced hazards for the tests. The plan's
 specification.
 
 It lands as a sequence of small pull requests. Each one is self-contained, has its own tests,
-and leaves `make check` green.
+and leaves `just check` green.
 
 | # | Pull request | What it adds | What proves it |
 |---|---|---|---|
@@ -24,4 +24,4 @@ and leaves `make check` green.
 | 11 | **Transfers** | The form, the review page, supervisor approval over the threshold | a transfer posts end to end |
 | 12 | **Hazards in the pages** | Every hazard wired into the pages that show it | one test per forced hazard |
 | 13 | **The inbox and ground truth** | The fake inbox for codes; the bank-admin API the tests read | codes arrive; tests read the ledger, not the page |
-| 14 | **Running it** | Compose wiring, the operator passwords as secrets, the inbox service | `make up`; the bank fits its memory limit |
+| 14 | **Running it** | Compose wiring, the operator passwords as secrets, the inbox service | `just up`; the bank fits its memory limit |

@@ -1,4 +1,4 @@
-// make agent: the demo agent on the command line. With a model key it talks to the configured model
+// just agent: the demo agent on the command line. With a model key it talks to the configured model
 // and the member types; without one, the scripted mock plays the model and the member's lines.
 import { createInterface } from 'node:readline/promises';
 import Anthropic from '@anthropic-ai/sdk';

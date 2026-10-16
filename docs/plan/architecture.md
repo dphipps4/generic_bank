@@ -209,12 +209,12 @@ What is saved, all of it in Postgres and on this machine:
 - **For every factory run:** every model call (role, model, prompt version, tokens, cost, how
   long), every tool call and refusal, the Supervisor's decisions, the evaluation results, the
   lessons and the spend.
-- **Logs:** JSON lines on stdout and in `.data/logs/`, read with `make logs`. A log line never
+- **Logs:** JSON lines on stdout and in `.data/logs/`, read with `just logs`. A log line never
   holds a field value, credential, code, account number, amount or name, and the PII scan checks
   the logs too.
 
 Every row and log line carries the run's id and its step, so either leads to the other. The
-Console's pages read these records. Traces, `make trace` and `make observe` are Part 2.
+Console's pages read these records. Traces, `just trace` and `just observe` are Part 2.
 
 ---
 

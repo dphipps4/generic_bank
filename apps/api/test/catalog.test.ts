@@ -232,7 +232,7 @@ describe('the registry decides which banks can do what', () => {
 });
 
 describe('the published reference', () => {
-  it('is the document the code generates: run make api-docs after changing the API', async () => {
+  it('is the document the code generates: run just api-docs after changing the API', async () => {
     const { readFileSync } = await import('node:fs');
     const committed = JSON.parse(
       readFileSync(new URL('../../../docs/api/openapi.json', import.meta.url), 'utf8'),

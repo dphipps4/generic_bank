@@ -1,4 +1,4 @@
-// make try: one task under forced hazards, from the command line (plan, §S.2). It runs inside the API
+// just try: one task under forced hazards, from the command line (plan, §S.2). It runs inside the API
 // container, which holds the hashing key, and starts the run through the same door as the Console's
 // hazard lab. It waits for the result and says whether it is the one the outcome table expects.
 //
@@ -33,12 +33,12 @@ const stop = (s: string, code = 2): never => {
 
 if (cfg.HAZARDS_FORCEABLE !== 'true')
   stop(
-    'The banks are not forceable here. Set HAZARDS_FORCEABLE=true in config/app.env, then make restart.',
+    'The banks are not forceable here. Set HAZARDS_FORCEABLE=true in config/app.env, then just restart.',
   );
 
 const [taskArg, hazardArg, memberArg, accountArg, bankArg] = process.argv.slice(2);
 const task = (taskArg || 'check-balance') as OutcomeTask;
-if (!(task in OUTCOMES)) stop(`make try covers ${Object.keys(OUTCOMES).join(', ')}; not ${task}.`);
+if (!(task in OUTCOMES)) stop(`just try covers ${Object.keys(OUTCOMES).join(', ')}; not ${task}.`);
 const o = OUTCOMES[task];
 const hazards = (hazardArg ?? '').split(',').filter(Boolean);
 const unknown = hazards.filter((h) => !isHazard(h));
@@ -54,16 +54,16 @@ const expected = member ? expectedFor(task, member, hazards.filter(isHazard)) : 
 
 const db = sql(cfg.CONTROL_DATABASE_URL);
 const tokens = oauth(db, cfg.API_TOKEN_HASH_KEY);
-const NAME = 'Hazard lab (make try)';
+const NAME = 'Hazard lab (just try)';
 const found = await db.query<{ clientId: string }>(
   'SELECT "clientId" FROM "ApiClient" WHERE name = $1 AND "revokedAt" IS NULL LIMIT 1',
   [NAME],
 );
 const clientId =
   found.rows[0]?.clientId ??
-  (await tokens.createClient({ name: NAME, scopes: [...TASK_SCOPES], createdBy: 'make try' }))
+  (await tokens.createClient({ name: NAME, scopes: [...TASK_SCOPES], createdBy: 'just try' }))
     .clientId;
-const token = async () => (await tokens.issueDirect(clientId, 'make try')).access_token;
+const token = async () => (await tokens.issueDirect(clientId, 'just try')).access_token;
 const api = `http://127.0.0.1:${cfg.API_PORT}`;
 const consoleAt = `http://localhost:${cfg.CONSOLE_PORT}`;
 

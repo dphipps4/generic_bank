@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared helpers for the make targets. Sourced, never run.
+# Shared helpers for the just recipes. Sourced, never run.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 ROOT="$(pwd)"

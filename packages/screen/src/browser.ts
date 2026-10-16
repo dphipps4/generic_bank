@@ -10,7 +10,7 @@ import type { Readable, Writable } from 'node:stream';
 import { Cdp, CdpError, CdpTimeout, type Transport } from './cdp.js';
 import { type Identity, identityCommands, MAC, macChrome } from './identity.js';
 
-/** Where Chrome is: CHROME_PATH, `make browser`'s install, or the Runner image's Debian chromium. */
+/** Where Chrome is: CHROME_PATH, `just browser`'s install, or the Runner image's Debian chromium. */
 export function findChrome(root = process.cwd()): string {
   if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
   const local = resolve(root, '.run/browser/chrome');
@@ -29,7 +29,7 @@ export function findChrome(root = process.cwd()): string {
   // Debian's /usr/bin/chromium is a shell script that does not exec: killing it would orphan the
   // browser. Start the real binary.
   for (const p of ['/usr/lib/chromium/chromium', '/usr/bin/chromium']) if (existsSync(p)) return p;
-  throw new Error('No Chrome found: run `make browser`, or set CHROME_PATH.');
+  throw new Error('No Chrome found: run `just browser`, or set CHROME_PATH.');
 }
 
 /** The identity extension (extension/mac.js), beside this package's source and its build. */

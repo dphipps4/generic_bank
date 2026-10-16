@@ -17,8 +17,6 @@ info "macOS"
 if [[ "$(uname -s)" == "Darwin" ]]; then
   mac="$(sw_vers -productVersion)"
   version_ge "$mac" 14.0 && ok "macOS $mac (14 or newer)" || bad "macOS $mac: 14 (Sonoma) or newer is needed"
-  xcode-select -p >/dev/null 2>&1 && ok "Xcode command line tools" \
-    || bad "Xcode command line tools are missing: xcode-select --install"
 else
   warn "this is $(uname -s), not macOS: the stack is made for a Mac; Linux works if Docker does"
 fi
@@ -26,14 +24,16 @@ fi
 info "Tools on the Mac"
 if command -v git >/dev/null; then
   g="$(git --version | awk '{print $3}')"
-  version_ge "$g" 2.39 && ok "git $g (2.39 or newer)" || bad "git $g: 2.39 or newer is needed (xcode-select --install)"
-else bad "git is missing: xcode-select --install"; fi
-command -v make >/dev/null && ok "make $(make --version | head -1 | awk '{print $NF}')" \
-  || bad "make is missing: xcode-select --install"
+  version_ge "$g" 2.39 && ok "git $g (2.39 or newer)" || bad "git $g: 2.39 or newer is needed"
+else bad "git is missing: install it from git-scm.com"; fi
+if command -v just >/dev/null; then
+  j="$(just --version | awk '{print $2}')"
+  version_ge "$j" 1.59 && ok "just $j (1.59 or newer)" || bad "just $j: 1.59 or newer is needed (infra/scripts/bootstrap.sh)"
+else bad "just is missing: infra/scripts/bootstrap.sh installs it"; fi
 
 info "Docker"
 if ! command -v docker >/dev/null; then
-  bad "Docker is missing: brew install --cask docker (Docker Desktop), then start it"
+  bad "Docker is missing: install Docker Desktop (docker.com/products/docker-desktop), then start it"
 elif ! docker info >/dev/null 2>&1; then
   bad "Docker is installed but not running: open Docker Desktop"
 else
@@ -63,11 +63,11 @@ if [[ $DEV == 1 ]]; then
   if command -v node >/dev/null; then
     n="$(node --version | sed 's/^v//')"
     if [[ "${n%%.*}" == 22 ]] && version_ge "$n" 22.19; then ok "Node $n (22.19 or newer within 22)"
-    else bad "Node $n: Node 22 (22.19 or newer) is needed: brew install node@22, then follow its PATH note"; fi
+    else bad "Node $n: Node 22 (22.19 or newer) is needed: the Node 22 installer from nodejs.org"; fi
     p="$(npm --version 2>/dev/null)"
     version_ge "${p:-0}" 10.0 && ok "npm $p (10 or newer)" || bad "npm ${p:-missing}: 10 or newer comes with Node 22"
   else
-    bad "Node is missing: brew install node@22, then follow its PATH note"
+    bad "Node is missing: the Node 22 installer from nodejs.org"
   fi
 fi
 

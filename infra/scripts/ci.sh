@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Everything GitHub's CI runs, on this machine, so a fork can check a change without Actions:
 # the checks, the whole suite, the long suite, the images it ships with their secret scan, the
-# compose file, and the history's secret scan. Slow (most of an hour) and heavy; make check is the
+# compose file, and the history's secret scan. Slow (most of an hour) and heavy; just check is the
 # quick version.
 source "$(dirname "$0")/lib.sh"
 set -e
@@ -32,6 +32,10 @@ infra/scripts/secrets-scan.sh image generic-bank/node:ci generic-bank/runner:ci 
 info "The compose file, with every profile"
 infra/scripts/render-env.sh >/dev/null
 docker compose -f infra/compose/compose.yaml --env-file config/app.env -p generic-bank-ci --profile '*' config -q
+
+info "The Justfile: every recipe parses, and up's commands resolve"
+just --summary >/dev/null
+just --dry-run up >/dev/null
 
 info "No secret in the history or in uncommitted changes"
 infra/scripts/secrets-scan.sh

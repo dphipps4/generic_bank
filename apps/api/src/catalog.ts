@@ -236,7 +236,7 @@ export function openapi(): Record<string, unknown> {
       title: 'Generic Bank Task API',
       version: '1',
       description:
-        'Typed tasks at banks that have no API, done by operating each bank’s website the way a person would. No money moves without a person’s approval. Get a token with `make api-token`, press Authorize, and paste it.',
+        'Typed tasks at banks that have no API, done by operating each bank’s website the way a person would. No money moves without a person’s approval. Get a token with `just api-token`, press Authorize, and paste it.',
     },
     tags: [{ name: 'tasks' }, { name: 'catalog' }, { name: 'oauth' }],
     components: {
@@ -244,7 +244,7 @@ export function openapi(): Record<string, unknown> {
         bearer: {
           type: 'http',
           scheme: 'bearer',
-          description: 'An OAuth2 access token from POST /oauth/token (or `make api-token`).',
+          description: 'An OAuth2 access token from POST /oauth/token (or `just api-token`).',
         },
       },
       schemas: {

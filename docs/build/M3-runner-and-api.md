@@ -16,7 +16,7 @@ timeout, and frames from another origin are read through their own sessions.
 | 1 | **The result, in types** | Every status and code of the result, problem details, the bank list, as zod contracts | every code maps to exactly one HTTP status |
 | 2 | **The control database grows** | API clients, tokens and token families, runs and their steps | the migration applies on top of the last one |
 | 3 | **OAuth2** | The token endpoint (one-time code, rotating refresh tokens), revoke, bearer checks, scopes, a rate limit, audit entries | a spent refresh token revokes its family; a missing scope is a 403 |
-| 4 | **API clients in the Console** | Create a client (its secret and code shown once), revoke it; `make api-token` | the secret is never stored, only its hash |
+| 4 | **API clients in the Console** | Create a client (its secret and code shown once), revoke it; `just api-token` | the secret is never stored, only its hash |
 | 5 | **The API describes itself** | OpenAPI from the contracts, Swagger UI at `/docs`, `GET /tools`, `GET /banks` | the tools, the endpoints and the document never disagree |
 | 6 | **A browser, from outside** | A DevTools client with a timeout on every call; Chromium's headless shell in the Runner | a frozen call times out instead of hanging |
 | 7 | **The screen model** | Layout, accessibility tree and screenshot from every frame, flattened into one picture; only what is visible and on top; stable references | the hidden twin of a button is not in the model |

@@ -31,7 +31,7 @@ case "${1:-ensure}" in
     fi
     if [[ "$(jq -r .sealed <<<"$st")" == "true" ]]; then
       key="$(decrypt ops | grep '^VAULT_UNSEAL_KEY=' | cut -d= -f2-)"
-      [[ -n "$key" ]] || die "Vault is sealed and no unseal key is stored; see make vault-status"
+      [[ -n "$key" ]] || die "Vault is sealed and no unseal key is stored; see just vault-status"
       v operator unseal "$key" >/dev/null; unset key
       ok "Vault unsealed"
     else
