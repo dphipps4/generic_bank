@@ -66,14 +66,14 @@ export async function buildInbox(banks: InboxBank[]): Promise<FastifyInstance> {
     return reply.type('text/html; charset=utf-8')
       .send(`<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="refresh" content="5">
-<title>Staff Inbox</title><style>
+<title>Simulated phone and email inbox</title><style>
 body{margin:0;background:#f6f7f9;color:#1a1a1a;font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
-header{background:#fff;border-bottom:1px solid #e3e5e8;padding:14px 20px}h1{font-size:17px;margin:0}header p{margin:2px 0 0;color:#666;font-size:13px}
+header{background:#fff;border-bottom:1px solid #e3e5e8;padding:18px 20px}h1{font-size:28px;margin:0;letter-spacing:-.01em}header p{margin:4px 0 0;color:#555;font-size:14px}
 main{max-width:860px;margin:0 auto;padding:12px 16px 40px}h2{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:#1f4d7a;margin:24px 0 8px}
 ul{list-style:none;margin:0;padding:0}li{background:#fff;border:1px solid #e3e5e8;border-radius:8px;padding:10px 12px;margin:6px 0}
 .when{color:#888;font-size:12px}.kind{font-size:11px;text-transform:uppercase;letter-spacing:.05em;background:#eef3f8;color:#1f4d7a;padding:1px 6px;border-radius:4px;margin:0 6px}
 .to{color:#555;font-size:13px}.app{background:#fff;border:1px solid #c9d6e4;border-radius:8px;padding:10px 12px;margin:6px 0}.code b{font-size:20px;letter-spacing:.12em;font-variant-numeric:tabular-nums}.body{margin-top:4px;font-size:15px}.none{color:#888}
-</style></head><body><header><h1>Staff inbox</h1><p>Texts and emails the banks send to their staff. Refreshes every five seconds.</p></header>
+</style></head><body><header><h1>Simulated phone and email inbox</h1><p>It stands in for the bank staff's phones and email: every text and email a bank sends its staff arrives here, and a person reads the sign-in codes from it. The crawler can't reach this page. Refreshes every five seconds.</p></header>
 <main>${sections.join('')}</main></body></html>`);
   });
   return app;
