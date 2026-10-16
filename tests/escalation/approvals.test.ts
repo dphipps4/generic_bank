@@ -79,7 +79,7 @@ describe('a person decides a parked transfer', () => {
   it('nobody answers: the deadline ends it expired', async () => {
     const { runId, memoToken } = await h.start({ amountCents: 7_500 });
     // Long enough for the staff code, which shares the deadline; short enough to pass unanswered.
-    expect(await h.execute(runId, { humanDeadlineMs: 15_000 })).toMatchObject({
+    expect(await h.execute(runId, { humanDeadlineMs: 5_000 })).toMatchObject({
       status: 'expired',
     });
     const task = (

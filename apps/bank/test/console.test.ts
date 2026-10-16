@@ -176,7 +176,7 @@ describe('page-level hazards in the main frame', () => {
 });
 
 describe('activity', () => {
-  it('has a date-range control, and rows that arrive late, three seconds late when forced', async () => {
+  it('has a date-range control, and rows that arrive late, a second late when forced', async () => {
     const a = (await accountsOf(b.db, MEMBERS.demo))[0]!;
     const r = await c.get(`members/${MEMBERS.demo}/activity?account=${a.id}`);
     expect(r.body).toContain('From');
@@ -184,7 +184,7 @@ describe('activity', () => {
     scriptsParse(r.body);
     c.hazards = ['late-rows'];
     expect((await c.get(`members/${MEMBERS.demo}/activity?account=${a.id}`)).body).toMatch(
-      /\}, 3000\);/,
+      /\}, 1000\);/,
     );
     c.hazards = null;
     const rows = await api(

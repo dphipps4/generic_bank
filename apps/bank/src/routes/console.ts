@@ -359,7 +359,7 @@ ${confirm ? `setTimeout(function () { if (window.confirm("This member has 2 unre
             : months[2]!;
           const to = months.includes(String(req.query.to)) ? String(req.query.to) : months[0]!;
           const rowsBox = d.cls('rows');
-          const late = c.hz.on('late-rows') ? 3000 : 250;
+          const late = c.hz.on('late-rows') ? 1000 : 250;
           const opt = (m: string, sel: string) => ({ value: m, text: m, selected: m === sel });
           const rows =
             row(

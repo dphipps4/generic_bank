@@ -20,6 +20,24 @@ const presses = async (runId: string) =>
   (await h.journalOf(runId)).filter((l) => l.intent.startsWith('press ') && !l.result);
 
 describe('the swallowed-submit protocol', () => {
+  it('a swallowed submit: the history is read, the button never pressed again, one posting', async () => {
+    const { runId, memoToken } = await h.start({ amountCents: 2_500 });
+    // The bank posts it, then answers with a gateway error or a "Processing" page that never ends;
+    // the run gives that page 10 seconds.
+    const done = h.execute(runId, { headers: h.bank.forced(['swallowed-submit']) });
+    expect(await h.act(await h.approval(runId), 'approve')).toBe(200);
+    // The confirmation never came, so the reference is the one read from the history.
+    expect(await done).toMatchObject({
+      status: 'succeeded',
+      data: { confirmation: memoToken, seenInHistory: true },
+    });
+    expect(await h.postings(memoToken)).toBe(1);
+    expect((await presses(runId)).map((l) => l.action)).toEqual([null, 'pressed']);
+    expect(await h.journalOf(runId)).toContainEqual(
+      expect.objectContaining({ intent: 'find the memo token in the history', result: '1 found' }),
+    );
+  }, 300_000);
+
   it('a browser killed while parked: a fresh sign-in after approval, checked against the grant, one posting', async () => {
     const { runId, memoToken } = await h.start({ amountCents: 3_100 });
     const before = h.browsers.length;

@@ -63,7 +63,7 @@ export async function waitFullyRendered(
     until?: (m: ScreenModel) => boolean;
   } = {},
 ): Promise<Rendered> {
-  const limit = o.limitMs ?? 180_000;
+  const limit = o.limitMs ?? 60_000;
   const quiet = o.quietMs ?? 700;
   const start = Date.now();
   let prev: { image: Image; key: string } | null = null;
@@ -120,9 +120,9 @@ export async function waitFullyRendered(
       sameOutside(prev.image, image, model.animated);
     if (still && signals.length === 0 && actionable && complete)
       return { model, rendered: true, waitedMs: Date.now() - start };
-    // Loaded and usable, but no screen the caller knows: after 10 s it is what it is.
+    // Loaded and usable, but no screen the caller knows: after 2 s it is what it is.
     usableSince = signals.length === 0 && actionable ? (usableSince ?? Date.now()) : null;
-    if (usableSince !== null && Date.now() - usableSince >= 10_000)
+    if (usableSince !== null && Date.now() - usableSince >= 2_000)
       return { model, rendered: true, waitedMs: Date.now() - start };
     reason =
       signals[0] ??

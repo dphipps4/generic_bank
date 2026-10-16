@@ -136,7 +136,8 @@ export async function see(
   o: { limitMs?: number; until?: (m: ScreenModel) => boolean } = {},
 ): Promise<Seen> {
   const r = await waitFullyRendered(ctx.page, {
-    limitMs: o.limitMs ?? 180_000,
+    // A slow page gets a minute; past that, the bank is too slow to wait for.
+    limitMs: o.limitMs ?? 60_000,
     until: (m) => {
       const named = namePictures(m, ctx.profile.pictures);
       if (o.until) return o.until(named);

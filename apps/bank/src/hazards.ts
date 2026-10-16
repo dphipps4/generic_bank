@@ -94,11 +94,12 @@ export function hazards(opts: HazardOptions) {
             if (hit) opts.log(n, path, true);
             return hit;
           },
-          latencyMs: () => (set.has('latency') ? 1800 : 0),
+          latencyMs: () => (set.has('latency') ? 1000 : 0),
         };
       }
       const r = rng(hash32(seed, ++counter));
-      const latency = scale === 0 ? 0 : r.int(250, 1800);
+      // Enough to shuffle the order frames arrive in, not enough to slow a test down.
+      const latency = scale === 0 ? 0 : r.int(0, 150);
       return {
         forced: false,
         on: (n) => {

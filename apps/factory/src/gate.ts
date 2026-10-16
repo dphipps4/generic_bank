@@ -23,7 +23,7 @@ export async function decided(
     const status = r.rows[0]?.status;
     if (!status) throw new Error(`no recommendation ${recommendationId}`);
     if (status !== 'open') return status === 'approved';
-    await new Promise((x) => setTimeout(x, o.pollMs ?? 2000));
+    await new Promise((x) => setTimeout(x, o.pollMs ?? 500));
   }
   return false;
 }

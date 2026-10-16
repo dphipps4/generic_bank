@@ -105,10 +105,11 @@ approval issues a one-time grant for this run, these accounts, this amount and t
 for five minutes. The Runner checks that the screen still matches the grant, writes down that it's
 about to press, and presses once. That uses up the grant.
 
-If the bank shows a confirmation number, that's the answer. If it doesn't, the Runner never
-presses again. It searches the account's history for the transfer's memo marker. Found once, the
-transfer succeeded; found twice or not at all, a person looks. If a run loses its browser while
-waiting, it signs in again and checks the review page against the grant before it presses.
+If the bank shows a confirmation number, that's the answer. If it doesn't within 10 seconds, the
+Runner never presses again. It searches the account's history for the transfer's memo marker.
+Found once, the transfer succeeded; found twice or not at all, a person looks. If a run loses its
+browser while waiting, it signs in again and checks the review page against the grant before it
+presses.
 
 ---
 
@@ -355,7 +356,7 @@ its activity (rows arrive late), its statements (a PDF in a new window) or a tra
 goes to a review page, then to a supervisor's approval if it's over the threshold, and ends with a
 confirmation number.
 
-Ambient hazards: 250 ms to 1.8 s of latency on every response; script errors (harmless 10%,
+Ambient hazards: up to 150 ms of latency on every response; script errors (harmless 10%,
 widget 5%, fatal 2%); a 503 at 3%; a confirmation dialog at 10%; a promotional page at 10%; an
 early session expiry at 2%. These happen only when forced: a swallowed submit or click, late rows,
 an injected instruction, an unknown screen, and permission, not-found and validation errors.

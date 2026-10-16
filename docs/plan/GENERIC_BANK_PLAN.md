@@ -705,7 +705,7 @@ logged to the bank's hazard log:
 
 | Hazard | Default | Effect |
 |---|---|---|
-| Latency | every response | uniform 250 ms to 1.8 s before the server answers; frames load independently, so the main frame may arrive last |
+| Latency | every response | uniform 0 to 150 ms before the server answers; frames load independently, so the main frame may arrive last |
 | Injected JavaScript error, harmless | 10% of pages | uncaught `TypeError` in the console; page still works |
 | Injected JavaScript error, widget | 5% | one widget fails to draw (a balance shows "--", a dropdown stays empty) |
 | Injected JavaScript error, fatal | 2% | the main frame shows "An unexpected error has occurred. Reference ERR-…" |
@@ -714,7 +714,7 @@ logged to the bank's hazard log:
 | Promotional interstitial | 10% of first loads after sign-in | full-page "New in CoreLink" notice with "Not now" and "Learn more" |
 | Record in use | 3% of member lookups | "This member's record is in use by another operator." (retry later) |
 | Session warning and expiry | idle 10 min, plus 2% random early expiry | warning modal, then the sign-in page appears inside the main frame |
-| Slow hand-off | 5% of sign-ins | the callback page holds for 5 to 8 seconds |
+| Slow hand-off | 5% of sign-ins | the callback page holds for 2 to 3 seconds |
 
 **Profiles:** `HAZARDS=default` (the rates above), `HAZARDS=gentle` (a quarter of every rate,
 fixed seed; used by `just demo`), `HAZARDS=harsh` (double).
@@ -726,7 +726,7 @@ hazards:
 - **Swallowed submit:** the server commits the transfer, then the response is lost (the page
   hangs on a spinner, or returns a gateway error).
 - **Swallowed click:** script cancels the first click on a chosen button.
-- **Late rows:** activity or statement rows arrive 3 seconds after load.
+- **Late rows:** activity or statement rows arrive a second after load.
 - **Injected instruction:** text on the page addressed to "automated assistants" asking for a
   payment or a new payee.
 - **Unknown screen:** a page the product has never shown ("System maintenance: please verify
@@ -1055,8 +1055,8 @@ is recognized, a control on it is visible and enabled, nothing says it is still 
 
 Failing that, it is ready when two screenshots 700 ms apart match and so does the layout
 structure. A loaded, usable page that matches no known screen is handed back as an unknown
-screen after 10 seconds, whether it is still or not. A page that is still loading gets up to 3
-minutes.
+screen after 2 seconds, whether it is still or not. A page that is still loading gets up to a
+minute.
 
 Signed in means a recognized signed-in screen, never a missing password field. Every browser
 call has its own timeout.
@@ -1175,8 +1175,9 @@ One person may both start and approve a transfer; four-eyes approval is Part 2.
   marker, kept in the bank's own data.
 - On the confirmation screen, read the confirmation number, then find the transfer in the
   activity by its memo token: `succeeded`.
-- If the result is unclear (gateway error, spinner, timeout, unknown screen, session lost), **do
-  not click again**. Open the activity and look for the memo token, polling briefly:
+- If the result is unclear (gateway error, spinner, no answer in 10 seconds, unknown screen,
+  session lost), **do not click again**. Open the activity and look for the memo token, polling
+  briefly:
   - found once: `succeeded`, with the reference read from history
   - found twice: `escalated: ambiguous_outcome` (a duplicate exists; a person must look)
   - not found: `escalated: ambiguous_outcome`. Never resubmit.

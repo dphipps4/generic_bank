@@ -344,7 +344,7 @@ export async function waitForResult(
     const r = await resultOf(sql, runId);
     if (!r || (r.status !== 'running' && r.status !== 'needs_human') || Date.now() >= until)
       return r;
-    await new Promise((res) => setTimeout(res, 300));
+    await new Promise((res) => setTimeout(res, 100));
   }
 }
 
@@ -680,7 +680,7 @@ export async function awaitAnswer(
   taskId: string,
   secret: string,
   deadline: Date,
-  pollMs = 1000,
+  pollMs = 250,
 ): Promise<Answer> {
   for (;;) {
     const r = await sql.query<{ status: string; answerSealed: string | null; runId: string }>(
@@ -723,7 +723,7 @@ export async function awaitDecision(
   sql: Sql,
   taskId: string,
   deadline: Date,
-  pollMs = 1000,
+  pollMs = 250,
 ): Promise<Decision> {
   for (;;) {
     const t = (
