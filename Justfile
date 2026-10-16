@@ -156,7 +156,7 @@ up: env image
 # Stop everything (data is kept), or only some groups: just down console bank
 [group('Run')]
 down *groups:
-    @if [[ -z "{{groups}}" ]]; then {{compose}} --profile '*' down; \
+    @if [[ -z "{{groups}}" ]]; then {{compose}} --profile '*' down --remove-orphans; \
       else {{compose}} --profile '*' rm -sf $(just _services {{groups}}); fi
 
 # Stop and start everything
@@ -349,7 +349,7 @@ browser:
 all:
     @rm -rf apps/*/dist packages/*/dist
     @find . -name '*.tsbuildinfo' -not -path './node_modules/*' -delete
-    @{{compose}} --profile '*' down -v
+    @{{compose}} --profile '*' down -v --remove-orphans
     @just build-nc
     @echo "Rebuilt from nothing. Next: just up"
 
@@ -357,7 +357,7 @@ all:
 [group('Housekeeping')]
 [confirm('This deletes every database and object store volume. Continue?')]
 reset:
-    @{{compose}} --profile '*' down -v
+    @{{compose}} --profile '*' down -v --remove-orphans
 
 # Remove build output (dist, tsbuildinfo, .run)
 [group('Housekeeping')]
