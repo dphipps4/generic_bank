@@ -60,7 +60,8 @@ let factory: ReturnType<typeof buildServer>;
 let factoryUrl: string;
 let dir: string;
 let api: Awaited<ReturnType<typeof buildApi>>;
-let apiToken: string;
+/** A fresh access token: the test can outlive one (they last 15 minutes) on a busy machine. */
+let apiToken: () => Promise<string>;
 const store = memoryStore();
 const consoleApp = Fastify();
 
@@ -278,7 +279,7 @@ beforeAll(async () => {
   const o = oauth(db, KEY);
   api = await buildApi({ oauth: o, sql: db, sealKey: KEY, enqueue: async () => {} });
   const c = await o.createClient({ name: 't', scopes: ['tasks:read'], createdBy: 'a' });
-  apiToken = (await o.exchangeCode(c.clientId, c.clientSecret, c.code)).access_token;
+  apiToken = async () => (await o.issueDirect(c.clientId, 'the test')).access_token;
   // The person at the staff phone: answers each staff-code task, the Runner's and the Scout's,
   // with the code the bank sent, through the Console's inbox.
   answering = setInterval(async () => {
@@ -478,7 +479,7 @@ describe('a bank redesigns, the crawl breaks, the factory repairs it', () => {
     const v = await gate({ sql: db, sandbox: sandbox() }, recommendationId!);
     expect(v.state).toBe('promoted');
     const banks = (
-      await api.inject({ url: '/banks', headers: { authorization: `Bearer ${apiToken}` } })
+      await api.inject({ url: '/banks', headers: { authorization: `Bearer ${await apiToken()}` } })
     ).json<{ id: string; tasks: { task: string; crawlerVersion: string }[] }[]>();
     expect(banks.find((b) => b.id === 'generic')!.tasks).toContainEqual({
       task: 'check-balance',

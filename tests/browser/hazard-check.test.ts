@@ -30,7 +30,8 @@ let db: Awaited<ReturnType<typeof controlDb>>;
 let bank: LiveBank;
 let browser: Browser;
 let api: Awaited<ReturnType<typeof buildServer>>;
-let token: string;
+/** A fresh access token: the test can outlive one (they last 15 minutes) on a busy machine. */
+let token: () => Promise<string>;
 const console_ = Fastify();
 
 beforeAll(async () => {
@@ -42,7 +43,7 @@ beforeAll(async () => {
   const o = oauth(db, 'k'.repeat(40));
   api = await buildServer({ oauth: o, sql: db, sealKey: 'r'.repeat(40), enqueue: async () => {} });
   const c = await o.createClient({ name: 't', scopes: ['tasks:read'], createdBy: 'a' });
-  token = (await o.exchangeCode(c.clientId, c.clientSecret, c.code)).access_token;
+  token = async () => (await o.issueDirect(c.clientId, 'the test')).access_token;
   recommendationPages(console_, {
     sql: db,
     whoIs: () => ({ email: 'ada@generic-bank.local', role: 'approver' }),
@@ -94,7 +95,7 @@ const sandbox = (): Sandbox => ({
 });
 
 const listed = async () =>
-  (await api.inject({ url: '/banks', headers: { authorization: `Bearer ${token}` } }))
+  (await api.inject({ url: '/banks', headers: { authorization: `Bearer ${await token()}` } }))
     .json<{ id: string; tasks: { task: string; crawlerVersion: string }[] }[]>()
     .find((b) => b.id === 'generic')!
     .tasks.filter((t) => t.task === 'check-balance');
