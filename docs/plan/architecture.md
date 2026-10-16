@@ -430,38 +430,30 @@ every seeded secret and personal value. One hit fails it.
 
 ## Observability
 
-### Three signals, one id
+### Two signals, one id
 
 ```text
   api · console · runner · memory · factory
-     │  every row, log line and span carries  runId · traceId · step
+     │  every row and log line carries  runId · step
      │
      ├──▶ records ──▶ Postgres ──▶ the Console's timelines        source of truth
      │
-     ├──▶ JSON logs ──▶ stdout and .data/logs/*.jsonl            make logs
-     │
-     └──▶ OpenTelemetry spans ──▶ .data/traces/*.jsonl           make trace RUN=…
-                                └─▶ OTLP ─▶ Collector ─▶ Tempo (traces) · Loki (logs)
-                                                       └─▶ Grafana     make observe
+     └──▶ JSON logs ──▶ stdout and .data/logs/*.jsonl            make logs
 ```
 
-Each run is one OpenTelemetry trace; its `runId`, trace id and current step ride on every row,
-log line and span, so any one finds the other two.
+A run's `runId` and current step ride on every row and log line, so either finds the other.
 
 ### What the crawler did and what the agent did
 
 A task run records every step (screen, action, outcome, duration), masked frame, recovery and
 its hazard, guard decision, network event (no bodies or query strings), journal entry and human
 answer. A factory run records every model call (role, model, prompt version, tokens, cost,
-latency), tool call and veto, Supervisor verdict, eval rung, lesson and its spend. Traces have a
-span per step or phase; model-call spans follow the OpenTelemetry **GenAI semantic
-conventions**.
+latency), tool call and veto, Supervisor verdict, eval rung, lesson and its spend.
 
-Logs and traces stay on the machine: `make logs`, `make <group>-logs` and
-`make trace RUN=<runId>` read them, and `make observe` adds a Collector, Tempo, Loki and Grafana
-(about 600 MB, off by default). Span attributes never carry a field value, credential, code,
-account number, amount or name, and the PII scan covers log and trace files too. SQL views over
-the records feed the Console's Home, Health and Cost pages.
+Logs stay on the machine: `make logs` and `make <group>-logs` read them. A log line never
+carries a field value, credential, code, account number, amount or name, and the PII scan covers
+the log files too. SQL views over the records feed the Console's Home, Health and Cost pages.
+OpenTelemetry traces, `make trace` and `make observe` are Part 2.
 
 ---
 

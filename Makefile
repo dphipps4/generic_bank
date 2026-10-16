@@ -239,8 +239,8 @@ secrets-scan: ## Secrets (gitleaks, in its pinned image): the whole history and 
 demo evals check-prompts memory-export memory-import export import trace observe docs: ## Not built yet: each says which milestone brings it
 	@case "$@" in \
 	  demo) m="milestone M4" ;; evals) m="milestone M7" ;; check-prompts) m="milestone M9" ;; \
-	  memory-export|memory-import|export|import) m="Part 2" ;; \
-	  trace|observe) m="milestone M5" ;; docs) m="milestone M10" ;; esac; \
+	  memory-export|memory-import|export|import|trace|observe) m="Part 2" ;; \
+	  docs) m="milestone M10" ;; esac; \
 	echo "make $@ is not built yet: it arrives in $$m."; exit 1
 
 ##@ Housekeeping

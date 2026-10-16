@@ -94,8 +94,7 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 |---|---|---|
 | Source of truth | **Postgres records** | Every step, frame, guard decision and call is a row |
 | Logs | **pino** JSON, redacted and scrubbed, to stdout and `.data/logs/` | Redaction is configuration, not discipline |
-| Traces | **OpenTelemetry**, one trace per run, **GenAI semantic conventions**; JSON lines in `.data/traces/` | Vendor-neutral; Tempo, LangSmith, Langfuse or Phoenix by configuration |
-| Optional stack | `make observe`: **OpenTelemetry Collector**, **Grafana Tempo**, **Loki**, **Grafana** | About 600 MB, off by default, always on in Part 2 |
+| Traces (Part 2 of `GENERIC_BANK_PLAN.md`) | **OpenTelemetry**, one trace per run, **GenAI semantic conventions**; `make trace` and `make observe` (**Collector**, **Grafana Tempo**, **Loki**, **Grafana**) | Vendor-neutral; Tempo, LangSmith, Langfuse or Phoenix by configuration |
 | Metrics and cost | SQL views on the AdminJS dashboard | No metrics stack by default |
 | Notifications | Console banner, log, optional webhook | ntfy and paging are Part 2 |
 
