@@ -326,6 +326,9 @@ async function readSession(
           let p = n.parentIndex[k]!;
           while (p >= 0 && p !== ni) p = n.parentIndex[p]!;
           if (p !== ni) break;
+          // A control's name is what is drawn inside it: text hidden with it (a closed menu's
+          // items) has no layout, and is no part of the name.
+          if (!layoutOf.has(k)) continue;
           const parentTag = S(n.nodeName[n.parentIndex[k]!]);
           if (S(n.nodeName[k]) === '#text' && parentTag !== 'SCRIPT' && parentTag !== 'STYLE')
             parts.push(S(n.nodeValue[k]));

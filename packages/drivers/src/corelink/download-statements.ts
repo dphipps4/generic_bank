@@ -61,7 +61,7 @@ export async function downloadStatements(
             continue;
           }
           // The tile's own Statements: beside its Activity, on the same line.
-          const activity = withText(s.model, tile.accountLabel, 'Activity');
+          const activity = withText(s.model, tile.accountLabel, ctx.profile.words.activity);
           const mid = (b: { y: number; h: number }) => b.y + b.h / 2;
           const own = s.model.controls
             .filter(

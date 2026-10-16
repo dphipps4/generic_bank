@@ -12,7 +12,14 @@ const ERRORS_ON_SEARCH = [
 
 export function signatures(p: Profile): Signature[] {
   const w = p.words;
+  const marks = p.screens ?? {};
+  // A notice after sign-in, at a bank that shows one: its words, and the button that passes it.
+  const notice: Signature[] =
+    marks['login.notice'] && w.dismiss.length
+      ? [{ id: 'login.notice', requires: [marks['login.notice']], controls: [{ name: w.dismiss }] }]
+      : [];
   return [
+    ...notice,
     {
       id: 'login.signin',
       requires: [w.operatorId],
@@ -44,7 +51,12 @@ export function signatures(p: Profile): Signature[] {
     { id: 'login.code_expired', requires: ['That code has expired'] },
     { id: 'login.terms', requires: ['Terms updated'], controls: [{ name: 'Acknowledge' }] },
     { id: 'dialog.promo', requires: ['New in CoreLink'], controls: [{ name: 'Not now' }] },
-    { id: 'console.home', requires: ['to begin'], controls: [{ name: w.memberSearch }] },
+    {
+      id: 'console.home',
+      requires: [marks['console.home'] ?? 'to begin'],
+      // Behind a menu, member search shows only once the menu is open.
+      controls: [{ name: w.menu.length ? w.menu : w.memberSearch }],
+    },
     {
       id: 'member.search',
       controls: [{ name: w.search }],
@@ -55,7 +67,11 @@ export function signatures(p: Profile): Signature[] {
     { id: 'member.closed', requires: ['Member status: Closed'] },
     { id: 'member.in_use', requires: ['record is in use by another operator'] },
     { id: 'member.permission', requires: ['You do not have permission'] },
-    { id: 'member.summary', requires: ['Available balance'], controls: [{ name: 'Activity' }] },
+    {
+      id: 'member.summary',
+      requires: ['Available balance'],
+      controls: [{ name: w.activity }],
+    },
     {
       id: 'transfer.form',
       requires: [w.transfer, 'Amount', 'Memo'],

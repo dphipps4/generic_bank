@@ -3,13 +3,7 @@
 // for its hazard (the same table the hazard lab shows), and a balance it read must be the one in
 // the bank's own ledger: the bank's word, never the crawler's. Every hazard that gives another
 // result is named.
-import {
-  type Expected,
-  describeExpected,
-  type HazardName,
-  OUTCOMES,
-  type ResultCode,
-} from '@gb/contracts';
+import { type Expected, describeExpected, type HazardName, OUTCOMES } from '@gb/contracts';
 import {
   type Balance,
   checkBalance,
@@ -18,31 +12,9 @@ import {
   type Profile,
 } from '@gb/drivers';
 import type { Browser } from '@gb/screen';
-import type { Claim } from './recommend.js';
 
-/**
- * The bank's profile from its approved claims, over the profile the factory starts from: the
- * vendor's for a bank it onboards, the bank's last for a repair (plan, §M.1). Each claimed word,
- * refusal and statements notice replaces the base's; the rest (the account wording, the code
- * style, the named pictures) is the base's, and the hazard check is what proves it holds here.
- */
-export function profileFrom(base: Profile, claims: Claim[]): Profile {
-  const words = { ...base.words };
-  const refusals = new Map(base.refusals.map((r) => [r.code, r.text]));
-  let statementsKept = base.statementsKept;
-  for (const c of claims) {
-    const [part, name] = c.about.split('.') as [string, string | undefined];
-    if (part === 'words' && name && name in words) words[name as keyof typeof words] = [c.value];
-    else if (part === 'refusals' && name) refusals.set(name as ResultCode, c.value);
-    else if (part === 'statementsKept') statementsKept = c.value;
-  }
-  return {
-    ...base,
-    words,
-    refusals: [...refusals].map(([code, text]) => ({ text, code })),
-    statementsKept,
-  };
-}
+// The profile from approved claims is the drivers' own, so the Runner serves what this checked.
+export { profileFrom } from '@gb/drivers';
 
 /** The bank the check runs against, as the sandbox reaches it. */
 export interface Sandbox {

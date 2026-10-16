@@ -33,7 +33,18 @@ export interface Profile {
     /** An account tile's way to its statements, and a statement row's button. */
     statements: string[];
     statement: string[];
+    /** An account tile's way to its activity. */
+    activity: string[];
+    /** The control that opens a menu holding the places to go; none when they are on the page. */
+    menu: string[];
+    /** The button that moves past a notice after sign-in (the screen `login.notice`). */
+    dismiss: string[];
   };
+  /**
+   * The bank's own words that mark a screen, by screen id, where they differ from the product's:
+   * `console.home`, or `login.notice` for a page after sign-in that is passed with `dismiss`.
+   */
+  screens?: Record<string, string>;
   /** The bank's own words when it refuses a transfer, and the business outcome each one is. */
   refusals: { text: string; code: ResultCode }[];
   /** The bank's own words, on its statements page, for the months it does not list. */

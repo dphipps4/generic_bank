@@ -6,7 +6,6 @@ import {
   checkBalance,
   type DriverContext,
   downloadStatements,
-  PROFILES,
   type StepRecord,
 } from '@gb/drivers';
 import { type FrameStore, frameOf } from '@gb/evidence';
@@ -18,6 +17,9 @@ import {
   loadRun,
   openHumanTask,
   awaitAnswer,
+  driverFault,
+  forcedHazardsOf,
+  serving,
   settleRun,
   type Sql,
   trailEnd,
@@ -70,20 +72,18 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
   const bank = (
     await deps.sql.query<{ url: string }>('SELECT url FROM "Bank" WHERE id = $1', [run.bank])
   ).rows[0];
-  // A frozen bank runs nothing until a person clears the freeze (plan, Appendix L).
-  const promoted = (
-    await deps.sql.query<{ id: string }>(
-      `SELECT id FROM "Driver" WHERE tenant = $1 AND task = $2 AND state = 'promoted'
-         AND NOT EXISTS (SELECT 1 FROM "Freeze" WHERE tenant = $1 AND "clearedAt" IS NULL)`,
-      [run.bank, run.task],
-    )
-  ).rows[0];
-  const profile = PROFILES[run.bank];
-  if (!bank || !promoted || !profile || !TASKS.has(run.task)) {
+  // The version serving the task now, and its profile; a frozen bank, or none, runs nothing.
+  const served = await serving(deps.sql, run.bank, run.task);
+  if (!bank || !served || !TASKS.has(run.task)) {
     const e: Ending = { status: 'failed', code: 'no_driver', retryable: false };
     await settleRun(deps.sql, runId, e);
     return e;
   }
+  const profile = served.profile;
+  await deps.sql.query(`UPDATE "TaskRun" SET "driverVersionId" = $2 WHERE id = $1`, [
+    runId,
+    served.versionId,
+  ]);
 
   const input = await inputsOf<Record<string, unknown>>(deps.sql, runId, deps.sealKey);
   const creds = await deps.credentials(run.bank);
@@ -218,6 +218,21 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
     await (browser as Browser | null)?.close();
   }
   await settleRun(deps.sql, runId, ending);
+  // A screen the driver does not know is the driver's fault, never the bank's: it is taken out of
+  // service, and a repair case opens (plan, Appendix L). A hazard forced in the lab is the bank
+  // misbehaving on purpose, and is no fault.
+  if (
+    ending.status === 'escalated' &&
+    ending.code === 'unknown_screen' &&
+    !(await forcedHazardsOf(deps.sql, runId)).length
+  )
+    await driverFault(deps.sql, {
+      tenant: run.bank,
+      task: run.task,
+      versionId: served.versionId,
+      runId,
+      why: 'a screen the driver does not know',
+    });
   return ending;
 }
 

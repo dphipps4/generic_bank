@@ -792,3 +792,4 @@ export {
   verifyJournal,
 } from './journal.js';
 export { statementKey, statementOf, statementRef } from './statements.js';
+export { closeRepairCase, driverFault, openRepairCase, profileOf, serving } from './registry.js';
