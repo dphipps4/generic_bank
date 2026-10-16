@@ -129,7 +129,7 @@ describe('the recorder', () => {
   it('with memory stopped, the run settles as it would; its episode arrives once memory is back', async () => {
     await stopMemory();
     // The Runner, carrying out a run with no promoted driver: it settles before any browser opens.
-    const runId = await balanceRun('example');
+    const runId = await balanceRun('sample');
     const ending = await executeRun(runId, {
       sql: control,
       store: memoryStore(),
