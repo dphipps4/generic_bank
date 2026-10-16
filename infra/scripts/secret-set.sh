@@ -10,13 +10,13 @@
 # in the local file, which every app service can read.
 source "$(dirname "$0")/lib.sh"
 FILE="${1:-}" KEY="${2:-}" FROM="${3:-}"
-[[ -n "$FILE" && -n "$KEY" ]] || die "usage: just secret-set local|ops|factory NAME [path]"
-[[ " ${SECRET_FILES[*]} " == *" $FILE "* ]] || die "FILE must be local, ops or factory"
+[[ -n "$FILE" && -n "$KEY" ]] || die "usage: just secret-set local|factory NAME [path]"
+[[ " ${SECRET_FILES[*]} " == *" $FILE "* ]] || die "FILE must be local or factory"
 [[ "$KEY" =~ ^[A-Z][A-Z0-9_]*$ ]] || die "KEY must look like AN_ENV_NAME"
 target="$(secret_path "$FILE")"
 [[ -f "$target" ]] || die "$target does not exist; run just setup"
-if [[ "$FILE" == "local" && "$KEY" =~ ^(VAULT_[A-Z_]+|ANTHROPIC_API_KEY|OPENAI_API_KEY|OPENROUTER_API_KEY|FACTORY_[A-Z_]+)$ ]]; then
-  die "$KEY must never be in the local file; use FILE=ops or FILE=factory"
+if [[ "$FILE" == "local" && "$KEY" =~ ^(ANTHROPIC_API_KEY|OPENAI_API_KEY|OPENROUTER_API_KEY|FACTORY_[A-Z_]+)$ ]]; then
+  die "$KEY must never be in the local file; use the factory file"
 fi
 from_clipboard=0
 if [[ -n "$FROM" ]]; then

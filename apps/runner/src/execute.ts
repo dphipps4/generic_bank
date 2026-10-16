@@ -45,7 +45,7 @@ export interface RunDeps {
   /** Opens a person's answer (a staff code). The Console seals with it; it opens no run's inputs. */
   answerKey: string;
   /**
-   * The staff service account for a bank (from Vault in the plan; from the Runner's secrets here),
+   * The staff service account for a bank (from the Runner's secrets, which SOPS keeps),
    * and the supervisor whose code a person reads when a transfer is over the bank's threshold.
    */
   credentials(

@@ -84,7 +84,7 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 |---|---|---|
 | Encrypted config in git | **SOPS** with **age** keys | Encrypted secrets reviewed like code; `just up` makes a local key |
 | Runtime config | **Environment variables** through a zod schema that fails closed | All values present, secrets 32+ characters, no duplicate tokens |
-| Credentials and device cookies | **HashiCorp Vault** (KV), dev mode locally | Fetched only at the moment of typing; never leave the Runner |
+| Credentials | **SOPS** secrets, rendered only to the Runner | Typed, never returned or logged; Vault in Part 2 |
 
 ---
 

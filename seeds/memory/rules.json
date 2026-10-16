@@ -44,7 +44,7 @@
     {
       "id": "R09",
       "rule": "Credentials are never placed on a command line, in git, in a log or in a model's context. Sign in only by the method the bank profile names.",
-      "enforced_by": "secret typing from Vault and the PII scan"
+      "enforced_by": "secret typing from stored secrets and the PII scan"
     },
     {
       "id": "R10",

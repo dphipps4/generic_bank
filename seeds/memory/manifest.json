@@ -8,7 +8,7 @@
     "rules": {
       "path": "rules.json",
       "entries": 19,
-      "sha256": "7707f5421533ae55fb6da7358cf838356b299469368df0367a4cfb1bed7ff22d"
+      "sha256": "24da8ae616dbc8dae63120244ae81b778d0db0e15aed9aeeb6c5c09e1855cb22"
     },
     "checks": {
       "path": "checks.json",

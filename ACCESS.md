@@ -30,7 +30,6 @@ below.
 | Bank 4, Placeholder FCU | http://127.0.0.1:8084/cu/ib/ | the same, with a code from its authenticator |
 | Staff inbox (the bank staff's phone and email) | http://localhost:8089 | none |
 | MinIO console (evidence and statements) | http://localhost:9001 | MinIO user and password |
-| Vault | http://localhost:8201/ui | Vault root token |
 
 Bank 2 also serves pages from a second origin on 8092, and bank 4 on 8094; you reach them
 through the bank's own pages, not directly. Supervisor `0901` signs in the same way as `0412`
@@ -50,7 +49,6 @@ and the inbox shows that app's current code too.
 | Memory | http://localhost:8470 | `Authorization: Bearer` a memory role token |
 | Factory gateway | http://localhost:8200 | `Authorization: Bearer` the factory gateway token |
 | MinIO S3 API | http://localhost:9000 | MinIO user and password |
-| Vault API | http://localhost:8201/v1 | `X-Vault-Token` the root token |
 
 The bank admin API reads a bank's own state, which is how tests judge what really happened:
 `/state`, `/members/{member}/balances`, `/hazards` (the hazard log) and `/messages` (the codes
@@ -71,7 +69,6 @@ Each answers 200 when the service is up.
 | Bank admin APIs | http://localhost:9081/healthz to :9084 |
 | Staff inbox | http://localhost:8089/healthz |
 | MinIO | http://localhost:9000/minio/health/live |
-| Vault | http://localhost:8201/v1/sys/health |
 
 All of them at once:
 

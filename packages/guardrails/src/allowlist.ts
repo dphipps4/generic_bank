@@ -17,7 +17,7 @@ export interface Entry {
   control: string;
   /** Moves money: allowed only with a consumed approval grant. */
   money?: true;
-  /** Typed only from the vault by the Runner, never as plain text. */
+  /** Typed only from a stored secret by the Runner, never as plain text. */
   secret?: true;
 }
 
@@ -35,7 +35,7 @@ export type Names = Readonly<Record<string, readonly (string | RegExp)[]>>;
 export interface Context {
   /** What consumeGrant returned for this click, for a money-moving press. */
   grant?: GrantCheck;
-  /** The Runner is typing a value from the vault, not text it was given. */
+  /** The Runner is typing a stored secret, not text it was given. */
   secret?: boolean;
   /** What is typed as plain text. */
   typed?: string;
@@ -187,7 +187,7 @@ export function decide(
     return {
       allowed: false,
       layer: 'secret typing',
-      rule: `"${entry.control}" is typed only from the vault`,
+      rule: `"${entry.control}" is typed only from a stored secret`,
     };
   if (!entry.secret && ctx.secret === true)
     return {

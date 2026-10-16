@@ -1,7 +1,7 @@
 # Generic Bank Architecture
 
 > **The boxes named here:** box A runs the application (Task API, Console, workflows, the
-> Runner); box B holds every durable thing (Postgres, Vault, object storage, Memory); box D is
+> Runner); box B holds every durable thing (Postgres, object storage, Memory); box D is
 > the software factory, created for a session and destroyed after. The four banks are the
 > outside world.
 
@@ -124,7 +124,7 @@ changing an account; is this a money or account page; for the one money click, i
 grant; and afterward, did a confirmation appear that shouldn't have. Any refusal stops the run,
 writes it down, freezes that bank until a person clears it, and tells someone.
 
-Credentials are typed from Vault and never come back out. Sign-ins are capped per day. The
+Credentials are SOPS secrets only the Runner receives; they are typed and never come back out. Sign-ins are capped per day. The
 guards judge the controls themselves, so instructions planted in a page's text change nothing.
 A guard error always stops the run, and a lint rule forbids catching one.
 
@@ -158,7 +158,7 @@ doesn't recognize, it stops and escalates rather than guess.
 A crashed worker or browser picks up at the last finished step; a crash between deciding to press
 submit and seeing the result goes to the history check, never to a second press. A run that
 stalls is ended with a final picture. A person who never answers lets the deadline end the run.
-When Postgres, Vault, object storage or memory is down, the system refuses new work, stops before
+When Postgres, object storage or memory is down, the system refuses new work, stops before
 signing in, keeps pictures on disk until it can upload them, or queues memory's records for
 later, as each case calls for.
 
@@ -399,7 +399,6 @@ an unknown screen, and permission, not-found and validation errors.
 | Stall: no step for 3 minutes | saves a final picture and ends the run | `escalated: stuck` |
 | Nobody answers a human task | the deadline ends the run | `expired` |
 | Postgres down | new calls refused; running workflows pause and resume | HTTP 503 |
-| Vault down | stops before sign-in | `failed: unavailable`, retryable |
 | Object storage down | pictures wait on disk and upload later | nothing |
 | Memory down | runs continue; their records wait in an outbox; the factory won't start without its pack | nothing for tasks |
 | A picture can't be proven clean | not kept; the reason is | nothing |

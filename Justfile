@@ -27,7 +27,7 @@ compose := "docker compose -f infra/compose/compose.yaml --env-file config/app.e
 scripts := "infra/scripts"
 
 # Service groups, for up, down, logs and rebuild.
-data := "postgres vault minio memory"
+data := "postgres minio memory"
 backend := "api"
 console := "console"
 crawlers := "runner"
@@ -101,7 +101,7 @@ secrets-init:
 env: secrets-init
     @{{scripts}}/render-env.sh
 
-# Edit secrets (in vi, in the tools image): just secrets-edit local|ops|factory
+# Edit secrets (in vi, in the tools image): just secrets-edit local|factory
 [group('Secrets (SOPS + age)')]
 secrets-edit file="local":
     @{{scripts}}/tool.sh sops config/{{file}}.secrets.enc.env
@@ -119,7 +119,7 @@ secret-rotate file key:
 # List the secret names in each file (never the values)
 [group('Secrets (SOPS + age)')]
 secrets-keys:
-    @for f in local factory ops; do echo "$f"; {{scripts}}/tool.sh sops decrypt --input-type dotenv --output-type dotenv config/$f.secrets.enc.env | cut -d= -f1 | sed 's/^/  /'; done
+    @for f in local factory; do echo "$f"; {{scripts}}/tool.sh sops decrypt --input-type dotenv --output-type dotenv config/$f.secrets.enc.env | cut -d= -f1 | sed 's/^/  /'; done
 
 # Show the Console's first admin password
 [group('Secrets (SOPS + age)')]
@@ -178,7 +178,6 @@ urls:
       echo "  Example CU     http://localhost:$BANK_EXAMPLE_PORT/"; \
       echo "  Staff inbox    http://localhost:$BANK_INBOX_PORT  (sign-in and approval codes)"; \
       echo "  MinIO          http://localhost:$MINIO_CONSOLE_PORT"; \
-      echo "  Vault          http://localhost:$VAULT_PORT/ui"; \
       echo; echo "  Every URL: ACCESS.md. Logins: secrets/credentials.txt"
     @{{scripts}}/model-mode.sh
     @echo
@@ -193,11 +192,10 @@ credentials:
 hazard-header hazards:
     @{{scripts}}/hazard-header.sh "{{hazards}}"
 
-# Box B: Postgres, Vault, MinIO, Memory
+# Box B: Postgres, MinIO, Memory
 [group('Run')]
 data: env image
-    @{{compose}} up -d --wait postgres vault minio
-    @{{scripts}}/vault.sh ensure
+    @{{compose}} up -d --wait postgres minio
     @{{compose}} up -d --wait memory
 
 # Box A back end: the Task API (and its migrations)
@@ -262,11 +260,6 @@ logs *groups:
 rebuild +groups:
     @just build
     @{{compose}} --profile '*' up -d --wait --force-recreate $(just _services {{groups}})
-
-# Show whether Vault is initialized and unsealed
-[group('Run')]
-vault-status:
-    @{{scripts}}/vault.sh status
 
 # Load the starting knowledge (seeds/memory) into memory, through its door, as the curator; again writes nothing
 [group('Run')]
@@ -367,7 +360,7 @@ browser:
 # Back to a fresh clone's state: build output and every volume deleted, the images rebuilt with no
 # cache. Then just up, as after just setup. Asks first.
 [group('Housekeeping')]
-[confirm('This deletes every database, Vault and object store volume, and rebuilds every image. Continue?')]
+[confirm('This deletes every database and object store volume, and rebuilds every image. Continue?')]
 all:
     @rm -rf apps/*/dist packages/*/dist
     @find . -name '*.tsbuildinfo' -not -path './node_modules/*' -delete
@@ -377,7 +370,7 @@ all:
 
 # Delete all local data (volumes) and start again from nothing. Asks first.
 [group('Housekeeping')]
-[confirm('This deletes every database, Vault and object store volume. Continue?')]
+[confirm('This deletes every database and object store volume. Continue?')]
 reset:
     @{{compose}} --profile '*' down -v
 
