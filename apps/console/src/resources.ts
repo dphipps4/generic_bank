@@ -39,6 +39,8 @@ const MODELS: { name: string; sortBy: string; nav: string; evidence?: boolean }[
   { name: 'FactoryRun', sortBy: 'startedAt', nav: 'Factory', evidence: true },
   { name: 'ModelCall', sortBy: 'at', nav: 'Factory', evidence: true },
   { name: 'EvalResult', sortBy: 'at', nav: 'Factory', evidence: true },
+  // Decided on the Recommendations page, with a reason; never edited here.
+  { name: 'Recommendation', sortBy: 'createdAt', nav: 'Factory', evidence: true },
   { name: 'RepairCase', sortBy: 'openedAt', nav: 'Drivers' },
   // Cleared on the Freezes page, with a reason; never edited here.
   { name: 'Freeze', sortBy: 'frozenAt', nav: 'Drivers', evidence: true },

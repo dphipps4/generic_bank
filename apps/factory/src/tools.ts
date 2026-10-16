@@ -15,7 +15,7 @@ export const TOOLS: Readonly<Record<Role, readonly string[]>> = {
     'browser_type_credential',
     'browser_enter_code',
   ],
-  supervisor: ['browser_look'],
+  supervisor: ['browser_look', 'recommend'],
   lessons: [],
 };
 

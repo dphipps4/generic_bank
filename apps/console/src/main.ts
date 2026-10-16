@@ -16,6 +16,7 @@ import { freezePages } from './pages/freezes.js';
 import { inboxPages } from './pages/inbox.js';
 import { journalPages } from './pages/journal.js';
 import { labPages, throughTheApi } from './pages/lab.js';
+import { recommendationPages } from './pages/recommendations.js';
 import { runPages, type Viewer } from './pages/runs.js';
 import { s3Store } from '@gb/evidence';
 import { resources } from './resources.js';
@@ -131,6 +132,7 @@ inboxPages(app, {
       runId,
     )),
 });
+recommendationPages(app, { sql: control, whoIs });
 journalPages(app, { sql: control, whoIs });
 if (cfg.HAZARDS_FORCEABLE === 'true') {
   showLabInNav();

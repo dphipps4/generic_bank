@@ -4,7 +4,9 @@
   "include": ["src"],
   "references": [
     { "path": "../../packages/config" },
+    { "path": "../../packages/contracts" },
     { "path": "../../packages/db" },
+    { "path": "../../packages/drivers" },
     { "path": "../../packages/evidence" },
     { "path": "../../packages/runs" },
     { "path": "../../packages/screen" }

@@ -6,12 +6,14 @@ import { join } from 'node:path';
 import Fastify from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
+import { recommendationPages } from '../../apps/console/src/pages/recommendations.js';
 import { runPages } from '../../apps/console/src/pages/runs.js';
 import type { Agent, Conversation } from '../../apps/factory/src/agent.js';
 import { gateway } from '../../apps/factory/src/gateway.js';
 import { sqlLedger } from '../../apps/factory/src/ledger.js';
 import { DEFAULT_ROLES, PRICES, type Provider, type Role } from '../../apps/factory/src/models.js';
 import { personCode } from '../../apps/factory/src/person.js';
+import { type Claim, recommend } from '../../apps/factory/src/recommend.js';
 import { scout } from '../../apps/factory/src/scout.js';
 import { buildServer } from '../../apps/factory/src/server.js';
 import { type Goal, GOALS, runGoal } from '../../apps/factory/src/supervisor.js';
@@ -23,7 +25,7 @@ import { GENERIC_BANK } from '../../packages/drivers/src/corelink/profiles.js';
 import { memoryStore } from '../../packages/evidence/src/index.js';
 import { controlDb } from '../../packages/oauth/test/control.js';
 import { answerHumanTask } from '../../packages/runs/src/index.js';
-import { Browser, encodePng } from '../../packages/screen/src/index.js';
+import { Browser, click, encodePng, waitFullyRendered } from '../../packages/screen/src/index.js';
 import { type LiveBank, liveBank, PASSWORDS } from '../support/banks.js';
 
 // The Scout against the real Generic Bank in Chrome: its tools, what they refuse, and a run guided
@@ -47,6 +49,9 @@ let posts = 0;
 const CONFIRM = encodePng({ width: 80, height: 24, data: new Uint8Array(80 * 24 * 4).fill(64) });
 let nearUrl: string;
 let farHost: string;
+// The Console's run and recommendation pages, for a person signed in as an approver.
+let consoleApp: ReturnType<typeof Fastify>;
+let consoleUrl: string;
 
 const listen = async (s: Server) => {
   await new Promise<void>((r) => s.listen(0, '127.0.0.1', r));
@@ -91,12 +96,21 @@ beforeAll(async () => {
     );
   });
   nearUrl = `http://localhost:${await listen(near)}/`;
-  browser = await Browser.launch({ hosts: [new URL(bank.url).host, new URL(nearUrl).host] });
   store = memoryStore();
+  consoleApp = Fastify();
+  const whoIs = () => ({ email: 'staff@test', role: 'approver' }) as const;
+  runPages(consoleApp, { sql: db, store, whoIs });
+  recommendationPages(consoleApp, { sql: db, whoIs });
+  await consoleApp.listen({ host: '127.0.0.1', port: 0 });
+  consoleUrl = `http://127.0.0.1:${(consoleApp.server.address() as AddressInfo).port}`;
+  browser = await Browser.launch({
+    hosts: [new URL(bank.url).host, new URL(nearUrl).host, new URL(consoleUrl).host],
+  });
 }, 120_000);
 
 afterAll(async () => {
   await browser?.close();
+  await consoleApp?.close();
   await bank?.close();
   await db?.close();
   near?.close();
@@ -467,6 +481,52 @@ const pageOf = (text: string) => {
 };
 
 /**
+ * The Supervisor's model drafting the recommendation from the run's frames: first a draft with a
+ * claim that cites no frame, which the tool refuses; then each claim on the first frame that shows
+ * it, and a refusal the bank never made, as a guess from the transfer form; then done.
+ */
+function recommending(text: string, items: object[]) {
+  const results = items.filter((x) => 'result' in x).length;
+  if (results === 2) return { text: 'Recommended.' };
+  const frames = [...text.matchAll(/^(f\d+): (\{.*\})$/gm)].map(([, ref, json]) => ({
+    ref: ref!,
+    ...(JSON.parse(json!) as { controls: string[]; texts: string[] }),
+  }));
+  const on = (pred: (f: (typeof frames)[number]) => boolean) => frames.find(pred)!.ref;
+  const control = (name: string) => on((f) => f.controls.includes(name));
+  const seen = (about: string, value: string, ref: string): Claim => ({
+    about,
+    value,
+    basis: 'seen',
+    frames: [ref],
+  });
+  const guess: Claim = {
+    about: 'refusals.insufficient_funds',
+    value: 'The amount is more than the available balance.',
+    basis: 'guess',
+    frames: results === 0 ? [] : [control('Continue')],
+  };
+  const claims =
+    results === 0
+      ? [seen('words.signIn', 'Sign In', control('Sign In')), guess]
+      : [
+          seen('words.signIn', 'Sign In', control('Sign In')),
+          seen('words.memberSearch', 'Member Search', control('Member Search')),
+          seen('words.statements', 'Statements', control('Statements')),
+          seen('words.transfer', 'Transfer Funds', control('Transfer Funds')),
+          seen('words.continue', 'Continue', control('Continue')),
+          seen('words.submitTransfer', 'Submit transfer', control('Submit transfer')),
+          seen(
+            'screens.member.summary',
+            'Available balance',
+            on((f) => f.texts.some((t) => t.includes('Available balance'))),
+          ),
+          guess,
+        ];
+  return { tool: 'recommend', input: { claims } };
+}
+
+/**
  * Both roles' models, scripted, on either provider. The Supervisor reads the goal and the latest
  * frame and answers in its form, citing that frame (its first answer cites a frame of no run, which
  * counts as a wait); the Scout follows the plan for its instruction, on the latest page a tool
@@ -477,6 +537,7 @@ function scripted() {
   return fakeModels((_provider, r) => {
     n++;
     const said = r.items.flatMap((x) => ('user' in x ? [x.user] : []));
+    if (r.system.includes('with the recommend tool')) return recommending(said[0]!, r.items);
     if (r.system.startsWith('You are the Supervisor')) {
       const text = said[0]!;
       const goal = (Object.keys(GOALS) as Goal[]).find((g) =>
@@ -575,7 +636,18 @@ async function runThrough(upstream: Upstream, runId: string, provider: Provider)
       ended.push(r.ended);
       reached.push(s.latest()!.ref);
     }
-    return { conversation, ended, reached, answered: await stop() };
+    // The goals reached, the Supervisor recommends the bank's profile from the run's frames.
+    const claims = await recommend({
+      agent: agent('supervisor'),
+      sql: db,
+      trail,
+      runId,
+      bank: 'generic',
+      goals: (['check-balance', 'download-statements', 'transfer'] as const).map((g) =>
+        GOALS[g](MEMBERS.demo),
+      ),
+    });
+    return { conversation, ended, reached, claims, answered: await stop() };
   } finally {
     await stop();
     await page.close();
@@ -686,15 +758,69 @@ describe.each(['anthropic', 'openai'] as const)(
 
         // The Console shows the run's trail, behind its Frames button.
         const frames = await rows('SELECT seq FROM "TrailFrame" WHERE "runId" = $1', mockRun);
-        const consoleApp = Fastify();
-        runPages(consoleApp, {
-          sql: db,
-          store,
-          whoIs: () => ({ email: 'staff@test', role: 'approver' }),
-        });
         const html = (await consoleApp.inject({ method: 'GET', url: `/runs/${mockRun}` })).body;
         expect(html).toContain(`Frames (${frames.length})`);
-        await consoleApp.close();
+
+        // The recommendation: every claim cites frames of this run, and each claim marked seen
+        // is on every frame it cites. The refusal the bank never made is kept as a guess.
+        const claims = replayed.claims!;
+        expect(claims).toEqual(recorded.claims);
+        expect(claims.map((c) => c.basis)).toEqual([...Array<string>(7).fill('seen'), 'guess']);
+        for (const c of claims) {
+          expect(c.frames.length).toBeGreaterThan(0);
+          for (const ref of c.frames) {
+            expect(Number(ref.slice(1))).toBeLessThanOrEqual(frames.length);
+            const m = await model(ref);
+            const words = [...m.controls.map((x) => x.name), ...m.texts.map((t) => t.text)];
+            if (c.basis === 'seen') expect(words.some((w) => w.includes(c.value))).toBe(true);
+            else expect(words).not.toContain(c.value);
+          }
+        }
+        // Its first draft held a claim with no frame: refused, and nothing kept until it was fixed.
+        const drafts = await rows<{ action: string; outcome: string }>(
+          `SELECT action, outcome FROM "Step" WHERE "runId" = $1 AND name = 'recommend' ORDER BY seq`,
+          mockRun,
+        );
+        expect(drafts.map((d) => d.action)).toEqual(['refused', 'recommended']);
+        expect(drafts[0]!.outcome).toBe(
+          'claim 2 (refusals.insufficient_funds) cites no frame: every claim rests on frames of this run',
+        );
+        expect(drafts[1]!.outcome).toBe('8 claims: 7 seen, 1 guessed');
+        const [kept] = await rows<{ id: string; status: string }>(
+          'SELECT id, status FROM "Recommendation" WHERE "factoryRunId" = $1',
+          mockRun,
+        );
+        expect(kept!.status).toBe('open');
+
+        // In Chrome, on the review card: the guess shows as a guess, and the first claim's Frames
+        // button opens the frame it cites.
+        const tab = await browser.newPage();
+        try {
+          await tab.goto(`${consoleUrl}/recommendations`);
+          const card = (await waitFullyRendered(tab, { limitMs: 30_000 })).model;
+          expect(card.texts.some((t) => t.text === 'guess')).toBe(true);
+          expect(card.texts.some((t) => t.text.includes('One claim is a guess'))).toBe(true);
+          // The newest open recommendation, this run's, is the first card.
+          const button = card.controls.find((x) => x.name.startsWith('Frames ('))!;
+          expect(button.name).toBe('Frames (1)');
+          await click(tab, button);
+          await waitFullyRendered(tab, { limitMs: 30_000 });
+          const shown = await tab.call<{
+            result: { value: { open: boolean; src: string; loaded: boolean; caption: string } };
+          }>('Runtime.evaluate', {
+            expression: `(() => { const i = document.querySelector('#frame-body img'); return { open: document.getElementById('frames').open, src: i ? new URL(i.src).pathname : '', loaded: !!i && i.complete && i.naturalWidth > 0, caption: document.getElementById('frame-cap').textContent }; })()`,
+            returnByValue: true,
+          });
+          const seq = Number(claims[0]!.frames[0]!.slice(1));
+          expect(shown.result.value).toEqual({
+            open: true,
+            src: `/runs/${mockRun}/frames/${seq}.png`,
+            loaded: true,
+            caption: expect.stringMatching(new RegExp(`^${seq}\\. `)),
+          });
+        } finally {
+          await tab.close();
+        }
       } finally {
         await rm(dir, { recursive: true, force: true });
       }
