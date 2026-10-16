@@ -40,6 +40,7 @@ set up.
 ```sh
 just setup                      # once, after git clone: checks the Mac, creates secrets, builds the images
 just up                         # everything: data, memory, API, Console, crawler, all four banks, factory
+just open                       # Swagger UI, the Console and the staff inbox, in the browser
 just down                       # stop everything; the data stays
 just help                       # every recipe, grouped, with what each does
 ```
