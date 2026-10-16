@@ -1,9 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { resultOf } from '../../packages/runs/src/index.js';
-import { type Harness, transferHarness } from './transfer-harness.js';
+import { type Harness, transferHarness } from '../runs/transfer-harness.js';
 
-// Every decision but Approve ends a parked transfer in the result the plan gives it (§F.1 step 3,
-// §F.3), with nothing submitted: the bank's ledger never sees the transfer.
+// Every human step of a transfer, taken in the Console (plan, §F.1 step 3, §F.3, §G.4): the staff
+// code and the supervisor code answered there and never stored, then Approve, Reject, Take over,
+// Cancel, or a deadline nobody meets. Each ends in the result the plan gives it; the bank's ledger
+// is the judge of what moved.
 
 let h: Harness;
 beforeAll(async () => {
@@ -26,6 +28,28 @@ const grants = async (runId: string) =>
   (await h.db.query('SELECT id FROM "ApprovalGrant" WHERE "runId" = $1', [runId])).rows.length;
 
 describe('a person decides a parked transfer', () => {
+  it('Approve, over the threshold: the staff code and the supervisor code from the Console, one posting', async () => {
+    const { runId, memoToken } = await h.start({
+      from: 'Rainy Day Savings',
+      to: 'Everyday Checking',
+      amountCents: 300_000,
+    });
+    const done = h.execute(runId);
+    expect(await h.act(await h.approval(runId), 'approve')).toBe(200);
+    expect(await done).toMatchObject({ status: 'succeeded', data: { seenInHistory: true } });
+    expect(await h.postings(memoToken)).toBe(1);
+    // Each code was answered in the Console, and none is kept. (Reading the history signs in
+    // again, so the staff phone is asked twice.)
+    const codes = (
+      await h.db.query<{ kind: string; status: string; answerSealed: string | null }>(
+        `SELECT kind, status, "answerSealed" FROM "HumanTask" WHERE "runId" = $1 AND kind <> 'approval'`,
+        [runId],
+      )
+    ).rows;
+    expect(new Set(codes.map((c) => c.kind))).toEqual(new Set(['staff_code', 'supervisor_code']));
+    for (const c of codes) expect(c).toMatchObject({ status: 'answered', answerSealed: null });
+  }, 300_000);
+
   it('Reject: the business outcome approval_rejected', async () => {
     const { runId, memoToken } = await decided('reject');
     expect(await resultOf(h.db, runId)).toMatchObject({

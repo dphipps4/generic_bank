@@ -83,25 +83,6 @@ describe('a transfer run', () => {
     expect(h.browsers.length - launched).toBe(1);
   }, 300_000);
 
-  it('over the threshold, asks a person for the supervisor code and posts once', async () => {
-    const { runId, memoToken } = await h.start({
-      from: 'Rainy Day Savings',
-      to: 'Everyday Checking',
-      amountCents: 300_000,
-    });
-    const done = h.execute(runId);
-    expect(await h.act(await h.approval(runId), 'approve')).toBe(200);
-    expect(await done).toMatchObject({ status: 'succeeded', data: { seenInHistory: true } });
-    expect(await h.postings(memoToken)).toBe(1);
-    const code = (
-      await h.db.query<{ status: string; answerSealed: string | null }>(
-        `SELECT status, "answerSealed" FROM "HumanTask" WHERE "runId" = $1 AND kind = 'supervisor_code'`,
-        [runId],
-      )
-    ).rows;
-    expect(code).toEqual([{ status: 'answered', answerSealed: null }]);
-  }, 300_000);
-
   it('never makes up a memo token: a run created without one stops before any browser opens', async () => {
     const { runId } = await createRun(
       h.db,
