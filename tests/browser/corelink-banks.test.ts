@@ -45,6 +45,24 @@ describe.each(['example', 'sample', 'placeholder'] as TenantId[])('CoreLink on %
   /** A run's context: the person at the staff phone, or with the authenticator app, answers. */
   async function context(steps: StepRecord[]): Promise<DriverContext> {
     const page = await browser.newPage();
+    const opened = page.openedDocument.bind(page) as (...a: unknown[]) => Promise<unknown>;
+    (page as unknown as { openedDocument: unknown }).openedDocument = async (...a: unknown[]) => {
+      const d = (await opened(...a)) as {
+        status: number;
+        contentType: string;
+        url: string;
+        body: Buffer;
+      } | null;
+      console.log(
+        'OPENED',
+        id,
+        d && d.status,
+        d && d.contentType,
+        d && d.url,
+        d && d.body.subarray(0, 200).toString('latin1'),
+      );
+      return d;
+    };
     const profile = PROFILES[id]!;
     return {
       page,
