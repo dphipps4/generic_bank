@@ -24,7 +24,7 @@
    runs prove it. The agents run on **pi** ([pi.dev](https://pi.dev)); every model call goes
    through our meter, and every limit lives in our code. *[The factory.](#7-the-software-factory)*
 5. **A memory that learns.** Agents propose lessons; fixed rules keep or retire them by what
-   really happened. *[How memory works.](#11-memory-how-the-agents-remember)*
+   really happened. *[How memory works.](#71-memory-how-the-factory-remembers)*
 6. **An admin Console** showing every run, every masked screenshot, every agent decision, the
    approval inbox and each crawler's state.
 
@@ -206,51 +206,7 @@ Details: [Appendix M](#appendix-m-the-software-factory), [Appendix N](#appendix-
 
 ---
 
-## 8. The Console: where people step in
-
-Our operations website, on **AdminJS** over the shared Postgres. A person comes to it when:
-
-- **a transfer needs approval** (large ones also need the bank's supervisor code)
-- **the bank sent a staff code** (the crawler cannot read the inbox, by design)
-- **the crawler is stuck** on an unknown screen or an unclear transfer: take over or cancel
-- **the crawler generator is stuck:** a factory run hands back what it knows, what it does not,
-  and what would settle it
-- **a new crawler is ready for review:** approve for probation or reject
-
-Every action is also an API call and needs a written reason. Nothing unmasked is shown. The
-Console also shows the read-only allowlist, the prompts (edits are drafts until their evals
-pass) and the memory. Details: [Appendix G](#appendix-g-the-console).
-
----
-
-## 9. Reviewing the evidence
-
-Every run leaves a trail: a frame for every page it acts on, grabbed as soon as the page is ready
-(a masked screenshot and the visible page as JSON), with the screen, the action and the result.
-In the Console, a run's Frames button opens them in a popup, one at a time. Account numbers, amounts, names, emails,
-addresses and typed fields are covered with white boxes before a frame is stored; a frame that
-cannot be proven clean is withheld with the reason. Details: [Appendix I](#appendix-i-evidence-redaction-and-observability).
-
----
-
-## 10. Promotion and demotion
-
-Each crawler, per bank and job, has one state, shown as a badge:
-
-- **draft:** the factory is writing it
-- **candidate:** passed its tests, waiting for review
-- **probation:** approved, proving itself on real jobs
-- **promoted:** two clean real runs in a row; serves every job for that bank
-- **demoted:** failed in real use; the previous version serves and a repair case opens
-- **frozen:** a guard tripped; nothing runs for that bank until a person clears it
-- **stuck:** a run has gone quiet too long
-
-Demotion is automatic: the first real fault if fewer than two clean runs since promotion,
-otherwise two faults in a row. Bank faults (slowness, 503) do not count. Details: [Appendix L](#appendix-l-driver-lifecycle-and-the-repair-loop).
-
----
-
-## 11. Memory: how the agents remember
+### 7.1 Memory: how the factory remembers
 
 Without memory, every factory job starts from zero and rediscovers what the last one
 learned. With memory, the factory learns from each job, from its successes and its mistakes,
@@ -304,6 +260,50 @@ same. *[Read about memory on a graph.](#20-memory-on-a-graph-neo4j-and-graphiti)
 
 ---
 
+## 8. The Console: where people step in
+
+Our operations website, on **AdminJS** over the shared Postgres. A person comes to it when:
+
+- **a transfer needs approval** (large ones also need the bank's supervisor code)
+- **the bank sent a staff code** (the crawler cannot read the inbox, by design)
+- **the crawler is stuck** on an unknown screen or an unclear transfer: take over or cancel
+- **the crawler generator is stuck:** a factory run hands back what it knows, what it does not,
+  and what would settle it
+- **a new crawler is ready for review:** approve for probation or reject
+
+Every action is also an API call and needs a written reason. Nothing unmasked is shown. The
+Console also shows the read-only allowlist, the prompts (edits are drafts until their evals
+pass) and the memory. Details: [Appendix G](#appendix-g-the-console).
+
+---
+
+## 9. Reviewing the evidence
+
+Every run leaves a trail: a frame for every page it acts on, grabbed as soon as the page is ready
+(a masked screenshot and the visible page as JSON), with the screen, the action and the result.
+In the Console, a run's Frames button opens them in a popup, one at a time. Account numbers, amounts, names, emails,
+addresses and typed fields are covered with white boxes before a frame is stored; a frame that
+cannot be proven clean is withheld with the reason. Details: [Appendix I](#appendix-i-evidence-redaction-and-observability).
+
+---
+
+## 10. Promotion and demotion
+
+Each crawler, per bank and job, has one state, shown as a badge:
+
+- **draft:** the factory is writing it
+- **candidate:** passed its tests, waiting for review
+- **probation:** approved, proving itself on real jobs
+- **promoted:** two clean real runs in a row; serves every job for that bank
+- **demoted:** failed in real use; the previous version serves and a repair case opens
+- **frozen:** a guard tripped; nothing runs for that bank until a person clears it
+- **stuck:** a run has gone quiet too long
+
+Demotion is automatic: the first real fault if fewer than two clean runs since promotion,
+otherwise two faults in a row. Bank faults (slowness, 503) do not count. Details: [Appendix L](#appendix-l-driver-lifecycle-and-the-repair-loop).
+
+---
+
 ## 12. Seeing what happened
 
 Every step, screenshot, recovery, guard decision, model call, tool call and verdict is a database
@@ -351,28 +351,6 @@ blank. It fits on an 8 GB laptop. Details: [Appendix S](#appendix-s-running-it).
 | From 80% to 100% | each first-draft mistake replaced and covered by a test | [§T.4](#t4-from-80-to-100) |
 | Generalization | one crawler per product, a profile per bank, a factory that learns new banks | [§T.5](#t5-generalization-to-the-real-environment) |
 | Safety | approval grants, masking, guard layers, a trap matrix, a PII scan | [Appendix J](#appendix-j-guardrails) |
-
----
-
-## 16. Build order
-
-Each milestone ends with its tests green, a short note in `docs/`, and the requirements report
-linking each point of the brief it touches to the code and test that prove it.
-
-| # | Milestone | Done when |
-|---|---|---|
-| M0 | Skeleton: workspaces, compose with memory limits, auto-bootstrap of secrets, Prisma schema and first migration, AdminJS shell, CI, import boundaries | `make up` starts every service on an 8 GB laptop; CI green |
-| M1 | Bank 1: ledger, seed, staff sign-in, codes, inbox, member lookup, member summary, activity, statements, transfer, supervisor approval, framesets, nested tables, markup dialects, forced hazards | bank tests green |
-| M2 | Banks 2, 3 and 4, and ambient hazards: themes, labels, layout variants, URL bases, image text, account formats, bank 3's extra frame, bank 4's split transfer and popup results | all four banks seeded and browsable |
-| M3 | Screen package and the first driver: capture, fully-rendered wait, recognition, targeting, image fingerprints, the CoreLink driver with bank 1's profile written by hand, Task API with OAuth2 (clients, tokens, refresh) and its HTTP status codes, trail, masking, AdminJS run pages and the API clients page | `checkBalance` succeeds on bank 1 under ambient hazards; outcome tests green |
-| M4 | The browser's fingerprint (Chrome on a Mac, set at launch; banks 2 to 4 refuse anything not a browser), then human steps: inbox, codes, transfer preparation, approval grant, submit, swallowed-submit protocol, the tool definitions and the demo agent, `downloadStatements`, hazard lab | escalation and transfer-safety suites green |
-| M5 | Guardrails complete, trap matrix, PII scan, customer-safe messages | guards and PII suites green |
-| M6 | Memory service | memory suite green |
-| M7 | **Factory:** workflow, model gateway, tools, caps, scout (autocrawl), evals E0 to E4, review gate, probation, driver states in the Console, mock mode | **the factory onboards bank 2 as a profile, end to end, and it is promoted after probation** |
-| M8 | **Repair loop:** bump bank 1's `BANK_UI_VERSION`; runs fail; the driver is demoted; a repair case opens; a factory repair run fixes it | the repair is visible end to end in the Console |
-| M9 | Prompt library, `check-prompts`, prompt eval runner; Console complete ([Appendix G](#appendix-g-the-console)) | `check-prompts` green; every Console page exists |
-| M10 | README, diagram, the requirements report (every point of the brief, how we meet it, and links to the code and tests that prove it), the 80%-to-100% notes, a recorded factory run for mock mode | a reviewer can clone, `make up`, `make demo`, `make factory` in minutes |
-| **Submission** | | |
 
 ---
 
@@ -2264,3 +2242,25 @@ Accept: */*
 ```
 
 No `Accept-Language`, no `Sec-Fetch-*`, no client hints: banks 2, 3 and 4 refuse it on sight.
+
+---
+
+## Appendix X. Build order
+
+Each milestone ends with its tests green, a short note in `docs/`, and the requirements report
+linking each point of the brief it touches to the code and test that prove it.
+
+| # | Milestone | Done when |
+|---|---|---|
+| M0 | Skeleton: workspaces, compose with memory limits, auto-bootstrap of secrets, Prisma schema and first migration, AdminJS shell, CI, import boundaries | `make up` starts every service on an 8 GB laptop; CI green |
+| M1 | Bank 1: ledger, seed, staff sign-in, codes, inbox, member lookup, member summary, activity, statements, transfer, supervisor approval, framesets, nested tables, markup dialects, forced hazards | bank tests green |
+| M2 | Banks 2, 3 and 4, and ambient hazards: themes, labels, layout variants, URL bases, image text, account formats, bank 3's extra frame, bank 4's split transfer and popup results | all four banks seeded and browsable |
+| M3 | Screen package and the first driver: capture, fully-rendered wait, recognition, targeting, image fingerprints, the CoreLink driver with bank 1's profile written by hand, Task API with OAuth2 (clients, tokens, refresh) and its HTTP status codes, trail, masking, AdminJS run pages and the API clients page | `checkBalance` succeeds on bank 1 under ambient hazards; outcome tests green |
+| M4 | The browser's fingerprint (Chrome on a Mac, set at launch; banks 2 to 4 refuse anything not a browser), then human steps: inbox, codes, transfer preparation, approval grant, submit, swallowed-submit protocol, the tool definitions and the demo agent, `downloadStatements`, hazard lab | escalation and transfer-safety suites green |
+| M5 | Guardrails complete, trap matrix, PII scan, customer-safe messages | guards and PII suites green |
+| M6 | Memory service | memory suite green |
+| M7 | **Factory:** workflow, model gateway, tools, caps, scout (autocrawl), evals E0 to E4, review gate, probation, driver states in the Console, mock mode | **the factory onboards bank 2 as a profile, end to end, and it is promoted after probation** |
+| M8 | **Repair loop:** turn on bank 1's redesign (`BANK_REDESIGN`); runs fail; the driver is demoted; a repair case opens; a factory repair run fixes it | the repair is visible end to end in the Console |
+| M9 | Prompt library, `check-prompts`, prompt eval runner; Console complete ([Appendix G](#appendix-g-the-console)) | `check-prompts` green; every Console page exists |
+| M10 | README, diagram, the requirements report (every point of the brief, how we meet it, and links to the code and tests that prove it), the 80%-to-100% notes, a recorded factory run for mock mode | a reviewer can clone, `make up`, `make demo`, `make factory` in minutes |
+| **Submission** | | |
