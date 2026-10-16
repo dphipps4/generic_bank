@@ -1,0 +1,15 @@
+# Keep Cursor's AI from indexing (and sending) anything it shouldn't.
+
+# Plaintext secrets on disk: the rendered per-service env files, and the credentials dump.
+.run/
+secrets/
+
+# Encrypted secrets and local config: no value in indexing them.
+config/*.secrets.enc.env
+*.enc.env
+
+# Heavy or generated, to keep indexing fast and relevant.
+node_modules/
+**/dist/
+**/*.tsbuildinfo
+package-lock.json
