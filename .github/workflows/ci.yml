@@ -46,7 +46,11 @@ jobs:
       # runs on every merge to master and every night, below.
       - name: The tests this change touches
         if: github.event_name == 'pull_request'
-        run: npx vitest run --changed origin/${{ github.base_ref }} --passWithNoTests
+        run: npx vitest run --changed origin/${{ github.base_ref }} --passWithNoTests --reporter=default --reporter=json --outputFile.json=.run/changed.json
+      # A skipped test passes; in the escalation suite, a skip is a failure.
+      - name: Nothing in the escalation suite was skipped
+        if: github.event_name == 'pull_request'
+        run: node infra/scripts/suite-ran.mjs .run/changed.json tests/escalation
 
   suite:
     name: the whole suite (${{ matrix.shard }} of 3)
@@ -66,7 +70,27 @@ jobs:
       - run: npm run db:generate
       - name: Headless Chromium for the browser tests
         run: infra/scripts/browser.sh
-      - run: npx vitest run --shard=${{ matrix.shard }}/3
+      # The escalation suite runs in its own job, below, where its count is checked.
+      - run: npx vitest run --shard=${{ matrix.shard }}/3 --exclude 'tests/escalation/**'
+
+  escalation:
+    name: the escalation suite
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run db:generate
+      - name: Headless Chromium for the browser tests
+        run: infra/scripts/browser.sh
+      - run: npx vitest run tests/escalation --reporter=default --reporter=json --outputFile.json=.run/escalation.json
+      # Every test ran and passed, and there are as many as the suite has: a skip is a failure.
+      - name: The escalation suite really ran
+        run: node infra/scripts/suite-ran.mjs .run/escalation.json tests/escalation=9
 
   long:
     name: the long suite
