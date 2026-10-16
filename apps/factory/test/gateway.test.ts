@@ -6,11 +6,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Anthropic from '@anthropic-ai/sdk';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConfigError, loadConfig } from '../../../packages/config/src/index.js';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import { CAPS } from '../src/caps.js';
 import { gateway, worstCaseUsd } from '../src/gateway.js';
 import { sqlLedger, type Ledger } from '../src/ledger.js';
-import { PRICES } from '../src/models.js';
+import { DEFAULT_ROLES, PRICES, ROLE_SETTINGS, rolesOf } from '../src/models.js';
 import { buildServer } from '../src/server.js';
 import { live, upstreamFor, type Upstream } from '../src/upstream.js';
 
@@ -267,5 +268,55 @@ describe('mock mode', () => {
     const r = await post('run1', 'scout', ask({ max_tokens: 999 }));
     expect(r.statusCode).toBe(400);
     expect(r.json().error.message).toBe('call 1 differs from the recording');
+  });
+
+  it('matches a screenshot by its place, since the same page differs where it moves', async () => {
+    const shot = (data: string, text = 'What next?') =>
+      ask({
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: 'image/png', data } },
+              { type: 'text', text },
+            ],
+          },
+        ],
+      });
+    await factory(live(fakeModel(), dir))('run1', 'supervisor', shot('AAAA'));
+    await factory(live(fakeModel(), dir))('run2', 'supervisor', shot('AAAA'));
+    const post = factory(upstreamFor('', dir));
+    expect((await post('run1', 'supervisor', shot('BBBB'))).statusCode).toBe(200);
+    // Every other byte must still match.
+    expect((await post('run2', 'supervisor', shot('AAAA', 'What now?'))).statusCode).toBe(400);
+  });
+});
+
+describe('each role’s model', () => {
+  const settings = (env: Record<string, string>) => rolesOf(loadConfig(ROLE_SETTINGS, env));
+
+  it('defaults to Opus 5.5, thinking hard for the Supervisor and lightly for the Scout', () => {
+    expect(settings({})).toEqual(DEFAULT_ROLES);
+    expect(DEFAULT_ROLES.scout).toEqual({
+      provider: 'anthropic',
+      model: 'claude-opus-5-5',
+      effort: 'low',
+    });
+    expect(DEFAULT_ROLES.supervisor.effort).toBe('high');
+    expect(DEFAULT_ROLES.lessons).toEqual(DEFAULT_ROLES.supervisor);
+  });
+
+  it('comes from the settings, and a provider not yet supported is refused', async () => {
+    const roles = settings({ FACTORY_SUPERVISOR_EFFORT: 'max', FACTORY_SCOUT_MODEL: 'other' });
+    expect(roles.supervisor.effort).toBe('max');
+    expect(roles.lessons.effort).toBe('max');
+    expect(roles.scout.model).toBe('other');
+    expect(() => settings({ FACTORY_SCOUT_PROVIDER: 'openai' })).toThrow(ConfigError);
+
+    // The gateway sets the configured effort; a model with no price is refused.
+    const post = factory(live(fakeModel(), dir, roles));
+    await post('run1', 'supervisor', ask());
+    expect((sent[0]!.output_config as { effort: string }).effort).toBe('max');
+    expect((await post('run1', 'scout', ask({ model: 'other' }))).statusCode).toBe(400);
   });
 });

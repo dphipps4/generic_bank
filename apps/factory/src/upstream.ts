@@ -4,7 +4,7 @@ import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import Anthropic from '@anthropic-ai/sdk';
-import { ROLES, type Role } from './models.js';
+import { DEFAULT_ROLES, type Role, type Roles } from './models.js';
 
 export type Request = Record<string, unknown>;
 
@@ -45,12 +45,16 @@ const file = (dir: string, runId: string) => join(dir, `${runId}.jsonl`);
 const sse = (e: Anthropic.MessageStreamEvent) => `event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`;
 
 /** The model, through the SDK. The role sets the effort; every call is recorded. */
-export function live(client: Anthropic, recordings: string): Upstream {
+export function live(
+  client: Anthropic,
+  recordings: string,
+  roles: Roles = DEFAULT_ROLES,
+): Upstream {
   return {
     spends: true,
     async answer(runId, role, request) {
       const { stream: streamed, ...params } = request;
-      const output_config = { ...(params.output_config as object), effort: ROLES[role].effort };
+      const output_config = { ...(params.output_config as object), effort: roles[role].effort };
       let answer: Answer;
       try {
         // Always streamed upstream, so a long answer cannot time out the request.
@@ -79,8 +83,17 @@ export function live(client: Anthropic, recordings: string): Upstream {
 }
 
 /** With a key, the model; without one, mock mode, and no client is ever made. */
-export const upstreamFor = (apiKey: string, recordings: string): Upstream =>
-  apiKey ? live(new Anthropic({ apiKey }), recordings) : replay(recordings);
+export const upstreamFor = (apiKey: string, recordings: string, roles?: Roles): Upstream =>
+  apiKey ? live(new Anthropic({ apiKey }), recordings, roles) : replay(recordings);
+
+// Two screenshots of the same page differ where the page moves (bank 1's marquee), so a picture is
+// matched by its place in the request, not its bytes; every other byte must match.
+const unpictured = (r: Request) =>
+  JSON.parse(
+    JSON.stringify(r, (_k, v: unknown) =>
+      (v as { type?: unknown } | null)?.type === 'image' ? { type: 'image' } : v,
+    ),
+  ) as unknown;
 
 /** Mock mode: each request must be the next one in the run's recording, which answers it. */
 export function replay(recordings: string): Upstream {
@@ -104,7 +117,7 @@ export function replay(recordings: string): Upstream {
       const call = run.calls[run.next];
       if (!call)
         throw new Refusal(400, 'invalid_request_error', `the recording ends before call ${n}`);
-      if (call.role !== role || !isDeepStrictEqual(call.request, request))
+      if (call.role !== role || !isDeepStrictEqual(unpictured(call.request), unpictured(request)))
         throw new Refusal(400, 'invalid_request_error', `call ${n} differs from the recording`);
       run.next = n;
       return call;
