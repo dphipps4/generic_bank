@@ -40,7 +40,7 @@ set up.
 ```sh
 just setup                      # once, after git clone: checks the Mac, creates secrets, builds the images
 just up                         # everything: data, memory, API, Console, crawler, all four banks, factory
-just all                        # start again from nothing: deletes the data and rebuilds the images; then just up
+just down                       # stop everything; the data stays
 just                            # every recipe
 ```
 
@@ -125,6 +125,7 @@ just dev-setup                  # once: Node dependencies, the Prisma client, Ch
 just check                      # the quick checks: types, lint, tests, import boundaries, secrets
 just ci                         # what GitHub's CI checks, on this machine; no Actions needed
 just api-docs                   # write the API reference from the contracts and open it in Chrome
+just all                        # start again from nothing: deletes the data, rebuilds the images; then just up
 ```
 
 GitHub's CI is free for a public repository and its forks. If you don't have it, `just ci` runs
