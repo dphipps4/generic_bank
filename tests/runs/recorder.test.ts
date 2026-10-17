@@ -56,14 +56,14 @@ const MEMBER = '700123456';
 const ACCOUNT = '4321';
 const BALANCE = 987_654;
 
-async function balanceRun(bank = 'generic') {
+async function balanceRun() {
   const { runId } = await createRun(
     control,
     {
       task: 'check-balance',
-      bank,
+      bank: 'generic',
       clientId: null,
-      inputs: { bank, memberId: MEMBER, account: ACCOUNT },
+      inputs: { bank: 'generic', memberId: MEMBER, account: ACCOUNT },
     },
     KEY,
   );
@@ -128,9 +128,18 @@ describe('the recorder', () => {
 
   it('with memory stopped, the run settles as it would; its episode arrives once memory is back', async () => {
     await stopMemory();
-    // The Runner, carrying out a run on a bank the registry does not list, so no driver serves it:
-    // it settles before any browser opens.
-    const runId = await balanceRun('unlisted');
+    // The Runner, carrying out a run no promoted driver serves, bank 2's statements: it settles
+    // before any browser opens.
+    const { runId } = await createRun(
+      control,
+      {
+        task: 'download-statements',
+        bank: 'example',
+        clientId: null,
+        inputs: { bank: 'example', memberId: MEMBER, account: ACCOUNT, months: ['2026-01'] },
+      },
+      KEY,
+    );
     const ending = await executeRun(runId, {
       sql: control,
       store: memoryStore(),
