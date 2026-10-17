@@ -1,5 +1,5 @@
-// What the Console shows in M0: every model, newest first. Evidence is read-only: nothing in
-// the trail or the audit log can be edited or deleted from the Console.
+// What the Console shows through AdminJS, newest first. The audit log is read-only: nothing in
+// it can be edited or deleted from the Console.
 import { getModelByName } from '@adminjs/prisma';
 import type { PrismaClient } from '@gb/db';
 import { SCOPE_CHOICES } from './api-clients.js';
@@ -26,30 +26,12 @@ export function stripSecrets<T extends ActionResponse>(response: T): T {
   return response;
 }
 
+// The runs, the inbox, approvals and freezes have pages of their own. Here: what a person manages
+// (API clients and Console users) and the audit log, read-only.
 const MODELS: { name: string; sortBy: string; nav: string; evidence?: boolean }[] = [
-  { name: 'TaskRun', sortBy: 'startedAt', nav: 'Runs', evidence: true },
-  { name: 'Step', sortBy: 'startedAt', nav: 'Runs', evidence: true },
-  { name: 'TrailFrame', sortBy: 'at', nav: 'Runs', evidence: true },
-  { name: 'HumanTask', sortBy: 'openedAt', nav: 'Inbox' },
-  { name: 'ApprovalGrant', sortBy: 'expiresAt', nav: 'Inbox', evidence: true },
-  { name: 'Driver', sortBy: 'tenant', nav: 'Drivers' },
-  { name: 'DriverVersion', sortBy: 'createdAt', nav: 'Drivers' },
-  { name: 'RegistryEvent', sortBy: 'at', nav: 'Drivers', evidence: true },
-  { name: 'FactoryRun', sortBy: 'startedAt', nav: 'Factory', evidence: true },
-  { name: 'ModelCall', sortBy: 'at', nav: 'Factory', evidence: true },
-  { name: 'EvalResult', sortBy: 'at', nav: 'Factory', evidence: true },
-  // Decided on the Recommendations page, with a reason; never edited here.
-  { name: 'Recommendation', sortBy: 'createdAt', nav: 'Factory', evidence: true },
-  { name: 'RepairCase', sortBy: 'openedAt', nav: 'Drivers' },
-  // Cleared on the Freezes page, with a reason; never edited here.
-  { name: 'Freeze', sortBy: 'frozenAt', nav: 'Drivers', evidence: true },
-  { name: 'SignInAttempt', sortBy: 'at', nav: 'Safety', evidence: true },
-  { name: 'AuditEntry', sortBy: 'at', nav: 'Safety', evidence: true },
-  { name: 'ConsoleUser', sortBy: 'createdAt', nav: 'Safety' },
   { name: 'ApiClient', sortBy: 'createdAt', nav: 'API' },
-  { name: 'TokenFamily', sortBy: 'createdAt', nav: 'API', evidence: true },
-  { name: 'ApiToken', sortBy: 'createdAt', nav: 'API', evidence: true },
-  { name: 'ApiCode', sortBy: 'expiresAt', nav: 'API', evidence: true },
+  { name: 'ConsoleUser', sortBy: 'createdAt', nav: 'Safety' },
+  { name: 'AuditEntry', sortBy: 'at', nav: 'Safety', evidence: true },
 ];
 
 const hideSecrets = {
@@ -66,7 +48,7 @@ const hideSecrets = {
 
 export function resources(client: PrismaClient, apiClients: Record<string, object> = {}) {
   return MODELS.map((m) => {
-    const secrets = ['ConsoleUser', 'ApiClient', 'ApiCode', 'ApiToken'].includes(m.name);
+    const secrets = ['ConsoleUser', 'ApiClient'].includes(m.name);
     const actions = {
       ...(secrets ? hideSecrets.after : {}),
       ...(m.evidence ? readOnly : {}),
