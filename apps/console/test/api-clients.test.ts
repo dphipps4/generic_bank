@@ -30,7 +30,7 @@ describe('API clients in the Console', () => {
       {
         method: 'post',
         payload: {
-          name: 'Member assistant',
+          name: 'Budgeting app',
           'scopes.0': 'tasks:read',
           'scopes.1': 'tasks:balance',
         },
