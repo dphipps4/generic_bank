@@ -13,6 +13,7 @@ import {
   NEAR,
   newPage,
   press,
+  read,
   see,
   TargetError,
   type,
@@ -176,6 +177,12 @@ describe('the runtime: see first, then click', () => {
       const i = (y * img.width + x) * 4;
       expect([img.data[i], img.data[i + 1], img.data[i + 2]]).toEqual([255, 255, 255]);
     }
+  });
+
+  it('reads the page unmasked for the crawler, and keeps nothing', async () => {
+    const p = await open('/mask');
+    await see(p, { known: ['Alex Sample'], limitMs: 10_000 });
+    expect(await read(p)).toMatch(/41,231/);
   });
 
   it('knows a picture of text by its fingerprint, and tells two apart', async () => {

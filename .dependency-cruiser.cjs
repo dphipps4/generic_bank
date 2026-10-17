@@ -3,6 +3,13 @@
 module.exports = {
   forbidden: [
     {
+      name: 'crawler-sees-no-bank',
+      comment: 'The crawler knows a bank only by its table, written from evidence: never its code.',
+      severity: 'error',
+      from: { path: '^packages/crawler/src/' },
+      to: { path: '^(apps/|packages/(?!crawler/|runtime/|contracts/))' },
+    },
+    {
       name: 'runtime-stands-alone',
       comment: 'The runtime knows no bank and no app: it is the browser, seeing and acting.',
       severity: 'error',

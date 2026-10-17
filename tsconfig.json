@@ -20,6 +20,9 @@
       "path": "packages/runtime"
     },
     {
+      "path": "packages/crawler"
+    },
+    {
       "path": "packages/evidence"
     },
     {

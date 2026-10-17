@@ -250,3 +250,20 @@ export function knows(frame: Frame, pages: Expected[]): string {
     .map((p) => p.name);
   throw new UnknownPage(frame, hits.length > 1 ? hits.map((h) => h.name) : closest);
 }
+
+/**
+ * The page's visible words, unmasked, for the crawler to read a value from (a balance, a
+ * confirmation number). Never kept: evidence comes only from `see`.
+ */
+export async function read(page: Page): Promise<string> {
+  const parts: string[] = [];
+  for (const f of page.frames())
+    if (await f.locator('body').count())
+      parts.push(
+        await f
+          .locator('body')
+          .ariaSnapshot({ timeout: 5_000 })
+          .catch(() => ''),
+      );
+  return parts.join('\n');
+}

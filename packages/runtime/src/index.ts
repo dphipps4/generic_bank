@@ -9,6 +9,8 @@ export {
   type Frame,
   knows,
   NotReady,
+  read,
   see,
   UnknownPage,
 } from './see.js';
+export type { Browser, Page } from 'playwright-core';
