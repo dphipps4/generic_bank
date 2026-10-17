@@ -1,6 +1,6 @@
 # Prompts, part 2: the factory, the loop
 
-These prompts build the factory: two agents and a memory that learn a bank no one wrote a crawler for, and repair a crawler after a bank changes its site. It's separate code from [part 1](bank1.md). It uses only part 1's runtime, which runs the crawlers it writes, the API's registry, which lists them, and the Console's inbox, where a person approves them. The brief doesn't ask for any of this. Start it once bank 1 is proven.
+These prompts build the factory: two agents and a memory that learn a bank no one wrote a crawler for, and repair a crawler after a bank changes its site. It's separate code from [part 1](bank1.md). It uses only part 1's runtime, which runs the crawlers it writes, the API's registry, which lists them, and the Console: its dashboard and inbox, where a person approves each learned or repaired crawler. The brief doesn't ask for any of this. Start it once bank 1 is proven.
 
 ## 1. What the factory is
 
@@ -54,7 +54,7 @@ These prompts build the factory: two agents and a memory that learn a bank no on
 ## 5. The gate
 
 > 1. Code runs the new crawler live first, from a fresh sign-in and a remembered one, against the ledger.
-> 2. A person approves it, seeing each step beside its picture.
+> 2. A person approves it in the Console, seeing each step beside its picture. The Console's dashboard shows every crawler waiting for approval, learned or repaired, with its run's pictures and the Supervisor's diagnosis. Nothing is promoted without that approval.
 > 3. Each kept hazard is forced alone.
 > 4. Two clean runs.
 > 5. Promotion: `GET /banks` lists it.
