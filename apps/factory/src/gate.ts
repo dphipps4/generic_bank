@@ -79,6 +79,10 @@ export async function gate(
     };
     const check = await hazardCheck(attempt, sandbox.ledger, o.hazards, record ?? undefined);
     const control = check.verdicts[0]!;
+    // The verdict is the run's last step, so a repair reads why it stopped even when the driver
+    // threw rather than stopping.
+    if (trail && !control.passed)
+      await trail.step({ name: 'stopped', outcome: control.got.slice(0, 500) }, null);
     if (trail)
       await sql.query(
         `UPDATE "TaskRun" SET status = $2::"TaskStatus", "settledAt" = now() WHERE id = $1`,
