@@ -162,13 +162,13 @@ export const bank1: Table = {
   ],
   submit: { press: 'Submit transfer', frame: 'transfer/17' },
   reads: {
+    // A tile of the summary (happy/11).
     balance:
-      /^(?<name>.+?) Account ending in (?<last4>\d{4}) Available balance: (?<available>\S+) Current balance: (?<current>\S+)/gm,
-    review:
-      /From: (?<from>.+?) To: (?<to>.+?) Amount: (?<amount>\S+) Memo: (?<memo>.*?) Submit transfer/,
-    confirmation: /Confirmation number (?<confirmation>[A-Z0-9-]+)/,
-    history: 'TRANSFER OUT $memo',
+      '{name} Account ending in {last4} Available balance: {available} Current balance: {current}',
+    // The review's cells (transfer/17), and the posted page's line (transfer/18).
+    review: 'From:\n{from}\nTo:\n{to}\nAmount:\n{amount}\nMemo:\n{memo}',
+    confirmation: 'Transfer posted. Confirmation number {confirmation}.',
     // The results row (happy/10), then the summary's heading (happy/11).
-    name: ['^$member\\n(?<name>[^\\n]+)\\n(?:Active|Closed)$', '^Member $member · (?<name>.+)$'],
+    name: ['$member\n{name}\n{status}', 'Member $member · {name}'],
   },
 };

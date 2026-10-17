@@ -16,7 +16,7 @@ import {
   type,
   UnknownPage,
 } from '@gb/runtime';
-import type { Goal, Step, Table } from './table.js';
+import { type Goal, readOf, type Step, type Table } from './table.js';
 
 export interface Session {
   page: Page;
@@ -157,7 +157,7 @@ async function learn(s: Session, task: Task): Promise<boolean> {
   const text = (await leaves(s.page)).join('\n');
   let learned = false;
   for (const p of s.table.reads.name) {
-    const name = text.match(new RegExp(p.replace('$member', task.member), 'm'))?.groups?.name;
+    const name = readOf(p, task.member).exec(text)?.groups?.name;
     if (!name) continue;
     for (const part of [name, ...name.split(/[\s.,]+/)])
       if (part.trim().length >= 2 && !s.known.includes(part)) {
@@ -282,14 +282,14 @@ export async function checkBalance(s: Session, task: Task & { account: string })
   await crawl(s, task, 'balance');
   s.guard?.({ screen: screenOf(s.table, s.table.ends.balance), verb: 'read', control: 'Page' });
   const text = (await leaves(s.page)).join('\n');
-  const tiles = [...text.matchAll(s.table.reads.balance)]
+  const tiles = [...text.matchAll(readOf(s.table.reads.balance, task.member))]
     .map((m) => m.groups!)
     .filter((g) => g.name === task.account || g.last4 === task.account);
   const names = new Set(tiles.map((g) => `${g.name}/${g.last4}`));
   if (names.size !== 1) return stop('no_such_account', `${names.size} accounts match`);
   const g = tiles[0]!;
   return {
-    accountLabel: `${g.name}, Account ending in ****`,
+    accountLabel: `${g.name}, ending in ****`,
     availableCents: cents(g.available!),
     currentCents: cents(g.current!),
     asOf: new Date().toISOString(),
@@ -312,7 +312,7 @@ export async function prepareTransfer(s: Session, task: Task): Promise<Review> {
 /** The review page's From, To, Amount and Memo, as the bank shows them. */
 export async function readReview(s: Session): Promise<Review> {
   s.guard?.({ screen: screenOf(s.table, s.table.ends.transfer), verb: 'read', control: 'Page' });
-  const m = (await leaves(s.page)).join(' ').match(s.table.reads.review);
+  const m = readOf(s.table.reads.review).exec((await leaves(s.page)).join('\n'));
   if (!m?.groups) return stop('ambiguous_outcome', 'the review page could not be read');
   return {
     from: m.groups.from!,
@@ -359,8 +359,8 @@ export async function submitTransfer(
     if (answer) return stop(answer.code, answer.says, answer.retryable);
     if (at) {
       s.guard?.({ screen: screenOf(t, at), verb: 'read', control: 'Page' });
-      confirmation = (await leaves(s.page)).join(' ').match(t.reads.confirmation)
-        ?.groups?.confirmation;
+      confirmation = readOf(t.reads.confirmation).exec((await leaves(s.page)).join('\n'))?.groups
+        ?.confirmation;
     }
   } catch (e) {
     if (!(e instanceof NotReady)) throw e;
@@ -377,6 +377,7 @@ export async function submitTransfer(
 export async function inHistory(s: Session, task: Task & { memo: string }): Promise<number> {
   await crawl(s, task, 'history', { submitted: true });
   s.guard?.({ screen: screenOf(s.table, s.table.ends.history), verb: 'read', control: 'Page' });
-  const row = s.table.reads.history.replace('$memo', task.memo);
-  return (await leaves(s.page)).filter((l) => l.startsWith(row)).length;
+  // The memo begins with the run's token, which no other transfer carries: any bank's activity
+  // shows it in one visible line per transfer.
+  return (await leaves(s.page)).filter((l) => l.includes(task.memo)).length;
 }

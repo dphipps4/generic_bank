@@ -54,7 +54,7 @@ jobs:
                        grep -qx 'config/app.env' <<< "$files" && echo apps/factory/ || true; } | sort -u | tr '\n' ' ')
           fi
           # The crawler's code, the bank, or the harness that starts it: one browser test.
-          browser=$(grep -qE '^(apps/(bank|runner)/|packages/(runtime|crawler)/|docs/evidence/bank-1/|tests/(support|crawler)/|tests/runs/execute\.test\.ts$)' <<< "$files" && echo true || echo false)
+          browser=$(grep -qE '^(apps/(bank|runner)/|apps/factory/src/(scout|trail)\.ts$|packages/(runtime|crawler)/|docs/evidence/bank-1/|tests/(support|crawler|factory)/|tests/runs/execute\.test\.ts$)' <<< "$files" && echo true || echo false)
           { echo "code=$code"; echo "units=$units"; echo "browser=$browser"; } >> "$GITHUB_OUTPUT"
 
   # Its name is the check the master branch's ruleset requires, so it must report on every pull
@@ -115,7 +115,7 @@ jobs:
           [ -n "$dirs" ] || { echo "no tests in $UNITS"; exit 0; }
           echo "$dirs"
           # shellcheck disable=SC2086 # one argument per directory
-          npx vitest run $dirs --bail=1 --passWithNoTests --exclude '**/node_modules/**' --exclude 'packages/runtime/test/**' --exclude tests/crawler/bank1.test.ts
+          npx vitest run $dirs --bail=1 --passWithNoTests --exclude '**/node_modules/**' --exclude 'packages/runtime/test/**' --exclude tests/crawler/bank1.test.ts --exclude 'tests/factory/**'
 
   # One small browser test, on a pull request that changes the crawler's code or a bank: a balance
   # checked end to end on bank 1.
@@ -134,7 +134,7 @@ jobs:
       - name: Headless Chromium
         run: '[ -d .run/browser/chrome ] || infra/scripts/browser.sh'
       - run: npx vitest run tests/runs/execute.test.ts -t 'checks a balance end to end'
-      - run: npx vitest run packages/runtime tests/crawler/bank1.test.ts
+      - run: npx vitest run packages/runtime tests/crawler/bank1.test.ts tests/factory
 
   # On master, the whole suite, in four parts at once.
   suite:

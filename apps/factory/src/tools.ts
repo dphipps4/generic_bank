@@ -7,18 +7,20 @@ export const TOOLS: Readonly<Record<Role, readonly string[]>> = {
   scout: [
     'browser_open',
     'browser_look',
-    'browser_click',
+    'browser_wait',
+    'browser_press',
     'browser_type',
     'browser_choose',
-    'browser_press',
-    'browser_wait',
-    'browser_type_credential',
-    'browser_enter_code',
+    'name_page',
+    'note_answer',
+    'note_read',
+    'goal_reached',
     'memory_query',
   ],
-  supervisor: ['browser_look', 'recommend', 'memory_query', 'record_lesson'],
+  // The Supervisor judges each action from its picture, and can reopen any frame of a run.
+  supervisor: ['open_frame', 'memory_query', 'record_lesson'],
   // The Supervisor writing the run's lessons, on the budget kept for them.
-  lessons: ['memory_query', 'record_lesson'],
+  lessons: ['open_frame', 'memory_query', 'record_lesson'],
 };
 
 /** Of the tools given, those the role may call. */

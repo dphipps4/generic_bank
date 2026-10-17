@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { type Frame, knows } from '@gb/runtime';
 import { describe, expect, it } from 'vitest';
 import { decide } from '../../guardrails/src/index.js';
-import { bank1, cents, leaf } from '../src/index.js';
+import { bank1, cents, leaf, readOf } from '../src/index.js';
 
 const EVIDENCE = join(import.meta.dirname, '../../../docs/evidence/bank-1');
 type Kept = { frame: string; tree?: string; same?: string };
@@ -30,6 +30,34 @@ describe("bank 1's table, against its evidence", () => {
     it(`finds "${a.says}" in ${a.frame}`, () => {
       expect(frame(a.frame).tree.toLowerCase()).toContain(a.says.toLowerCase());
     });
+
+  // Masked frames: the member's number and every value read as stars, which a read still fits.
+  const lines = (ref: string) =>
+    frame(ref)
+      .tree.split('\n')
+      .map(leaf)
+      .filter((l): l is string => !!l)
+      .join('\n');
+  it('reads each balance tile on happy/11', () => {
+    const tiles = [...lines('happy/11').matchAll(readOf(bank1.reads.balance))].map(
+      (m) => m.groups!.name,
+    );
+    expect(tiles).toEqual(['Everyday Checking', 'Rainy Day Savings', 'Money Market']);
+  });
+  it('reads the review on transfer/17 and the confirmation on transfer/18', () => {
+    expect(readOf(bank1.reads.review).exec(lines('transfer/17'))?.groups).toMatchObject({
+      from: 'Everyday Checking, Account ending in ****',
+      memo: 'GBX TEST lunch',
+    });
+    expect(readOf(bank1.reads.confirmation).exec(lines('transfer/18'))?.groups?.confirmation).toBe(
+      'GB-*****-G',
+    );
+  });
+  it("finds where the member's name shows, on happy/10 and happy/11", () => {
+    const [results, summary] = bank1.reads.name;
+    expect(readOf(results!, '********').exec(lines('happy/10'))?.groups?.name).toBe('********');
+    expect(readOf(summary!, '********').exec(lines('happy/11'))?.groups?.name).toBe('********');
+  });
 
   it('has a row for every end, and nothing to do on an end for its goal', () => {
     for (const [goal, page] of Object.entries(bank1.ends)) {
