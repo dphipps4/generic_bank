@@ -61,6 +61,7 @@ const bank = {
   uiVersion: Number(process.env.BANK_UI_VERSION ?? 1),
   hazards: hazards({
     profile,
+    runRatePct: process.env.HAZARD_RUN_RATE_PCT ? Number(process.env.HAZARD_RUN_RATE_PCT) : undefined,
     seed: Number(process.env.HAZARD_SEED ?? 1),
     forceable,
     hmacKey: forceable ? need('HAZARD_HMAC_KEY', 32) : '',

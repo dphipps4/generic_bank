@@ -42,6 +42,25 @@ export const HAZARD_NAMES: readonly HazardName[] = [
 export type Profile = 'default' | 'gentle' | 'harsh' | 'none';
 const SCALE: Record<Profile, number> = { default: 1, gentle: 0.25, harsh: 2, none: 0 };
 
+// The stopping hazards' total per-page rate at scale 1 and the pages a run loads, used to compute
+// the scale from a target run-rate percentage.
+const STOPPING: readonly (keyof typeof AMBIENT)[] = [
+  'js-error-widget',
+  'js-error-fatal',
+  'service-unavailable',
+  'record-in-use',
+  'early-expiry',
+];
+const STOPPING_RATE = STOPPING.reduce((s, k) => s + AMBIENT[k], 0);
+const PAGES_PER_RUN = 20;
+
+/** The scale that gives `pct`% of runs at least one stopping hazard over ~20 pages. */
+export function scaleForRunRate(pct: number): number {
+  if (pct <= 0) return 0;
+  if (pct >= 100) return 1 / (STOPPING_RATE * PAGES_PER_RUN);
+  return -Math.log(1 - pct / 100) / (STOPPING_RATE * PAGES_PER_RUN);
+}
+
 export interface RequestHazards {
   readonly forced: boolean;
   /** Whether a hazard fires on this request. A hazard that fires is logged. */
@@ -51,6 +70,8 @@ export interface RequestHazards {
 
 export interface HazardOptions {
   profile: Profile;
+  /** Overrides the profile's scale: what percentage of runs should hit a stopping hazard. */
+  runRatePct?: number;
   seed: number;
   forceable: boolean;
   hmacKey: string;
@@ -81,7 +102,8 @@ function verify(value: string, key: string): HazardName[] | null {
 export function hazards(opts: HazardOptions) {
   // gentle also fixes the seed, so a reviewer's first run is the same every time
   const seed = opts.profile === 'gentle' ? 20_031_014 : opts.seed;
-  const scale = SCALE[opts.profile];
+  const scale =
+    opts.runRatePct !== undefined ? scaleForRunRate(opts.runRatePct) : SCALE[opts.profile];
   let counter = 0;
 
   return {
