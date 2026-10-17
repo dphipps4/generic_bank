@@ -111,6 +111,8 @@ describe('the Supervisor’s answer', () => {
     expect(readAnswer(answer('Sign in.', ['f1', 'f7']), has)).toBe('f7 is not a frame of this run');
     expect(readAnswer(answer('Sign in.', []), has)).toMatch(/does not fit/);
     expect(readAnswer(answer('Sign in.', ['f1'], 'one\ntwo'), has)).toMatch(/one line/);
+    const long = readAnswer(answer('Sign in.', ['f1'], 'x'.repeat(500)), has);
+    expect(typeof long !== 'string' && long.reason).toHaveLength(300);
     expect(readAnswer(JSON.stringify({ next: 'stop', frames: ['f1'] }), has)).toMatch(
       /does not fit/,
     );
