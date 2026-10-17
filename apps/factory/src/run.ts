@@ -205,6 +205,7 @@ export async function factoryRun(
       `UPDATE "FactoryRun" SET phase = 'REVIEW GATE', status = $2, "lastActivityAt" = now() WHERE id = $1`,
       [runId, claims ? 'review' : 'failed'],
     );
+    await settle(sql, runId, claims ? 'succeeded' : 'failed');
     log(
       claims
         ? `recommendation ${rec!.id}: ${claims.length} claims, awaiting a person`
@@ -213,8 +214,16 @@ export async function factoryRun(
     return { runId, recommendationId: rec?.id ?? null };
   } catch (e) {
     await sql.query(`UPDATE "FactoryRun" SET status = 'failed' WHERE id = $1`, [runId]);
+    await settle(sql, runId, 'failed');
     throw e;
   } finally {
     await page.close();
   }
 }
+
+/** The run's entry in the Console's Runs, settled when the run ends. */
+const settle = (sql: Sql, runId: string, status: 'succeeded' | 'failed') =>
+  sql.query(`UPDATE "TaskRun" SET status = $2::"TaskStatus", "settledAt" = now() WHERE id = $1`, [
+    runId,
+    status,
+  ]);
