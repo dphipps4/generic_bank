@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
+import { TURN_MS } from './agent.js';
 import type { Provider, Role, Usage } from './models.js';
 
 export type Request = Record<string, unknown>;
@@ -182,17 +183,21 @@ export function upstreamFor(
   if (!keys.anthropic && !keys.openai && !keys.openrouter) return replay(recordings);
   return live(
     {
-      anthropic: keys.anthropic ? new Anthropic({ apiKey: keys.anthropic }) : undefined,
-      openai: keys.openai ? new OpenAI({ apiKey: keys.openai }) : undefined,
+      anthropic: keys.anthropic
+        ? new Anthropic({ apiKey: keys.anthropic, timeout: TURN_MS })
+        : undefined,
+      openai: keys.openai ? new OpenAI({ apiKey: keys.openai, timeout: TURN_MS }) : undefined,
       openrouter: keys.openrouter
         ? {
             anthropic: new Anthropic({
               apiKey: keys.openrouter,
               baseURL: OPENROUTER_BASE_URL,
+              timeout: TURN_MS,
             }),
             openai: new OpenAI({
               apiKey: keys.openrouter,
               baseURL: `${OPENROUTER_BASE_URL}/v1`,
+              timeout: TURN_MS,
             }),
           }
         : undefined,
