@@ -50,6 +50,27 @@ const ROLES: [string, string][] = [
   ['clickable', '[onclick]:visible:not(a):not(button):not(input)'],
 ];
 
+/** The page's visible words, in short: what a page that never became ready was showing. */
+async function shown(page: Page): Promise<string> {
+  const words: string[] = [];
+  for (const f of page.frames())
+    if (await f.locator('body').count())
+      words.push(
+        await f
+          .locator('body')
+          .innerText()
+          .catch(() => ''),
+      );
+  return words.join(' ').replace(/\s+/g, ' ').trim().slice(0, 160);
+}
+
+async function hasText(page: Page): Promise<boolean> {
+  for (const f of page.frames())
+    if ((await f.locator('body').count()) && (await f.locator('body').innerText()).trim())
+      return true;
+  return false;
+}
+
 async function actionable(page: Page): Promise<number> {
   let n = 0;
   for (const f of page.frames())
@@ -64,7 +85,7 @@ async function loading(page: Page): Promise<boolean> {
   for (const f of page.frames())
     if (
       await f
-        .getByText(/^\s*(loading|please wait)/i)
+        .getByText(/\b(loading|please wait|processing)\b/i)
         .first()
         .isVisible()
         .catch(() => false)
@@ -121,17 +142,34 @@ export async function see(
   let before: PNG | null = null;
   let lastChange: Box | null = null;
   const animated: Box[] = [];
+  let still = 0;
   for (;;) {
     const marquees = page.frames().map((f) => f.locator('marquee'));
-    const shot = PNG.sync.read(await page.screenshot({ mask: marquees }));
+    // A navigation can begin while we look: then the page is not still, and we look again.
+    const raw = await page.screenshot({ mask: marquees }).catch(() => null);
+    if (!raw) {
+      before = null;
+      lastChange = null;
+      still = 0;
+      await page.waitForTimeout(700);
+      continue;
+    }
+    const shot = PNG.sync.read(raw);
     const change = before && changed(before, shot, animated);
     // A small region that changes again in the same place is animated (a flashing badge): it is
     // left out from then on. Anything else that changes means the page is still being drawn.
     if (change && lastChange && small(change) && small(lastChange) && overlaps(change, lastChange))
       animated.push(grow(change, lastChange));
-    else if (!change && before && !(await loading(page)) && (await actionable(page)) > 0) break;
+    else if (!change && before && !(await loading(page))) {
+      // Ready: something to act on, or, for a page with nothing to act on (an error page), words
+      // that have held still for three looks. A blank page that holds still is not ready.
+      still++;
+      if ((await actionable(page)) > 0 || (still >= 3 && (await hasText(page)))) break;
+    } else still = 0;
     if (Date.now() > until)
-      throw new NotReady(`not ready after ${o.limitMs ?? 60_000} ms at ${maskAddress(page.url())}`);
+      throw new NotReady(
+        `not ready after ${o.limitMs ?? 60_000} ms at ${maskAddress(page.url(), known)}, showing: ${maskText(await shown(page), known)}`,
+      );
     lastChange = change || null;
     before = shot;
     await page.waitForTimeout(700);

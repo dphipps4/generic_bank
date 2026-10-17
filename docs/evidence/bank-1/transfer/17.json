@@ -1,0 +1,107 @@
+{
+  "did": "press \"Submit transfer\"",
+  "at": "2026-10-17T17:58:40.454Z",
+  "address": "http://localhost:63367/corelink/console",
+  "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ********\":\n      - cell \"Member ******** · ********\"\n- table:\n  - rowgroup:\n    - 'row \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: (none) Back to member summary\"':\n      - 'cell \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: (none) Back to member summary\"':\n        - table:\n          - rowgroup:\n            - 'row \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: (none) Back to member summary\"':\n              - 'cell \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: (none) Back to member summary\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: (none) Back to member summary\"':\n                      - 'cell \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: (none) Back to member summary\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: (none) Back to member summary\"':\n                              - 'cell \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: (none) Back to member summary\"':\n                                - table:\n                                  - rowgroup:\n                                    - row \"Transfer posted\":\n                                      - cell \"Transfer posted\"\n                                - paragraph: Transfer posted. Confirmation number GB-*****-G.\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"From: Everyday Checking, Account ending in ****\"':\n                                      - cell \"From:\"\n                                      - cell \"Everyday Checking, Account ending in ****\"\n                                    - 'row \"To: Rainy Day Savings, Account ending in ****\"':\n                                      - cell \"To:\"\n                                      - cell \"Rainy Day Savings, Account ending in ****\"\n                                    - 'row \"Amount: ******\"':\n                                      - cell \"Amount:\"\n                                      - cell \"******\"\n                                    - 'row \"Memo: (none)\"':\n                                      - cell \"Memo:\"\n                                      - cell \"(none)\"\n                                - paragraph:\n                                  - link \"Back to member summary\":\n                                    - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+  "controls": [
+    {
+      "role": "link",
+      "name": "Member Search",
+      "box": {
+        "x": 11,
+        "y": 72,
+        "w": 78.6875,
+        "h": 18
+      }
+    },
+    {
+      "role": "link",
+      "name": "Transfer Funds",
+      "box": {
+        "x": 11,
+        "y": 90,
+        "w": 73.921875,
+        "h": 18
+      }
+    },
+    {
+      "role": "link",
+      "name": "Statements",
+      "box": {
+        "x": 11,
+        "y": 112,
+        "w": 57.84375,
+        "h": 18
+      }
+    },
+    {
+      "role": "link",
+      "name": "Reports",
+      "box": {
+        "x": 11,
+        "y": 150,
+        "w": 38.390625,
+        "h": 18
+      }
+    },
+    {
+      "role": "link",
+      "name": "Admin",
+      "box": {
+        "x": 11,
+        "y": 168,
+        "w": 31.875,
+        "h": 18
+      }
+    },
+    {
+      "role": "link",
+      "name": "Fee Waivers",
+      "box": {
+        "x": 11,
+        "y": 186,
+        "w": 60.359375,
+        "h": 18
+      }
+    },
+    {
+      "role": "link",
+      "name": "Address Change",
+      "box": {
+        "x": 11,
+        "y": 204,
+        "w": 81.296875,
+        "h": 18
+      }
+    },
+    {
+      "role": "link",
+      "name": "Sign Out",
+      "box": {
+        "x": 11,
+        "y": 240,
+        "w": 43.796875,
+        "h": 18
+      }
+    },
+    {
+      "role": "link",
+      "name": "Back to member summary",
+      "box": {
+        "x": 425.5,
+        "y": 249,
+        "w": 133.59375,
+        "h": 18
+      }
+    }
+  ],
+  "dialogs": [],
+  "animated": [
+    {
+      "x": 71,
+      "y": 110,
+      "w": 38,
+      "h": 18
+    }
+  ]
+}

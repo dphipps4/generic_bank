@@ -1,0 +1,117 @@
+{
+  "did": "press \"Search\"",
+  "at": "2026-10-17T18:07:31.854Z",
+  "address": "http://localhost:64027/corelink/console",
+  "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - 'row \"Member Search Member number: ******** Search\"':\n      - 'cell \"Member Search Member number: ******** Search\"':\n        - table:\n          - rowgroup:\n            - 'row \"Member Search Member number: ******** Search\"':\n              - 'cell \"Member Search Member number: ******** Search\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Member Search Member number: ******** Search\"':\n                      - 'cell \"Member Search Member number: ******** Search\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Member Search Member number: ******** Search\"':\n                              - 'cell \"Member Search Member number: ******** Search\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Member Search Member number: ******** Search\"':\n                                      - 'cell \"Member Search Member number: ******** Search\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Member Search Member number: ******** Search\"':\n                                              - 'cell \"Member Search Member number: ******** Search\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - row \"Member Search\":\n                                                      - cell \"Member Search\"\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Member number: ********\"':\n                                                      - cell \"Member number:\"\n                                                      - cell \"********\":\n                                                        - textbox: \"********\"\n                                                    - row \"Search\":\n                                                      - cell\n                                                      - cell \"Search\":\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Search\":\n                                                              - cell \"Search\"\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+  "controls": [
+    {
+      "role": "link",
+      "name": "Member Search",
+      "box": {
+        "x": 11,
+        "y": 72,
+        "w": 78.6875,
+        "h": 18
+      }
+    },
+    {
+      "role": "link",
+      "name": "Transfer Funds",
+      "box": {
+        "x": 11,
+        "y": 90,
+        "w": 73.921875,
+        "h": 18
+      }
+    },
+    {
+      "role": "link",
+      "name": "Statements",
+      "box": {
+        "x": 11,
+        "y": 112,
+        "w": 57.84375,
+        "h": 18
+      }
+    },
+    {
+      "role": "link",
+      "name": "Reports",
+      "box": {
+        "x": 11,
+        "y": 150,
+        "w": 38.390625,
+        "h": 18
+      }
+    },
+    {
+      "role": "link",
+      "name": "Admin",
+      "box": {
+        "x": 11,
+        "y": 168,
+        "w": 31.875,
+        "h": 18
+      }
+    },
+    {
+      "role": "link",
+      "name": "Fee Waivers",
+      "box": {
+        "x": 11,
+        "y": 186,
+        "w": 60.359375,
+        "h": 18
+      }
+    },
+    {
+      "role": "link",
+      "name": "Address Change",
+      "box": {
+        "x": 11,
+        "y": 204,
+        "w": 81.296875,
+        "h": 18
+      }
+    },
+    {
+      "role": "link",
+      "name": "Sign Out",
+      "box": {
+        "x": 11,
+        "y": 240,
+        "w": 43.796875,
+        "h": 18
+      }
+    },
+    {
+      "role": "textbox",
+      "name": "",
+      "box": {
+        "x": 531.6875,
+        "y": 105,
+        "w": 111,
+        "h": 21
+      }
+    },
+    {
+      "role": "clickable",
+      "name": "Search",
+      "box": {
+        "x": 531.6875,
+        "y": 132,
+        "w": 58.609375,
+        "h": 20
+      }
+    }
+  ],
+  "dialogs": [],
+  "animated": [
+    {
+      "x": 71,
+      "y": 110,
+      "w": 38,
+      "h": 18
+    }
+  ]
+}

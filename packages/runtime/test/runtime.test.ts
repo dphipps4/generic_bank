@@ -121,10 +121,37 @@ describe('the runtime: see first, then click', () => {
     expect(await textIn(p)).toContain('saved');
   });
 
+  it('presses the one of two same-named links nearest the section a person means', async () => {
+    const p = await open('/twice');
+    await see(p, { limitMs: 10_000 });
+    await expect(press(p, 'Transfer Funds')).rejects.toBeInstanceOf(TargetError);
+    await press(p, 'Transfer Funds', { near: 'Member Summary' });
+    expect(await textIn(p)).toContain('from the summary');
+  });
+
+  it('sees an error page that has words and nothing to act on', async () => {
+    const p = await open('/unavailable');
+    const f = await see(p, { limitMs: 10_000 });
+    expect(knows(f, [{ name: 'unavailable', shows: ['Service Unavailable'] }])).toBe('unavailable');
+  });
+
+  it('looks again when a page moves on while it is being looked at', async () => {
+    const p = await open('/moves-on');
+    const f = await see(p, { limitMs: 10_000 });
+    expect(f.address).toContain('/label');
+  });
+
+  it('never calls a page that says it is processing ready, and says what it showed', async () => {
+    const p = await open('/processing');
+    await expect(see(p, { limitMs: 3_000 })).rejects.toThrow(/please wait/);
+  });
+
   it('refuses a control something is drawn over', async () => {
     const p = await open('/covered');
     await see(p, { limitMs: 10_000 });
-    await expect(press(p, 'Pay', 1_500)).rejects.toThrow(/intercepts pointer events|Timeout/);
+    await expect(press(p, 'Pay', { timeoutMs: 1_500 })).rejects.toThrow(
+      /intercepts pointer events|Timeout/,
+    );
   });
 
   it('answers a surprise dialog without committing, and records it', async () => {

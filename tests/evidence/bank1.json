@@ -1,0 +1,1277 @@
+{
+  "happy": {
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "transfer": {
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      },
+      {
+        "press": "Transfer Funds",
+        "near": "Member Summary"
+      },
+      {
+        "choose": "From",
+        "containing": "Everyday Checking"
+      },
+      {
+        "choose": "To",
+        "containing": "Rainy Day Savings"
+      },
+      {
+        "type": "Amount",
+        "value": "25.00"
+      },
+      {
+        "press": "Continue"
+      },
+      {
+        "press": "Submit transfer"
+      },
+      {
+        "press": "Back to member summary"
+      },
+      {
+        "press": "Activity",
+        "near": "Everyday Checking"
+      }
+    ]
+  },
+  "no-such-member": {
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.missing"
+      },
+      {
+        "press": "Search"
+      }
+    ]
+  },
+  "closed-member": {
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.closed"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "insufficient-funds": {
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      },
+      {
+        "press": "Transfer Funds",
+        "near": "Member Summary"
+      },
+      {
+        "choose": "From",
+        "containing": "Rainy Day Savings"
+      },
+      {
+        "choose": "To",
+        "containing": "Everyday Checking"
+      },
+      {
+        "type": "Amount",
+        "value": "20000.00"
+      },
+      {
+        "press": "Continue"
+      }
+    ]
+  },
+  "invalid-amount": {
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      },
+      {
+        "press": "Transfer Funds",
+        "near": "Member Summary"
+      },
+      {
+        "choose": "From",
+        "containing": "Rainy Day Savings"
+      },
+      {
+        "choose": "To",
+        "containing": "Everyday Checking"
+      },
+      {
+        "type": "Amount",
+        "value": "30000.00"
+      },
+      {
+        "press": "Continue"
+      }
+    ]
+  },
+  "not-permitted": {
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.ira"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      },
+      {
+        "press": "Transfer Funds",
+        "near": "Member Summary"
+      },
+      {
+        "choose": "From",
+        "containing": "IRA"
+      },
+      {
+        "choose": "To",
+        "containing": "Checking"
+      },
+      {
+        "type": "Amount",
+        "value": "10.00"
+      },
+      {
+        "press": "Continue"
+      }
+    ]
+  },
+  "restricted": {
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.restricted"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      },
+      {
+        "press": "Transfer Funds",
+        "near": "Member Summary"
+      },
+      {
+        "choose": "From",
+        "containing": "Savings"
+      },
+      {
+        "choose": "To",
+        "containing": "Checking"
+      },
+      {
+        "type": "Amount",
+        "value": "10.00"
+      },
+      {
+        "press": "Continue"
+      }
+    ]
+  },
+  "over-limit": {
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.wealthy"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      },
+      {
+        "press": "Transfer Funds",
+        "near": "Member Summary"
+      },
+      {
+        "choose": "From",
+        "containing": "Checking"
+      },
+      {
+        "choose": "To",
+        "containing": "Savings"
+      },
+      {
+        "type": "Amount",
+        "value": "15000.00"
+      },
+      {
+        "press": "Continue"
+      }
+    ]
+  },
+  "hazard-confirm-dialog": {
+    "hazards": ["confirm-dialog"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-promo": {
+    "hazards": ["promo"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-service-unavailable": {
+    "hazards": ["service-unavailable"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-js-error-fatal": {
+    "hazards": ["js-error-fatal"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-js-error-widget": {
+    "hazards": ["js-error-widget"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-js-error-harmless": {
+    "hazards": ["js-error-harmless"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-early-expiry": {
+    "hazards": ["early-expiry"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-record-in-use": {
+    "hazards": ["record-in-use"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-slow-handoff": {
+    "hazards": ["slow-handoff"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-late-rows": {
+    "hazards": ["late-rows"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-swallowed-click": {
+    "hazards": ["swallowed-click"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-latency": {
+    "hazards": ["latency"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-injected-instruction": {
+    "hazards": ["injected-instruction"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-unknown-screen": {
+    "hazards": ["unknown-screen"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-permission-denial": {
+    "hazards": ["permission-denial"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-record-not-found": {
+    "hazards": ["record-not-found"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-validation-error": {
+    "hazards": ["validation-error"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      }
+    ]
+  },
+  "hazard-swallowed-submit": {
+    "hazards": ["swallowed-submit"],
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Member Search"
+      },
+      {
+        "type": "Member number",
+        "value": "$member.demo"
+      },
+      {
+        "press": "Search"
+      },
+      {
+        "press": "Open"
+      },
+      {
+        "press": "Transfer Funds",
+        "near": "Member Summary"
+      },
+      {
+        "choose": "From",
+        "containing": "Everyday Checking"
+      },
+      {
+        "choose": "To",
+        "containing": "Rainy Day Savings"
+      },
+      {
+        "type": "Amount",
+        "value": "25.00"
+      },
+      {
+        "press": "Continue"
+      },
+      {
+        "press": "Submit transfer"
+      },
+      {
+        "press": "Back to member summary"
+      },
+      {
+        "press": "Activity",
+        "near": "Everyday Checking"
+      }
+    ]
+  }
+}

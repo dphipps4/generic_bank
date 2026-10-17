@@ -53,6 +53,7 @@ export async function field(page: Page, label: string): Promise<{ target: Locato
 export async function control(
   page: Page,
   name: string,
+  near?: string,
 ): Promise<{ target: Locator; box: Box; frame: Frame }> {
   const exact = new RegExp(`^\\s*${escape(name)}\\s*$`);
   const hits: { target: Locator; frame: Frame }[] = [];
@@ -64,6 +65,23 @@ export async function control(
   if (!hits.length)
     for (const f of page.frames())
       for (const l of await visible(f.getByText(exact))) hits.push({ target: l, frame: f });
+  // Two of the same name (one in the nav, one in the page): the one nearest the anchor a person
+  // would go by, such as the heading of the section it sits in.
+  if (hits.length > 1 && near) {
+    const anchors: Box[] = [];
+    for (const f of page.frames())
+      for (const l of await visible(f.getByText(near, { exact: true }))) {
+        const b = await boxOf(l);
+        if (b) anchors.push(b);
+      }
+    if (anchors.length === 1) {
+      const a = anchors[0]!;
+      const by = await Promise.all(hits.map(async (h) => ({ h, b: await boxOf(h.target) })));
+      const d = (b: Box | null) => (b ? Math.hypot(b.x - a.x, b.y - a.y) : Infinity);
+      by.sort((x, y) => d(x.b) - d(y.b));
+      if (d(by[1]!.b) - d(by[0]!.b) > 20) hits.splice(0, hits.length, by[0]!.h);
+    }
+  }
   if (hits.length !== 1) throw new TargetError(`press "${name}": ${hits.length} visible`);
   const box = await boxOf(hits[0]!.target);
   if (!box) throw new TargetError(`press "${name}": it has no box`);
@@ -71,9 +89,13 @@ export async function control(
 }
 
 /** Presses a control by its drawn name. Refused if anything covers it. */
-export async function press(page: Page, name: string, timeoutMs = 10_000): Promise<Box> {
-  const c = await control(page, name);
-  await c.target.click({ timeout: timeoutMs });
+export async function press(
+  page: Page,
+  name: string,
+  o: { near?: string; timeoutMs?: number } = {},
+): Promise<Box> {
+  const c = await control(page, name, o.near);
+  await c.target.click({ timeout: o.timeoutMs ?? 10_000 });
   return c.box;
 }
 
@@ -86,9 +108,13 @@ export async function type(page: Page, label: string, text: string): Promise<Box
   return f.box;
 }
 
-/** Chooses an option, by its visible text, in the list a label names. */
-export async function choose(page: Page, label: string, option: string): Promise<Box> {
+/** Chooses, in the list a label names, the one option whose visible text contains these words. */
+export async function choose(page: Page, label: string, containing: string): Promise<Box> {
   const f = await field(page, label);
-  await f.target.selectOption({ label: option });
+  const options = await f.target.locator('option').allInnerTexts();
+  const hits = options.filter((o) => o.includes(containing));
+  if (hits.length !== 1)
+    throw new TargetError(`choose "${containing}" in "${label}": ${hits.length} options match`);
+  await f.target.selectOption({ label: hits[0]! });
   return f.box;
 }
