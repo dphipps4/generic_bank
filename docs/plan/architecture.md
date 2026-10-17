@@ -142,7 +142,7 @@ nothing acts.
 
 ### Failures in the bank
 
-Sign-in trouble either stops the run or asks for help. A wrong password or a locked operator stops
+Sign-in trouble either stops the run or asks for help. A wrong password or a locked-out teller stops
 it at once, and a sign-in code goes to a person. When the bank refuses
 something in its own words (no member, a closed member, insufficient funds, a restricted account),
 that's the answer the caller gets. If the bank is slow or briefly broken, the run waits or retries
@@ -372,7 +372,7 @@ an injected instruction, an unknown screen, and permission, not-found and valida
 | Failure | Detected by | The system | The caller sees |
 |---|---|---|---|
 | Wrong password | sign-in error screen | stops; never submits again | `failed: bad_credentials`, not retryable |
-| Operator locked or rate limited | lock screen | stops | `failed: operator_locked`, not retryable |
+| Teller locked out or rate limited | lock screen | stops | `failed: operator_locked`, not retryable |
 | Staff code needed | code screen, with proof a code was sent | waits; opens a human task | `needs_human: awaiting_staff_code` |
 | Code rejected or expired | the bank's wording | one attempt per code; asks for a new one only if the bank offers | `awaiting_staff_code` again; `failed: bad_credentials` after three refused codes |
 | No member found, member closed | lookup result | stops | `business_outcome: no_such_member` / `member_closed` |

@@ -56,7 +56,7 @@ describe('recognizing screens', () => {
   });
 
   it('tells two layouts of one screen apart by what each must not show', () => {
-    const m = model([text('Welcome back, Operator 0412', 5)], [control('password', '', 30)]);
+    const m = model([text('Welcome back, teller0412', 5)], [control('password', '', 30)]);
     expect(recognize(m, SIGS).screen).toBe('login.welcome_back');
   });
 
