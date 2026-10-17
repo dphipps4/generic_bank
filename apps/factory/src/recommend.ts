@@ -10,7 +10,7 @@ import { GENERIC_BANK, type Profile } from '@gb/drivers';
 import type { Sql } from '@gb/runs';
 import { normalize } from '@gb/screen';
 import { z } from 'zod';
-import { type Agent, turn } from './agent.js';
+import { type Agent, ThoughtTooLong, turn } from './agent.js';
 import { type Tool, ToolRefusal } from './tools.js';
 import type { Shown, Trail } from './trail.js';
 
@@ -114,6 +114,14 @@ Mark a claim seen only when it is on every frame it cites. Anything no frame sho
 
 Call recommend once with every claim. If it is refused, correct what it says and call it again.`;
 
+/** One effort lower, for a turn asked again. */
+const LOWER: Partial<Record<Agent['model']['effort'], Agent['model']['effort']>> = {
+  max: 'xhigh',
+  xhigh: 'high',
+  high: 'medium',
+  medium: 'low',
+};
+
 const REPAIR = `You are the Supervisor, and the site has changed: the site's driver, which runs its approved profile, stopped at a screen it did not know. The Scout's run at the site as it is now has reached its goals. Draft what changed in the site's profile from the frames of this run, with the recommend tool.
 
 You are shown the profile as it is, why the failing run stopped and its frames there, and the frames of this run. Recommend only what changed: anything still true stays as it is and needs no claim. Each claim is one thing about the site in its own words, exactly as on screen: its new word for a thing; words.menu for a control that must be opened to reach the places to go; for a page after sign-in that must be passed, the words that mark it (screens.login.notice) and its button (words.dismiss); the words that mark its home page (screens.console.home). Each cites the frames of this run that show it.
@@ -158,28 +166,42 @@ export async function recommend(o: {
     refusals: r.profile.refusals,
     statementsKept: r.profile.statementsKept,
   };
-  await turn(o.agent, {
-    system: r ? REPAIR : SYSTEM,
-    say: [
-      `Goals reached:\n${o.goals.map((g) => `- ${g}`).join('\n')}`,
-      ...(r
-        ? [
-            `The profile as it is:\n${JSON.stringify(was)}`,
-            ...(r.stopped ? [`Why the failing run stopped: ${r.stopped}`] : []),
-            `Where the failing run stopped, its last frames, the last one first:\n${r.failing
-              .slice(-3)
-              .reverse()
-              .map((s) => JSON.stringify(s))
-              .join('\n')}`,
-          ]
-        : []),
-      `Frames of this run, each as its page and the words on it:\n${frames.join('\n')}`,
-    ].join('\n\n'),
-    tools: [recommendTool(o)],
-    calls: 3,
-    // Drafting a profile from every frame is the Supervisor's longest thinking.
-    maxTokens: 48_000,
-  });
+  const ask = (agent: Agent) =>
+    turn(agent, {
+      system: r ? REPAIR : SYSTEM,
+      say: [
+        `Goals reached:\n${o.goals.map((g) => `- ${g}`).join('\n')}`,
+        ...(r
+          ? [
+              `The profile as it is:\n${JSON.stringify(was)}`,
+              ...(r.stopped ? [`Why the failing run stopped: ${r.stopped}`] : []),
+              `Where the failing run stopped, its last frames, the last one first:\n${r.failing
+                .slice(-3)
+                .reverse()
+                .map((s) => JSON.stringify(s))
+                .join('\n')}`,
+            ]
+          : []),
+        `Frames of this run, each as its page and the words on it:\n${frames.join('\n')}`,
+      ].join('\n\n'),
+      tools: [recommendTool(o)],
+      calls: 3,
+      // Drafting a profile from every frame is the Supervisor's longest thinking.
+      maxTokens: 48_000,
+    });
+  // At high effort a model can think through its whole allowance and say nothing; asked once more,
+  // a step lower, it answers. Steering keeps its effort; only this turn is asked again.
+  try {
+    await ask(o.agent);
+  } catch (e) {
+    const lower = LOWER[o.agent.model.effort];
+    if (!(e instanceof ThoughtTooLong) || !lower) throw e;
+    await o.trail.step(
+      { name: 'recommend', action: 'asked again', outcome: `${e.message}; now at ${lower} effort` },
+      null,
+    );
+    await ask({ ...o.agent, model: { ...o.agent.model, effort: lower } });
+  }
   const kept = await o.sql.query<{ claims: Claim[] }>(
     `SELECT claims FROM "Recommendation" WHERE "factoryRunId" = $1`,
     [o.runId],
