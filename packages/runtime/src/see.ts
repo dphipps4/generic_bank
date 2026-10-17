@@ -4,6 +4,7 @@
 // evidence is kept: the masked picture, the rendered page (what is visible, by role and name) and
 // the masked address.
 import type { Page } from 'playwright-core';
+import { PNG } from 'pngjs';
 import { dialogsSince } from './browser.js';
 import { type Box, maskAddress, maskBoxes, maskText, paint } from './mask.js';
 
@@ -23,6 +24,8 @@ export interface Frame {
   controls: Control[];
   /** JavaScript dialogs the page showed (and the run answered) since the last frame. */
   dialogs: string[];
+  /** Small regions that kept changing (a flashing badge), left out of "holds still". */
+  animated: Box[];
 }
 
 export class NotReady extends Error {}
@@ -70,6 +73,44 @@ async function loading(page: Page): Promise<boolean> {
   return false;
 }
 
+/** Where two pictures differ, outside the regions already known to move; null if nowhere. */
+function changed(a: PNG, b: PNG, skip: Box[]): Box | null {
+  if (a.width !== b.width || a.height !== b.height) return { x: 0, y: 0, w: b.width, h: b.height };
+  let x1 = Infinity,
+    y1 = Infinity,
+    x2 = -1,
+    y2 = -1;
+  for (let y = 0; y < a.height; y++)
+    for (let x = 0; x < a.width; x++) {
+      const i = (y * a.width + x) * 4;
+      if (
+        a.data[i] === b.data[i] &&
+        a.data[i + 1] === b.data[i + 1] &&
+        a.data[i + 2] === b.data[i + 2]
+      )
+        continue;
+      if (skip.some((s) => x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h)) continue;
+      x1 = Math.min(x1, x);
+      y1 = Math.min(y1, y);
+      x2 = Math.max(x2, x);
+      y2 = Math.max(y2, y);
+    }
+  return x2 < 0 ? null : { x: x1, y: y1, w: x2 - x1 + 1, h: y2 - y1 + 1 };
+}
+const small = (b: Box) => b.w * b.h <= 12_000;
+const overlaps = (a: Box, b: Box) =>
+  a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+const grow = (a: Box, b: Box): Box => {
+  const x = Math.min(a.x, b.x) - 2,
+    y = Math.min(a.y, b.y) - 2;
+  return {
+    x,
+    y,
+    w: Math.max(a.x + a.w, b.x + b.w) + 2 - x,
+    h: Math.max(a.y + a.h, b.y + b.h) + 2 - y,
+  };
+};
+
 /** Waits until the page is ready, then keeps it: the masked picture, page and address. */
 export async function see(
   page: Page,
@@ -77,13 +118,21 @@ export async function see(
 ): Promise<Frame> {
   const known = o.known ?? [];
   const until = Date.now() + (o.limitMs ?? 60_000);
-  let before: Buffer = Buffer.alloc(0);
+  let before: PNG | null = null;
+  let lastChange: Box | null = null;
+  const animated: Box[] = [];
   for (;;) {
-    const moving = page.frames().map((f) => f.locator('marquee'));
-    const shot = await page.screenshot({ mask: moving });
-    if (before.equals(shot) && !(await loading(page)) && (await actionable(page)) > 0) break;
+    const marquees = page.frames().map((f) => f.locator('marquee'));
+    const shot = PNG.sync.read(await page.screenshot({ mask: marquees }));
+    const change = before && changed(before, shot, animated);
+    // A small region that changes again in the same place is animated (a flashing badge): it is
+    // left out from then on. Anything else that changes means the page is still being drawn.
+    if (change && lastChange && small(change) && small(lastChange) && overlaps(change, lastChange))
+      animated.push(grow(change, lastChange));
+    else if (!change && before && !(await loading(page)) && (await actionable(page)) > 0) break;
     if (Date.now() > until)
       throw new NotReady(`not ready after ${o.limitMs ?? 60_000} ms at ${maskAddress(page.url())}`);
+    lastChange = change || null;
     before = shot;
     await page.waitForTimeout(700);
   }
@@ -129,6 +178,7 @@ export async function see(
     tree: maskText(parts.join('\n\n'), known),
     controls,
     dialogs: dialogsSince(page).map((d) => maskText(d, known)),
+    animated,
   };
 }
 

@@ -44,6 +44,13 @@ export const PAGES: Record<string, string> = {
     `<marquee scrollamount="20">Branch hours are 9 to 5</marquee><button>Ready</button>`,
   ),
 
+  // A badge that a script recolours forever, through seven colours every 200 ms, so no two
+  // pictures 700 ms apart are alike; beside it, a link: the page is ready all the same.
+  '/blink': doc(
+    `<a href="/blink">Statements</a> <span id="b" style="color:#fff">NEW!</span>`,
+    `<script>var n=0,c=['#f60','#c00','#090','#00c','#909','#099','#990'];setInterval(function(){document.getElementById('b').style.background=c[n++%7]},200)</script>`,
+  ),
+
   // Blank and still for two seconds, then drawn: blank is not ready.
   '/late': doc(
     `<div id="x"></div>`,

@@ -80,11 +80,12 @@ async function boxesFrom(cdp: CDPSession, known: string[], dx: number, dy: numbe
       const b = d.layout.bounds[layoutOf.get(node) ?? -1];
       if (b) offsets.set(owners.value[k]!, { x: x0 + b[0]!, y: y0 + b[1]! });
     });
-    // A field holding a value is covered whole.
+    // A field holding a value to mask (a typed number, a password, a name) is covered whole. A
+    // radio button's or a checkbox's value is not typed: it stays, so the picture shows the choice.
     const inputs = d.nodes.inputValue;
     inputs?.index.forEach((node, k) => {
       const b = d.layout.bounds[layoutOf.get(node) ?? -1];
-      if (b && str(inputs.value[k]!))
+      if (b && spans(str(inputs.value[k]!), known).length)
         out.push({ x: x0 + b[0]!, y: y0 + b[1]!, w: b[2]!, h: b[3]! });
     });
     // Text: only the characters that match, by their share of the run's width.
@@ -95,11 +96,13 @@ async function boxesFrom(cdp: CDPSession, known: string[], dx: number, dy: numbe
       );
       const b = d.textBoxes.bounds[k]!;
       const per = text.length ? b[2]! / text.length : 0;
+      // Where a character falls is estimated from the run's width, so each span grows by a
+      // character on both sides: a leaked digit is a leak.
       for (const [s, e] of spans(text, known))
         out.push({
-          x: x0 + b[0]! + s * per - 1,
+          x: x0 + b[0]! + (s - 1) * per - 1,
           y: y0 + b[1]! - 1,
-          w: (e - s) * per + 2,
+          w: (e - s + 2) * per + 2,
           h: b[3]! + 2,
         });
     });
