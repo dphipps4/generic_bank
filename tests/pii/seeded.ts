@@ -1,6 +1,6 @@
 // The seeded secrets and personal values of a bank, read from the bank's own database: its members'
-// numbers, names and full account numbers, its staff's contact details, authenticator secrets and
-// passwords, and every staff code it has sent.
+// numbers, names and full account numbers, its staff's contact details and passwords, and every
+// staff code it has sent.
 import { MEMBERS } from '../../apps/bank/src/seed.js';
 import { TENANTS } from '../../apps/bank/src/tenants.js';
 import { type LiveBank, PASSWORDS } from '../support/banks.js';
@@ -60,16 +60,12 @@ export async function seededOf(bank: LiveBank, lookedUp: string[]): Promise<Seed
     name: string;
     phone: string;
     email: string;
-    totp: string | null;
-  }>(
-    'SELECT operator_id AS id, display_name AS name, phone, email, totp_secret AS totp FROM operators',
-  );
+  }>('SELECT operator_id AS id, display_name AS name, phone, email FROM operators');
   for (const o of staff.rows) {
     const who = `${bank.id} operator ${o.id.replace(/\d/g, '*')}`;
     text.push(words(`${who}'s name`, o.name, { anyCase: true }));
     text.push(anywhere(`${who}'s phone`, o.phone));
     text.push(anywhere(`${who}'s email`, o.email));
-    if (o.totp) text.push(anywhere(`${who}'s authenticator secret`, o.totp));
   }
   text.push(anywhere('the service password', PASSWORDS.service));
   text.push(anywhere('the supervisor password', PASSWORDS.supervisor));

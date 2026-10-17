@@ -8,9 +8,7 @@ if (!base) {
   console.error('BANK_DATABASE_URL_BASE is missing');
   process.exit(1);
 }
-const ids = (process.env.BANKS ?? 'generic,example,sample,placeholder')
-  .split(',')
-  .map((s) => s.trim()) as TenantId[];
+const ids = (process.env.BANKS ?? 'generic,example').split(',').map((s) => s.trim()) as TenantId[];
 const banks: { t: (typeof TENANTS)[TenantId]; db: Db }[] = [];
 for (const id of ids) {
   const t = TENANTS[id];

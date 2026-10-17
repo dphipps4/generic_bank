@@ -9,7 +9,6 @@ import { hazards, type HazardName, signHazards } from '../../apps/bank/src/hazar
 import { OPERATORS, seed } from '../../apps/bank/src/seed.js';
 import { buildServer } from '../../apps/bank/src/server.js';
 import { redesigned, TENANTS, type TenantId } from '../../apps/bank/src/tenants.js';
-import { totp } from '../../apps/bank/src/auth.js';
 import { MAC_CHROME } from '../../apps/bank/test/browser.js';
 
 export const PASSWORDS = {
@@ -100,16 +99,12 @@ export async function liveBank(
 
 /**
  * Signs the service account in over plain HTTP, the way a person's browser would and with its
- * headers, so banks 2 to 4 let it in, and returns the cookies. For tests that need a signed-in
+ * headers, so bank 2 lets it in, and returns the cookies. For tests that need a signed-in
  * console before the crawler can type for itself.
  */
 export async function signedInCookies(b: LiveBank): Promise<{ name: string; value: string }[]> {
-  const t = TENANTS[b.id];
   const jar = new Map<string, string>();
-  const at = (path: string) =>
-    t.secondOrigin === 'signin' && /signin|code|auth\//.test(path)
-      ? `${b.secondOrigin}${t.basePath}${path}`
-      : `${b.url}${path}`;
+  const at = (path: string) => `${b.url}${path}`;
   const keep = (r: Response) => {
     for (const c of r.headers.getSetCookie()) {
       const [kv] = c.split(';');
@@ -137,33 +132,23 @@ export async function signedInCookies(b: LiveBank): Promise<{ name: string; valu
     return r;
   };
   const code = async () => {
-    if (t.codeStyle === 'authenticator') {
-      const r = await b.db.query<{ s: string }>(
-        'SELECT totp_secret AS s FROM operators WHERE operator_id = $1',
-        [OPERATORS.service.id],
-      );
-      return totp(r.rows[0]!.s, new Date());
-    }
     const r = await b.db.query<{ body: string }>(
       `SELECT m.body FROM messages m JOIN operators o ON m.address IN (o.phone, o.email) WHERE o.operator_id = $1 ORDER BY m.id DESC LIMIT 1`,
       [OPERATORS.service.id],
     );
     return /(\d{6})/.exec(r.rows[0]!.body)![1]!;
   };
-  for (let attempt = 0; attempt < 2; attempt++) {
-    keep(await fetch(at('signin'), { headers: headers() }));
-    await post('signin', { operator: OPERATORS.service.id, password: PASSWORDS.service });
-    keep(await fetch(at('code'), { headers: headers(), redirect: 'manual' }));
-    await post('code', { channel: 'text' });
-    const r = await post('code/enter', { code: await code() });
-    const handoff = new URL(r.headers.get('location') ?? '', b.url).searchParams.get('code') ?? '';
-    const done = await fetch(at(`auth/complete?code=${encodeURIComponent(handoff)}`), {
+  keep(await fetch(at('signin'), { headers: headers() }));
+  await post('signin', { operator: OPERATORS.service.id, password: PASSWORDS.service });
+  keep(await fetch(at('code'), { headers: headers(), redirect: 'manual' }));
+  await post('code', { channel: 'text' });
+  const r = await post('code/enter', { code: await code() });
+  const handoff = new URL(r.headers.get('location') ?? '', b.url).searchParams.get('code') ?? '';
+  keep(
+    await fetch(at(`auth/complete?code=${encodeURIComponent(handoff)}`), {
       headers: headers(),
       redirect: 'manual',
-    });
-    keep(done);
-    if (done.status === 302) break; // bank 4 bounces the first hand-off of the day
-  }
-  if (t.termsAfterSignIn) await post('terms', {});
+    }),
+  );
   return [...jar].map(([n, value]) => ({ name: n, value }));
 }

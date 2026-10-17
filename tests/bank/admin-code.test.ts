@@ -1,7 +1,6 @@
 // The bank's own word for a teller's sign-in code, which the factory's hazard check types: the
-// last code the bank sent them, or, at a bank whose staff use an authenticator, the app's code.
+// last code the bank sent them.
 import { afterAll, describe, expect, it } from 'vitest';
-import { totp } from '../../apps/bank/src/auth.js';
 import { OPERATORS } from '../../apps/bank/src/seed.js';
 import { type LiveBank, liveBank } from '../support/banks.js';
 
@@ -28,20 +27,5 @@ describe("the bank admin's code for an operator", () => {
       new Date(),
     ]);
     expect(await b.admin(path)).toEqual({ code: '123456' });
-  });
-
-  it("is the authenticator's at a bank whose staff use one", async () => {
-    const b = await liveBank('placeholder');
-    open.push(b);
-    const { s } = (
-      await b.db.query<{ s: string }>(
-        'SELECT totp_secret AS s FROM operators WHERE operator_id = $1',
-        [OPERATORS.service.id],
-      )
-    ).rows[0]!;
-    const { code } = await b.admin<{ code: string }>(`/operators/${OPERATORS.service.id}/code`);
-    // A code changes every 30 seconds; either side of a boundary is the app's.
-    const now = Date.now();
-    expect([totp(s, new Date(now - 30_000)), totp(s, new Date(now))]).toContain(code);
   });
 });

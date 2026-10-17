@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, randomInt } from 'node:crypto';
+import { randomBytes, randomInt } from 'node:crypto';
 import argon2 from 'argon2';
 import type { Db } from './db.js';
 
@@ -273,48 +273,3 @@ export async function trustedOperator(
 /** "(***) ***-0412" and "o***@generic.bank.localhost": where a code goes, without saying all of it. */
 export const maskPhone = (p: string) => `(***) ***-${p.slice(-4)}`;
 export const maskEmail = (e: string) => `${e.charAt(0)}***@${e.split('@')[1] ?? ''}`;
-
-// Bank 4's codes come from an authenticator app: a time-based one-time code (RFC 6238, SHA-1,
-// 30-second steps, six digits) from a secret only the operator's device holds.
-
-const STEP_MS = 30_000;
-
-export function totp(secretHex: string, at: Date, digits = 6): string {
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(at.getTime() / STEP_MS)));
-  const h = createHmac('sha1', Buffer.from(secretHex, 'hex')).update(counter).digest();
-  const o = h[h.length - 1]! & 0xf;
-  const n = (h.readUInt32BE(o) & 0x7fffffff) % 10 ** digits;
-  return String(n).padStart(digits, '0');
-}
-
-/** Gives every operator an authenticator secret; databases seeded before this get theirs here. */
-export async function ensureAuthenticators(db: Db): Promise<void> {
-  const r = await db.query<{ pk: number }>('SELECT pk FROM operators WHERE totp_secret IS NULL');
-  for (const o of r.rows) {
-    await db.query('UPDATE operators SET totp_secret = $2 WHERE pk = $1', [
-      o.pk,
-      randomBytes(20).toString('hex'),
-    ]);
-  }
-}
-
-/** The current code, or one from the last thirty seconds, is right; an older one has expired. */
-export async function checkAuthenticator(
-  db: Db,
-  operatorPk: number,
-  code: string,
-  now: Date,
-): Promise<CodeResult> {
-  const r = await db.query<{ totp_secret: string | null }>(
-    'SELECT totp_secret FROM operators WHERE pk = $1',
-    [operatorPk],
-  );
-  const secret = r.rows[0]?.totp_secret;
-  if (!secret) return 'wrong';
-  const at = (k: number) => totp(secret, new Date(now.getTime() - k * STEP_MS));
-  const c = code.trim();
-  if (c === at(0) || c === at(1)) return 'ok';
-  for (let k = 2; k <= 20; k++) if (c === at(k)) return 'expired';
-  return 'wrong';
-}

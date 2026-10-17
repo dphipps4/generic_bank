@@ -40,8 +40,7 @@ describe('with BANK_REDESIGN off', () => {
     it(`${id}: signs in to the console it always had, in its old words`, async () => {
       const { b, c } = off[id];
       const t = TENANTS[id];
-      expect(where(b.base, c.landing)).toBe(t.termsAfterSignIn ? 'terms' : 'console');
-      if (t.termsAfterSignIn) expect((await c.post('terms', {})).location).toBe(`${b.base}console`);
+      expect(where(b.base, c.landing)).toBe('console');
       expect((await c.get('refreshed')).status).toBe(404);
       const console_ = (await c.get('console')).body;
       expect(console_).not.toContain('Menu &#9662;');
@@ -61,15 +60,10 @@ describe('with BANK_REDESIGN on', () => {
     it(`${id}: shows "We've refreshed Online Banking" once after sign-in, then the console`, async () => {
       const { b } = on[id];
       const c = await signIn(b);
-      let at = where(b.base, c.landing);
-      if (t.termsAfterSignIn) {
-        expect(at).toBe('terms');
-        at = where(b.base, (await c.post('terms', {})).location);
-      }
+      const at = where(b.base, c.landing);
       expect(at).toBe('refreshed');
       const page = (await c.get(at)).body;
-      // Bank 3 draws its headings as pixels; everyone else writes them.
-      if (!t.imageText?.headings) expect(page).toContain("We've refreshed Online Banking");
+      expect(page).toContain("We've refreshed Online Banking");
       expect(page).toContain('has a new look');
       expect(page).toContain('Continue to Online Banking');
       expect((await c.post('refreshed', {})).location).toBe(`${b.base}console`);
@@ -116,9 +110,7 @@ describe('with BANK_REDESIGN on', () => {
       expect(words(pages[1]!)).toContain(`Open the Menu and choose ${renamed('memberSearch')}.`);
       for (const k of ['memberSearch', 'transferFunds', 'statements', 'activity'] as const) {
         expect(text, `${id} says "${renamed(k)}"`).toContain(renamed(k));
-        // Bank 4 calls its search button "Search" as well; that button is not the nav.
-        if (t.labels[k] !== t.labels.search)
-          expect(said(text, t.labels[k]), `${id} no longer says "${t.labels[k]}"`).toBe(false);
+        expect(said(text, t.labels[k]), `${id} no longer says "${t.labels[k]}"`).toBe(false);
       }
       // The summary's tiles stack in one column, and its transfer link moves below them.
       const summary = pages[3]!;
@@ -154,12 +146,10 @@ describe('with BANK_REDESIGN on', () => {
       const transfer = /HREF="([^"]+\/transfer)"/i.exec(summary)![1]!;
       const [from, to] = ledger;
       const accounts = { from: String(from!.id), to: String(to!.id) };
-      const amount = t.splitTransfer ? {} : accounts;
-      expect((await c.post(transfer, { ...amount, amount: '0', memo: 'RD0' })).body).toContain(
+      expect((await c.post(transfer, { ...accounts, amount: '0', memo: 'RD0' })).body).toContain(
         'Enter an amount between $0.01 and $25,000.00.',
       );
-      let r = await c.post(transfer, { ...amount, amount: '25.00', memo: 'RD1' });
-      if (t.splitTransfer) r = await c.post(r.location, accounts);
+      const r = await c.post(transfer, { ...accounts, amount: '25.00', memo: 'RD1' });
       expect(r.location).toBe(`${transfer}/review`);
       expect((await c.get(r.location)).body).toContain('RD1');
       expect((await c.post(`${transfer}/submit`, {})).body).toMatch(/Confirmation number \S+\./);
@@ -172,11 +162,7 @@ describe('with BANK_REDESIGN on', () => {
       const rows = JSON.parse(
         (await c.get(`api/members/${n}/accounts/${from!.id}/statements`)).body,
       ).rows;
-      let pdf = rows.find((x: { balance: number | null }) => x.balance !== null).url as string;
-      if (pdf.includes('statements/view'))
-        pdf = /HREF="([^"]*statement\?[^"]*)"/i
-          .exec((await c.get(pdf)).body)![1]!
-          .replace(/&amp;/g, '&');
+      const pdf = rows.find((x: { balance: number | null }) => x.balance !== null).url as string;
       const file = await c.raw(pdf);
       expect(file.type).toBe('application/pdf');
       expect(file.bytes.subarray(0, 5).toString()).toBe('%PDF-');

@@ -1,7 +1,6 @@
 import { randomInt } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import {
-  checkAuthenticator,
   checkCode,
   checkPassword,
   createSession,
@@ -17,7 +16,6 @@ import {
   trustWorkstation,
   WORKSTATION_DAYS,
 } from '../auth.js';
-import { has } from '../tenants.js';
 import { dialect, readFields } from '../markup/dialect.js';
 import {
   type Ctx,
@@ -34,15 +32,7 @@ import {
   row,
   submit,
 } from '../markup/html.js';
-import {
-  type Bank,
-  COOKIE,
-  cookieOptions,
-  ctxOf,
-  current,
-  origins,
-  rotateNonce,
-} from '../context.js';
+import { type Bank, COOKIE, cookieOptions, ctxOf, current, rotateNonce } from '../context.js';
 
 // The operator's way in: a loading shell, the sign-in page (two layouts), the code chooser, the
 // code, and a hand-off page that is mid-sign-in, not signed in.
@@ -50,10 +40,7 @@ import {
 const html = (reply: FastifyReply, body: string) =>
   reply.type('text/html; charset=utf-8').send(body);
 
-/**
- * The script that enables the page's forms only after the page has "hydrated". Every form: bank 3's
- * hidden copy comes first, and the form a person sees must still come alive.
- */
+/** The script that enables the page's forms only after the page has "hydrated". */
 const hydrate = (ms: number) =>
   `setTimeout(function () { for (var k = 0; k < document.forms.length; k++) { var f = document.forms[k]; for (var i = 0; i < f.elements.length; i++) { f.elements[i].disabled = false; } } }, ${ms});`;
 
@@ -86,49 +73,21 @@ ${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}
     bank.t.theme === 'y2003'
       ? `<MARQUEE SCROLLAMOUNT="3">${font(c, `Welcome to ${esc(bank.t.brand)} Online Branch &nbsp;&middot;&nbsp; Branch hours are 9 to 5 &nbsp;&middot;&nbsp; Remember to sign out when you leave your workstation`)}</MARQUEE>`
       : '';
-  // Bank 3: a hidden copy of the password field and the button, earlier in the page. Whatever is
-  // typed there is never sent.
-  const shadow = has(bank.t, 'hidden-duplicate')
-    ? // Its rows sit in a table of their own: a stray <TR> makes the HTML parser move them out of
-      // the hidden block, which would draw the "hidden" copy on screen.
-      `<DIV STYLE="display:none"><FORM METHOD="post" ACTION="${c.base}signin"><TABLE>${row(c, d, L.password, input(c, 'password-shadow', { type: 'password' }))}</TABLE>${submit(c, d, L.signIn, 'button')}</FORM></DIV>`
-    : '';
   const body = nest(
     c,
     d,
     `${banner}${heading(c, d, `${bank.t.brand}: CoreLink Branch Console`)}${o.error ? message(c, o.error) : ''}${o.note ? `<P>${font(c, esc(o.note))}</P>` : ''}
-${shadow}${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}`,
+${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}`,
   );
   return doc(c, d, { title: L.signIn, body, script: hydrate(randomInt(150, 400)) });
 }
 
-/**
- * The sign-in page as the operator meets it. Bank 4 shows a shell on its main origin whose sign-in
- * form is an inline frame from its second origin; everywhere else it is the form itself.
- */
+/** The sign-in page as the operator meets it. */
 export async function signInEntry(
   bank: Bank,
   req: FastifyRequest,
   o: { other?: boolean; note?: string },
 ) {
-  const where = origins(bank, req);
-  if (bank.t.secondOrigin === 'signin' && !where.onSecond) {
-    const c = ctxOf(bank, req);
-    const d = dialect(bank.t, bank.uiVersion, 'signin-shell');
-    const q = new URLSearchParams({
-      embedded: '1',
-      ...(o.other ? { other: '1' } : {}),
-      ...(o.note ? { expired: '1' } : {}),
-    });
-    return doc(c, d, {
-      title: bank.t.labels.signIn,
-      body: nest(
-        c,
-        d,
-        `${heading(c, d, `${bank.t.brand}: CoreLink Branch Console`)}<IFRAME SRC="${where.second}${bank.t.basePath}signin?${q}" WIDTH="600" HEIGHT="320" FRAMEBORDER="0" SCROLLING="no"></IFRAME>`,
-      ),
-    });
-  }
   const trusted = o.other
     ? null
     : await trustedOperator(bank.db, req.cookies[COOKIE.workstation], bank.now());
@@ -154,7 +113,6 @@ async function handOff(bank: Bank, reply: FastifyReply, sessionToken: string) {
 
 function codePage(c: Ctx, bank: Bank, o: { error?: string }) {
   const d = dialect(bank.t, bank.uiVersion, 'code-enter');
-  const app = bank.t.codeStyle === 'authenticator';
   const rows =
     row(c, d, 'Code', input(c, 'code', { size: 8 })) +
     `<TR><TD COLSPAN="2"></TD><TD>${input(c, 'trust', { type: 'checkbox', value: '1' })} ${font(c, `Trust this workstation for ${WORKSTATION_DAYS} days`)}</TD></TR>`;
@@ -163,19 +121,14 @@ function codePage(c: Ctx, bank: Bank, o: { error?: string }) {
     body: nest(
       c,
       d,
-      `${heading(c, d, app ? 'Enter the 6-digit code from your authenticator app.' : 'Enter the 6-digit code we sent.')}${o.error ? message(c, o.error) : ''}
+      `${heading(c, d, 'Enter the 6-digit code we sent.')}${o.error ? message(c, o.error) : ''}
 ${form(c, d, `${c.base}code/enter`, rows, submit(c, d, 'Verify'), '_top')}
-${app ? '' : `<P>${linkButton(c, `${c.base}code`, 'Send a new code', '_top')}</P>`}`,
+<P>${linkButton(c, `${c.base}code`, 'Send a new code', '_top')}</P>`,
     ),
   });
 }
 
-/** Operators whose hand-off has bounced today, per bank (bank 4). */
-const bouncedBy = new WeakMap<Bank, Set<string>>();
-
 export function signInRoutes(app: FastifyInstance, bank: Bank) {
-  const bounced = bouncedBy.get(bank) ?? new Set<string>();
-  bouncedBy.set(bank, bounced);
   const base = bank.t.basePath;
   const L = bank.t.labels;
   // Where a sign-in lands: the console, or after a redesign, the page that announces it first.
@@ -196,7 +149,7 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
     );
   });
 
-  app.get<{ Querystring: { expired?: string; other?: string; embedded?: string } }>(
+  app.get<{ Querystring: { expired?: string; other?: string } }>(
     `${base}signin`,
     async (req, reply) => {
       const note = req.query.expired ? 'Your session has ended. Sign in again.' : undefined;
@@ -231,8 +184,6 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
   app.get(`${base}code`, async (req, reply) => {
     const cs = await codeSession(bank, req);
     if (!cs) return reply.redirect(`${base}signin`);
-    // Bank 4: the code is already on the operator's authenticator app; nothing to send.
-    if (bank.t.codeStyle === 'authenticator') return reply.redirect(`${base}code/enter`);
     if (bank.t.codeChannels.length === 1) {
       await sendCode(
         bank.db,
@@ -286,18 +237,9 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
     if (!cs) return reply.redirect(`${base}signin`);
     const now = bank.now();
     const f = readFields(req.body ?? {}, req.nonce, ['code', 'trust'] as const);
-    const r =
-      bank.t.codeStyle === 'authenticator'
-        ? await checkAuthenticator(bank.db, cs.operator.pk, f.code, now)
-        : await checkCode(bank.db, cs.operator.pk, 'sign-in', f.code, now);
+    const r = await checkCode(bank.db, cs.operator.pk, 'sign-in', f.code, now);
     if (r !== 'ok') {
-      // Bank 4: an expired code just clears the field, with no message.
-      const silent = r === 'expired' && has(bank.t, 'silent-code-clear');
-      const error = silent
-        ? undefined
-        : r === 'wrong'
-          ? 'That code is not correct.'
-          : 'That code has expired.';
+      const error = r === 'wrong' ? 'That code is not correct.' : 'That code has expired.';
       return html(reply, codePage(ctxOf(bank, req), bank, { error }));
     }
     if (f.trust === '1') {
@@ -338,53 +280,8 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
       last_seen: now,
       expires_early_at: early,
     });
-    // Bank 4 signs in on its second origin; the console lives on the main one.
-    const to = bank.t.secondOrigin === 'signin' ? origins(bank, req).main : '';
-    // Bank 4: the first hand-off of the day draws the console for a moment, then drops the
-    // operator back on the sign-in page. Signing in again works.
-    const day = `${s.operatorPk}:${now.toISOString().slice(0, 10)}`;
-    if (has(bank.t, 'handoff-bounce') && !bounced.has(day)) {
-      bounced.add(day);
-      await endSession(bank.db, s.token);
-      const c = ctxOf(bank, req);
-      const d = dialect(bank.t, bank.uiVersion, 'bounce');
-      return html(
-        reply,
-        doc(c, d, {
-          title: 'CoreLink',
-          footer: false,
-          body: `${heading(c, d, bank.t.brand)}<P>${font(c, 'Loading your workspace&hellip;')}</P>`,
-          script: `setTimeout(function () { top.location.replace(${js(`${to}${base}signin`)}); }, 400);`,
-        }),
-      );
-    }
-    return reply.redirect(`${to}${base}${bank.t.termsAfterSignIn ? 'terms' : landing}`);
+    return reply.redirect(`${base}${landing}`);
   });
-
-  // Bank 3: "Terms updated: Acknowledge" after every sign-in, before the console.
-  if (bank.t.termsAfterSignIn) {
-    app.get(`${base}terms`, async (req, reply) => {
-      if (!(await current(bank, req))) return reply.redirect(`${base}signin`);
-      const c = ctxOf(bank, req);
-      const d = dialect(bank.t, bank.uiVersion, 'terms');
-      return html(
-        reply,
-        doc(c, d, {
-          title: 'Terms updated',
-          body: nest(
-            c,
-            d,
-            `${heading(c, d, 'Terms updated')}<P>${font(c, 'The staff terms of use have changed. Read them and acknowledge to continue.')}</P>
-<P>${font(c, 'Staff may act for a member only with the member present or on a verified call. Every action is recorded.')}</P>
-${form(c, d, `${base}terms`, '', submit(c, d, 'Acknowledge'), '_top')}`,
-          ),
-        }),
-      );
-    });
-    app.post(`${base}terms`, async (req, reply) =>
-      reply.redirect(`${base}${(await current(bank, req)) ? landing : 'signin'}`),
-    );
-  }
 
   // The redesign: "We've refreshed Online Banking", once per sign-in, before the console.
   if (bank.t.redesigned) {

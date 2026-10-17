@@ -47,22 +47,6 @@ const PALETTES: Record<Theme, Palette> = {
     face: 'Tahoma, sans-serif',
     size: 2,
   },
-  maroon: {
-    body: '#F7F0E1',
-    panel: '#FFFBF2',
-    head: '#6E1423',
-    headText: '#FFF5E6',
-    face: 'Arial',
-    size: 1,
-  },
-  flat: {
-    body: '#ECEDEF',
-    panel: '#FFFFFF',
-    head: '#5B6573',
-    headText: '#FFFFFF',
-    face: 'Segoe UI, Arial',
-    size: 2,
-  },
 };
 export const palette = (t: Tenant) => PALETTES[t.theme];
 
@@ -182,9 +166,7 @@ export function form(
 
 export function heading(c: Ctx, d: Dialect, text: string): string {
   const p = palette(c.t);
-  const inner = c.t.imageText?.headings
-    ? pixels(c, text, 'heading')
-    : font(c, `<B>${esc(text)}</B>`, ` COLOR="${p.headText}"`);
+  const inner = font(c, `<B>${esc(text)}</B>`, ` COLOR="${p.headText}"`);
   return `<TABLE WIDTH="100%" CELLPADDING="3" CELLSPACING="0" BORDER="0" CLASS="${d.cls('h')}"><TR><TD BGCOLOR="${p.head}">${inner}</TD></TR></TABLE>`;
 }
 
@@ -305,8 +287,8 @@ CL.money = function (c) {
 /** A bevelled grey button, drawn as an image, for pages whose dialect submits by image. */
 export function buttonSvg(label: string, theme: string): string {
   const w = Math.max(64, label.length * 7 + 22);
-  const fill = theme === 'teal' ? '#0F6E6E' : theme === 'maroon' ? '#6E1423' : '#D4D0C8';
-  const ink = theme === 'teal' || theme === 'maroon' ? '#FFFFFF' : '#000000';
+  const fill = theme === 'teal' ? '#0F6E6E' : '#D4D0C8';
+  const ink = theme === 'teal' ? '#FFFFFF' : '#000000';
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="22">
 <rect x="0" y="0" width="${w}" height="22" fill="${fill}"/>
 <path d="M0 22V0H${w}" stroke="#FFFFFF" fill="none" stroke-width="2"/>

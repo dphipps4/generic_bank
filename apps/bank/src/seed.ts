@@ -1,5 +1,4 @@
 import argon2 from 'argon2';
-import { ensureAuthenticators } from './auth.js';
 import type { Db } from './db.js';
 import { hash32, rng } from './rng.js';
 import type { Tenant } from './tenants.js';
@@ -156,10 +155,7 @@ function accountsFor(number: string, r: ReturnType<typeof rng>): AccountSpec[] {
 /** Seeds the bank once. Running it again on a seeded database changes nothing. */
 export async function seed(db: Db, t: Tenant, secrets: SeedSecrets, now: Date): Promise<boolean> {
   const done = await db.query<{ n: number }>('SELECT count(*)::int AS n FROM members');
-  if ((done.rows[0]?.n ?? 0) > 0) {
-    await ensureAuthenticators(db);
-    return false;
-  }
+  if ((done.rows[0]?.n ?? 0) > 0) return false;
 
   const r = rng(hash32('seed', t.id));
   for (const [key, o] of Object.entries(OPERATORS)) {
@@ -182,8 +178,6 @@ export async function seed(db: Db, t: Tenant, secrets: SeedSecrets, now: Date): 
       await argon2.hash(pw, ARGON),
     ]);
   }
-
-  await ensureAuthenticators(db);
 
   // The bank's own side of every transaction, so the ledger always balances to zero.
   const suspense = await db.query<{ id: number }>(
