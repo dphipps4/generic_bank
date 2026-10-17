@@ -110,7 +110,7 @@ describe('the recommend tool', () => {
     );
     await expect(
       tool().run({ claims: [seen('words.colorScheme', 'Sign In', ['f1'])] }),
-    ).rejects.toThrow(/is not about a part of a bank's profile/);
+    ).rejects.toThrow(/is not about a part of the site's profile/);
     expect(await kept()).toEqual([]);
   });
 

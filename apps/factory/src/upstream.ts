@@ -223,6 +223,10 @@ function differs(a: unknown, b: unknown, path: string): string | null {
 const modelless = (r: unknown) =>
   r && typeof r === 'object' ? { ...(r as Record<string, unknown>), model: undefined } : r;
 
+/** OpenRouter speaks the Anthropic Messages API; a recording made on one replays on the other. */
+const sameApi = (a: string, b: string) =>
+  a === b || [a, b].sort().join(',') === 'anthropic,openrouter';
+
 /** Mock mode: each request must be the next one in the run's recording, which answers it. */
 export function replay(recordings: string): Upstream {
   const runs = new Map<string, { calls: Recorded[]; next: number }>();
@@ -253,7 +257,7 @@ export function replay(recordings: string): Upstream {
       const where =
         call.role !== role
           ? `the role (${role}, recorded ${call.role})`
-          : call.provider !== provider
+          : !sameApi(call.provider, provider)
             ? `the provider (${provider}, recorded ${call.provider})`
             : differs(modelless(unpictured(call.request)), modelless(unpictured(request)), '');
       if (where)

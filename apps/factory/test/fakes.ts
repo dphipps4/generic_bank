@@ -129,13 +129,14 @@ function openaiSse(n: number, model: string, reply: Reply): string {
 export function fakeModels(
   script: (provider: Provider, request: Seen, body: Record<string, unknown>) => Reply,
   sent: Record<string, unknown>[] = [],
-): { anthropic: Anthropic; openai: OpenAI } {
+): { anthropic: Anthropic; openai: OpenAI; openrouter: Anthropic } {
   const fetch = (provider: Provider) => async (_url: unknown, init?: RequestInit) => {
     const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
     sent.push(body);
-    const reply = script(provider, seen(provider, body), body);
+    const apiProvider = provider === 'openrouter' ? 'anthropic' : provider;
+    const reply = script(apiProvider, seen(apiProvider, body), body);
     const model = String(body.model);
-    const sse = provider === 'anthropic' ? anthropicSse : openaiSse;
+    const sse = apiProvider === 'anthropic' ? anthropicSse : openaiSse;
     return new Response(sse(sent.length, model, reply), {
       headers: { 'content-type': 'text/event-stream' },
     });
@@ -149,6 +150,11 @@ export function fakeModels(
     openai: new OpenAI({
       apiKey: 'not-a-real-key',
       fetch: fetch('openai') as never,
+      maxRetries: 0,
+    }),
+    openrouter: new Anthropic({
+      apiKey: 'not-a-real-key',
+      fetch: fetch('openrouter') as never,
       maxRetries: 0,
     }),
   };

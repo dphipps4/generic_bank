@@ -54,10 +54,10 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-describe.each(['anthropic'] as const)('a turn on %s', (provider: Provider) => {
+describe.each([DEFAULT_ROLES.scout.provider] as const)('a turn on %s', (provider: Provider) => {
   const agent = (): Agent => ({
     model:
-      provider === 'anthropic'
+      provider === 'anthropic' || provider === 'openrouter'
         ? DEFAULT_ROLES.scout
         : { ...DEFAULT_ROLES.scout, provider, model: OPENAI_TEST_MODEL },
     url: `http://127.0.0.1:${(app.server.address() as AddressInfo).port}/gateway/run1/scout`,

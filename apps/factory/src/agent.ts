@@ -102,7 +102,7 @@ function modelOf(a: Agent): Model<Api> {
 function withAnswer(provider: RoleModel['provider'], schema: Record<string, unknown>) {
   return (payload: unknown) => {
     const p = payload as Record<string, unknown>;
-    if (provider === 'anthropic')
+    if (provider === 'anthropic' || provider === 'openrouter')
       return {
         ...p,
         output_config: { ...(p.output_config as object), format: { type: 'json_schema', schema } },
