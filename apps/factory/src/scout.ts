@@ -256,7 +256,14 @@ export function scout(deps: ScoutDeps, task: Task) {
         });
         same(found.box, c, `"${c.name}"`);
         await press(page, c.name, i.near ? { near: i.near } : {});
-        visit.push({ press: c.name, ...(i.near ? { near: i.near } : {}) });
+        // Near the task's own account, the step says so, and fits any member's account.
+        const near =
+          i.near && [task.from, account(task.from)].includes(i.near)
+            ? '$from'
+            : i.near && [task.to, account(task.to)].includes(i.near)
+              ? '$to'
+              : i.near;
+        visit.push({ press: c.name, ...(near ? { near } : {}) });
         return look(`pressed "${c.name}"`, i.why);
       },
     },
