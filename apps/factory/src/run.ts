@@ -80,7 +80,12 @@ export async function factoryRun(
       throw new Error(`no open repair case for ${TASK} at ${o.bank}: nothing to repair`);
     baseVersionId = c.versionId;
     base = await profileOf(sql, c.versionId);
-    if (base) repair = { profile: base, failing: await framesOf(sql, store, c.runId) };
+    if (base)
+      repair = {
+        profile: base,
+        failing: await framesOf(sql, store, c.runId),
+        stopped: await stoppedOf(sql, c.runId),
+      };
   }
   if (!base) throw new Error(`no profile to start from at ${o.bank}`);
   const goals = o.mode === 'build' ? BUILD_GOALS : [TASK as Goal];
@@ -227,3 +232,12 @@ const settle = (sql: Sql, runId: string, status: 'succeeded' | 'failed') =>
     runId,
     status,
   ]);
+
+/** The failing run's last word on why it stopped: its last step with an outcome. */
+async function stoppedOf(sql: Sql, runId: string): Promise<string | undefined> {
+  const r = await sql.query<{ outcome: string }>(
+    `SELECT outcome FROM "Step" WHERE "runId" = $1 AND outcome IS NOT NULL ORDER BY seq DESC LIMIT 1`,
+    [runId],
+  );
+  return r.rows[0]?.outcome;
+}
