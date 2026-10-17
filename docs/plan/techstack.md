@@ -57,8 +57,8 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 |---|---|---|
 | Agent harness | **pi** ([pi.dev](https://pi.dev)), one session per role | Switches model providers by configuration; gives us a prompt loop, a tool-call hook that can veto, and a session file as a checkpoint |
 | Model gateway | Our metering endpoint, through OpenRouter to any model in its catalog | The spend meter and caps sit where the model can't touch them |
-| Scout model (default; configurable) | `qwen/qwen3.8-flash`, low effort | Navigates as the Supervisor directs |
-| Supervisor model (default; configurable) | `qwen/qwen3.8-flash`, high effort | Reasons over every frame and drafts the profile |
+| Scout model (default; configurable) | `qwen/qwen3.8-max-prime`, low effort | Navigates as the Supervisor directs |
+| Supervisor model (default; configurable) | `qwen/qwen3.8-max-prime`, high effort | Reasons over every frame and drafts the profile |
 | Mock mode | Recorded responses replayed by the gateway | A whole factory run without an API key |
 | Embeddings | **@huggingface/transformers** with **bge-small-en-v1.5** (384 dimensions, CPU) | Runs in the Memory process: about 130 MB, no API cost |
 | Prompt files (Part 2) | Markdown with YAML frontmatter; answers in **JSON Schema**, checked by **ajv** | Prompts are reviewed and versioned like code |

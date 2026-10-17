@@ -237,7 +237,7 @@ which are data, not code.
 **Our code owns the limits.** Each role is a pi session whose only route to a model is our
 metering gateway. Caps live in code: $25 a run, $150 a rolling week, turns, sign-ins and hours; a
 run can lower a cap, never raise it. A model with no known price counts as free. Models and
-effort are configuration in `config/app.env` (both roles `qwen/qwen3.8-flash`), reached through
+effort are configuration in `config/app.env` (both roles `qwen/qwen3.8-max-prime`), reached through
 OpenRouter, so any model in its catalog works. Without a key, **mock mode** replays a
 recorded run.
 

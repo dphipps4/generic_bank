@@ -440,8 +440,8 @@ A change log that fails verification puts Memory into read-only mode until a per
 
 | Role | Default model (configurable) | Writes | Sees |
 |---|---|---|---|
-| Scout | `qwen/qwen3.8-flash`, low effort | browser steps, as the Supervisor directs | the pages it reaches, tool results, the knowledge pack |
-| Supervisor | `qwen/qwen3.8-flash`, high effort | the next step; the profile, each claim citing pictures, seen or guess; lessons | every picture and page record, never the Scout's reasoning |
+| Scout | `qwen/qwen3.8-max-prime`, low effort | browser steps, as the Supervisor directs | the pages it reaches, tool results, the knowledge pack |
+| Supervisor | `qwen/qwen3.8-max-prime`, high effort | the next step; the profile, each claim citing pictures, seen or guess; lessons | every picture and page record, never the Scout's reasoning |
 
 | Rung | Proves | Where |
 |---|---|---|

@@ -74,8 +74,8 @@ rolling week).
 
 | Role | What it does | Default model | Effort |
 |---|---|---|---|
-| Scout | Navigates the bank, one simple step at a time | `qwen/qwen3.8-flash` | low |
-| Supervisor | Looks at every frame, reasons, directs the Scout, drafts the bank's profile | `qwen/qwen3.8-flash` | high |
+| Scout | Navigates the bank, one simple step at a time | `qwen/qwen3.8-max-prime` | low |
+| Supervisor | Looks at every frame, reasons, directs the Scout, drafts the bank's profile | `qwen/qwen3.8-max-prime` | high |
 
 With no API key, the factory runs in **mock mode**: recorded answers stand in for the model, so
 nothing is sent to one and nothing is spent.
@@ -91,8 +91,7 @@ just factory
 To change a role's model or effort, edit it in `config/app.env`, then run `just factory`:
 
 ```sh
-FACTORY_SUPERVISOR_MODEL=qwen/qwen3.8-max-prime
-FACTORY_SUPERVISOR_EFFORT=high
+FACTORY_SCOUT_MODEL=qwen/qwen3.8-flash
 FACTORY_SCOUT_EFFORT=medium
 ```
 
