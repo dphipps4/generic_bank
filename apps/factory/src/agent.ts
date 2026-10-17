@@ -30,6 +30,9 @@ export interface Agent {
 /** A role's conversation so far, as a turn returned it. Only this file reads it. */
 export type Conversation = readonly unknown[];
 
+/** A turn whose model spent its whole allowance thinking and gave no answer. */
+export class ThoughtTooLong extends Error {}
+
 export interface TurnInput {
   system: string;
   conversation?: Conversation;
@@ -202,7 +205,7 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
     throw new Error(`the ${a.model.provider} model failed: ${last?.errorMessage ?? 'no answer'}`);
   // A model that spends its whole allowance thinking says nothing; that is a failure, not an answer.
   if (last.stopReason === 'length' && !last.content.some((b) => b.type !== 'thinking'))
-    throw new Error(
+    throw new ThoughtTooLong(
       `the ${a.model.provider} model used all ${i.maxTokens} tokens thinking and gave no answer`,
     );
   const refused = added.flatMap((m) =>
