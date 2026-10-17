@@ -79,8 +79,13 @@ describe('a transfer run', () => {
     expect(grant[0]!.usedAt).not.toBeNull();
     expect((await h.journalOf(runId)).filter((l) => l.action === 'pressed')).toHaveLength(1);
     expect(await verifyJournal(h.db, runId)).toMatchObject({ ok: true, entries: 4 });
-    // The browser was held while parked: one browser, one sign-in.
+    // The browser was held while parked: one browser, one sign-in, one code asked of a person.
     expect(h.browsers.length - launched).toBe(1);
+    const codes = await h.db.query(
+      `SELECT 1 FROM "HumanTask" WHERE "runId" = $1 AND kind = 'staff_code'`,
+      [runId],
+    );
+    expect(codes.rows).toHaveLength(1);
   }, 180_000);
 
   it('when the bank swallows the submit, reads the history and never presses again', async () => {
