@@ -3,6 +3,13 @@
 module.exports = {
   forbidden: [
     {
+      name: 'runtime-stands-alone',
+      comment: 'The runtime knows no bank and no app: it is the browser, seeing and acting.',
+      severity: 'error',
+      from: { path: '^packages/runtime/' },
+      to: { path: '^(apps/|packages/(?!runtime/))' },
+    },
+    {
       name: 'nothing-imports-the-bank',
       comment: 'The bank is the outside world. It is reached only over HTTP.',
       severity: 'error',

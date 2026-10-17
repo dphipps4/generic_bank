@@ -1,0 +1,163 @@
+// The runtime on synthetic pages, through a real Chrome: each test is one trouble the real banks
+// showed. Needs a Chrome (`just browser`, or CHROME_PATH).
+import type { Browser, Page } from 'playwright-core';
+import { PNG } from 'pngjs';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import {
+  distance,
+  field,
+  fingerprint,
+  knows,
+  launch,
+  maskBoxes,
+  NEAR,
+  newPage,
+  press,
+  see,
+  TargetError,
+  type,
+  UnknownPage,
+} from '../src/index.js';
+import { serve } from './pages.js';
+
+let browser: Browser;
+let site: Awaited<ReturnType<typeof serve>>;
+let page: Page;
+
+beforeAll(async () => {
+  [browser, site] = await Promise.all([launch(), serve()]);
+});
+afterAll(async () => {
+  await browser?.close();
+  await site?.close();
+});
+
+const open = async (path: string) => {
+  page = await newPage(browser);
+  await page.goto(site.url + path);
+  return page;
+};
+const textIn = async (p: Page) =>
+  (
+    await Promise.all(
+      p
+        .frames()
+        .map(async (f) => ((await f.locator('body').count()) ? f.locator('body').innerText() : '')),
+    )
+  ).join('\n');
+
+describe('the runtime: see first, then click', () => {
+  it('reads a frameset frame by frame, and a link in one frame drives another', async () => {
+    const p = await open('/frames');
+    const first = await see(p, { limitMs: 10_000 });
+    expect(knows(first, [{ name: 'welcome', shows: ['Welcome'] }])).toBe('welcome');
+    await press(p, 'Member Search');
+    const next = await see(p, { limitMs: 10_000 });
+    expect(
+      knows(next, [
+        { name: 'welcome', shows: ['Welcome'] },
+        { name: 'search', shows: ['Search for a member'] },
+      ]),
+    ).toBe('search');
+  });
+
+  it('names an unknown page, with the closest it knows', async () => {
+    const p = await open('/frames');
+    const f = await see(p, { limitMs: 10_000 });
+    const e = (() => {
+      try {
+        knows(f, [{ name: 'summary', shows: ['Available balance', 'Welcome'] }]);
+      } catch (x) {
+        return x;
+      }
+    })();
+    expect(e).toBeInstanceOf(UnknownPage);
+    expect((e as UnknownPage).closest).toEqual(['summary']);
+  });
+
+  it('finds a field by the label drawn beside it, not the decoy below', async () => {
+    const p = await open('/label');
+    await see(p, { limitMs: 10_000 });
+    await type(p, 'Member number', '40017732');
+    expect(await p.locator('#m').inputValue()).toBe('40017732');
+    expect(await p.locator('#decoy').inputValue()).toBe('');
+    await expect(field(p, 'Member name')).rejects.toBeInstanceOf(TargetError);
+  });
+
+  it('presses a "button" that is styled text, and a real submit, by their drawn names', async () => {
+    const p = await open('/font');
+    await see(p, { limitMs: 10_000 });
+    await press(p, 'Search');
+    expect(await textIn(p)).toContain('font pressed');
+    await press(p, 'Send');
+    expect(await textIn(p)).toContain('send pressed');
+  });
+
+  it('sees a page whose marquee never stops', async () => {
+    const p = await open('/marquee');
+    const f = await see(p, { limitMs: 10_000 });
+    expect(f.controls.map((c) => c.name)).toContain('Ready');
+  });
+
+  it('waits out a blank, still page until there is something to act on', async () => {
+    const p = await open('/late');
+    const t = Date.now();
+    const f = await see(p, { limitMs: 10_000 });
+    expect(Date.now() - t).toBeGreaterThanOrEqual(1_900);
+    expect(f.controls.map((c) => c.name)).toContain('Go');
+  });
+
+  it('presses the visible button, never its hidden or zero-size twins', async () => {
+    const p = await open('/hidden');
+    await see(p, { limitMs: 10_000 });
+    await press(p, 'Save');
+    expect(await textIn(p)).toContain('saved');
+  });
+
+  it('refuses a control something is drawn over', async () => {
+    const p = await open('/covered');
+    await see(p, { limitMs: 10_000 });
+    await expect(press(p, 'Pay', 1_500)).rejects.toThrow(/intercepts pointer events|Timeout/);
+  });
+
+  it('answers a surprise dialog without committing, and records it', async () => {
+    const p = await open('/confirm');
+    const f = await see(p, { limitMs: 10_000 });
+    expect(f.dialogs).toEqual(['confirm: Leave unsaved changes?']);
+    expect(knows(f, [{ name: 'done', shows: ['Done'] }])).toBe('done');
+  });
+
+  it('masks money, long numbers and known names in the picture, the page text and the address', async () => {
+    const p = await open('/mask?token=abc123');
+    const f = await see(p, { known: ['Alex Sample'], limitMs: 10_000 });
+    expect(f.tree).not.toMatch(/41,231|40017732|Alex Sample/);
+    expect(f.address).not.toContain('token');
+    expect(f.controls.map((c) => c.name).join(' ')).not.toContain('40017732');
+    const img = PNG.sync.read(f.picture);
+    const boxes = await maskBoxes(p, ['Alex Sample']);
+    expect(boxes.length).toBeGreaterThanOrEqual(3);
+    for (const b of boxes) {
+      const x = Math.floor(b.x + b.w / 2);
+      const y = Math.floor(b.y + b.h / 2);
+      const i = (y * img.width + x) * 4;
+      expect([img.data[i], img.data[i + 1], img.data[i + 2]]).toEqual([255, 255, 255]);
+    }
+  });
+
+  it('knows a picture of text by its fingerprint, and tells two apart', async () => {
+    const p = await open('/pictures');
+    await see(p, { limitMs: 10_000 });
+    const imgs = p.getByRole('img');
+    const a = fingerprint(await imgs.nth(0).screenshot());
+    const b = fingerprint(await imgs.nth(1).screenshot());
+    expect(distance(a, fingerprint(await imgs.nth(0).screenshot()))).toBe(0);
+    expect(distance(a, b)).toBeGreaterThan(NEAR);
+  });
+
+  it('presents as Chrome on a Mac', async () => {
+    const p = await open('/label');
+    expect(
+      await p.evaluate(() => [navigator.userAgent, navigator.webdriver, navigator.platform]),
+    ).toEqual([expect.stringContaining('Macintosh'), false, 'MacIntel']);
+  });
+});
