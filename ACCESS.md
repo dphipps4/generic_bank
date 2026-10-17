@@ -1,7 +1,7 @@
 # Access
 
 Everything you can open, call or poke once `just up` has run. That command starts the whole
-stack: the data box, memory and its seed, the Task API, the Console, the crawler, all four banks,
+stack: the data box, memory and its seed, the Task API, the Console, the crawler, both banks,
 the staff inbox and the factory. Every port listens only on this machine (127.0.0.1).
 
 The logins are in `secrets/credentials.txt`. `just up` writes it from the encrypted secrets, and
@@ -26,17 +26,14 @@ below.
 | API reference, static | http://localhost:8099 | none (`just api-docs` serves it) |
 | Bank 1, Generic Bank (2003 frameset) | http://localhost:8081/corelink/ | `teller0412` and its password |
 | Bank 2, Example Credit Union | http://localhost:8082/ | the same |
-| Bank 3, Sample Savings Bank | http://localhost:8083/online/branch/ | the same |
-| Bank 4, Placeholder FCU | http://127.0.0.1:8084/cu/ib/ | the same, with a code from its authenticator |
 | Staff inbox (the bank staff's phone and email) | http://localhost:8089 | none |
 | MinIO console (evidence and statements) | http://localhost:9001 | MinIO user and password |
 
-Bank 2 also serves pages from a second origin on 8092, and bank 4 does the same on 8094. You
-reach those through the bank's own pages, not directly. Supervisor `supervisor0901` signs in just like
+Bank 2 also serves pages from a second origin on 8092. You reach those through the bank's own
+pages, not directly. Supervisor `supervisor0901` signs in just like
 `teller0412` and approves large transfers.
 
-Banks send their sign-in codes to the staff inbox. Bank 4 uses an authenticator app instead, and
-the inbox shows that app's current code as well.
+Banks send their sign-in codes to the staff inbox.
 
 ## APIs
 
@@ -45,7 +42,7 @@ the inbox shows that app's current code as well.
 | Task API | http://localhost:8000 | `Authorization: Bearer $(just api-token)` |
 | Task API, OpenAPI document | http://localhost:8000/openapi.json | none |
 | Task API, agent tools | http://localhost:8000/tools | `Authorization: Bearer $(just api-token)` |
-| Bank admin API, banks 1 to 4 | http://localhost:9081 to 9084 | `Authorization: Bearer` the bank admin token |
+| Bank admin API, banks 1 and 2 | http://localhost:9081 and 9082 | `Authorization: Bearer` the bank admin token |
 | Memory | http://localhost:8470 | `Authorization: Bearer` a memory role token |
 | Factory gateway | http://localhost:8200 | `Authorization: Bearer` the factory gateway token |
 | MinIO S3 API | http://localhost:9000 | MinIO user and password |
@@ -65,15 +62,15 @@ Each answers 200 when the service is up.
 | Runner (the crawler) | http://localhost:8100/healthz |
 | Factory | http://localhost:8200/healthz |
 | Memory | http://localhost:8470/healthz |
-| Banks 1 to 4 | http://localhost:8081/healthz, :8082, :8083, :8084 |
-| Bank admin APIs | http://localhost:9081/healthz to :9084 |
+| Banks 1 and 2 | http://localhost:8081/healthz, :8082 |
+| Bank admin APIs | http://localhost:9081/healthz, :9082 |
 | Staff inbox | http://localhost:8089/healthz |
 | MinIO | http://localhost:9000/minio/health/live |
 
 All of them at once:
 
 ```sh
-for u in 8000 8080 8100 8200 8470 8081 8082 8083 8084 8089 9081 9082 9083 9084; do
+for u in 8000 8080 8100 8200 8470 8081 8082 8089 9081 9082; do
   printf '%-5s ' "$u"; curl -s -o /dev/null -w '%{http_code}\n' "http://localhost:$u/healthz"
 done
 ```
@@ -93,7 +90,7 @@ done
 
 ## Things to try with curl
 
-Banks 2 to 4 turn away anything that doesn't look like a browser, the way a real bank's bot
+Bank 2 turns away anything that doesn't look like a browser, the way a real bank's bot
 screen does. Bank 1, the old site, doesn't check:
 
 ```sh
