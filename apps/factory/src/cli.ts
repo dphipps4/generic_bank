@@ -12,7 +12,9 @@ import { sql as connect } from '@gb/db';
 import { s3Store } from '@gb/evidence';
 import { hazardHeader } from '@gb/runs';
 import { Browser } from '@gb/screen';
+import { Agent as Dispatcher, setGlobalDispatcher } from 'undici';
 import { z } from 'zod';
+import { TURN_MS } from './agent.js';
 import { decided, gate } from './gate.js';
 import type { Sandbox } from './hazard-check.js';
 import { memoryClient } from './memory.js';
@@ -53,6 +55,10 @@ const cfg = loadConfig(
     'MEMORY_SIGNING_KEY',
   ],
 );
+
+// The gateway answers a turn once the model has finished, and Node's fetch gives up on headers after
+// five minutes: a turn may take as long as TURN_MS.
+setGlobalDispatcher(new Dispatcher({ headersTimeout: TURN_MS, bodyTimeout: TURN_MS }));
 
 const [command, arg] = process.argv.slice(2);
 if (!['onboard', 'repair', 'gate'].includes(command ?? '') || !arg) {

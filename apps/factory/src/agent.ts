@@ -52,6 +52,9 @@ export interface TurnOutput {
   refused: { name: string; why: string }[];
 }
 
+/** The longest one model call may take: a profile drafted at high effort can think for many minutes. */
+export const TURN_MS = 30 * 60_000;
+
 const png = (b: Buffer): ImageContent => ({
   type: 'image',
   data: b.toString('base64'),
@@ -179,6 +182,7 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
         ...options,
         apiKey: a.token,
         maxTokens: i.maxTokens,
+        timeoutMs: TURN_MS,
         ...(i.answer ? { onPayload: withAnswer(api, i.answer) } : {}),
       }),
     finishTurn: () => (i.calls !== undefined && ++calls >= i.calls ? { action: 'end' } : undefined),
