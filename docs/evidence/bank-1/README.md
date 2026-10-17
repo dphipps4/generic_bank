@@ -12,6 +12,8 @@ Bank 1's crawler is built by the arrow: evidence, then prompts, then determinist
 | What is never kept | [`known()`](../../../tests/evidence/bank1.walk.ts#L62) | Every seeded name and secret, handed to the masking |
 | A failed step | [the walk's `catch`](../../../tests/evidence/bank1.walk.ts#L126) | Where a step couldn't be done is evidence too: the page shown instead is kept |
 
+Each walk is one file, `<walk>.json`, with every frame's steps, page text, controls and dialogs; its pictures are in the folder of the same name. A frame the happy walk already kept word for word is a pointer to it.
+
 To walk a scenario again: `WALK=happy npx vitest run -c vitest.evidence.config.ts`. It needs a Chrome (`just browser`). Bank 1 runs in-process, so no Docker stack is needed.
 
 ## How a page is seen, then acted on

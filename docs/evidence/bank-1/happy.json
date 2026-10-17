@@ -1,0 +1,972 @@
+{
+ "walk": "happy",
+ "frames": [
+  {
+   "frame": "01",
+   "picture": "happy/01.png",
+   "did": "open ./",
+   "at": "2026-10-17T17:57:33.929Z",
+   "address": "http://localhost:63304/corelink/signin",
+   "tree": "- table:\n  - rowgroup:\n    - 'row \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: Password: Sign In\"':\n      - 'cell \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: Password: Sign In\"':\n        - table:\n          - rowgroup:\n            - 'row \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: Password: Sign In\"':\n              - 'cell \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: Password: Sign In\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: Password: Sign In\"':\n                      - 'cell \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: Password: Sign In\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: Password: Sign In\"':\n                              - 'cell \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: Password: Sign In\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: Password: Sign In\"':\n                                      - 'cell \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: Password: Sign In\"':\n                                        - text: Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Generic Bank: CoreLink Branch Console\"':\n                                              - 'cell \"Generic Bank: CoreLink Branch Console\"'\n                                        - table:\n                                          - rowgroup:\n                                            - row \"Operator ID:\":\n                                              - cell \"Operator ID:\"\n                                              - cell:\n                                                - textbox\n                                            - row \"Password:\":\n                                              - cell \"Password:\"\n                                              - cell:\n                                                - textbox\n                                            - row \"Sign In\":\n                                              - cell\n                                              - cell \"Sign In\":\n                                                - button \"Sign In\"\n- paragraph: CoreLink Branch Console 4.2 \u00a9 Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "button",
+     "name": "Sign In",
+     "box": {
+      "x": 414.40625,
+      "y": 106,
+      "w": 71,
+      "h": 22
+     }
+    },
+    {
+     "role": "textbox",
+     "name": "",
+     "box": {
+      "x": 414.40625,
+      "y": 52,
+      "w": 97,
+      "h": 21
+     }
+    },
+    {
+     "role": "password",
+     "name": "",
+     "box": {
+      "x": 414.40625,
+      "y": 79,
+      "w": 125,
+      "h": 21
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": []
+  },
+  {
+   "frame": "02",
+   "picture": "happy/02.png",
+   "did": "type $operator into \"Operator ID\"",
+   "at": "2026-10-17T17:57:35.214Z",
+   "address": "http://localhost:63304/corelink/signin",
+   "tree": "- table:\n  - rowgroup:\n    - 'row \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: Sign In\"':\n      - 'cell \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: Sign In\"':\n        - table:\n          - rowgroup:\n            - 'row \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: Sign In\"':\n              - 'cell \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: Sign In\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: Sign In\"':\n                      - 'cell \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: Sign In\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: Sign In\"':\n                              - 'cell \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: Sign In\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: Sign In\"':\n                                      - 'cell \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: Sign In\"':\n                                        - text: Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Generic Bank: CoreLink Branch Console\"':\n                                              - 'cell \"Generic Bank: CoreLink Branch Console\"'\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Operator ID: ********\"':\n                                              - cell \"Operator ID:\"\n                                              - cell \"********\":\n                                                - textbox: ********\n                                            - row \"Password:\":\n                                              - cell \"Password:\"\n                                              - cell:\n                                                - textbox\n                                            - row \"Sign In\":\n                                              - cell\n                                              - cell \"Sign In\":\n                                                - button \"Sign In\"\n- paragraph: CoreLink Branch Console 4.2 \u00a9 Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "button",
+     "name": "Sign In",
+     "box": {
+      "x": 414.40625,
+      "y": 106,
+      "w": 71,
+      "h": 22
+     }
+    },
+    {
+     "role": "textbox",
+     "name": "",
+     "box": {
+      "x": 414.40625,
+      "y": 52,
+      "w": 97,
+      "h": 21
+     }
+    },
+    {
+     "role": "password",
+     "name": "",
+     "box": {
+      "x": 414.40625,
+      "y": 79,
+      "w": 125,
+      "h": 21
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": []
+  },
+  {
+   "frame": "03",
+   "picture": "happy/03.png",
+   "did": "type $password into \"Password\"",
+   "at": "2026-10-17T17:57:37.785Z",
+   "address": "http://localhost:63304/corelink/signin",
+   "tree": "- table:\n  - rowgroup:\n    - 'row \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: ******** Sign In\"':\n      - 'cell \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: ******** Sign In\"':\n        - table:\n          - rowgroup:\n            - 'row \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: ******** Sign In\"':\n              - 'cell \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: ******** Sign In\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: ******** Sign In\"':\n                      - 'cell \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: ******** Sign In\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: ******** Sign In\"':\n                              - 'cell \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: ******** Sign In\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: ******** Sign In\"':\n                                      - 'cell \"Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation Generic Bank: CoreLink Branch Console Operator ID: ******** Password: ******** Sign In\"':\n                                        - text: Welcome to Generic Bank Online Branch \u00b7 Branch hours are 9 to 5 \u00b7 Remember to sign out when you leave your workstation\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Generic Bank: CoreLink Branch Console\"':\n                                              - 'cell \"Generic Bank: CoreLink Branch Console\"'\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Operator ID: ********\"':\n                                              - cell \"Operator ID:\"\n                                              - cell \"********\":\n                                                - textbox: ********\n                                            - 'row \"Password: ********\"':\n                                              - cell \"Password:\"\n                                              - cell \"********\":\n                                                - textbox: ********\n                                            - row \"Sign In\":\n                                              - cell\n                                              - cell \"Sign In\":\n                                                - button \"Sign In\"\n- paragraph: CoreLink Branch Console 4.2 \u00a9 Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "button",
+     "name": "Sign In",
+     "box": {
+      "x": 414.40625,
+      "y": 106,
+      "w": 71,
+      "h": 22
+     }
+    },
+    {
+     "role": "textbox",
+     "name": "",
+     "box": {
+      "x": 414.40625,
+      "y": 52,
+      "w": 97,
+      "h": 21
+     }
+    },
+    {
+     "role": "password",
+     "name": "",
+     "box": {
+      "x": 414.40625,
+      "y": 79,
+      "w": 125,
+      "h": 21
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": []
+  },
+  {
+   "frame": "04",
+   "picture": "happy/04.png",
+   "did": "press \"Sign In\"",
+   "at": "2026-10-17T17:57:38.925Z",
+   "address": "http://localhost:63304/corelink/code",
+   "tree": "- table:\n  - rowgroup:\n    - row \"Where should we send your code? Text message to (***) ***-**** Email to t***@generic.bank.localhost Send code\":\n      - cell \"Where should we send your code? Text message to (***) ***-**** Email to t***@generic.bank.localhost Send code\":\n        - table:\n          - rowgroup:\n            - row \"Where should we send your code? Text message to (***) ***-**** Email to t***@generic.bank.localhost Send code\":\n              - cell \"Where should we send your code? Text message to (***) ***-**** Email to t***@generic.bank.localhost Send code\":\n                - table:\n                  - rowgroup:\n                    - row \"Where should we send your code? Text message to (***) ***-**** Email to t***@generic.bank.localhost Send code\":\n                      - cell \"Where should we send your code? Text message to (***) ***-**** Email to t***@generic.bank.localhost Send code\":\n                        - table:\n                          - rowgroup:\n                            - row \"Where should we send your code? Text message to (***) ***-**** Email to t***@generic.bank.localhost Send code\":\n                              - cell \"Where should we send your code? Text message to (***) ***-**** Email to t***@generic.bank.localhost Send code\":\n                                - table:\n                                  - rowgroup:\n                                    - row \"Where should we send your code?\":\n                                      - cell \"Where should we send your code?\"\n                                - table:\n                                  - rowgroup:\n                                    - row \"Text message to (***) ***-****\":\n                                      - cell\n                                      - cell \"Text message to (***) ***-****\":\n                                        - radio [checked]\n                                        - text: Text message to (***) ***-****\n                                    - row \"Email to t***@generic.bank.localhost\":\n                                      - cell\n                                      - cell \"Email to t***@generic.bank.localhost\":\n                                        - radio\n                                        - text: Email to t***@generic.bank.localhost\n                                    - row \"Send code\":\n                                      - cell\n                                      - cell \"Send code\":\n                                        - button \"Send code\"\n- paragraph: CoreLink Branch Console 4.2 \u00a9 Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "button",
+     "name": "Send code",
+     "box": {
+      "x": 350,
+      "y": 91,
+      "w": 68.34375,
+      "h": 18
+     }
+    },
+    {
+     "role": "radio",
+     "name": "",
+     "box": {
+      "x": 355,
+      "y": 42,
+      "w": 13,
+      "h": 13
+     }
+    },
+    {
+     "role": "radio",
+     "name": "",
+     "box": {
+      "x": 355,
+      "y": 68,
+      "w": 13,
+      "h": 13
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": []
+  },
+  {
+   "frame": "05",
+   "picture": "happy/05.png",
+   "did": "press \"Send code\"",
+   "at": "2026-10-17T17:57:39.992Z",
+   "address": "http://localhost:63304/corelink/code/enter",
+   "tree": "- table:\n  - rowgroup:\n    - 'row \"Enter the 6-digit code we sent. Code: Trust this workstation for 30 days Verify Send a new code\"':\n      - 'cell \"Enter the 6-digit code we sent. Code: Trust this workstation for 30 days Verify Send a new code\"':\n        - table:\n          - rowgroup:\n            - 'row \"Enter the 6-digit code we sent. Code: Trust this workstation for 30 days Verify Send a new code\"':\n              - 'cell \"Enter the 6-digit code we sent. Code: Trust this workstation for 30 days Verify Send a new code\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Enter the 6-digit code we sent. Code: Trust this workstation for 30 days Verify Send a new code\"':\n                      - 'cell \"Enter the 6-digit code we sent. Code: Trust this workstation for 30 days Verify Send a new code\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Enter the 6-digit code we sent. Code: Trust this workstation for 30 days Verify Send a new code\"':\n                              - 'cell \"Enter the 6-digit code we sent. Code: Trust this workstation for 30 days Verify Send a new code\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Enter the 6-digit code we sent. Code: Trust this workstation for 30 days Verify Send a new code\"':\n                                      - 'cell \"Enter the 6-digit code we sent. Code: Trust this workstation for 30 days Verify Send a new code\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Enter the 6-digit code we sent. Code: Trust this workstation for 30 days Verify Send a new code\"':\n                                              - 'cell \"Enter the 6-digit code we sent. Code: Trust this workstation for 30 days Verify Send a new code\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Enter the 6-digit code we sent. Code: Trust this workstation for 30 days Verify Send a new code\"':\n                                                      - 'cell \"Enter the 6-digit code we sent. Code: Trust this workstation for 30 days Verify Send a new code\"':\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Enter the 6-digit code we sent.\":\n                                                              - cell \"Enter the 6-digit code we sent.\"\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Code:\":\n                                                              - cell \"Code:\"\n                                                              - cell:\n                                                                - textbox\n                                                            - row \"Trust this workstation for 30 days\":\n                                                              - cell\n                                                              - cell \"Trust this workstation for 30 days\":\n                                                                - checkbox\n                                                                - text: Trust this workstation for 30 days\n                                                            - row \"Verify\":\n                                                              - cell\n                                                              - cell \"Verify\":\n                                                                - link \"Verify\":\n                                                                  - /url: javascript:void(0)\n                                                        - paragraph:\n                                                          - link \"Send a new code\":\n                                                            - /url: /corelink/code\n- paragraph: CoreLink Branch Console 4.2 \u00a9 Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "link",
+     "name": "Verify",
+     "box": {
+      "x": 382.765625,
+      "y": 90,
+      "w": 33.40625,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Send a new code",
+     "box": {
+      "x": 342,
+      "y": 121,
+      "w": 85.84375,
+      "h": 18
+     }
+    },
+    {
+     "role": "textbox",
+     "name": "",
+     "box": {
+      "x": 382.765625,
+      "y": 41,
+      "w": 69,
+      "h": 21
+     }
+    },
+    {
+     "role": "checkbox",
+     "name": "",
+     "box": {
+      "x": 386.765625,
+      "y": 71,
+      "w": 13,
+      "h": 13
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": []
+  },
+  {
+   "frame": "06",
+   "picture": "happy/06.png",
+   "did": "type $code into \"Code\"",
+   "at": "2026-10-17T17:57:41.156Z",
+   "address": "http://localhost:63304/corelink/code/enter",
+   "tree": "- table:\n  - rowgroup:\n    - 'row \"Enter the 6-digit code we sent. Code: ****** Trust this workstation for 30 days Verify Send a new code\"':\n      - 'cell \"Enter the 6-digit code we sent. Code: ****** Trust this workstation for 30 days Verify Send a new code\"':\n        - table:\n          - rowgroup:\n            - 'row \"Enter the 6-digit code we sent. Code: ****** Trust this workstation for 30 days Verify Send a new code\"':\n              - 'cell \"Enter the 6-digit code we sent. Code: ****** Trust this workstation for 30 days Verify Send a new code\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Enter the 6-digit code we sent. Code: ****** Trust this workstation for 30 days Verify Send a new code\"':\n                      - 'cell \"Enter the 6-digit code we sent. Code: ****** Trust this workstation for 30 days Verify Send a new code\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Enter the 6-digit code we sent. Code: ****** Trust this workstation for 30 days Verify Send a new code\"':\n                              - 'cell \"Enter the 6-digit code we sent. Code: ****** Trust this workstation for 30 days Verify Send a new code\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Enter the 6-digit code we sent. Code: ****** Trust this workstation for 30 days Verify Send a new code\"':\n                                      - 'cell \"Enter the 6-digit code we sent. Code: ****** Trust this workstation for 30 days Verify Send a new code\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Enter the 6-digit code we sent. Code: ****** Trust this workstation for 30 days Verify Send a new code\"':\n                                              - 'cell \"Enter the 6-digit code we sent. Code: ****** Trust this workstation for 30 days Verify Send a new code\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Enter the 6-digit code we sent. Code: ****** Trust this workstation for 30 days Verify Send a new code\"':\n                                                      - 'cell \"Enter the 6-digit code we sent. Code: ****** Trust this workstation for 30 days Verify Send a new code\"':\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Enter the 6-digit code we sent.\":\n                                                              - cell \"Enter the 6-digit code we sent.\"\n                                                        - table:\n                                                          - rowgroup:\n                                                            - 'row \"Code: ******\"':\n                                                              - cell \"Code:\"\n                                                              - cell \"******\":\n                                                                - textbox: \"******\"\n                                                            - row \"Trust this workstation for 30 days\":\n                                                              - cell\n                                                              - cell \"Trust this workstation for 30 days\":\n                                                                - checkbox\n                                                                - text: Trust this workstation for 30 days\n                                                            - row \"Verify\":\n                                                              - cell\n                                                              - cell \"Verify\":\n                                                                - link \"Verify\":\n                                                                  - /url: javascript:void(0)\n                                                        - paragraph:\n                                                          - link \"Send a new code\":\n                                                            - /url: /corelink/code\n- paragraph: CoreLink Branch Console 4.2 \u00a9 Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "link",
+     "name": "Verify",
+     "box": {
+      "x": 382.765625,
+      "y": 90,
+      "w": 33.40625,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Send a new code",
+     "box": {
+      "x": 342,
+      "y": 121,
+      "w": 85.84375,
+      "h": 18
+     }
+    },
+    {
+     "role": "textbox",
+     "name": "",
+     "box": {
+      "x": 382.765625,
+      "y": 41,
+      "w": 69,
+      "h": 21
+     }
+    },
+    {
+     "role": "checkbox",
+     "name": "",
+     "box": {
+      "x": 386.765625,
+      "y": 71,
+      "w": 13,
+      "h": 13
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": []
+  },
+  {
+   "frame": "07",
+   "picture": "happy/07.png",
+   "did": "press \"Verify\"",
+   "at": "2026-10-17T17:57:44.725Z",
+   "address": "http://localhost:63304/corelink/console",
+   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank \u00b7 Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank \u00b7 Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 \u00b7 New member promotion runs through month end \u00b7 Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"CoreLink Branch Console Use Member Search to begin.\":\n      - cell \"CoreLink Branch Console Use Member Search to begin.\":\n        - table:\n          - rowgroup:\n            - row \"CoreLink Branch Console Use Member Search to begin.\":\n              - cell \"CoreLink Branch Console Use Member Search to begin.\":\n                - table:\n                  - rowgroup:\n                    - row \"CoreLink Branch Console Use Member Search to begin.\":\n                      - cell \"CoreLink Branch Console Use Member Search to begin.\":\n                        - table:\n                          - rowgroup:\n                            - row \"CoreLink Branch Console Use Member Search to begin.\":\n                              - cell \"CoreLink Branch Console Use Member Search to begin.\":\n                                - table:\n                                  - rowgroup:\n                                    - row \"CoreLink Branch Console Use Member Search to begin.\":\n                                      - cell \"CoreLink Branch Console Use Member Search to begin.\":\n                                        - table:\n                                          - rowgroup:\n                                            - row \"CoreLink Branch Console\":\n                                              - cell \"CoreLink Branch Console\"\n                                        - paragraph: Use Member Search to begin.\n- paragraph: CoreLink Branch Console 4.2 \u00a9 Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "link",
+     "name": "Member Search",
+     "box": {
+      "x": 11,
+      "y": 72,
+      "w": 78.6875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Transfer Funds",
+     "box": {
+      "x": 11,
+      "y": 90,
+      "w": 73.921875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Statements",
+     "box": {
+      "x": 11,
+      "y": 112,
+      "w": 57.84375,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Reports",
+     "box": {
+      "x": 11,
+      "y": 150,
+      "w": 38.390625,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Admin",
+     "box": {
+      "x": 11,
+      "y": 168,
+      "w": 31.875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Fee Waivers",
+     "box": {
+      "x": 11,
+      "y": 186,
+      "w": 60.359375,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Address Change",
+     "box": {
+      "x": 11,
+      "y": 204,
+      "w": 81.296875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Sign Out",
+     "box": {
+      "x": 11,
+      "y": 240,
+      "w": 43.796875,
+      "h": 18
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": [
+    {
+     "x": 71,
+     "y": 110,
+     "w": 38,
+     "h": 18
+    }
+   ]
+  },
+  {
+   "frame": "08",
+   "picture": "happy/08.png",
+   "did": "press \"Member Search\"",
+   "at": "2026-10-17T17:57:47.463Z",
+   "address": "http://localhost:63304/corelink/console",
+   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank \u00b7 Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank \u00b7 Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 \u00b7 New member promotion runs through month end \u00b7 Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - 'row \"Member Search Member number: Search\"':\n      - 'cell \"Member Search Member number: Search\"':\n        - table:\n          - rowgroup:\n            - 'row \"Member Search Member number: Search\"':\n              - 'cell \"Member Search Member number: Search\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Member Search Member number: Search\"':\n                      - 'cell \"Member Search Member number: Search\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Member Search Member number: Search\"':\n                              - 'cell \"Member Search Member number: Search\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Member Search Member number: Search\"':\n                                      - 'cell \"Member Search Member number: Search\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Member Search Member number: Search\"':\n                                              - 'cell \"Member Search Member number: Search\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - row \"Member Search\":\n                                                      - cell \"Member Search\"\n                                                - table:\n                                                  - rowgroup:\n                                                    - row \"Member number:\":\n                                                      - cell \"Member number:\"\n                                                      - cell:\n                                                        - textbox\n                                                    - row \"Search\":\n                                                      - cell\n                                                      - cell \"Search\":\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Search\":\n                                                              - cell \"Search\"\n- paragraph: CoreLink Branch Console 4.2 \u00a9 Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "link",
+     "name": "Member Search",
+     "box": {
+      "x": 11,
+      "y": 72,
+      "w": 78.6875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Transfer Funds",
+     "box": {
+      "x": 11,
+      "y": 90,
+      "w": 73.921875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Statements",
+     "box": {
+      "x": 11,
+      "y": 112,
+      "w": 57.84375,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Reports",
+     "box": {
+      "x": 11,
+      "y": 150,
+      "w": 38.390625,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Admin",
+     "box": {
+      "x": 11,
+      "y": 168,
+      "w": 31.875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Fee Waivers",
+     "box": {
+      "x": 11,
+      "y": 186,
+      "w": 60.359375,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Address Change",
+     "box": {
+      "x": 11,
+      "y": 204,
+      "w": 81.296875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Sign Out",
+     "box": {
+      "x": 11,
+      "y": 240,
+      "w": 43.796875,
+      "h": 18
+     }
+    },
+    {
+     "role": "textbox",
+     "name": "",
+     "box": {
+      "x": 531.6875,
+      "y": 105,
+      "w": 111,
+      "h": 21
+     }
+    },
+    {
+     "role": "clickable",
+     "name": "Search",
+     "box": {
+      "x": 531.6875,
+      "y": 132,
+      "w": 58.609375,
+      "h": 20
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": [
+    {
+     "x": 71,
+     "y": 110,
+     "w": 38,
+     "h": 18
+    }
+   ]
+  },
+  {
+   "frame": "09",
+   "picture": "happy/09.png",
+   "did": "type $member.demo into \"Member number\"",
+   "at": "2026-10-17T17:57:50.337Z",
+   "address": "http://localhost:63304/corelink/console",
+   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank \u00b7 Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank \u00b7 Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 \u00b7 New member promotion runs through month end \u00b7 Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - 'row \"Member Search Member number: ******** Search\"':\n      - 'cell \"Member Search Member number: ******** Search\"':\n        - table:\n          - rowgroup:\n            - 'row \"Member Search Member number: ******** Search\"':\n              - 'cell \"Member Search Member number: ******** Search\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Member Search Member number: ******** Search\"':\n                      - 'cell \"Member Search Member number: ******** Search\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Member Search Member number: ******** Search\"':\n                              - 'cell \"Member Search Member number: ******** Search\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Member Search Member number: ******** Search\"':\n                                      - 'cell \"Member Search Member number: ******** Search\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Member Search Member number: ******** Search\"':\n                                              - 'cell \"Member Search Member number: ******** Search\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - row \"Member Search\":\n                                                      - cell \"Member Search\"\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Member number: ********\"':\n                                                      - cell \"Member number:\"\n                                                      - cell \"********\":\n                                                        - textbox: \"********\"\n                                                    - row \"Search\":\n                                                      - cell\n                                                      - cell \"Search\":\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Search\":\n                                                              - cell \"Search\"\n- paragraph: CoreLink Branch Console 4.2 \u00a9 Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "link",
+     "name": "Member Search",
+     "box": {
+      "x": 11,
+      "y": 72,
+      "w": 78.6875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Transfer Funds",
+     "box": {
+      "x": 11,
+      "y": 90,
+      "w": 73.921875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Statements",
+     "box": {
+      "x": 11,
+      "y": 112,
+      "w": 57.84375,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Reports",
+     "box": {
+      "x": 11,
+      "y": 150,
+      "w": 38.390625,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Admin",
+     "box": {
+      "x": 11,
+      "y": 168,
+      "w": 31.875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Fee Waivers",
+     "box": {
+      "x": 11,
+      "y": 186,
+      "w": 60.359375,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Address Change",
+     "box": {
+      "x": 11,
+      "y": 204,
+      "w": 81.296875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Sign Out",
+     "box": {
+      "x": 11,
+      "y": 240,
+      "w": 43.796875,
+      "h": 18
+     }
+    },
+    {
+     "role": "textbox",
+     "name": "",
+     "box": {
+      "x": 531.6875,
+      "y": 105,
+      "w": 111,
+      "h": 21
+     }
+    },
+    {
+     "role": "clickable",
+     "name": "Search",
+     "box": {
+      "x": 531.6875,
+      "y": 132,
+      "w": 58.609375,
+      "h": 20
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": [
+    {
+     "x": 71,
+     "y": 110,
+     "w": 38,
+     "h": 18
+    }
+   ]
+  },
+  {
+   "frame": "10",
+   "picture": "happy/10.png",
+   "did": "press \"Search\"",
+   "at": "2026-10-17T17:57:53.833Z",
+   "address": "http://localhost:63304/corelink/console",
+   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank \u00b7 Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank \u00b7 Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 \u00b7 New member promotion runs through month end \u00b7 Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - 'row \"Member Search Member number: ******** Search Member Name Status ******** ******** Active Open\"':\n      - 'cell \"Member Search Member number: ******** Search Member Name Status ******** ******** Active Open\"':\n        - table:\n          - rowgroup:\n            - 'row \"Member Search Member number: ******** Search Member Name Status ******** ******** Active Open\"':\n              - 'cell \"Member Search Member number: ******** Search Member Name Status ******** ******** Active Open\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Member Search Member number: ******** Search Member Name Status ******** ******** Active Open\"':\n                      - 'cell \"Member Search Member number: ******** Search Member Name Status ******** ******** Active Open\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Member Search Member number: ******** Search Member Name Status ******** ******** Active Open\"':\n                              - 'cell \"Member Search Member number: ******** Search Member Name Status ******** ******** Active Open\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Member Search Member number: ******** Search Member Name Status ******** ******** Active Open\"':\n                                      - 'cell \"Member Search Member number: ******** Search Member Name Status ******** ******** Active Open\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Member Search Member number: ******** Search Member Name Status ******** ******** Active Open\"':\n                                              - 'cell \"Member Search Member number: ******** Search Member Name Status ******** ******** Active Open\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - row \"Member Search\":\n                                                      - cell \"Member Search\"\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Member number: ********\"':\n                                                      - cell \"Member number:\"\n                                                      - cell \"********\":\n                                                        - textbox: \"********\"\n                                                    - row \"Search\":\n                                                      - cell\n                                                      - cell \"Search\":\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Search\":\n                                                              - cell \"Search\"\n                                                - table:\n                                                  - rowgroup:\n                                                    - row \"Member Name Status\":\n                                                      - columnheader \"Member\"\n                                                      - columnheader \"Name\"\n                                                      - columnheader \"Status\"\n                                                      - columnheader\n                                                    - row \"******** ******** Active Open\":\n                                                      - cell \"********\"\n                                                      - cell \"********\"\n                                                      - cell \"Active\"\n                                                      - cell \"Open\":\n                                                        - link \"Open\":\n                                                          - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 \u00a9 Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "link",
+     "name": "Member Search",
+     "box": {
+      "x": 11,
+      "y": 72,
+      "w": 78.6875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Transfer Funds",
+     "box": {
+      "x": 11,
+      "y": 90,
+      "w": 73.921875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Statements",
+     "box": {
+      "x": 11,
+      "y": 112,
+      "w": 57.84375,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Reports",
+     "box": {
+      "x": 11,
+      "y": 150,
+      "w": 38.390625,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Admin",
+     "box": {
+      "x": 11,
+      "y": 168,
+      "w": 31.875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Fee Waivers",
+     "box": {
+      "x": 11,
+      "y": 186,
+      "w": 60.359375,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Address Change",
+     "box": {
+      "x": 11,
+      "y": 204,
+      "w": 81.296875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Sign Out",
+     "box": {
+      "x": 11,
+      "y": 240,
+      "w": 43.796875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Open",
+     "box": {
+      "x": 597.046875,
+      "y": 195,
+      "w": 28.171875,
+      "h": 18
+     }
+    },
+    {
+     "role": "textbox",
+     "name": "",
+     "box": {
+      "x": 531.6875,
+      "y": 105,
+      "w": 111,
+      "h": 21
+     }
+    },
+    {
+     "role": "clickable",
+     "name": "Search",
+     "box": {
+      "x": 531.6875,
+      "y": 132,
+      "w": 58.609375,
+      "h": 20
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": [
+    {
+     "x": 71,
+     "y": 110,
+     "w": 38,
+     "h": 18
+    }
+   ]
+  },
+  {
+   "frame": "11",
+   "picture": "happy/11.png",
+   "did": "press \"Open\"",
+   "at": "2026-10-17T17:57:56.565Z",
+   "address": "http://localhost:63304/corelink/console",
+   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank \u00b7 Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank \u00b7 Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 \u00b7 New member promotion runs through month end \u00b7 Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** \u00b7 ********\":\n      - cell \"Member ******** \u00b7 ********\"\n- table:\n  - rowgroup:\n    - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n      - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n        - table:\n          - rowgroup:\n            - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n              - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                      - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                              - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                                      - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                                              - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - row \"Member Summary\":\n                                                      - cell \"Member Summary\"\n                                                - paragraph:\n                                                  - link \"Transfer Funds\":\n                                                    - /url: /corelink/members/********/transfer\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements\"':\n                                                      - 'cell \"Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements\"':\n                                                        - text: \"Everyday Checking Account ending in **** Available balance: ******** Current balance: ********\"\n                                                        - link \"Activity\":\n                                                          - /url: /corelink/members/********/activity?account=2\n                                                        - link \"Statements\":\n                                                          - /url: /corelink/members/********/statements?account=2\n                                                      - 'cell \"Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements\"':\n                                                        - text: \"Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ********\"\n                                                        - link \"Activity\":\n                                                          - /url: /corelink/members/********/activity?account=3\n                                                        - link \"Statements\":\n                                                          - /url: /corelink/members/********/statements?account=3\n                                                      - 'cell \"Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements\"':\n                                                        - text: \"Money Market Account ending in **** Available balance: ******** Current balance: ********\"\n                                                        - link \"Activity\":\n                                                          - /url: /corelink/members/********/activity?account=4\n                                                        - link \"Statements\":\n                                                          - /url: /corelink/members/********/statements?account=4\n                                                - paragraph:\n                                                  - link \"Waive fee\":\n                                                    - /url: /corelink/members/********/waive-fee\n                                                  - text: \"|\"\n                                                  - link \"Add payee\":\n                                                    - /url: /corelink/members/********/add-payee\n                                                  - text: \"|\"\n                                                  - link \"Change address\":\n                                                    - /url: /corelink/members/********/change-address\n                                                  - text: \"|\"\n                                                  - link \"Enroll in eStatements\":\n                                                    - /url: /corelink/members/********/estatements\n                                                  - text: \"|\"\n                                                  - link \"Pay now\":\n                                                    - /url: /corelink/members/********/pay-now\n                                                  - text: \"|\"\n                                                  - link \"Close account\":\n                                                    - /url: /corelink/members/********/close-account\n- paragraph: CoreLink Branch Console 4.2 \u00a9 Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "link",
+     "name": "Member Search",
+     "box": {
+      "x": 11,
+      "y": 72,
+      "w": 78.6875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Transfer Funds",
+     "box": {
+      "x": 11,
+      "y": 90,
+      "w": 73.921875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Statements",
+     "box": {
+      "x": 11,
+      "y": 112,
+      "w": 57.84375,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Reports",
+     "box": {
+      "x": 11,
+      "y": 150,
+      "w": 38.390625,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Admin",
+     "box": {
+      "x": 11,
+      "y": 168,
+      "w": 31.875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Fee Waivers",
+     "box": {
+      "x": 11,
+      "y": 186,
+      "w": 60.359375,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Address Change",
+     "box": {
+      "x": 11,
+      "y": 204,
+      "w": 81.296875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Sign Out",
+     "box": {
+      "x": 11,
+      "y": 240,
+      "w": 43.796875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Transfer Funds",
+     "box": {
+      "x": 426.5,
+      "y": 134,
+      "w": 73.921875,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Activity",
+     "box": {
+      "x": 440.5,
+      "y": 308,
+      "w": 48.375,
+      "h": 16
+     }
+    },
+    {
+     "role": "link",
+     "name": "Statements",
+     "box": {
+      "x": 502.59375,
+      "y": 308,
+      "w": 75.203125,
+      "h": 16
+     }
+    },
+    {
+     "role": "link",
+     "name": "Activity",
+     "box": {
+      "x": 637.828125,
+      "y": 308,
+      "w": 48.375,
+      "h": 16
+     }
+    },
+    {
+     "role": "link",
+     "name": "Statements",
+     "box": {
+      "x": 699.921875,
+      "y": 308,
+      "w": 75.203125,
+      "h": 16
+     }
+    },
+    {
+     "role": "link",
+     "name": "Activity",
+     "box": {
+      "x": 835.15625,
+      "y": 308,
+      "w": 48.375,
+      "h": 16
+     }
+    },
+    {
+     "role": "link",
+     "name": "Statements",
+     "box": {
+      "x": 897.25,
+      "y": 308,
+      "w": 75.203125,
+      "h": 16
+     }
+    },
+    {
+     "role": "link",
+     "name": "Waive fee",
+     "box": {
+      "x": 426.5,
+      "y": 354,
+      "w": 48.890625,
+      "h": 12
+     }
+    },
+    {
+     "role": "link",
+     "name": "Add payee",
+     "box": {
+      "x": 494,
+      "y": 354,
+      "w": 52.71875,
+      "h": 12
+     }
+    },
+    {
+     "role": "link",
+     "name": "Change address",
+     "box": {
+      "x": 565.328125,
+      "y": 354,
+      "w": 80.46875,
+      "h": 12
+     }
+    },
+    {
+     "role": "link",
+     "name": "Enroll in eStatements",
+     "box": {
+      "x": 664.40625,
+      "y": 354,
+      "w": 108.390625,
+      "h": 12
+     }
+    },
+    {
+     "role": "link",
+     "name": "Pay now",
+     "box": {
+      "x": 791.40625,
+      "y": 354,
+      "w": 41.734375,
+      "h": 12
+     }
+    },
+    {
+     "role": "link",
+     "name": "Close account",
+     "box": {
+      "x": 851.75,
+      "y": 354,
+      "w": 69.578125,
+      "h": 12
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": [
+    {
+     "x": 71,
+     "y": 110,
+     "w": 38,
+     "h": 18
+    }
+   ]
+  }
+ ]
+}
