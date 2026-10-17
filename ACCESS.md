@@ -8,9 +8,6 @@ The logins are in `secrets/credentials.txt`. `just up` writes it from the encryp
 `just credentials` writes it again. The file never leaves your machine and is never committed.
 The Postgres login isn't in it; read that one with `just secrets-edit local`.
 
-If you ran `just fork-ports` in a second copy, add its offset (10000 by default) to every port
-below.
-
 ## In a browser
 
 | What | URL | Sign in with |

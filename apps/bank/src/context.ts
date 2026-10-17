@@ -33,7 +33,7 @@ export function origins(bank: Bank, req: FastifyRequest) {
   const local = req.socket?.localPort ?? hostPort;
   const main = bank.ports?.main ?? local;
   const second = bank.ports?.second ?? main + 10;
-  // A second copy of the stack publishes every port moved by the same amount (just fork-ports):
+  // A copy of the stack may publish every port moved by the same amount (config/local.env):
   // links keep that shift, so a person's browser stays on the copy it is looking at.
   const shift = hostPort && local ? hostPort - local : 0;
   return {

@@ -5,7 +5,7 @@
 source "$(dirname "$0")/lib.sh"
 in_tools "$@"
 
-# The ports this machine uses, moved if just fork-ports was run.
+# The ports this machine uses, with any local overrides from config/local.env.
 set -a; source config/app.env; [[ -f config/local.env ]] && source config/local.env; set +a
 
 local_env="$(decrypt local)"

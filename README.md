@@ -99,13 +99,6 @@ Every model is reached through OpenRouter, with the one key. Any model in its ca
 Qwen, Google, OpenAI and others, named as OpenRouter lists it, maker first. The caps price each one
 from that catalog.
 
-## A second copy, side by side
-
-Clone or fork into another folder and run `just fork-ports` there before `just setup`. The copy
-takes its folder's name and a short hash of where it is, so it gets its own containers, volumes and
-images, even beside another folder of the same name. Its ports all move up by 10000 (its Console is
-on http://localhost:18080).
-
 ## Develop
 
 ```sh

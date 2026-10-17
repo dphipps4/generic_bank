@@ -211,6 +211,6 @@ docs/knowledge-graph.html
 .run/
 .sops.yaml
 config/*.secrets.enc.env
-# A second copy's moved ports (just fork-ports)
+# Local overrides, never committed
 config/local.env
 plan/REVIEW.md
