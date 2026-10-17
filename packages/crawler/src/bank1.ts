@@ -8,6 +8,7 @@ export const bank1: Table = {
   rows: [
     {
       page: 'sign-in',
+      screen: 'sign_in',
       shows: ['Operator ID:', 'Password:'],
       do: {
         any: [
@@ -20,12 +21,14 @@ export const bank1: Table = {
     },
     {
       page: 'code chooser',
+      screen: 'staff_code',
       shows: ['Where should we send your code?'],
       do: { any: [{ press: 'Send code' }] },
       frame: 'happy/04',
     },
     {
       page: 'code',
+      screen: 'staff_code',
       shows: ['Enter the 6-digit code we sent'],
       do: {
         any: [{ type: 'Code', value: '$code' }, { press: 'Verify' }],
@@ -46,6 +49,7 @@ export const bank1: Table = {
     },
     {
       page: 'member search',
+      screen: 'member.search',
       shows: ['Member number:'],
       never: ['Status'],
       do: {
@@ -55,12 +59,14 @@ export const bank1: Table = {
     },
     {
       page: 'member found',
+      screen: 'member.search',
       shows: ['Member number:', 'Status'],
       do: { any: [{ press: 'Open' }] },
       frame: 'happy/10',
     },
     {
       page: 'summary',
+      screen: 'member.summary',
       shows: ['Member Summary', 'Available balance:'],
       do: {
         transfer: [{ press: 'Transfer Funds', near: 'Member Summary' }],
@@ -70,6 +76,7 @@ export const bank1: Table = {
     },
     {
       page: 'transfer form',
+      screen: 'transfer.form',
       shows: ['From:', 'Amount:', 'Continue'],
       never: ['Review transfer', 'Transfer posted'],
       do: {
@@ -83,10 +90,23 @@ export const bank1: Table = {
       },
       frame: 'transfer/12',
     },
-    { page: 'review', shows: ['Review transfer'], do: {}, frame: 'transfer/17' },
-    { page: 'posted', shows: ['Transfer posted'], do: {}, frame: 'transfer/18' },
+    {
+      page: 'review',
+      screen: 'transfer.review',
+      shows: ['Review transfer'],
+      do: {},
+      frame: 'transfer/17',
+    },
+    {
+      page: 'posted',
+      screen: 'transfer.posted',
+      shows: ['Transfer posted'],
+      do: {},
+      frame: 'transfer/18',
+    },
     { page: 'activity', shows: ['Activity:', 'Description'], do: {}, frame: 'transfer/20' },
   ],
+  names: { 'Matching member': ['Open'] },
   ends: { balance: 'summary', transfer: 'review', history: 'activity' },
   answers: [
     {
@@ -148,5 +168,7 @@ export const bank1: Table = {
       /From: (?<from>.+?) To: (?<to>.+?) Amount: (?<amount>\S+) Memo: (?<memo>.*?) Submit transfer/,
     confirmation: /Confirmation number (?<confirmation>[A-Z0-9-]+)/,
     history: 'TRANSFER OUT $memo',
+    // The results row (happy/10), then the summary's heading (happy/11).
+    name: ['^$member\\n(?<name>[^\\n]+)\\n(?:Active|Closed)$', '^Member $member · (?<name>.+)$'],
   },
 };

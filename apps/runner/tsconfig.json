@@ -10,10 +10,10 @@
       "path": "../../packages/config"
     },
     {
-      "path": "../../packages/db"
+      "path": "../../packages/crawler"
     },
     {
-      "path": "../../packages/drivers"
+      "path": "../../packages/db"
     },
     {
       "path": "../../packages/evidence"
@@ -25,7 +25,7 @@
       "path": "../../packages/runs"
     },
     {
-      "path": "../../packages/screen"
+      "path": "../../packages/runtime"
     }
   ]
 }

@@ -1,8 +1,15 @@
 // What the PII suite looks for and how it looks. Every needle is a seeded value with a name that
 // says what it is without repeating it, so a failure names the place and the kind of value, never
 // the value itself.
-import type { Box, Image, ScreenModel } from '../../packages/screen/src/index.js';
-import type { MaskedModel } from '../../packages/evidence/src/index.js';
+import { PNG } from 'pngjs';
+import type { Box } from '../../packages/runtime/src/index.js';
+
+export interface Image {
+  width: number;
+  height: number;
+  data: Uint8Array;
+}
+export const decodePng = (png: Buffer): Image => PNG.sync.read(png);
 
 export interface Needle {
   what: string;
@@ -128,77 +135,6 @@ export function scanRow(r: Row, needles: Needle[]): Hit[] {
 // ── Pictures ─────────────────────────────────────────────────────────────────
 
 /** What the bank drew, as the screen model read it before masking; the picture itself is not kept. */
-export type Drawn = Pick<ScreenModel, 'url' | 'structureKey'> & {
-  texts: ScreenModel['texts'];
-  controls: Pick<ScreenModel['controls'][number], 'role' | 'name' | 'box' | 'hasValue'>[];
-};
-
-export const drawnOf = (m: ScreenModel): Drawn => ({
-  url: m.url,
-  structureKey: m.structureKey,
-  texts: m.texts.map((t) => ({ ...t, box: { ...t.box } })),
-  controls: m.controls.map((c) => ({
-    role: c.role,
-    name: c.name,
-    box: { ...c.box },
-    ...(c.hasValue !== undefined ? { hasValue: c.hasValue } : {}),
-  })),
-});
-
-/** Masking keeps a text's length and stars only what it hides: the rest must read the same. */
-const consistent = (masked: string, raw: string) => {
-  if (masked.length !== raw.length) return false;
-  for (let i = 0; i < masked.length; i++)
-    if (masked[i] !== '*' && masked[i] !== raw[i]) return false;
-  return true;
-};
-const sameBox = (a: Box, b: Box) => a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
-
-/** The screens a stored frame could have been made from: same layout, same text where unmasked. */
-export function sourcesOf(stored: MaskedModel, seen: Drawn[]): Drawn[] {
-  return seen.filter(
-    (d) =>
-      d.structureKey === stored.structureKey &&
-      d.texts.length === stored.texts.length &&
-      d.controls.length === stored.controls.length &&
-      d.texts.every(
-        (t, i) => sameBox(t.box, stored.texts[i]!.box) && consistent(stored.texts[i]!.text, t.text),
-      ) &&
-      d.controls.every(
-        (c, i) =>
-          sameBox(c.box, stored.controls[i]!.box) && consistent(stored.controls[i]!.name, c.name),
-      ),
-  );
-}
-
-const TYPED: Drawn['controls'][number]['role'][] = ['textbox', 'password'];
-
-/**
- * Every place on a screen that showed a seeded value: a text or a control's name holding one, an
- * amount of money, or a field something was typed into (a member number, a password, a code).
- */
-export function placesOf(d: Drawn, needles: Needle[]): { box: Box; what: string }[] {
-  const holds = (s: string) =>
-    needles.find((n) => {
-      n.re.lastIndex = 0;
-      const found = n.re.test(s);
-      n.re.lastIndex = 0;
-      return found;
-    });
-  const out: { box: Box; what: string }[] = [];
-  for (const t of d.texts) {
-    const n = holds(t.text);
-    if (n) out.push({ box: t.box, what: n.what });
-  }
-  for (const c of d.controls) {
-    const n = holds(c.name);
-    if (n) out.push({ box: c.box, what: n.what });
-    else if (TYPED.includes(c.role) && c.hasValue)
-      out.push({ box: c.box, what: `what was typed into a ${c.role}` });
-  }
-  return out;
-}
-
 /**
  * The share of a box's pixels the mask did not cover. The mask paints exactly three greys: a white
  * fill, a grey outline and darker grey asterisks; text the bank drew, even in light grey, leaves

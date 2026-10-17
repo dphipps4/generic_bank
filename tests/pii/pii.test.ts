@@ -6,28 +6,23 @@ import { executeRun } from '../../apps/runner/src/execute.js';
 import { accountsOf } from '../../apps/bank/src/ledger.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
 import type { TaskName } from '../../packages/contracts/src/index.js';
-import { type MaskedModel, memoryStore } from '../../packages/evidence/src/index.js';
+import { createHash } from 'node:crypto';
+import { memoryStore } from '../../packages/evidence/src/index.js';
 import { oauth } from '../../packages/oauth/src/index.js';
 import { controlDb } from '../../packages/oauth/test/control.js';
-import {
-  type Box,
-  decodePng,
-  type Image,
-  type ScreenModel,
-} from '../../packages/screen/src/index.js';
+import type { Box } from '../../packages/runtime/src/index.js';
 import { type LiveBank, liveBank, PASSWORDS } from '../support/banks.js';
 import { captureLogs } from './logs.js';
 import {
+  decodePng,
   digits,
-  type Drawn,
   everyRow,
   type Hit,
-  placesOf,
+  type Image,
   pngText,
   type Row,
   scanRow,
   scanText,
-  sourcesOf,
   uncoveredShare,
 } from './scan.js';
 import { type Seeded, seededOf } from './seeded.js';
@@ -36,19 +31,25 @@ import { type Seeded, seededOf } from './seeded.js';
 // out by the Runner, with a person answering through the Console. Then everything those runs wrote
 // is searched for every seeded secret and personal value: each row of the control database, each
 // stored object, each log line. A stored picture is judged by what the bank drew: every place a
-// screen showed a seeded value must be covered. Any hit fails the suite and names where it was.
+// page drew a seeded value must be covered. Any hit fails the suite and names where it was.
 
-// Every screen the crawler reads, before masking: what the bank drew, and where.
-const seen = vi.hoisted(() => [] as Drawn[]);
-vi.mock('../../packages/screen/src/model.js', async (original) => {
-  const m = await original<typeof import('../../packages/screen/src/model.js')>();
-  const { drawnOf: keep } = await import('./scan.js');
+// Every picture the crawler takes, and where on that page the bank drew a seeded value, found as
+// the picture was taken: from every seeded value, not only the ones the run knew to mask.
+const pictured = vi.hoisted(() => ({ seeded: [] as string[], places: new Map<string, Box[]>() }));
+const hashOf = (png: Buffer) => createHash('sha256').update(png).digest('hex');
+vi.mock('../../packages/runtime/src/see.js', async (original) => {
+  const m = await original<typeof import('../../packages/runtime/src/see.js')>();
+  const { maskBoxes } = await import('../../packages/runtime/src/mask.js');
+  const { createHash: hash } = await import('node:crypto');
   return {
     ...m,
-    readScreen: async (...a: Parameters<typeof m.readScreen>) => {
-      const s: ScreenModel = await m.readScreen(...a);
-      seen.push(keep(s));
-      return s;
+    see: async (...a: Parameters<typeof m.see>) => {
+      const f = await m.see(...a);
+      pictured.places.set(
+        hash('sha256').update(f.picture).digest('hex'),
+        await maskBoxes(a[0], pictured.seeded),
+      );
+      return f;
     },
   };
 });
@@ -160,6 +161,7 @@ beforeAll(async () => {
   const token = (await o.exchangeCode(client.clientId, client.clientSecret, client.code))
     .access_token;
   before = new Set((await everyRow(db)).map((r) => r.key));
+  for (const b of live) pictured.seeded.push(...(await seededValues(b)));
 
   const deps = {
     sql: db,
@@ -220,6 +222,21 @@ afterAll(async () => {
   await db?.close();
 });
 
+/** Every seeded value of a bank as plain text, for finding where a page drew one. */
+async function seededValues(b: LiveBank): Promise<string[]> {
+  const q = async (sql: string) => (await b.db.query<{ v: string }>(sql)).rows.map((r) => r.v);
+  return [
+    ...(await q('SELECT number AS v FROM members')),
+    ...(await q(`SELECT first_name || ' ' || last_name AS v FROM members`)),
+    ...(await q(`SELECT last_name || ', ' || first_name AS v FROM members`)),
+    ...(await q('SELECT number AS v FROM accounts')),
+    ...(await q('SELECT operator_id AS v FROM operators')),
+    ...(await q('SELECT display_name AS v FROM operators')),
+    PASSWORDS.service,
+    PASSWORDS.supervisor,
+  ];
+}
+
 /** Why a run did not succeed, in a line a person can act on: its last steps and its tasks for a person. */
 async function whyNot(runId: string, task: TaskName, ending: string): Promise<string> {
   const steps = await db.query<{ screen: string | null; name: string; outcome: string | null }>(
@@ -270,39 +287,27 @@ describe('the PII suite', () => {
     expect(hits, report(hits)).toEqual([]);
   });
 
-  it('covers every place a screen showed a seeded value in the stored picture', async () => {
+  it('covers every place a page drew a seeded value in the stored picture', async () => {
     const hits: Hit[] = [];
     let checked = 0;
     for (const k of store.keys().filter((x) => x.endsWith('.png'))) {
-      const model = JSON.parse(
-        (await store.get(k.replace(/\.png$/, '.json')))!.toString(),
-      ) as MaskedModel;
-      const sources = sourcesOf(model, seen);
-      if (sources.length === 0) {
-        hits.push({ where: `object ${k}`, what: 'a picture no screen the bank drew accounts for' });
+      const png = (await store.get(k))!;
+      const places = pictured.places.get(hashOf(png));
+      if (!places) {
+        hits.push({ where: `object ${k}`, what: 'a picture no page the crawler saw accounts for' });
         continue;
       }
-      const img = decodePng((await store.get(k))!);
-      for (const s of sources) {
-        for (const p of placesOf(s, seeded.drawn)) {
-          const open = uncoveredShare(img, p.box);
-          if (open === null) continue;
-          checked++;
-          if (open <= 0.01 && !covered && p.box.h >= 8) covered = { img, box: p.box };
-          // Several screens can account for one picture (the same page read twice): one hit each.
-          if (
-            open > 0.01 &&
-            !hits.some((h) =>
-              h.where.startsWith(
-                `object ${k}, the box at ${Math.round(p.box.x)},${Math.round(p.box.y)} `,
-              ),
-            )
-          )
-            hits.push({
-              where: `object ${k}, the box at ${Math.round(p.box.x)},${Math.round(p.box.y)} (${Math.round(open * 100)}% uncovered)`,
-              what: p.what,
-            });
-        }
+      const img = decodePng(png);
+      for (const box of places) {
+        const open = uncoveredShare(img, box);
+        if (open === null) continue;
+        checked++;
+        if (open <= 0.01 && !covered && box.h >= 8) covered = { img, box };
+        if (open > 0.01)
+          hits.push({
+            where: `object ${k}, the box at ${Math.round(box.x)},${Math.round(box.y)} (${Math.round(open * 100)}% uncovered)`,
+            what: 'a seeded value, an account number or an amount the page drew',
+          });
       }
     }
     expect(hits, report(hits)).toEqual([]);

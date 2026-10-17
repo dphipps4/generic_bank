@@ -138,6 +138,15 @@ Values are read with [`read()`](../../../packages/runtime/src/see.ts#L258), whic
 
 When the bank changes its pages, repair means editing rows, not code. And the factory's Scout writes the same kind of table for a bank it's learning, which is the point.
 
+## The runner
+
+The runner carries out each task run with this crawler ([`executeRun()`](../../../apps/runner/src/execute.ts#L49)):
+- **Every page the crawler sees** becomes a step and a stored frame: the masked picture, and the visible tree and controls ([L90](../../../apps/runner/src/execute.ts#L90)).
+- **The code** for the staff phone comes from a person, through the Console ([L142](../../../apps/runner/src/execute.ts#L142)).
+- **Every action** passes the job's allowlist first ([L146](../../../apps/runner/src/execute.ts#L146), [`runGuard()`](../../../apps/runner/src/guard.ts#L19)). Each row names the allowlist's screen it stands for, and [`table.test.ts`](../../../packages/crawler/test/table.test.ts) checks every step of the table against the allowlist, with no browser. The first refusal trips the guard and freezes the bank.
+- **A transfer** ([`runTransfer()`](../../../apps/runner/src/transfer.ts#L87)) parks at review for a person's approval. Just before the one press, the grant is consumed against what the review page shows, and the intent is written to the trail ([L153](../../../apps/runner/src/transfer.ts#L153)). A run that resumes after that point reads the history and never presses again ([L169](../../../apps/runner/src/transfer.ts#L169)).
+- **A page the crawler doesn't know** takes its version out of service and opens a repair case, unless a hazard was forced in the lab.
+
 ## What the walk changed
 
 Walking the real pages turned up things the synthetic tests never had. Each one became a runtime rule, with its own test:

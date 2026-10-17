@@ -14,7 +14,6 @@ export {
   MONEY_WORDS,
   type Names,
   NEVER,
-  screenOf,
   type Verb,
   VERBS,
   type Verdict,
