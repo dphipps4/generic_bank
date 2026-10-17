@@ -201,6 +201,13 @@ const AGAIN = {
  */
 type Example = { summary: string; value: Record<string, unknown> };
 const demo = { memberId: '40017732' };
+/** Last month, as YYYY-MM, when the API starts: the newest month a bank has a statement for. */
+const lastMonth = () => {
+  const d = new Date();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() - 1);
+  return d.toISOString().slice(0, 7);
+};
 const EXAMPLES: Record<Task, Record<string, Example>> = {
   'check-balance': {
     bank1: {
@@ -233,7 +240,7 @@ const EXAMPLES: Record<Task, Record<string, Example>> = {
   'download-statements': {
     bank1: {
       summary: "Bank 1, Generic Bank: one month's statement",
-      value: { bank: 'generic', ...demo, account: 'Everyday Checking', months: ['2026-09'] },
+      value: { bank: 'generic', ...demo, account: 'Everyday Checking', months: [lastMonth()] },
     },
   },
 };
@@ -280,7 +287,7 @@ export function openapi(): Record<string, unknown> {
       title: 'Generic Bank Task API',
       version: '1',
       description:
-        'Typed tasks at banks that have no API, done by operating each bank’s website the way a person would. No money moves without a person’s approval. Get a token with `just api-token`, press Authorize, and paste it.',
+        'Typed tasks at banks that have no API, done by operating each bank’s website the way a person would. No money moves without a person’s approval. Press Authorize and enter the client id and secret from secrets/credentials.txt; curl takes a token from `just api-token`.',
     },
     tags: [{ name: 'tasks' }, { name: 'catalog' }, { name: 'oauth' }],
     components: {
