@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Bank } from './context.js';
+import { totp } from './auth.js';
 import { accountsOf } from './ledger.js';
 
 // Ground truth, for the test harness only. Tests never trust the automation's own account of what
@@ -76,6 +77,26 @@ export async function buildAdmin(bank: Bank, token: string): Promise<FastifyInst
       [String(req.query.address ?? '')],
     );
     return r.rows;
+  });
+
+  // The code an operator signs in with now: the authenticator's at a bank whose staff use one, and
+  // the last one the bank sent them at any other.
+  app.get<{ Params: { operator: string } }>('/operators/:operator/code', async (req, reply) => {
+    const o = (
+      await bank.db.query<{ phone: string; email: string; totp_secret: string | null }>(
+        'SELECT phone, email, totp_secret FROM operators WHERE operator_id = $1',
+        [req.params.operator],
+      )
+    ).rows[0];
+    if (!o) return reply.code(404).send({ error: 'no such operator' });
+    if (bank.t.codeStyle === 'authenticator' && o.totp_secret)
+      return { code: totp(o.totp_secret, bank.now()) };
+    const m = await bank.db.query<{ body: string }>(
+      'SELECT body FROM messages WHERE address IN ($1, $2) ORDER BY id DESC LIMIT 1',
+      [o.phone, o.email],
+    );
+    const code = /(\d{6})/.exec(m.rows[0]?.body ?? '')?.[1];
+    return code ? { code } : reply.code(404).send({ error: 'no code sent' });
   });
 
   return app;
