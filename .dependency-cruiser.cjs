@@ -45,17 +45,10 @@ module.exports = {
     },
     {
       name: 'guards-and-evals-stay-independent',
-      comment: 'Guardrails, evidence, evals and lint never import the runner, drivers or factory.',
+      comment: 'Guardrails, evidence, evals and lint never import the runner or the factory.',
       severity: 'error',
       from: { path: '^packages/(guardrails|evidence|evals|lint)/' },
-      to: { path: '^(apps/(runner|factory)|packages/drivers)/' },
-    },
-    {
-      name: 'drivers-import-only-the-sdk',
-      comment: 'Drivers may import only the driver SDK, the screen package and contracts.',
-      severity: 'error',
-      from: { path: '^packages/drivers/' },
-      to: { path: '^(apps/|packages/(?!drivers|screen|contracts))' },
+      to: { path: '^apps/(runner|factory)/' },
     },
     {
       name: 'no-circular',

@@ -1,14 +1,31 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": "src", "outDir": "dist" },
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
   "include": ["src"],
   "references": [
-    { "path": "../../packages/config" },
-    { "path": "../../packages/contracts" },
-    { "path": "../../packages/db" },
-    { "path": "../../packages/drivers" },
-    { "path": "../../packages/evidence" },
-    { "path": "../../packages/runs" },
-    { "path": "../../packages/screen" }
+    {
+      "path": "../../packages/config"
+    },
+    {
+      "path": "../../packages/contracts"
+    },
+    {
+      "path": "../../packages/crawler"
+    },
+    {
+      "path": "../../packages/db"
+    },
+    {
+      "path": "../../packages/evidence"
+    },
+    {
+      "path": "../../packages/runs"
+    },
+    {
+      "path": "../../packages/runtime"
+    }
   ]
 }

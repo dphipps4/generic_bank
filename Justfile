@@ -196,21 +196,6 @@ bank: env image
 factory: env image
     @{{compose}} --profile factory up -d --wait {{factory}}
 
-# The factory learns a bank, then runs the gate once you approve: just onboard example
-[group('Factory')]
-onboard bank: factory
-    @{{compose}} --profile factory-run run --rm factory-run onboard {{bank}}
-
-# The factory repairs a bank's open repair case, then runs the gate: just repair generic
-[group('Factory')]
-repair bank: factory
-    @{{compose}} --profile factory-run run --rm factory-run repair {{bank}}
-
-# The gate alone, for a recommendation approved later: just gate rec_...
-[private]
-gate rec: factory
-    @{{compose}} --profile factory-run run --rm factory-run gate {{rec}}
-
 # Apply database migrations
 [private]
 migrate: env image

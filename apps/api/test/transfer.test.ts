@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { MEMO_MAX, TransferInput } from '@gb/contracts';
 import { oauth } from '@gb/oauth';
 import { inputsOf, openHumanTask, settleRun } from '@gb/runs';
-import { memoFor } from '../../../packages/drivers/src/index.js';
+import { memoFor } from '../../runner/src/transfer.js';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import { openapi, tools } from '../src/catalog.js';
 import { buildServer } from '../src/server.js';

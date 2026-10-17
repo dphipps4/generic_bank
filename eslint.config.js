@@ -64,17 +64,4 @@ export default tseslint.config(
     },
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
-  {
-    // The identity extension's script runs in a web page, before the page's own scripts.
-    files: ['packages/screen/extension/**/*.js'],
-    languageOptions: {
-      sourceType: 'script',
-      globals: {
-        window: 'readonly',
-        Navigator: 'readonly',
-        Screen: 'readonly',
-        DOMException: 'readonly',
-      },
-    },
-  },
 );

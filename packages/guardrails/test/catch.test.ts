@@ -7,10 +7,10 @@ import { describe, expect, it } from 'vitest';
 
 const eslint = new ESLint({ cwd: fileURLToPath(new URL('../../..', import.meta.url)) });
 
-const lint = async (body: string, where = 'packages/drivers/src/corelink/probe.ts') => {
-  const code = `import { click, type Control, type Page } from '@gb/screen';
+const lint = async (body: string, where = 'packages/crawler/src/probe.ts') => {
+  const code = `import { press, type Page } from '@gb/runtime';
 import { GuardError } from '@gb/guardrails';
-export async function act(page: Page, c: Control) {
+export async function act(page: Page, c: string) {
 ${body}
 }
 export const keep = GuardError;
@@ -23,7 +23,7 @@ describe('catching a guard error', () => {
   it('fails lint when a catch handles the guard’s error by name', async () => {
     expect(
       await lint(`  try {
-    await click(page, c);
+    await press(page, c);
   } catch (e) {
     if (e instanceof GuardError) return;
     throw e;
@@ -31,7 +31,7 @@ describe('catching a guard error', () => {
     ).toEqual(['A guard error is never caught: it trips the guard and ends the run.']);
     expect(
       await lint(
-        `  await click(page, c).catch((e) => { if (!(e instanceof GuardError)) throw e; });`,
+        `  await press(page, c).catch((e) => { if (!(e instanceof GuardError)) throw e; });`,
         'apps/runner/src/probe.ts',
       ),
     ).toEqual(['A guard error is never caught: it trips the guard and ends the run.']);
@@ -40,7 +40,7 @@ describe('catching a guard error', () => {
   it('fails lint when a catch around an action swallows what it threw', async () => {
     expect(
       await lint(`  try {
-    await click(page, c);
+    await press(page, c);
   } catch {
     return;
   }`),
@@ -52,7 +52,7 @@ describe('catching a guard error', () => {
   it('passes a catch that handles its own error and rethrows the rest', async () => {
     expect(
       await lint(`  try {
-    await click(page, c);
+    await press(page, c);
   } catch (e) {
     if (e instanceof RangeError) return;
     throw e;

@@ -11,9 +11,6 @@
     },
     {
       "path": "../guardrails"
-    },
-    {
-      "path": "../drivers"
     }
   ]
 }
