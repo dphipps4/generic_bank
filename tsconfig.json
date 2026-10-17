@@ -2,55 +2,49 @@
   "files": [],
   "references": [
     {
+      "path": "apps/api"
+    },
+    {
+      "path": "apps/bank"
+    },
+    {
+      "path": "apps/console"
+    },
+    {
+      "path": "apps/factory"
+    },
+    {
+      "path": "apps/memory"
+    },
+    {
+      "path": "apps/runner"
+    },
+    {
       "path": "packages/config"
     },
     {
       "path": "packages/contracts"
     },
     {
-      "path": "packages/db"
-    },
-    {
-      "path": "packages/oauth"
-    },
-    {
-      "path": "packages/screen"
-    },
-    {
-      "path": "packages/runtime"
-    },
-    {
       "path": "packages/crawler"
+    },
+    {
+      "path": "packages/db"
     },
     {
       "path": "packages/evidence"
     },
     {
-      "path": "packages/drivers"
+      "path": "packages/guardrails"
+    },
+    {
+      "path": "packages/oauth"
     },
     {
       "path": "packages/runs"
     },
     {
-      "path": "packages/guardrails"
-    },
-    {
-      "path": "apps/api"
-    },
-    {
-      "path": "apps/console"
-    },
-    {
-      "path": "apps/runner"
-    },
-    {
-      "path": "apps/memory"
-    },
-    {
-      "path": "apps/bank"
-    },
-    {
-      "path": "apps/factory"
+      "path": "packages/runtime"
     }
   ]
 }

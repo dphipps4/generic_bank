@@ -1,19 +1,20 @@
 // A factory run's trail, kept as the Runner keeps a task run's: a step for every tool call and a
 // masked frame for every page reached, at most 60. It is kept under a task run with the factory
 // run's own id, so the Console's run page and its Frames button show it.
-import { type Frame, type FrameStore, frameOf, type MaskPolicy } from '@gb/evidence';
+import { leaf } from '@gb/crawler';
+import type { FrameStore } from '@gb/evidence';
 import { addFrame, addStep, type Sql } from '@gb/runs';
-import type { ScreenModel } from '@gb/screen';
+import type { Frame } from '@gb/runtime';
 
 const MAX_FRAMES = 60;
 
 export interface Trail {
-  /** Masks what is known, from the next frame on. */
-  readonly policy: MaskPolicy;
-  /** Records a step and, for a page, its frame; returns the frame, stored or not. */
+  /** Values masked wherever they appear; the runtime masks each frame by them as it is taken. */
+  readonly known: string[];
+  /** Records a step and, for a page, its frame (masked already); returns the frame's reference. */
   step(
     s: { name: string; action?: string; outcome?: string },
-    model: ScreenModel | null,
+    frame: Frame | null,
   ): Promise<Seen | null>;
   /** Whether a frame reference, such as f3, names a stored frame of this run. */
   has(ref: string): boolean;
@@ -21,16 +22,17 @@ export interface Trail {
   shown(ref: string): Promise<Shown | null>;
 }
 
-/** A frame's page and the words on it: its title, its controls' names and its text. */
+/** A frame's page and the words on it: its controls' names and its visible text. */
 export interface Shown {
   page: string;
-  title: string;
   controls: string[];
   texts: string[];
 }
 
-/** A frame and its reference, or a null reference when it was not stored. */
-export type Seen = Frame & { ref: string | null };
+/** A frame's reference, or null when it was not stored. */
+export interface Seen {
+  ref: string | null;
+}
 
 export async function openTrail(o: {
   sql: Sql;
@@ -40,10 +42,8 @@ export async function openTrail(o: {
   bank: string;
   /** Values masked wherever they appear: the credentials, and each code as it is typed. */
   known: string[];
-  now?: () => Date;
 }): Promise<Trail> {
   const { sql, store, runId } = o;
-  const now = o.now ?? (() => new Date());
   await sql.query(
     `INSERT INTO "TaskRun" (id, task, bank, "inputsMasked", status)
      VALUES ($1, $2, $3, $4, 'running') ON CONFLICT (id) DO NOTHING`,
@@ -58,34 +58,33 @@ export async function openTrail(o: {
   let stepSeq = last.rows[0]!.steps;
   let frameSeq = last.rows[0]!.frames;
   let since = Date.now();
-  const policy: MaskPolicy = { known: o.known };
 
   return {
-    policy,
-    async step(s, model) {
+    known: o.known,
+    async step(s, frame) {
       stepSeq++;
       await addStep(sql, runId, stepSeq, { ...s, screen: null, ms: Date.now() - since });
       since = Date.now();
-      if (!model) return null;
-      const f = frameOf(model, policy, { step: stepSeq, at: now() });
-      if (frameSeq >= MAX_FRAMES) return { ...f, ref: null };
+      if (!frame) return null;
+      if (frameSeq >= MAX_FRAMES) return { ref: null };
       try {
         const base = `runs/${runId}/${String(frameSeq + 1).padStart(3, '0')}`;
-        if (f.image) await store.put(`${base}.png`, f.image, 'image/png');
-        await store.put(`${base}.json`, Buffer.from(JSON.stringify(f.model)), 'application/json');
+        const { picture, ...page } = frame;
+        await store.put(`${base}.png`, picture, 'image/png');
+        await store.put(`${base}.json`, Buffer.from(JSON.stringify(page)), 'application/json');
+        const address = new URL(frame.address);
         await addFrame(sql, runId, frameSeq + 1, {
           stepSeq,
-          imageKey: f.image ? `${base}.png` : null,
+          imageKey: `${base}.png`,
           modelKey: `${base}.json`,
-          withheld: f.withheld,
-          host: f.host,
-          path: f.path,
+          host: address.host,
+          path: address.pathname,
         });
         frameSeq++;
-        return { ...f, ref: `f${frameSeq}` };
+        return { ref: `f${frameSeq}` };
       } catch {
         // A capture failure is recorded by its absence and never breaks the run.
-        return { ...f, ref: null };
+        return { ref: null };
       }
     },
     has,
@@ -110,16 +109,14 @@ async function shownAt(sql: Sql, store: FrameStore, runId: string, seq: number) 
   ).rows[0];
   const body = f && (await store.get(f.key));
   if (!body) return null;
-  const m = JSON.parse(body.toString()) as {
-    title: string;
-    controls: { name: string }[];
-    texts: { text: string }[];
-  };
+  const m = JSON.parse(body.toString()) as Omit<Frame, 'picture'>;
   return {
     page: `${f.host}${f.path}`,
-    title: m.title,
     controls: m.controls.map((c) => c.name).filter(Boolean),
-    texts: m.texts.map((t) => t.text),
+    texts: m.tree
+      .split('\n')
+      .map(leaf)
+      .filter((t): t is string => !!t),
   } satisfies Shown;
 }
 

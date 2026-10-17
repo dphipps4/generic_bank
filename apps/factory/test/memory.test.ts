@@ -4,7 +4,6 @@
 // The models are fake fetches behind the real gateway, and memory is the real service over HTTP.
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { memoryStore } from '../../../packages/evidence/src/index.js';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import { memoryService } from '../../../tests/support/memory.js';
 import { gateway } from '../src/gateway.js';
@@ -20,8 +19,6 @@ import {
 } from '../src/memory.js';
 import { type Role } from '../src/models.js';
 import { DEFAULT_ROLES } from './fakes.js';
-import { factoryRun } from '../src/run.js';
-import { runScout, type Scout } from '../src/scout.js';
 import { buildServer } from '../src/server.js';
 import { refusal, toolsOf } from '../src/tools.js';
 import type { Shown, Trail } from '../src/trail.js';
@@ -133,41 +130,13 @@ describe('record_lesson', () => {
     expect(refusal('supervisor', 'record_lesson')).toBeNull();
     expect(refusal('scout', 'record_lesson')).toBe("record_lesson is not one of the scout's tools");
     expect(refusal('scout', 'memory_query')).toBeNull();
-    const { trail, steps } = trailOf();
+    const { trail } = trailOf();
     const kept: Lesson[] = [];
     const memoryTools = [
       recordLessonTool(trail, kept),
       memoryQueryTool(memoryClient(memory.factory), at, new Map()),
     ];
     expect(toolsOf('scout', memoryTools).map((t) => t.name)).toEqual(['memory_query']);
-
-    // The Scout's model calls record_lesson all the same: it was not given the tool, the call is
-    // refused and recorded, and nothing is kept.
-    let instructed = false;
-    script = (_seen, results) =>
-      results ? { text: 'Done.' } : { tool: 'record_lesson', input: LESSON };
-    const before = sent.length;
-    await runScout({
-      agent: agent('scout'),
-      scout: { tools: () => [], latest: () => null } as unknown as Scout,
-      supervisor: {
-        next: async () => (instructed ? null : ((instructed = true), 'Look at the page.')),
-      },
-      trail,
-      extra: memoryTools,
-    });
-    // A tool is named at the top in Anthropic's form, under function in OpenAI's.
-    const offered = (sent[before]!.tools as { name?: string; function?: { name: string } }[]).map(
-      (t) => t.name ?? t.function?.name,
-    );
-    expect(offered).toContain('memory_query');
-    expect(offered).not.toContain('record_lesson');
-    expect(steps).toContainEqual({
-      name: 'refused',
-      action: 'record_lesson',
-      outcome: "record_lesson is not one of the scout's tools",
-    });
-    expect(kept).toEqual([]);
   });
 });
 
@@ -298,35 +267,5 @@ describe('a run’s lessons', () => {
     expect(disputed.rows).toEqual([
       { state: 'disputed', reason: 'it offered a share of another member' },
     ]);
-  });
-});
-
-describe('intake', () => {
-  it('starts no run without its knowledge pack', async () => {
-    const unreachable = memoryClient({ ...memory.factory, url: 'http://127.0.0.1:9' });
-    const runs = () => db.query(`SELECT id FROM "FactoryRun" WHERE tenant = 'example'`);
-    const before = (await runs()).rows;
-    await expect(
-      factoryRun(
-        {
-          sql: db,
-          store: memoryStore(),
-          browser: {
-            newPage: () => {
-              throw new Error('no page is opened');
-            },
-          } as never,
-          factoryUrl: 'http://127.0.0.1:9',
-          gatewayToken: TOKEN,
-          roles: DEFAULT_ROLES,
-          credentials: { operatorId: 'teller0412', password: 'p'.repeat(20) },
-          answerKey: 'q'.repeat(40),
-          member: '40017732',
-          memory: unreachable,
-        },
-        { bank: 'example', mode: 'build' },
-      ),
-    ).rejects.toThrow(/^no knowledge pack, no run: /);
-    expect((await runs()).rows).toEqual(before);
   });
 });

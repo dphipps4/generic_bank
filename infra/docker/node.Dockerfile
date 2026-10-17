@@ -8,12 +8,12 @@ COPY package.json package-lock.json ./
 COPY packages/config/package.json packages/config/
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/db/package.json packages/db/
-COPY packages/drivers/package.json packages/drivers/
 COPY packages/evidence/package.json packages/evidence/
 COPY packages/guardrails/package.json packages/guardrails/
 COPY packages/oauth/package.json packages/oauth/
 COPY packages/runs/package.json packages/runs/
-COPY packages/screen/package.json packages/screen/
+COPY packages/runtime/package.json packages/runtime/
+COPY packages/crawler/package.json packages/crawler/
 COPY apps/api/package.json apps/api/
 COPY apps/bank/package.json apps/bank/
 COPY apps/console/package.json apps/console/

@@ -792,4 +792,4 @@ export async function approvalOf(
 }
 
 export { forcedHazardsOf, HAZARD_HEADER, hazardHeader } from './hazards.js';
-export { closeRepairCase, driverFault, openRepairCase, profileOf, serving } from './registry.js';
+export { closeRepairCase, driverFault, openRepairCase, serving } from './registry.js';

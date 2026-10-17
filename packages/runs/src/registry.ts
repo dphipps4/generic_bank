@@ -1,10 +1,7 @@
-// The registry (plan, §7): which version of a bank's driver serves a task, and the
-// profile it runs. A version the factory made is its approved claims over the profile it started
-// from: the bank's base for an onboarding, the repaired version's profile for a repair. A version
-// written by hand runs the hand-written profile. The first driver fault demotes the version that
-// served: the one before it serves again, or with none, nothing does, and a repair case opens.
+// The registry (plan, §7): which version of a bank's crawler serves a task. The first fault demotes
+// the version that served: the one before it serves again, or with none, nothing does, and a repair
+// case opens.
 import { randomBytes } from 'node:crypto';
-import { BASES, type Profile, PROFILES, profileFrom } from '@gb/drivers';
 
 interface Sql {
   query<R = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<{ rows: R[] }>;
@@ -12,33 +9,12 @@ interface Sql {
 
 const id = (prefix: string) => `${prefix}_${randomBytes(8).toString('hex')}`;
 
-type Bankless = Omit<Profile, 'url'>;
-
-/** A version's profile, or null for one that has none. */
-export async function profileOf(sql: Sql, versionId: string, depth = 0): Promise<Bankless | null> {
-  const v = (
-    await sql.query<{ tenant: string; base: string | null; claims: unknown }>(
-      `SELECT d.tenant, f."baseVersionId" AS base, r.claims
-         FROM "DriverVersion" v JOIN "Driver" d ON d.id = v."driverId"
-         LEFT JOIN "FactoryRun" f ON f.id = v."sourceFactoryRunId"
-         LEFT JOIN "Recommendation" r ON r."factoryRunId" = f.id
-        WHERE v.id = $1`,
-      [versionId],
-    )
-  ).rows[0];
-  if (!v) return null;
-  if (!v.claims) return PROFILES[v.tenant] ?? null;
-  // A repair of a repair goes back version by version, never round in a loop.
-  const base = v.base && depth < 20 ? await profileOf(sql, v.base, depth + 1) : BASES[v.tenant];
-  return base ? profileFrom(base, v.claims as { about: string; value: string }[]) : null;
-}
-
-/** The version serving a task at a bank, and its profile; null when nothing serves it. */
+/** The version serving a task at a bank; null when nothing serves it, or the bank is frozen. */
 export async function serving(
   sql: Sql,
   tenant: string,
   task: string,
-): Promise<{ versionId: string | null; profile: Bankless } | null> {
+): Promise<{ versionId: string | null } | null> {
   // A frozen bank runs nothing until a person clears the freeze (plan, §7).
   const d = (
     await sql.query<{ active: string | null }>(
@@ -48,9 +24,7 @@ export async function serving(
       [tenant, task],
     )
   ).rows[0];
-  if (!d) return null;
-  const profile = d.active ? await profileOf(sql, d.active) : (PROFILES[tenant] ?? null);
-  return profile ? { versionId: d.active, profile } : null;
+  return d ? { versionId: d.active } : null;
 }
 
 /**
