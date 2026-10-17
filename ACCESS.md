@@ -146,7 +146,7 @@ curl -s http://localhost:9081/members/40017732/balances -H "Authorization: Beare
 | Command | What it does |
 |---|---|
 | `just try …` | one task under a forced hazard, with its expected result |
-| `just api-token` | an access token for curl, from the local client (15 minutes) |
+| `just api-token` | an access token for curl, from the local client (8 hours) |
 | `just api-docs` | writes and serves the API reference on port 8099 |
 | `just ps`, `just logs` | what's running, and its logs |
 | `just db-shell` | psql on the control database |
@@ -161,7 +161,7 @@ All of this runs on this machine. `just setup` made a local API client; its id a
 `client`, enter the id and secret; Swagger UI gets the token itself. Then open a task, press
 **Try it out**, then **Execute**.
 
-**With curl.** First a token, good for 15 minutes:
+**With curl.** First a token, good for 8 hours:
 
 ```sh
 TOKEN=$(just api-token)

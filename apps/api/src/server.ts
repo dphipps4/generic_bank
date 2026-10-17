@@ -93,7 +93,7 @@ export async function buildServer(opts: {
   await app.register(swaggerUi, {
     routePrefix: '/docs',
     // A link to /docs#/tasks/check_balance opens that call; Authorize lasts across page loads,
-    // so each link in the docs lands signed in (a token lasts 15 minutes).
+    // so each link in the docs lands signed in (its token lasts 8 hours).
     uiConfig: { deepLinking: true, persistAuthorization: true, tryItOutEnabled: true },
   });
   const now = opts.now ?? Date.now;
@@ -112,7 +112,13 @@ export async function buildServer(opts: {
         .code(401)
         .header('www-authenticate', 'Bearer error="invalid_token"')
         .type('application/problem+json')
-        .send(problem(401, 'invalid_token', 'A valid bearer access token is required.'));
+        .send(
+          problem(
+            401,
+            'invalid_token',
+            'A valid bearer access token is required. In Swagger UI: Authorize, Logout, then Authorize again.',
+          ),
+        );
     }
     req.caller = caller;
   });

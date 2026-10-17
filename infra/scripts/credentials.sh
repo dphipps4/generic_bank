@@ -65,7 +65,7 @@ Task API: Swagger UI's Authorize takes this client id and secret
   Swagger UI      http://localhost:${API_PORT:-8000}/docs
   client id       $(get API_LOCAL_CLIENT_ID "$local_env")
   client secret   $(get API_LOCAL_CLIENT_SECRET "$local_env")
-  access token    just api-token (15 minutes), or Authorize in Swagger UI with the id and secret
+  access token    just api-token (8 hours), or Authorize in Swagger UI with the id and secret
 
 Memory API, header Authorization: Bearer <token>
   address         http://localhost:${MEMORY_PORT:-8470}
