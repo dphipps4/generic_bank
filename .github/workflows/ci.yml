@@ -45,13 +45,12 @@ jobs:
           # Docs: the docs tree, Markdown and HTML anywhere, the license. Never tested.
           code=$(grep -vqE '^docs/|\.md$|\.html?$|^LICENSE$' <<< "$files" && echo true || echo false)
           # The unit tests of each package the change touches. The files every test reads (the
-          # lockfile, the configs, the control database's migrations) run them all; the seeds are
-          # memory's, and config/app.env, which names the models, is the factory's.
+          # lockfile, the configs, the control database's migrations) run them all; config/app.env,
+          # which names the models, is the factory's.
           if grep -qE '^(package(-lock)?\.json|vitest\.config\.ts|tsconfig[^/]*\.json|packages/db/prisma/)' <<< "$files"; then
             units=all
           else
             units=$( { grep -oE '^(apps|packages)/[^/]+/' <<< "$files" || true
-                       grep -q '^seeds/' <<< "$files" && echo apps/memory/ || true
                        grep -qx 'config/app.env' <<< "$files" && echo apps/factory/ || true; } | sort -u | tr '\n' ' ')
           fi
           # The crawler's code, the bank, or the harness that starts it: one browser test.

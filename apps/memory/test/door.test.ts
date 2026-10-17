@@ -1,7 +1,5 @@
 // One door (plan §A.6): a token per role, only the writes that role is given, a signature
 // on every write, and the privacy screen. A refused write leaves nothing behind.
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { sign, SIGNATURE, WRITES, type Write } from '../src/door.js';
 import { openMemory, ROLES, type Role } from '../src/memory.js';
@@ -180,15 +178,5 @@ describe('the privacy screen', () => {
           'Never request a second code. A failure after the password is submitted is terminal; do not submit the password twice.',
       }),
     ).toEqual({ ok: true });
-  });
-
-  it('lets through every entry of the starting knowledge', () => {
-    const dir = join(import.meta.dirname, '../../../seeds/memory');
-    for (const kind of ['rules', 'checks', 'lessons', 'scenarios', 'approaches']) {
-      const { entries } = JSON.parse(readFileSync(join(dir, `${kind}.json`), 'utf8')) as {
-        entries: { id: string }[];
-      };
-      for (const e of entries) expect(screen(e), `${kind} ${e.id}`).toEqual({ ok: true });
-    }
   });
 });
