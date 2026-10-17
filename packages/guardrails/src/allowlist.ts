@@ -130,23 +130,6 @@ const named = (e: Entry, control: string, names: Names = {}) =>
 const holdsSecret = (text: string, secrets: readonly string[]) =>
   secrets.some((s) => s.length >= 4 && text.includes(s));
 
-const SCREENS = (
-  JSON.parse(readFileSync(join(dir, 'screens.json'), 'utf8')) as {
-    screens: Record<string, string[]>;
-  }
-).screens;
-
-/**
- * The screen the lists name for a screen as a driver recognizes it: a recognized screen named in
- * screens.json is the list's screen it belongs to, one not named there is its own, and one not
- * recognized is unknown, where nothing is allowed but what holds on any screen.
- */
-export function screenOf(recognized: string | null): string {
-  if (!recognized) return 'unknown';
-  for (const [screen, ids] of Object.entries(SCREENS)) if (ids.includes(recognized)) return screen;
-  return recognized;
-}
-
 /** Whether the job may take this action on this screen, and if not, which rule and layer refuse. */
 export function decide(
   job: TaskName,

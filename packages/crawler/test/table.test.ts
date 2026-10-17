@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type Frame, knows } from '@gb/runtime';
 import { describe, expect, it } from 'vitest';
+import { decide } from '../../guardrails/src/index.js';
 import { bank1, cents, leaf } from '../src/index.js';
 
 const EVIDENCE = join(import.meta.dirname, '../../../docs/evidence/bank-1');
@@ -36,6 +37,36 @@ describe("bank 1's table, against its evidence", () => {
       expect(row, page).toBeDefined();
       expect(row!.do[goal as 'balance'] ?? []).toEqual([]);
     }
+  });
+});
+
+describe("bank 1's table, against the allowlists", () => {
+  const JOB = { balance: 'check-balance', transfer: 'transfer', history: 'transfer' } as const;
+  for (const row of bank1.rows)
+    for (const [goal, steps] of Object.entries(row.do))
+      for (const st of steps ?? [])
+        for (const job of goal === 'any' ? Object.values(JOB) : [JOB[goal as keyof typeof JOB]]) {
+          const [verb, control] =
+            'type' in st
+              ? (['type', st.type] as const)
+              : 'choose' in st
+                ? (['choose', st.choose] as const)
+                : (['press', st.press] as const);
+          it(`${job} may ${verb} "${control}" on the ${row.page} page`, () => {
+            const secret = 'type' in st && ['$operator', '$password'].includes(st.value);
+            const v = decide(job, row.screen ?? row.page, verb, control, {
+              names: bank1.names ?? {},
+              ...(secret ? { secret } : { typed: 'x' }),
+            });
+            expect(v).toEqual({ allowed: true });
+          });
+        }
+  it('lets Submit through only with a grant', () => {
+    const review = bank1.rows.find((r) => r.page === bank1.ends.transfer)!;
+    expect(decide('transfer', review.screen!, 'press', bank1.submit.press)).toMatchObject({
+      allowed: false,
+      layer: 'approval grant',
+    });
   });
 });
 

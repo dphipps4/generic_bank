@@ -7,7 +7,6 @@ import {
   decide,
   type GrantCheck,
   JOBS,
-  screenOf,
   VERBS,
 } from '../src/index.js';
 import { approvedRun, REVIEW } from './support.js';
@@ -139,14 +138,6 @@ describe('the allowlist', () => {
         layer: 'task allowlist',
       });
     }
-  });
-
-  it('maps the screens a driver recognizes to the screens the lists name', () => {
-    expect(screenOf('login.welcome_back')).toBe('sign_in');
-    expect(screenOf('login.code_expired')).toBe('staff_code');
-    expect(screenOf('transfer.supervisor')).toBe('supervisor_approval');
-    expect(screenOf('member.summary')).toBe('member.summary');
-    expect(screenOf(null)).toBe('unknown');
   });
 
   it('refuses what is on another job’s list', () => {

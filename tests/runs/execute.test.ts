@@ -85,7 +85,7 @@ describe('the Runner carries out a run', () => {
       data: {
         availableCents: acct.availableCents,
         currentCents: acct.currentCents,
-        accountLabel: 'Account ending in ****',
+        accountLabel: expect.stringMatching(/, Account ending in \*{4}$/),
       },
     });
 
@@ -94,9 +94,7 @@ describe('the Runner carries out a run', () => {
         runId,
       ])
     ).rows.map((r) => r.name);
-    expect(steps).toEqual(
-      expect.arrayContaining(['sign in', 'staff code', 'member search', 'balance']),
-    );
+    expect(steps).toEqual(expect.arrayContaining(['sign-in', 'code', 'member search', 'summary']));
 
     const task = (
       await db.query<{ status: string; answerSealed: string | null }>(
@@ -126,7 +124,7 @@ describe('the Runner carries out a run', () => {
       JSON.stringify((await db.query('SELECT * FROM "Step" WHERE "runId" = $1', [runId])).rows),
       JSON.stringify(frames),
     ].join('\n');
-    // The member's name was not known before the run; the driver learned it when the bank showed it.
+    // The member's name was not known before the run; the crawler learned it when the bank showed it.
     for (const v of [MEMBERS.demo, acct.number, acct.number.slice(-4), PASSWORDS.service, 'Sample'])
       expect(stored).not.toContain(v);
   }, 120_000);

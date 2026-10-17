@@ -15,9 +15,16 @@ import { type LiveBank, liveBank, PASSWORDS } from '../support/banks.js';
 // the run against the real Generic Bank. Escalated: 409 with the escalation's id. Resumed: 202, then
 // 200 once the Runner is done.
 
-const MAINTENANCE = `data:text/html,${encodeURIComponent(
-  '<title>Maintenance</title><h1>Scheduled maintenance</h1><p>We will be back soon.</p><button>Details</button>',
-)}`;
+// Served at every path, as a bank's whole site would be during maintenance.
+const maintenance = Fastify();
+maintenance.get('/*', async (_, reply) =>
+  reply
+    .type('text/html')
+    .send(
+      '<title>Maintenance</title><h1>Scheduled maintenance</h1><p>We will be back soon.</p><button>Details</button>',
+    ),
+);
+let MAINTENANCE: string;
 const KEY = 'k'.repeat(40);
 const ANSWER_KEY = 'q'.repeat(40);
 let db: Awaited<ReturnType<typeof controlDb>>;
@@ -30,6 +37,7 @@ const people = Fastify();
 
 beforeAll(async () => {
   [db, bank] = await Promise.all([controlDb(), liveBank('generic')]);
+  MAINTENANCE = `${await maintenance.listen({ host: '127.0.0.1', port: 0 })}/corelink/`;
   await db.query('UPDATE "Bank" SET url = $1 WHERE id = $2', [bank.url, 'generic']);
   const o = oauth(db, 'o'.repeat(40));
   api = await buildServer({ oauth: o, sql: db, sealKey: KEY, enqueue: async () => undefined });
@@ -69,6 +77,7 @@ beforeAll(async () => {
 afterAll(async () => {
   clearInterval(answering);
   await people.close();
+  await maintenance.close();
   await api?.close();
   await bank?.close();
   await db?.close();
@@ -152,8 +161,8 @@ describe('an escalation, as the agent and a person see it', () => {
         [runId],
       )
     ).rows;
-    expect(steps[0]!.name).toBe('unknown');
+    expect(steps[0]!.name).toBe('unknown page');
     expect(steps.map((s) => s.seq)).toEqual(steps.map((_, i) => i + 1));
-    expect(steps.map((s) => s.name)).toContain('balance');
+    expect(steps.map((s) => s.name)).toContain('summary');
   }, 120_000);
 });

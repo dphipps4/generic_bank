@@ -8,7 +8,7 @@ import { inboxPages } from '../../apps/console/src/pages/inbox.js';
 import { executeRun, type RunDeps } from '../../apps/runner/src/execute.js';
 import { memoryStore } from '../../packages/evidence/src/index.js';
 import { createRun, newMemoToken } from '../../packages/runs/src/index.js';
-import { Browser } from '../../packages/screen/src/index.js';
+import { type Browser, launch } from '../../packages/runtime/src/index.js';
 import { controlDb } from '../../packages/oauth/test/control.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
 import { liveBank, PASSWORDS } from '../support/banks.js';
@@ -153,10 +153,9 @@ export async function transferHarness() {
       credentials: async () => ({
         operatorId: OPERATORS.service.id,
         password: PASSWORDS.service,
-        supervisorId: OPERATORS.supervisor.id,
       }),
       launch: async () => {
-        const b = await Browser.launch(o.headers ? { headers: o.headers } : {});
+        const b = await launch();
         browsers.push(b);
         return b;
       },

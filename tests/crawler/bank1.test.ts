@@ -49,8 +49,8 @@ async function session(hazards: HazardName[] = []): Promise<{ s: Session; bank: 
     limitMs: 20_000,
     // CRAWL_FRAMES=<file> writes each page the crawler saw, for reading a failure.
     ...(process.env.CRAWL_FRAMES && {
-      keep: (did: string, f: { tree: string; address: string }) =>
-        appendFileSync(process.env.CRAWL_FRAMES!, `\n=== ${did} @ ${f.address}\n${f.tree}\n`),
+      keep: (seen: { did: string }, f: { tree: string; address: string }) =>
+        appendFileSync(process.env.CRAWL_FRAMES!, `\n=== ${seen.did} @ ${f.address}\n${f.tree}\n`),
     }),
     credentials: async () => ({ operatorId: OPERATORS.service.id, password: PASSWORDS.service }),
     code: async () =>
@@ -94,7 +94,7 @@ describe.concurrent('bank 1, crawled', { timeout: 240_000 }, () => {
       amountCents: 2_500,
       memo: 'GBX T001 lunch',
     });
-    expect((await submitTransfer(s, task)).seenInHistory).toBe(true);
+    expect((await submitTransfer(s, task, async () => undefined)).seenInHistory).toBe(true);
     const after = await ledger(bank, MEMBERS.demo);
     const moved = before.map((a, i) => after[i]!.currentCents - a.currentCents);
     expect(moved.filter(Boolean).sort((a, b) => a - b)).toEqual([-2_500, 2_500]);
@@ -143,6 +143,6 @@ describe.concurrent('bank 1, crawled', { timeout: 240_000 }, () => {
       memo: 'GBX T003',
     };
     await prepareTransfer(s, task);
-    expect((await submitTransfer(s, task)).seenInHistory).toBe(true);
+    expect((await submitTransfer(s, task, async () => undefined)).seenInHistory).toBe(true);
   });
 });

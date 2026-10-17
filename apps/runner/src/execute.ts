@@ -1,33 +1,25 @@
-// One task run, carried out: a browser held for the run, the bank's driver, every step recorded and
-// every frame masked before it is stored, a person asked when only a person can answer, and exactly
+// One task run, carried out: a browser held for the run, the bank's crawler, every page it sees
+// recorded and its masked frame stored, a person asked when only a person can answer, and exactly
 // one result.
-import { type BalanceInput, checkBalance, type DriverContext, type StepRecord } from '@gb/drivers';
-import { type FrameStore, frameOf } from '@gb/evidence';
+import { type Action, checkBalance, type Seen, type Session, Stop, TABLES } from '@gb/crawler';
+import type { FrameStore } from '@gb/evidence';
+import { GuardError, JOBS } from '@gb/guardrails';
 import {
   addFrame,
   addStep,
+  awaitAnswer,
+  driverFault,
   type Ending,
+  forcedHazardsOf,
   inputsOf,
   loadRun,
   openHumanTask,
-  awaitAnswer,
-  driverFault,
-  forcedHazardsOf,
   serving,
   settleRun,
   type Sql,
   trailEnd,
 } from '@gb/runs';
-import {
-  ActError,
-  Browser,
-  CdpTimeout,
-  guardActions,
-  type Page,
-  type ScreenModel,
-  TargetError,
-} from '@gb/screen';
-import { JOBS } from '@gb/guardrails';
+import { type Browser, type Frame, launch, newPage, type Page } from '@gb/runtime';
 import { runGuard } from './guard.js';
 import { runTransfer, type TransferTask } from './transfer.js';
 
@@ -37,13 +29,8 @@ export interface RunDeps {
   sealKey: string;
   /** Opens a person's answer (a staff code). The Console seals with it; it opens no run's inputs. */
   answerKey: string;
-  /**
-   * The staff service account for a bank (from the Runner's secrets, which SOPS keeps),
-   * and the supervisor whose code a person reads when a transfer is over the bank's threshold.
-   */
-  credentials(
-    bank: string,
-  ): Promise<{ operatorId: string; password: string; supervisorId?: string }>;
+  /** The staff service account for a bank (from the Runner's secrets, which SOPS keeps). */
+  credentials(bank: string): Promise<{ operatorId: string; password: string }>;
   launch?: () => Promise<Browser>;
   /** How long a person has to answer a human task. */
   humanDeadlineMs?: number;
@@ -53,7 +40,7 @@ export interface RunDeps {
   headers?: Record<string, string>;
 }
 
-/** At most this many frames per run (plan, §9); the last step always gets one. */
+/** At most this many frames per run (plan, §9). */
 const MAX_FRAMES = 60;
 
 /** The jobs a run can be: each has its allowlist. */
@@ -69,14 +56,14 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
   const bank = (
     await deps.sql.query<{ url: string }>('SELECT url FROM "Bank" WHERE id = $1', [run.bank])
   ).rows[0];
-  // The version serving the task now, and its profile; a frozen bank, or none, runs nothing.
+  // The version serving the task now; a frozen bank, or one with no crawler, runs nothing.
   const served = await serving(deps.sql, run.bank, run.task);
-  if (!bank || !served || !TASKS.has(run.task)) {
+  const table = TABLES[run.bank];
+  if (!bank || !served || !table || !TASKS.has(run.task)) {
     const e: Ending = { status: 'failed', code: 'no_driver', retryable: false };
     await settleRun(deps.sql, runId, e);
     return e;
   }
-  const profile = served.profile;
   await deps.sql.query(`UPDATE "TaskRun" SET "driverVersionId" = $2 WHERE id = $1`, [
     runId,
     served.versionId,
@@ -84,59 +71,60 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
 
   const input = await inputsOf<Record<string, unknown>>(deps.sql, runId, deps.sealKey);
   const creds = await deps.credentials(run.bank);
-  // Everything known before the run is masked wherever it appears.
-  const known = [
-    ...[input.memberId, input.account, input.from, input.to].filter(
-      (v): v is string => typeof v === 'string',
-    ),
-    creds.password,
-    creds.operatorId,
-  ];
-  // Every action on every page the run opens passes the job's guard first.
+  // Everything known before the run is masked wherever it appears; the crawler adds the member's
+  // name to this same list when the bank first shows it.
+  const known = [input.memberId, input.account, input.from, input.to, creds.password]
+    .filter((v): v is string => typeof v === 'string')
+    .concat(creds.operatorId);
   const guarded = runGuard({
     job: run.task as (typeof JOBS)[number],
-    profile,
+    ...(table.names ? { names: table.names } : {}),
     // Only the password. A username is not a secret: the bank prints it on every page.
     secrets: [creds.password],
   });
   // A resumed run carries on its trail after the steps and frames it already has.
   let { step: stepSeq, frame: frameSeq } = await trailEnd(deps.sql, runId);
   let pictured: { step: number; frame: number } | null = null;
+  let lastAt = Date.now();
 
-  const record = async (s: StepRecord, model: ScreenModel | null) => {
+  const keep = async (seen: Seen, f: Frame) => {
     stepSeq++;
-    await addStep(deps.sql, runId, stepSeq, s);
-    if (!model || frameSeq >= MAX_FRAMES) return;
+    const ms = Date.now() - lastAt;
+    lastAt = Date.now();
+    await addStep(deps.sql, runId, stepSeq, {
+      name: seen.page ?? 'unknown page',
+      screen: seen.screen,
+      action: seen.did,
+      ms,
+    });
+    if (frameSeq >= MAX_FRAMES) return;
     try {
-      const f = frameOf(
-        model,
-        { known, safePictures: profile.safePictures },
-        { step: stepSeq, at: now(), screen: s.screen },
-      );
+      // The frame is masked already: the runtime paints out every known value before it is kept.
       frameSeq++;
       const base = `runs/${runId}/${String(frameSeq).padStart(3, '0')}`;
-      if (f.image) await deps.store.put(`${base}.png`, f.image, 'image/png');
-      await deps.store.put(
-        `${base}.json`,
-        Buffer.from(JSON.stringify(f.model)),
-        'application/json',
-      );
+      const { picture, ...page } = f;
+      await deps.store.put(`${base}.png`, picture, 'image/png');
+      await deps.store.put(`${base}.json`, Buffer.from(JSON.stringify(page)), 'application/json');
+      const address = new URL(f.address);
       await addFrame(deps.sql, runId, frameSeq, {
         stepSeq,
-        imageKey: f.image ? `${base}.png` : null,
+        imageKey: `${base}.png`,
         modelKey: `${base}.json`,
-        withheld: f.withheld,
-        host: f.host,
-        path: f.path,
+        host: address.host,
+        path: address.pathname,
       });
-      if (f.image) pictured = { step: stepSeq, frame: frameSeq };
+      pictured = { step: stepSeq, frame: frameSeq };
     } catch {
       // A capture failure is recorded by its absence and never breaks the run.
     }
   };
+  const note = async (name: string, action: string) => {
+    stepSeq++;
+    await addStep(deps.sql, runId, stepSeq, { name, screen: null, action, ms: 0 });
+  };
 
   const deadline = () => new Date(now().getTime() + (deps.humanDeadlineMs ?? 15 * 60_000));
-  const askPerson = async (kind: 'staff_code' | 'supervisor_code', prompt: string) => {
+  const askPerson = async (kind: 'staff_code', prompt: string) => {
     const due = deadline();
     const task = await openHumanTask(deps.sql, runId, kind, { bank: run.bank, prompt }, due);
     const a = await awaitAnswer(deps.sql, task, deps.answerKey, due, deps.pollMs);
@@ -145,36 +133,30 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
     return a.answer;
   };
 
-  const contextOf = (page: Page): DriverContext => ({
+  const sessionOf = (page: Page): Session => ({
     page,
-    profile: { ...profile, url: bank.url },
+    url: bank.url,
+    table,
+    known,
     credentials: async () => creds,
-    askHuman: (req) => askPerson(req.kind, req.prompt),
-    // A name the bank shows is masked from then on, and so is each of its words.
-    learn: (values) => {
-      for (const v of values)
-        for (const part of [v, ...v.split(/[\s.,]+/)])
-          if (part.trim().length >= 2 && !known.includes(part)) known.push(part);
-    },
-    step: record,
-    now,
+    code: () =>
+      askPerson('staff_code', 'The bank sent a sign-in code to the staff phone. Enter it here.'),
+    keep,
+    note,
+    guard: (a: Action) => guarded.guard(a),
   });
 
   // The run's browser: launched when first needed, held while a person decides, and replaced by a
   // fresh one if it was lost meanwhile.
   let browser: Browser | null = null;
   let page: Page | null = null;
-  const launch =
-    deps.launch ?? (() => Browser.launch(deps.headers ? { headers: deps.headers } : {}));
-  const hold = async (): Promise<{ ctx: DriverContext; fresh: boolean }> => {
-    if (browser && page && (await alive(browser, page)))
-      return { ctx: contextOf(page), fresh: false };
+  const hold = async (): Promise<{ s: Session; fresh: boolean }> => {
+    if (browser?.isConnected() && page && !page.isClosed())
+      return { s: sessionOf(page), fresh: false };
     await browser?.close().catch(() => undefined);
-    browser = await launch();
-    page = await browser.newPage();
-    guardActions(page, guarded.guard);
-    if (deps.headers) await page.call('Network.setExtraHTTPHeaders', { headers: deps.headers });
-    return { ctx: contextOf(page), fresh: true };
+    browser = await (deps.launch ?? launch)();
+    page = await newPage(browser, deps.headers ? { headers: deps.headers } : {});
+    return { s: sessionOf(page), fresh: true };
   };
 
   let ending: Ending;
@@ -184,42 +166,34 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
         ? await runTransfer({
             sql: deps.sql,
             runId,
-            profile,
             input: input as unknown as TransferTask,
             known,
-            supervisorId: creds.supervisorId ?? '',
             hold,
-            note: (name, action) => record({ name, screen: null, action, ms: 0 }, null),
+            note,
             lastFrame: () =>
               pictured?.step === stepSeq ? { runId, seq: pictured.frame } : undefined,
-            ask: askPerson,
             granted: guarded.granted,
             deadline,
             ...(deps.pollMs ? { pollMs: deps.pollMs } : {}),
           })
-        : await balance((await hold()).ctx, input as unknown as BalanceInput);
+        : {
+            status: 'succeeded',
+            data: await checkBalance((await hold()).s, {
+              member: String(input.memberId),
+              account: String(input.account),
+            }),
+          };
   } catch (e) {
-    // Our own failures are ours to say: the bank too slow, a screen we could not act on, or
-    // something we did not expect, which a person should look at.
-    ending =
-      e instanceof Expired
-        ? { status: 'expired', code: 'expired' }
-        : e instanceof Cancelled
-          ? { status: 'cancelled', code: 'cancelled' }
-          : e instanceof CdpTimeout
-            ? { status: 'failed', code: 'step_timeout', retryable: true }
-            : e instanceof TargetError || e instanceof ActError
-              ? { status: 'escalated', code: 'unknown_screen' }
-              : { status: 'escalated', code: 'stuck' };
+    ending = endingOf(e);
   } finally {
-    await (browser as Browser | null)?.close();
+    await (browser as Browser | null)?.close().catch(() => undefined);
   }
-  // A refusal ends the run as a trip, whatever the driver made of the error: the bank is frozen
-  // with the refusal's layer and rule when the run settles.
+  // A refusal ends the run as a trip, whatever came of the error: the bank is frozen with the
+  // refusal's layer and rule when the run settles.
   const trip = guarded.tripped();
   if (trip) ending = { status: 'escalated', code: 'guard_tripped', guard: trip };
   await settleRun(deps.sql, runId, ending);
-  // A screen the driver does not know is the driver's fault, never the bank's: it is taken out of
+  // A page the crawler does not know is the crawler's fault, never the bank's: it is taken out of
   // service, and a repair case opens (plan, §7). A hazard forced in the lab is the bank
   // misbehaving on purpose, and is no fault.
   if (
@@ -232,32 +206,25 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
       task: run.task,
       versionId: served.versionId,
       runId,
-      why: 'a screen the driver does not know',
+      why: 'a page the crawler does not know',
     });
   return ending;
 }
 
-async function balance(ctx: DriverContext, input: BalanceInput): Promise<Ending> {
-  const out = await checkBalance(ctx, input);
-  return out.status === 'succeeded'
-    ? {
-        status: 'succeeded',
-        data: { ...out.data, accountLabel: out.data.accountLabel.replace(/\d/g, '*') },
-      }
-    : {
-        status: out.status,
-        code: out.code,
-        ...(out.retryable !== undefined ? { retryable: out.retryable } : {}),
-      };
+/** How a run that threw ends: the crawler's own word, or ours. */
+export function endingOf(e: unknown): Ending {
+  if (e instanceof Stop) {
+    const { status, code, retryable } = e.ended;
+    return { status, code, ...(retryable !== undefined ? { retryable } : {}) };
+  }
+  if (e instanceof Expired) return { status: 'expired', code: 'expired' };
+  if (e instanceof Cancelled) return { status: 'cancelled', code: 'cancelled' };
+  if (e instanceof GuardError) return { status: 'escalated', code: 'guard_tripped' };
+  if (e instanceof Error && e.name === 'TimeoutError')
+    return { status: 'failed', code: 'step_timeout', retryable: true };
+  // Something we did not expect: a person should look.
+  return { status: 'escalated', code: 'stuck' };
 }
-
-/** Whether a held page still answers, asked of the browser and never of the page's scripts. */
-const alive = (b: Browser, p: Page) =>
-  !b.cdp.isClosed &&
-  p.call('Page.getFrameTree', {}, 5000).then(
-    () => true,
-    () => false,
-  );
 
 class Expired extends Error {}
 class Cancelled extends Error {}

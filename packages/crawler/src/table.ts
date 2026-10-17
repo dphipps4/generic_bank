@@ -18,6 +18,8 @@ export type Step =
 
 export interface Row {
   page: string;
+  /** The allowlist's name for this page, where it differs: the guard judges every step by it. */
+  screen?: string;
   shows: string[];
   never?: string[];
   /** The steps, per goal; `any` for every goal. A row with none for a goal is where it ends. */
@@ -45,6 +47,8 @@ export interface Table {
   /** The console's home, an address the frames show, from the bank's URL; the sign-in follows if it must. */
   home: string;
   rows: Row[];
+  /** The bank's own names for controls the allowlists name ("Open" for "Matching member"). */
+  names?: Record<string, string[]>;
   /** Where each goal ends. */
   ends: Record<Goal, string>;
   answers: Answer[];
@@ -61,5 +65,10 @@ export interface Table {
     confirmation: RegExp;
     /** In the activity: a row of the transfer, with `$memo` in place of the memo. */
     history: string;
+    /**
+     * Where the member's name shows, with `$member` for their number: learned when it first shows,
+     * and masked from then on. Each pattern is matched against the visible words, one per line.
+     */
+    name: string[];
   };
 }
