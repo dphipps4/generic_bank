@@ -104,7 +104,7 @@ const agent = (role: Role) => ({
 });
 
 const LESSON: Lesson = {
-  text: 'This bank sends the staff code as soon as the password is accepted.',
+  text: 'This site sends the staff code as soon as the password is accepted.',
   area: 'sign-in',
   scope: 'tenant',
   confidence: 'high',
