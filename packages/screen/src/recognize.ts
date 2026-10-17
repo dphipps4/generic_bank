@@ -73,13 +73,14 @@ function check(sig: Signature, m: ScreenModel, text: string) {
 export function recognize(m: ScreenModel, signatures: Signature[]): Recognition {
   const text = reading(m);
   const results = signatures.map((sig) => {
-    const checks =
-      (sig.requires?.length ?? 0) + (sig.forbids?.length ?? 0) + (sig.controls?.length ?? 0);
+    // Only what a screen must show counts toward closeness; what it must not show only rules it out.
+    const needs = (sig.requires?.length ?? 0) + (sig.controls?.length ?? 0);
     const missing = check(sig, m, text);
+    const lacking = missing.filter((x) => !x.startsWith('not ')).length;
     return {
       id: sig.id,
       missing,
-      met: checks ? (checks - missing.length) / checks : 0,
+      met: needs ? (needs - lacking) / needs : 0,
       hint: sig.pathHint?.test(m.url) ?? false,
     };
   });

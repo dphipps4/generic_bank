@@ -83,6 +83,17 @@ describe('recognizing screens', () => {
     ];
     const m = model([text('Use Member Inquiry to begin.', 5)], [control('link', 'Menu', 20)]);
     expect(recognize(m, sigs).closest.map((c) => c.id)).toEqual(['console.home', 'login.error']);
+    // What a screen must not show doesn't make it closer.
+    const withSearch = [
+      ...sigs,
+      {
+        id: 'member.search',
+        requires: ['Member'],
+        controls: [{ name: 'Inquire' }],
+        forbids: ['to begin', 'No member', 'closed', 'locked'],
+      },
+    ];
+    expect(recognize(m, withSearch).closest[0]!.id).toBe('console.home');
   });
 
   it('reads business outcomes as screens', () => {
