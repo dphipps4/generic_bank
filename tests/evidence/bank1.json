@@ -96,6 +96,10 @@
         "value": "25.00"
       },
       {
+        "type": "Memo",
+        "value": "GBX TEST lunch"
+      },
+      {
         "press": "Continue"
       },
       {

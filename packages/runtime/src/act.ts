@@ -68,12 +68,16 @@ export async function control(
   // Two of the same name (one in the nav, one in the page): the one nearest the anchor a person
   // would go by, such as the heading of the section it sits in.
   if (hits.length > 1 && near) {
+    // The anchor exactly as drawn, else the one text that holds it ("ending in 1234").
     const anchors: Box[] = [];
-    for (const f of page.frames())
-      for (const l of await visible(f.getByText(near, { exact: true }))) {
-        const b = await boxOf(l);
-        if (b) anchors.push(b);
-      }
+    for (const exact of [true, false]) {
+      for (const f of page.frames())
+        for (const l of await visible(f.getByText(near, { exact }))) {
+          const b = await boxOf(l);
+          if (b) anchors.push(b);
+        }
+      if (anchors.length) break;
+    }
     if (anchors.length === 1) {
       const a = anchors[0]!;
       const by = await Promise.all(hits.map(async (h) => ({ h, b: await boxOf(h.target) })));
