@@ -107,7 +107,7 @@ env: secrets-init
 secrets-edit file="local":
     @{{scripts}}/tool.sh sops config/{{file}}.secrets.enc.env
 
-# Set one secret unseen; it asks for the value: just secret-set factory ANTHROPIC_API_KEY [clipboard|path]
+# Set one secret unseen; it asks for the value: just secret-set factory OPENROUTER_API_KEY [clipboard|path]
 [group('Secrets (SOPS + age)')]
 secret-set file key from="":
     @{{scripts}}/secret-set.sh "{{file}}" "{{key}}" "{{from}}"
@@ -231,7 +231,7 @@ bank-more: env image
     @{{compose}} --profile more-banks up -d --wait {{bank_more}}
     @echo "  Sample Savings Bank   http://localhost:$BANK_SAMPLE_PORT/online/branch/"; echo "  Placeholder FCU       http://127.0.0.1:$BANK_PLACEHOLDER_PORT/cu/ib/"
 
-# The factory box: the software factory (mock mode until ANTHROPIC_API_KEY is set)
+# The factory box: the software factory (mock mode until a model key is set)
 [group('Run')]
 factory: env image
     @{{compose}} --profile factory up -d --wait {{factory}}
