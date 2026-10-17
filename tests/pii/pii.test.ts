@@ -226,7 +226,9 @@ beforeAll(async () => {
     seeded.text.push(...s.text);
     seeded.drawn.push(...s.drawn);
   }
-}, 240_000);
+  // About 45 seconds alone; a change to config/app.env runs the whole suite at once on one CI
+  // runner, and there it has taken longer than four minutes.
+}, 480_000);
 
 afterAll(async () => {
   if (answering) clearInterval(answering);
