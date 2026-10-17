@@ -246,7 +246,7 @@ export function openapi(): Record<string, unknown> {
         post: {
           ...about(TASK_TOOLS[t].tool),
           tags: ['tasks'],
-          security: [{ bearer: [] }, { client: [] }],
+          security: [{ client: [] }],
           requestBody: {
             required: true,
             content: { 'application/json': { schema: schema(TASKS[t]), examples: EXAMPLES[t] } },
@@ -285,11 +285,8 @@ export function openapi(): Record<string, unknown> {
     tags: [{ name: 'tasks' }, { name: 'catalog' }, { name: 'oauth' }],
     components: {
       securitySchemes: {
-        bearer: {
-          type: 'http',
-          scheme: 'bearer',
-          description: 'An OAuth2 access token from POST /oauth/token (or `just api-token`).',
-        },
+        // One way in, so Swagger UI's Authorize shows one: the client id and secret. The token it
+        // gets is a bearer token, the same one curl sends from `just api-token`.
         client: {
           type: 'oauth2',
           description:
@@ -308,7 +305,7 @@ export function openapi(): Record<string, unknown> {
         get: {
           ...about('list_banks'),
           tags: ['catalog'],
-          security: [{ bearer: [] }, { client: [] }],
+          security: [{ client: [] }],
           responses: {
             '200': {
               description: 'The banks.',
@@ -325,7 +322,7 @@ export function openapi(): Record<string, unknown> {
         get: {
           operationId: 'list_tasks',
           tags: ['catalog'],
-          security: [{ bearer: [] }, { client: [] }],
+          security: [{ client: [] }],
           summary: 'The tasks and their input schemas.',
           responses: { '200': { description: 'The catalog.' } },
         },
@@ -334,7 +331,7 @@ export function openapi(): Record<string, unknown> {
         get: {
           operationId: 'list_tools',
           tags: ['catalog'],
-          security: [{ bearer: [] }, { client: [] }],
+          security: [{ client: [] }],
           summary:
             'The API as tool definitions an agent loads directly. A tool call returns the endpoint’s answer, flagged as an error unless it is 200 (succeeded, handed_off) or 202 (waiting).',
           responses: { '200': { description: 'The tools.' } },
@@ -345,7 +342,7 @@ export function openapi(): Record<string, unknown> {
         get: {
           ...about('get_task'),
           tags: ['tasks'],
-          security: [{ bearer: [] }, { client: [] }],
+          security: [{ client: [] }],
           parameters: parameters(tool('get_task')),
           responses: {
             '200': {
@@ -371,7 +368,7 @@ export function openapi(): Record<string, unknown> {
         get: {
           ...about('get_statement'),
           tags: ['tasks'],
-          security: [{ bearer: [] }, { client: [] }],
+          security: [{ client: [] }],
           parameters: parameters(tool('get_statement')),
           responses: {
             '200': {

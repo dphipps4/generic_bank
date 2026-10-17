@@ -18,11 +18,6 @@
   ],
   "components": {
     "securitySchemes": {
-      "bearer": {
-        "type": "http",
-        "scheme": "bearer",
-        "description": "An OAuth2 access token from POST /oauth/token (or `just api-token`)."
-      },
       "client": {
         "type": "oauth2",
         "description": "The Task API's client id and secret, under Task API in secrets/credentials.txt (not a bank login); Swagger UI gets the token.",
@@ -312,9 +307,6 @@
         ],
         "security": [
           {
-            "bearer": []
-          },
-          {
             "client": []
           }
         ],
@@ -343,9 +335,6 @@
         ],
         "security": [
           {
-            "bearer": []
-          },
-          {
             "client": []
           }
         ],
@@ -364,9 +353,6 @@
           "catalog"
         ],
         "security": [
-          {
-            "bearer": []
-          },
           {
             "client": []
           }
@@ -387,9 +373,6 @@
           "tasks"
         ],
         "security": [
-          {
-            "bearer": []
-          },
           {
             "client": []
           }
@@ -526,9 +509,6 @@
           "tasks"
         ],
         "security": [
-          {
-            "bearer": []
-          },
           {
             "client": []
           }
@@ -741,9 +721,6 @@
         ],
         "security": [
           {
-            "bearer": []
-          },
-          {
             "client": []
           }
         ],
@@ -878,9 +855,6 @@
         ],
         "security": [
           {
-            "bearer": []
-          },
-          {
             "client": []
           }
         ],
@@ -981,9 +955,6 @@
           "tasks"
         ],
         "security": [
-          {
-            "bearer": []
-          },
           {
             "client": []
           }
