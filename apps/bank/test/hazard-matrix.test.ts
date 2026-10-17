@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { connectInProcess, migrate } from '../src/db.js';
-import { HAZARD_NAMES, type HazardName, hazards } from '../src/hazards.js';
+import { HAZARD_NAMES, type HazardName, hazards, scaleForRunRate } from '../src/hazards.js';
 import { accountsOf } from '../src/ledger.js';
 import { MEMBERS } from '../src/seed.js';
 import { hazardLog } from '../src/server.js';
@@ -178,5 +178,19 @@ describe('the hazard catalog', () => {
     expect(fired).toBeGreaterThan(0);
     expect(n.rows[0]!.n).toBe(fired);
     await db.close();
+  });
+});
+
+describe('scaleForRunRate', () => {
+  it('returns 0 when the rate is 0', () => {
+    expect(scaleForRunRate(0)).toBe(0);
+  });
+  it('gives about 3% at rate 3', () => {
+    const s = scaleForRunRate(3);
+    expect(s).toBeGreaterThan(1);
+    expect(s).toBeLessThan(20);
+  });
+  it('gives a higher scale at a higher rate', () => {
+    expect(scaleForRunRate(10)).toBeGreaterThan(scaleForRunRate(3));
   });
 });
