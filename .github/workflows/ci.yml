@@ -28,20 +28,25 @@ jobs:
     outputs:
       code: ${{ steps.files.outputs.code }}
       repair: ${{ steps.files.outputs.repair }}
+      appenv: ${{ steps.files.outputs.appenv }}
     steps:
       - id: files
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ github.event_name }}" != pull_request ]; then
-            echo "code=true" >> "$GITHUB_OUTPUT"; echo "repair=true" >> "$GITHUB_OUTPUT"; exit 0
+            echo "code=true" >> "$GITHUB_OUTPUT"; echo "repair=true" >> "$GITHUB_OUTPUT"
+            echo "appenv=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           files=$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" --jq '.[].filename')
           echo "$files"
           # Docs: the docs tree, Markdown and HTML anywhere, the license. Never tested.
           code=$(grep -vqE '^docs/|\.md$|\.html?$|^LICENSE$' <<< "$files" && echo true || echo false)
-          repair=$(grep -qE '^(apps/factory/|packages/drivers/|packages/screen/|tests/browser/repair\.test\.ts$)' <<< "$files" && echo true || echo false)
+          repair=$(grep -qE '^(apps/factory/|packages/drivers/|packages/screen/|tests/browser/repair\.test\.ts$|config/app\.env$)' <<< "$files" && echo true || echo false)
+          # config/app.env names the factory's models: its tests read it, and nothing else's do.
+          appenv=$(grep -qx 'config/app.env' <<< "$files" && echo true || echo false)
           echo "code=$code" >> "$GITHUB_OUTPUT"; echo "repair=$repair" >> "$GITHUB_OUTPUT"
+          echo "appenv=$appenv" >> "$GITHUB_OUTPUT"
 
   check:
     name: typecheck, lint, boundaries
@@ -94,6 +99,9 @@ jobs:
       - name: The tests this change touches
         if: github.event_name == 'pull_request'
         run: npx vitest run --changed origin/${{ github.base_ref }} --passWithNoTests --bail=1 --exclude tests/browser/repair.test.ts
+      - name: The factory's tests, which read config/app.env
+        if: github.event_name == 'pull_request' && needs.changes.outputs.appenv == 'true'
+        run: npx vitest run apps/factory/test --bail=1
       - name: The whole suite
         if: github.event_name != 'pull_request'
         run: npx vitest run --bail=1 --exclude tests/browser/repair.test.ts

@@ -27,8 +27,8 @@ export default defineConfig({
       'packages/db/prisma/**',
       'apps/memory/prisma/**',
       'seeds/**',
-      // The factory's tests read config/app.env; compose, scripts and CI are the fresh-clone check's.
-      'config/app.env',
+      // config/app.env is not here: only the factory's tests read it, and CI runs them when it
+      // changes. Compose, scripts and CI are the fresh-clone check's.
       'tests/support/**',
       'tests/fixtures/**',
     ],
