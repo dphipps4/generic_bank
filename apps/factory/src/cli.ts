@@ -93,12 +93,8 @@ async function sandboxAt(bank: string): Promise<Sandbox> {
     browser,
     forced: (names) => hazardHeader(names, cfg.HAZARD_HMAC_KEY),
     credentials: async () => credentials,
-    code: async () => {
-      const m = await get<{ body: string }[]>('/messages');
-      const code = /(\d{6})/.exec(m[0]?.body ?? '')?.[1];
-      if (!code) throw new Error('the bank has sent no code');
-      return code;
-    },
+    // The bank's own word for the teller's code: the one it sent, or its authenticator's.
+    code: async () => (await get<{ code: string }>(`/operators/${cfg.BANK_OPERATOR_ID}/code`)).code,
     ledger: async (member, account) =>
       (
         await get<{ nickname: string; availableCents: number }[]>(`/members/${member}/balances`)
