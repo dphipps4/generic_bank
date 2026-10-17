@@ -39,7 +39,6 @@ export function origins(bank: Bank, req: FastifyRequest) {
   return {
     main: `http://${name}:${main + shift}`,
     second: `http://${name}:${second + shift}`,
-    onSecond: local === second,
   };
 }
 

@@ -181,40 +181,35 @@ describe('the API describes itself, and the descriptions agree', () => {
 });
 
 describe('the registry decides which banks can do what', () => {
-  it('lists the four banks; the drivers written by hand, bank 1’s and bank 2’s balance, are promoted from the start', async () => {
+  it('lists the two banks; the drivers written by hand, bank 1’s and bank 2’s balance, are promoted from the start', async () => {
     const banks = (await get('/banks')).json();
-    expect(banks.map((b: { id: string }) => b.id)).toEqual([
-      'generic',
-      'example',
-      'sample',
-      'placeholder',
-    ]);
+    expect(banks.map((b: { id: string }) => b.id)).toEqual(['generic', 'example']);
     expect(banks[0].tasks).toEqual([
       { task: 'check-balance', crawlerVersion: 'v1' },
       { task: 'download-statements', crawlerVersion: 'v1' },
       { task: 'transfer', crawlerVersion: 'v1' },
     ]);
     expect(banks[1].tasks).toEqual([{ task: 'check-balance', crawlerVersion: 'v1' }]);
-    expect(banks.slice(2).every((b: { tasks: unknown[] }) => b.tasks.length === 0)).toBe(true);
   });
 
   it('refuses a task on a bank with no promoted crawler, naming the banks that have one', async () => {
-    await promote('sample', 'download-statements', 3);
-    expect((await get('/banks')).json()[2].tasks).toEqual([
-      { task: 'download-statements', crawlerVersion: 'v3' },
+    await promote('example', 'transfer', 3);
+    expect((await get('/banks')).json()[1].tasks).toEqual([
+      { task: 'check-balance', crawlerVersion: 'v1' },
+      { task: 'transfer', crawlerVersion: 'v3' },
     ]);
     const call = (bank: string) =>
       app.inject({
         method: 'POST',
-        url: '/tasks/check-balance',
+        url: '/tasks/download-statements',
         headers: { authorization: `Bearer ${token}` },
-        payload: { bank, memberId: '40017732', account: '7890' },
+        payload: { bank, memberId: '40017732', account: '7890', months: ['2026-01'] },
       });
-    const notYet = await call('sample');
+    const notYet = await call('example');
     expect([notYet.statusCode, notYet.json().code, notYet.json().banksThatSupportIt]).toEqual([
       404,
       'task_not_available',
-      ['generic', 'example'],
+      ['generic'],
     ]);
     const unknown = await call('nonesuch');
     expect([unknown.statusCode, unknown.json().code]).toEqual([404, 'unknown_bank']);

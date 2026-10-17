@@ -304,6 +304,8 @@ describe('a run’s lessons', () => {
 describe('intake', () => {
   it('starts no run without its knowledge pack', async () => {
     const unreachable = memoryClient({ ...memory.factory, url: 'http://127.0.0.1:9' });
+    const runs = () => db.query(`SELECT id FROM "FactoryRun" WHERE tenant = 'example'`);
+    const before = (await runs()).rows;
     await expect(
       factoryRun(
         {
@@ -322,11 +324,9 @@ describe('intake', () => {
           member: '40017732',
           memory: unreachable,
         },
-        { bank: 'sample', mode: 'build' },
+        { bank: 'example', mode: 'build' },
       ),
     ).rejects.toThrow(/^no knowledge pack, no run: /);
-    expect((await db.query(`SELECT id FROM "FactoryRun" WHERE tenant = 'sample'`)).rows).toEqual(
-      [],
-    );
+    expect((await runs()).rows).toEqual(before);
   });
 });

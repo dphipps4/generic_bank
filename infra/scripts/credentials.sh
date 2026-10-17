@@ -34,12 +34,10 @@ Console: the admin UI
   email           admin@generic-bank.local
   password        $(get CONSOLE_ADMIN_PASSWORD "$local_env")
 
-The four banks' staff sites. Sign in to any of them as ${BANK_OPERATOR_ID} or ${BANK_SUPERVISOR_ID} (passwords below);
+The two banks' staff sites. Sign in to any of them as ${BANK_OPERATOR_ID} or ${BANK_SUPERVISOR_ID} (passwords below);
 each bank names the username field its own way:
   Generic Bank (bank 1)            "Operator ID"   http://localhost:${BANK_GENERIC_PORT:-8081}/corelink/
   Example Credit Union (bank 2)    "Username"      http://localhost:${BANK_EXAMPLE_PORT:-8082}/
-  Sample Savings Bank (bank 3)     "Staff number"  http://localhost:${BANK_SAMPLE_PORT:-8083}/online/branch/
-  Placeholder Federal CU (bank 4)  "User"          http://localhost:${BANK_PLACEHOLDER_PORT:-8084}/cu/ib/
 
 Teller: who does the work
   username        ${BANK_OPERATOR_ID}
@@ -53,7 +51,7 @@ Staff inbox: where the sign-in codes arrive
   address         http://localhost:${BANK_INBOX_PORT:-8089}
 
 The banks' admin API, header Authorization: Bearer <token>
-  ports           ${BANK_GENERIC_ADMIN_PORT:-9081} to ${BANK_PLACEHOLDER_ADMIN_PORT:-9084}, banks 1 to 4
+  ports           ${BANK_GENERIC_ADMIN_PORT:-9081} and ${BANK_EXAMPLE_ADMIN_PORT:-9082}, banks 1 and 2
   token           $(get BANK_ADMIN_TOKEN "$local_env")
 
 MinIO: the evidence store

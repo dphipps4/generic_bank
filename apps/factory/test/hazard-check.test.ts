@@ -5,17 +5,17 @@ import { TargetError } from '../../../packages/screen/src/index.js';
 import { named } from '../src/hazard-check.js';
 
 const profile = {
-  words: { memberSearch: 'number or last name:', search: 'Inquire' },
-  screens: { 'console.home': 'Sample Savings Bank' },
+  words: { memberNumber: 'Member number:', search: 'Find' },
+  screens: { 'console.home': 'Example Credit Union' },
 } as never;
 
 describe('a control the driver could not find', () => {
   it('names the profile entry behind it', async () => {
     const run = named(profile, async () => {
-      throw new TargetError('none', 'button "number or last name"');
+      throw new TargetError('none', 'button "Member number"');
     });
     await expect(run).rejects.toThrow(
-      `no button "number or last name" on this screen (the profile's words.memberSearch)`,
+      `no button "Member number" on this screen (the profile's words.memberNumber)`,
     );
   });
 

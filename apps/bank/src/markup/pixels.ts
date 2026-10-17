@@ -1,7 +1,7 @@
 import { deflateSync } from 'node:zlib';
 import { hash32 } from '../rng.js';
 
-// Text drawn as images. Some banks show certain labels, buttons and headings only as pixels: the
+// Text drawn as images. Some banks show certain labels and buttons only as pixels: the
 // markup holds an <IMG> with no alt text, the image's address is an opaque id, and the image is a
 // PNG drawn here from a 5x7 pixel font. The words exist nowhere a program could read them as
 // text, so only a reader that looks at the screen can find them. Legacy sites did this with
@@ -30,7 +30,7 @@ const FONT: Record<string, number[]> = {
   ')': [8, 4, 2, 2, 2, 4, 8], '·': [0, 0, 0, 12, 12, 0, 0],
 };
 
-export type PixelStyle = 'label' | 'button' | 'heading';
+export type PixelStyle = 'label' | 'button';
 
 interface Look {
   ink: [number, number, number];
@@ -42,7 +42,6 @@ interface Look {
 const LOOKS: Record<PixelStyle, Look> = {
   label: { ink: [32, 32, 32], paper: null, scale: 2, pad: 2 },
   button: { ink: [255, 255, 255], paper: [15, 110, 110], scale: 2, pad: 6 },
-  heading: { ink: [255, 245, 230], paper: [110, 20, 35], scale: 2, pad: 4 },
 };
 
 /** The text as an RGBA PNG. Characters the font lacks are drawn as a space. */

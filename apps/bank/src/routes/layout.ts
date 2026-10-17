@@ -4,10 +4,9 @@ import { dialect } from '../markup/dialect.js';
 import { type Ctx, doc, esc, font, js, linkButton, palette } from '../markup/html.js';
 import { html } from './frame.js';
 
-// The console's shape, a tenant setting. Every shape offers the same places to go; only how they
-// are laid out differs: a nav frame, a tab strip, a tab strip with a notices frame, or a
-// drop-down menu bar with no frameset at all. After the vendor's redesign, every bank has one
-// shape: a single Menu at the top right, the notices on the left.
+// The console's shape, a tenant setting. Both shapes offer the same places to go; only how they
+// are laid out differs: a nav frame or a tab strip. After the vendor's redesign, every bank has
+// one shape: a single Menu at the top right, the notices on the left.
 
 interface NavItem {
   href: string;
@@ -51,9 +50,7 @@ function frameset(bank: Bank, o: ReturnType<typeof origins>): string {
   const body =
     bank.t.layout === 'nav'
       ? `<FRAMESET ROWS="64,*" BORDER="1">${banner}<FRAMESET COLS="170,*">${f('frame/nav', 'nav')}${f('home', 'main')}</FRAMESET></FRAMESET>`
-      : bank.t.layout === 'tabs'
-        ? `<FRAMESET ROWS="56,30,*" BORDER="0">${banner}${tabs}${f('home', 'main')}</FRAMESET>`
-        : `<FRAMESET ROWS="56,30,*" BORDER="0">${banner}${tabs}<FRAMESET COLS="*,190">${f('home', 'main')}${f('frame/notices', 'notices')}</FRAMESET></FRAMESET>`;
+      : `<FRAMESET ROWS="56,30,*" BORDER="0">${banner}${tabs}${f('home', 'main')}</FRAMESET>`;
   // The cross-origin tab strip asks for a page by message; only a page of this console is opened.
   const relay = tabsFrom
     ? `<SCRIPT>window.onmessage = function (e) { var u = String(e.data); if (e.origin === ${js(o.second)} && u.indexOf(${js(`${o.main}${base}`)}) === 0) { frames['main'].location.href = u; } };</SCRIPT>`
@@ -61,45 +58,6 @@ function frameset(bank: Bank, o: ReturnType<typeof origins>): string {
   return `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Frameset//EN">
 <HTML><HEAD><TITLE>CoreLink Branch Console - ${esc(bank.t.brand)}</TITLE>${relay}</HEAD>
 ${body}</HTML>`;
-}
-
-/** Bank 4: no frameset. A menu bar whose menus open on click, over an inline frame. */
-function menubarPage(bank: Bank, c: Ctx, operator: string): string {
-  const base = bank.t.basePath;
-  const p = palette(bank.t);
-  const d = dialect(bank.t, bank.uiVersion, 'menubar');
-  const groups: [NavItem['group'], string][] = [
-    ['members', 'Members'],
-    ['money', 'Money'],
-    ['tools', 'Tools'],
-  ];
-  const menus = groups
-    .map(([g, title]) => {
-      const items = navItems(bank)
-        .filter((i) => i.group === g)
-        .map(
-          (i) =>
-            `<A HREF="${i.href}" TARGET="main" STYLE="display:block;padding:4px 10px;color:#000;text-decoration:none">${esc(i.text)}</A>`,
-        )
-        .join('');
-      return `<TD STYLE="position:relative;padding:6px 14px;cursor:pointer" ONCLICK="CL.menu(this)">${font(c, `${esc(title)} &#9662;`, ` COLOR="${p.headText}"`)}<DIV CLASS="${d.cls('menu')}" STYLE="display:none;position:absolute;left:0;top:28px;background:#FFF;border:1px solid #999;min-width:170px;z-index:5">${items}</DIV></TD>`;
-    })
-    .join('');
-  const bar = `<TABLE WIDTH="100%" CELLPADDING="0" CELLSPACING="0" BORDER="0" BGCOLOR="${p.head}"><TR>
-<TD STYLE="padding:6px 12px">${font(c, `<B>${esc(bank.t.brand)}</B>`, ` COLOR="${p.headText}"`)}</TD>${menus}
-<TD ALIGN="right" STYLE="padding:6px 12px">${font(c, `${esc(operator)} &middot; `, ` COLOR="${p.headText}"`)}<A HREF="${base}signout" TARGET="_top">${font(c, 'Sign Out', ` COLOR="${p.headText}"`)}</A></TD></TR></TABLE>`;
-  const script = `CL.menu = function (td) {
-  var all = CL.byClass('div', ${js(d.cls('menu'))});
-  for (var i = 0; i < all.length; i++) { if (all[i].parentNode !== td) { all[i].style.display = 'none'; } }
-  var m = td.getElementsByTagName('div')[0];
-  m.style.display = m.style.display === 'none' ? 'block' : 'none';
-};`;
-  return doc(c, d, {
-    title: 'CoreLink',
-    footer: false,
-    body: `${bar}<IFRAME NAME="main" SRC="${base}home" WIDTH="100%" HEIGHT="640" FRAMEBORDER="0"></IFRAME>`,
-    script,
-  });
 }
 
 const NOTICES = [
@@ -148,8 +106,6 @@ export function layoutRoutes(app: FastifyInstance, bank: Bank) {
     if (!cur) return reply.redirect(`${base}signin`);
     if (bank.t.redesigned)
       return html(reply, refreshedPage(bank, ctxOf(bank, req), cur.operator.displayName));
-    if (bank.t.layout === 'menubar')
-      return html(reply, menubarPage(bank, ctxOf(bank, req), cur.operator.displayName));
     return html(reply, frameset(bank, origins(bank, req)));
   });
 
@@ -180,7 +136,7 @@ export function layoutRoutes(app: FastifyInstance, bank: Bank) {
     );
   });
 
-  // Banks 2 and 3: a tab strip across the top.
+  // Bank 2: a tab strip across the top.
   app.get(`${base}frame/tabs`, async (req, reply) => {
     const c = ctxOf(bank, req);
     const d = dialect(bank.t, bank.uiVersion, 'tabs');
@@ -205,20 +161,6 @@ export function layoutRoutes(app: FastifyInstance, bank: Bank) {
         title: 'Tabs',
         footer: false,
         body: `<TABLE CELLPADDING="0" CELLSPACING="0" BORDER="0" CLASS="${d.cls('tabs')}"><TR>${tabs}</TR></TABLE>`,
-      }),
-    );
-  });
-
-  // Bank 3: a notices frame on the right.
-  app.get(`${base}frame/notices`, async (req, reply) => {
-    const c = ctxOf(bank, req);
-    const d = dialect(bank.t, bank.uiVersion, 'notices');
-    return html(
-      reply,
-      doc(c, d, {
-        title: 'Notices',
-        footer: false,
-        body: `<TABLE WIDTH="100%" CELLPADDING="4" CELLSPACING="0" BORDER="0"><TR><TD BGCOLOR="${p.head}">${font(c, '<B>Notices</B>', ` COLOR="${p.headText}"`)}</TD></TR>${NOTICES.map((n) => `<TR><TD>${font(c, esc(n))}</TD></TR>`).join('')}</TABLE>`,
       }),
     );
   });

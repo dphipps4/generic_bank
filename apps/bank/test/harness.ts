@@ -1,6 +1,5 @@
 import type { FastifyInstance } from 'fastify';
 import { connectInProcess, type Db, migrate } from '../src/db.js';
-import { totp } from '../src/auth.js';
 import { type HazardName, hazards, signHazards } from '../src/hazards.js';
 import { fieldName } from '../src/markup/dialect.js';
 import { OPERATORS, seed } from '../src/seed.js';
@@ -9,7 +8,7 @@ import { redesigned, TENANTS, type TenantId } from '../src/tenants.js';
 import { MAC_CHROME } from './browser.js';
 
 // A bank on an in-process Postgres, a movable clock, and a client that keeps cookies the way a
-// browser does, sends Chrome-on-a-Mac's headers so banks 2 to 4 let it in, and fills forms by
+// browser does, sends Chrome-on-a-Mac's headers so bank 2 lets it in, and fills forms by
 // field meaning, the way only the server can.
 
 export const PASSWORDS = {
@@ -21,8 +20,6 @@ export const HMAC = 'h'.repeat(32);
 export const PORTS: Record<TenantId, { main: number; second?: number }> = {
   generic: { main: 8081 },
   example: { main: 8082, second: 8092 },
-  sample: { main: 8083 },
-  placeholder: { main: 8084, second: 8094 },
 };
 
 export interface TestBank {
@@ -206,33 +203,21 @@ export async function signIn(
   c = b.client(),
   o: { trust?: boolean } = {},
 ): Promise<Client> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    await c.get('signin');
-    await c.post('signin', { operator: OPERATORS.service.id, password: PASSWORDS.service });
-    await c.get('code'); // a bank with one channel sends the code from here
-    await c.post('code', { channel: 'text' });
-    const r = await c.post('code/enter', {
-      code: await codeFor(b, OPERATORS.service.id),
-      ...(o.trust ? { trust: '1' } : {}),
-    });
-    const handoff = new URL(r.location, 'http://x').searchParams.get('code') ?? '';
-    const done = await c.get(`auth/complete?code=${encodeURIComponent(handoff)}`);
-    // Bank 4 bounces the first hand-off of the day back to sign-in; a person just signs in again.
-    if (done.location) {
-      c.landing = done.location;
-      return c;
-    }
-  }
-  throw new Error('sign-in did not complete');
+  await c.get('signin');
+  await c.post('signin', { operator: OPERATORS.service.id, password: PASSWORDS.service });
+  await c.get('code'); // a bank with one channel sends the code from here
+  await c.post('code', { channel: 'text' });
+  const r = await c.post('code/enter', {
+    code: await codeFor(b, OPERATORS.service.id),
+    ...(o.trust ? { trust: '1' } : {}),
+  });
+  const handoff = new URL(r.location, 'http://x').searchParams.get('code') ?? '';
+  const done = await c.get(`auth/complete?code=${encodeURIComponent(handoff)}`);
+  if (!done.location) throw new Error('sign-in did not complete');
+  c.landing = done.location;
+  return c;
 }
 
-/** The code an operator would read: from their phone or email, or their authenticator app. */
-export async function codeFor(b: TestBank, operatorId: string): Promise<string> {
-  const r = await b.db.query<{ totp_secret: string | null }>(
-    'SELECT totp_secret FROM operators WHERE operator_id = $1',
-    [operatorId],
-  );
-  const t = TENANTS[b.tenant];
-  if (t.codeStyle === 'authenticator') return totp(r.rows[0]!.totp_secret!, b.clock.now);
-  return lastCodeFor(b.db, operatorId);
-}
+/** The code an operator would read from their phone or email. */
+export const codeFor = (b: TestBank, operatorId: string): Promise<string> =>
+  lastCodeFor(b.db, operatorId);

@@ -1,19 +1,15 @@
-// The four banks: one product, four configurations. Every difference between them lives here:
-// brand, labels, theme, URL base path, account wording, thresholds, code style and the seed
+// The two banks: one product, two configurations. Every difference between them lives here:
+// brand, labels, theme, URL base path, account wording, thresholds, code channels and the seed
 // that fixes each page's markup dialect. The bank shares no code with the automation that
 // drives it.
 
-export type TenantId = 'generic' | 'example' | 'sample' | 'placeholder';
-export type Theme = 'y2003' | 'teal' | 'maroon' | 'flat';
+export type TenantId = 'generic' | 'example';
+export type Theme = 'y2003' | 'teal';
 export type CodeChannel = 'text' | 'email';
-/**
- * The console's shape: a nav frame on the left (bank 1), a tab strip across the top (bank 2), the
- * tab strip plus a notices frame on the right (bank 3), or no frameset at all, a drop-down menu
- * bar over an inline frame (bank 4).
- */
-export type Layout = 'nav' | 'tabs' | 'tabs-notices' | 'menubar';
-/** What a bank serves from its second origin (another port): bank 2's tab strip, bank 4's sign-in. */
-export type SecondOrigin = 'tabs' | 'signin';
+/** The console's shape: a nav frame on the left (bank 1), or a tab strip across the top (bank 2). */
+export type Layout = 'nav' | 'tabs';
+/** What a bank serves from its second origin (another port): bank 2's tab strip. */
+export type SecondOrigin = 'tabs';
 
 export interface Labels {
   operatorId: string;
@@ -32,32 +28,11 @@ export interface Labels {
 /** The places BANK_REDESIGN renames. */
 export type Renamed = Pick<Labels, 'memberSearch' | 'transferFunds' | 'statements' | 'activity'>;
 
-/**
- * Failure modes that only some banks show, so crawling them teaches the factory something new.
- * Bank 3's six, then bank 4's six (plan, Appendix C.4).
- */
-export type Trouble =
-  | 'hidden-duplicate'
-  | 'keypress-only'
-  | 'documents-among-statements'
-  | 'view-more'
-  | 'detached-menu'
-  | 'covering-bar'
-  | 'handoff-bounce'
-  | 'silent-code-clear'
-  | 'html-statement-viewer'
-  | 'window-token'
-  | 'shuffled-tiles'
-  | 'false-notice';
-
-/** Words this bank shows only as pixels: some labels, some buttons, or every section heading. */
+/** Words this bank shows only as pixels: some labels and some buttons. */
 export interface ImageText {
   labels?: string[];
   buttons?: string[];
-  headings?: boolean;
 }
-
-export const has = (t: { trouble?: Trouble[] }, x: Trouble) => !!t.trouble?.includes(x);
 
 export interface Tenant {
   id: TenantId;
@@ -75,18 +50,7 @@ export interface Tenant {
   supervisorThresholdCents: number;
   codeChannels: CodeChannel[];
   imageText?: ImageText;
-  /** Member lookup also by last name (bank 3). */
-  searchByName?: boolean;
-  /** A "Terms updated: Acknowledge" page after every sign-in (bank 3). */
-  termsAfterSignIn?: boolean;
-  trouble?: Trouble[];
-  /** Bank 4: codes come from an authenticator app, not by text or email. */
-  codeStyle?: 'sent' | 'authenticator';
-  /** Bank 4: member search results open in a popup window. */
-  searchPopup?: boolean;
-  /** Bank 4: the transfer is split over pages: Amount, then Accounts, then Authorize. */
-  splitTransfer?: boolean;
-  /** Turns away anything not shaped like a browser with "403 Access denied" (banks 2 to 4). */
+  /** Turns away anything not shaped like a browser with "403 Access denied" (bank 2). */
   botScreen?: boolean;
   /** Fixes every page's markup dialect, so a tenant's UI is the same from run to run. */
   markupSeed: number;
@@ -174,97 +138,6 @@ export const TENANTS: Record<TenantId, Tenant> = {
       transferFunds: 'Transfers',
       statements: 'eDocs',
       activity: 'Transactions',
-    },
-  },
-  sample: {
-    id: 'sample',
-    brand: 'Sample Savings Bank',
-    version: '4.3',
-    basePath: '/online/branch/',
-    branch: 'Harbor Branch',
-    theme: 'maroon',
-    layout: 'tabs-notices',
-    labels: {
-      operatorId: 'Staff number',
-      password: 'PIN',
-      signIn: 'Enter',
-      memberSearch: 'Member Inquiry',
-      memberNumber: 'Member number',
-      search: 'Inquire',
-      transferFunds: 'Internal Transfer',
-      continue: 'Proceed',
-      submitTransfer: 'Post',
-      statements: 'Statements',
-      activity: 'Activity',
-    },
-    accountWording: (n) => `Acct ${n.slice(0, 4)}-${n.slice(4, 8)}-${n.slice(8)}`,
-    supervisorThresholdCents: 50_000,
-    codeChannels: ['text'],
-    imageText: { headings: true },
-    searchByName: true,
-    termsAfterSignIn: true,
-    trouble: [
-      'hidden-duplicate',
-      'keypress-only',
-      'documents-among-statements',
-      'view-more',
-      'detached-menu',
-      'covering-bar',
-    ],
-    botScreen: true,
-    markupSeed: 4302,
-    database: 'bank_sample',
-    redesign: {
-      memberSearch: 'Find a Member',
-      transferFunds: 'Move Funds',
-      statements: 'Account Documents',
-      activity: 'Transaction History',
-    },
-  },
-  placeholder: {
-    id: 'placeholder',
-    brand: 'Placeholder Federal Credit Union',
-    version: '4.4',
-    basePath: '/cu/ib/',
-    branch: 'Capitol Office',
-    theme: 'flat',
-    layout: 'menubar',
-    secondOrigin: 'signin',
-    labels: {
-      operatorId: 'User',
-      password: 'Password',
-      signIn: 'Continue',
-      memberSearch: 'Search',
-      memberNumber: 'Member',
-      search: 'Search',
-      transferFunds: 'Transfer',
-      continue: 'Accounts',
-      submitTransfer: 'Authorize',
-      statements: 'Documents',
-      activity: 'Activity',
-    },
-    accountWording: (n) => `··· ${last4(n)}`,
-    supervisorThresholdCents: 200_000,
-    codeChannels: ['text'],
-    codeStyle: 'authenticator',
-    searchPopup: true,
-    splitTransfer: true,
-    trouble: [
-      'handoff-bounce',
-      'silent-code-clear',
-      'html-statement-viewer',
-      'window-token',
-      'shuffled-tiles',
-      'false-notice',
-    ],
-    botScreen: true,
-    markupSeed: 4400,
-    database: 'bank_placeholder',
-    redesign: {
-      memberSearch: 'Lookup',
-      transferFunds: 'Move',
-      statements: 'Records',
-      activity: 'History',
     },
   },
 };

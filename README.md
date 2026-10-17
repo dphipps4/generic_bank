@@ -4,7 +4,7 @@ This is a take-home implementation of an API for bank websites that have no API 
 AI agent, or any other program, calls it to check a balance, transfer money (only once a person
 approves) or download statements, and a crawler does the work by operating the bank's staff screens
 the way a person would. Behind it is a software factory where AI agents study a bank they haven't
-seen, like banks 3 and 4, and write the crawler for it as plain deterministic code, so no model runs
+seen, like bank 2, and write the crawler for it as plain deterministic code, so no model runs
 when a customer's task does.
 
 Everything runs locally with docker compose, and every step is a [just](https://just.systems) recipe.
@@ -39,7 +39,7 @@ set up.
 
 ```sh
 just setup                      # once, after git clone: checks the Mac, creates secrets, builds the images
-just up                         # everything: data, memory, API, Console, crawler, all four banks, factory
+just up                         # everything: data, memory, API, Console, crawler, both banks, factory
 just open                       # Swagger UI, the Console and the staff inbox, in the browser
 just down                       # stop everything; the data stays
 just help                       # every recipe, grouped, with what each does
@@ -52,7 +52,7 @@ asks; what you paste stays hidden. The factory needs it: without it, every model
 Each factory role's model and effort are set in one place, `config/app.env`: `FACTORY_SCOUT_MODEL`
 and `FACTORY_SUPERVISOR_MODEL`, `FACTORY_SCOUT_EFFORT` and `FACTORY_SUPERVISOR_EFFORT`.
 
-`just up` starts everything: all four banks, the staff inbox, the factory and memory. From there,
+`just up` starts everything: both banks, the staff inbox, the factory and memory. From there,
 **[ACCESS.md](ACCESS.md)** lists every page, API and health check you can reach, the logins
 (`just up` writes them to `secrets/credentials.txt`), and things to try, faults included.
 
@@ -63,7 +63,7 @@ curl -i http://localhost:8082/             # HTTP/1.1 403 Forbidden ... Access d
 curl -i http://localhost:8081/corelink/    # HTTP/1.1 200 OK
 ```
 
-Banks 2 to 4 turn away anything that doesn't look like a browser, the way a real bank's bot
+Bank 2 turns away anything that doesn't look like a browser, the way a real bank's bot
 screen does. Bank 1, the 2003 site, lets it through.
 
 ## Models
