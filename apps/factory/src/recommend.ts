@@ -106,11 +106,26 @@ export function recommendTool(o: { sql: Sql; trail: Trail; runId: string; bank: 
   };
 }
 
+/** What each word is to the driver: the Supervisor names the site's word for each of these. */
+const GLOSSARY = `What each word is to the driver, which finds a control by the word claimed for it:
+- words.operatorId, words.password: the sign-in form's labels for the username and the password.
+- words.signIn: the sign-in form's button.
+- words.memberSearch: the link or button that opens member search.
+- words.memberNumber: the label of the field the member number is typed into.
+- words.search: the button that runs the search.
+- words.transfer: the way to the transfer form. words.continue: the form's button to the review page. words.submitTransfer: the review page's submit, which the factory never presses.
+- words.statements: an account's way to its statements. words.statement: a statement row's button. words.activity: an account's way to its activity.
+- words.menu: the control that opens a menu holding the places to go; claimed only when they are not on the page.
+- words.dismiss: the button that moves past a page after sign-in (screens.login.notice, or a terms page).
+- screens.<screen>: words always on that screen and on no other, such as screens.console.home for the home page after sign-in.`;
+
 const SYSTEM = `You are the Supervisor, and the Scout's run at this site has reached its goals. Draft the site's profile from the frames of the run, with the recommend tool.
 
 Each claim is one thing about the site in its own words, exactly as on screen: its word for a thing (its sign-in button, its member search, its transfer form's way to the review page, its statements), words that mark one of its screens, or its words when it refuses a transfer. Each cites the frames it rests on.
 
 Mark a claim seen only when it is on every frame it cites. Anything no frame shows, such as a refusal the site never made, is a guess: say so, and cite the frames it is inferred from. Never present a guess as seen: a person approves this profile, and a guess taken for a fact could be costly. A claim with no frame is refused.
+
+${GLOSSARY}
 
 Call recommend once with every claim. If it is refused, correct what it says and call it again.`;
 
@@ -127,6 +142,8 @@ const REPAIR = `You are the Supervisor, and the site has changed: the site's dri
 You are shown the profile as it is, why the failing run stopped and its frames there, and the frames of this run. Recommend only what changed: anything still true stays as it is and needs no claim. Each claim is one thing about the site in its own words, exactly as on screen: its new word for a thing; words.menu for a control that must be opened to reach the places to go; for a page after sign-in that must be passed, the words that mark it (screens.login.notice) and its button (words.dismiss); the words that mark its home page (screens.console.home). Each cites the frames of this run that show it.
 
 Mark a claim seen only when it is on every frame it cites. Anything no frame shows is a guess: say so, and cite the frames it is inferred from. Never present a guess as seen: a person approves this, and a guess taken for a fact could be costly. A claim with no frame is refused.
+
+${GLOSSARY}
 
 Call recommend once with every changed claim. If it is refused, correct what it says and call it again.`;
 
