@@ -15,8 +15,6 @@ local   ANSWER_SEAL_KEY          hex
 local   CONSOLE_SESSION_SECRET   hex
 local   CONSOLE_COOKIE_SECRET    hex
 local   CONSOLE_ADMIN_PASSWORD   password
-local   MINIO_ROOT_USER          hex
-local   MINIO_ROOT_PASSWORD      hex
 local   MEMORY_TOKEN_RUNNER      hex
 local   MEMORY_TOKEN_CURATOR     hex
 local   MEMORY_TOKEN_SYSTEM      hex

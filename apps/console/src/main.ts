@@ -19,7 +19,7 @@ import { journalPages } from './pages/journal.js';
 import { labPages, throughTheApi } from './pages/lab.js';
 import { recommendationPages } from './pages/recommendations.js';
 import { runPages, type Viewer } from './pages/runs.js';
-import { s3Store } from '@gb/evidence';
+import { fileStore } from '@gb/evidence';
 import { resources } from './resources.js';
 
 const cfg = loadConfig(
@@ -31,9 +31,7 @@ const cfg = loadConfig(
     CONSOLE_ADMIN_PASSWORD: z.string().min(12),
     API_TOKEN_HASH_KEY: secret(),
     CONTROL_DATABASE_URL: z.string().startsWith('postgresql://'),
-    MINIO_ENDPOINT: z.string().url().default('http://minio:9000'),
-    MINIO_ROOT_USER: z.string().min(3),
-    MINIO_ROOT_PASSWORD: secret(),
+    EVIDENCE_DIR: z.string().min(1).default('/data/evidence'),
     ANSWER_SEAL_KEY: secret(),
     HAZARDS_FORCEABLE: z.enum(['true', 'false']).default('false'),
     API_URL: z.url().default('http://api:8000'),
@@ -42,13 +40,7 @@ const cfg = loadConfig(
     BANK_INBOX_PORT: port(8089),
   },
   process.env,
-  [
-    'CONSOLE_SESSION_SECRET',
-    'CONSOLE_COOKIE_SECRET',
-    'API_TOKEN_HASH_KEY',
-    'MINIO_ROOT_PASSWORD',
-    'ANSWER_SEAL_KEY',
-  ],
+  ['CONSOLE_SESSION_SECRET', 'CONSOLE_COOKIE_SECRET', 'API_TOKEN_HASH_KEY', 'ANSWER_SEAL_KEY'],
 );
 
 const client = db();
@@ -113,12 +105,7 @@ const whoIs = (req: FastifyRequest): Viewer | null => {
 };
 runPages(app, {
   sql: control,
-  store: s3Store({
-    endpoint: cfg.MINIO_ENDPOINT,
-    bucket: 'evidence',
-    accessKey: cfg.MINIO_ROOT_USER,
-    secretKey: cfg.MINIO_ROOT_PASSWORD,
-  }),
+  store: fileStore(cfg.EVIDENCE_DIR),
   whoIs,
 });
 // A resumed run goes back to the Runner through the workflow queue, as a new workflow: one per

@@ -81,7 +81,7 @@ export async function buildServer(opts: {
   sealKey: string;
   /** Hands a new run to the Runner (the workflow queue). */
   enqueue: (runId: string) => Promise<void>;
-  /** Where the Runner keeps the statements it downloaded (MinIO). */
+  /** Where the Runner keeps the statements it downloaded (the evidence volume). */
   documents?: { get(key: string): Promise<Buffer | null> };
   logger?: boolean;
   now?: () => number;
