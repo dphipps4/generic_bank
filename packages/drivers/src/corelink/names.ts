@@ -3,7 +3,6 @@
 // come from the reviewed profile, and no name here can let a control the lists never allow
 // through: those are refused first, whatever a bank calls them.
 import type { Profile } from '../sdk.js';
-import { MORE } from './download-statements.js';
 import { MENU } from './session.js';
 
 export function controlNames(p: Pick<Profile, 'words'>): Record<string, (string | RegExp)[]> {
@@ -23,8 +22,5 @@ export function controlNames(p: Pick<Profile, 'words'>): Record<string, (string 
     Activity: w.activity,
     Continue: w.continue,
     'Submit transfer': w.submitTransfer,
-    Statements: w.statements,
-    Statement: w.statement,
-    'View more': [MORE],
   };
 }

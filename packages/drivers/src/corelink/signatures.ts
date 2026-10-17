@@ -93,18 +93,6 @@ export function signatures(p: Profile): Signature[] {
       controls: [{ name: 'Approve' }],
     },
     { id: 'transfer.posted', requires: ['Transfer posted', 'Confirmation number'] },
-    // A row's way to its statement may be a button on it, or sit in the row's drop-down menu.
-    {
-      id: 'statements',
-      requires: ['Statement Date', 'Document Type'],
-      forbids: ['Available balance'],
-    },
-    // A statement shown as a page of its own, with its own download.
-    {
-      id: 'statement.viewer',
-      requires: ['Opening balance', 'Closing balance'],
-      controls: [{ name: 'Download' }],
-    },
     { id: 'error.unavailable', requires: ['Service Unavailable'] },
     { id: 'error.fatal', requires: ['An unexpected error has occurred'] },
   ];

@@ -5,7 +5,6 @@ import { z } from 'zod';
 import {
   BankInfo,
   CODES,
-  GetStatementInput,
   GetTaskInput,
   ProblemDetails,
   TASKS,
@@ -20,7 +19,6 @@ export type Task = TaskName;
 export const TASK_SCOPE: Record<Task, TaskScope> = {
   'check-balance': 'tasks:balance',
   transfer: 'tasks:transfer',
-  'download-statements': 'tasks:statements',
 };
 
 /**
@@ -83,11 +81,6 @@ export const TASK_TOOLS: Record<Task, { tool: string; description: string }> = {
     description:
       "Requests a transfer between a member's own accounts. Never moves money until a person approves it in the Console; until then the result is needs_human. To ask again, send the same idempotencyKey: it returns the same run, never a second transfer.",
   },
-  'download-statements': {
-    tool: 'download_statements',
-    description:
-      "Fetches an account's monthly statements: one entry per month, either a reference for get_statement or the bank's own words for why it has none. Never changes anything at the bank.",
-  },
 };
 
 /** One tool: what the agent reads, the schema it fills in, and the endpoint it calls. */
@@ -119,13 +112,6 @@ const TOOLS: Tool[] = [
       "Reads a task's current result by its runId, waiting up to `wait` seconds for it to settle. Never starts a task, and never repeats one.",
     input: GetTaskInput,
     endpoint: { method: 'GET', path: '/tasks/{runId}' },
-  },
-  {
-    name: 'get_statement',
-    description:
-      "Fetches a statement a download_statements run kept, by the reference in its result: the PDF exactly as the bank sent it. Needs tasks:statements. Never contacts the bank, and never returns a statement another client's run kept.",
-    input: GetStatementInput,
-    endpoint: { method: 'GET', path: '/statements/{ref}' },
   },
 ];
 
@@ -200,13 +186,6 @@ const AGAIN = {
  */
 type Example = { summary: string; value: Record<string, unknown> };
 const demo = { memberId: '40017732' };
-/** Last month, as YYYY-MM, when the API starts: the newest month a bank has a statement for. */
-const lastMonth = () => {
-  const d = new Date();
-  d.setUTCDate(1);
-  d.setUTCMonth(d.getUTCMonth() - 1);
-  return d.toISOString().slice(0, 7);
-};
 const EXAMPLES: Record<Task, Record<string, Example>> = {
   'check-balance': {
     bank1: {
@@ -230,12 +209,6 @@ const EXAMPLES: Record<Task, Record<string, Example>> = {
         memo: 'rent',
         idempotencyKey: 'try-transfer-0001',
       },
-    },
-  },
-  'download-statements': {
-    bank1: {
-      summary: "Bank 1, Generic Bank: one month's statement",
-      value: { bank: 'generic', ...demo, account: 'Everyday Checking', months: [lastMonth()] },
     },
   },
 };
@@ -363,25 +336,6 @@ export function openapi(): Record<string, unknown> {
             '422': problemResponse('business_outcome: ' + example('business_outcome') + '.'),
             '502': problemResponse('failed, and a retry will not help.'),
             '503': problemResponse('failed, and a retry may help; see Retry-After.'),
-          },
-        },
-      },
-      '/statements/{ref}': {
-        get: {
-          ...about('get_statement'),
-          tags: ['tasks'],
-          security: [{ client: [] }],
-          parameters: parameters(tool('get_statement')),
-          responses: {
-            '200': {
-              description: 'The statement.',
-              content: { 'application/pdf': { schema: { type: 'string', format: 'binary' } } },
-            },
-            '401': problemResponse('A valid bearer access token is required.'),
-            '403': problemResponse('The client may not use tasks:statements, or this bank.'),
-            '404': problemResponse(
-              'No statement by that reference for this client: no_such_statement.',
-            ),
           },
         },
       },

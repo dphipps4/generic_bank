@@ -96,7 +96,6 @@ model TaskRun {
   steps           Step[]
   frames          TrailFrame[]
   humanTasks      HumanTask[]
-  journal         JournalEntry[]
   episodes        EpisodeOutbox[]
 
   @@unique([clientId, idempotencyKey])
@@ -174,21 +173,6 @@ model ApprovalGrant {
   nonce       String    @unique
   expiresAt   DateTime
   usedAt      DateTime?
-}
-
-model JournalEntry {
-  id      String   @id @default(cuid())
-  runId   String
-  run     TaskRun  @relation(fields: [runId], references: [id])
-  seq     Int
-  intent  String
-  action  String?
-  result  String?
-  prevHash String
-  rowHash String   @unique
-  at      DateTime @default(now())
-
-  @@unique([runId, seq])
 }
 
 /// A settled run's episode on its way to memory (plan §A.6). Each settlement is one attempt of the

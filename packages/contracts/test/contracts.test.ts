@@ -21,7 +21,7 @@ import {
 
 describe('task inputs', () => {
   it('lists the three tasks', () => {
-    expect(Object.keys(TASKS).sort()).toEqual(['check-balance', 'download-statements', 'transfer']);
+    expect(Object.keys(TASKS).sort()).toEqual(['check-balance', 'transfer']);
   });
 
   it('takes the bank as a registry id, not a fixed list', () => {

@@ -177,22 +177,23 @@ export async function prepareTransfer(
   }
 }
 
-/** What the run gives the submit: the grant check, the journal, and a person's supervisor code. */
+/** What the run gives the submit: the grant check, the intent's record, and a person's supervisor code. */
 export interface SubmitHooks {
   /**
    * Uses the run's approval grant if, and only if, it matches the review page as read now. The
    * click happens only after this says yes; it can say yes once (plan, §6 step 4).
    */
   consume(review: Review): Promise<{ ok: true } | { ok: false; reason: string }>;
-  journal(line: { intent: string; action?: string; result?: string }): Promise<void>;
+  /** Writes the press's intent into the run's trail, before the click. */
+  intend(intent: string): Promise<void>;
   /** Over the bank's threshold: the code the bank sent the supervisor, from a person. */
   supervisorCode(): Promise<string>;
   supervisorId: string;
 }
 
 /**
- * The journal's line for the submit, written before the click. A run that finds it in its journal
- * has pressed, or may have: it reads the history and never presses again (plan, §6).
+ * The submit's intent, written into the run's trail before the click. A run that finds it in its
+ * trail has pressed, or may have: it reads the history and never presses again (plan, §6).
  */
 export const pressIntent = (profile: Pick<Profile, 'words'>, memoToken: string) =>
   `press ${profile.words.submitTransfer[0]} for ${memoToken}`;
@@ -246,15 +247,13 @@ export async function submitTransfer(
           const grant = await hooks.consume(review);
           if (!grant.ok) {
             await sess.record('submit', s.screen, s.model, undefined, `refused: ${grant.reason}`);
-            await hooks.journal({ intent: 'press submit', result: `refused: ${grant.reason}` });
             return stop('escalated', 'guard_tripped', grant.reason);
           }
           // The intent is written before the click, so a crash between the two is known.
           const intent = pressIntent(ctx.profile, input.memoToken);
-          await hooks.journal({ intent });
+          await hooks.intend(intent);
           pressed = true;
           await click(page, button(s.model, w.submitTransfer));
-          await hooks.journal({ intent, action: 'pressed' });
           await sess.record('submit', s.screen, s.model, 'pressed submit, under the grant');
           break;
         }
@@ -276,13 +275,8 @@ export async function submitTransfer(
             /Confirmation number ([A-Z0-9-]+)/.exec(
               s.model.texts.map((t) => t.text).join(' '),
             )?.[1] ?? '';
-          await hooks.journal({ intent: 'read the confirmation', result: confirmation || 'none' });
           await sess.record('submit', s.screen, s.model, 'read the confirmation', 'posted');
           const found = await inHistory(sess, input);
-          await hooks.journal({
-            intent: 'find the memo token in the history',
-            result: `${found} found`,
-          });
           if (found !== 1)
             return stop('escalated', 'ambiguous_outcome', `${found} entries carry the memo token`);
           return { status: 'succeeded', data: { confirmation, seenInHistory: true } };
@@ -296,10 +290,6 @@ export async function submitTransfer(
           // account's history for the memo token instead (plan, §6).
           await sess.record('submit', s.screen, s.model, undefined, 'no confirmation');
           const found = await inHistory(sess, input);
-          await hooks.journal({
-            intent: 'find the memo token in the history',
-            result: `${found} found`,
-          });
           if (found === 1)
             return {
               status: 'succeeded',

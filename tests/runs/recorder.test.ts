@@ -128,15 +128,22 @@ describe('the recorder', () => {
 
   it('with memory stopped, the run settles as it would; its episode arrives once memory is back', async () => {
     await stopMemory();
-    // The Runner, carrying out a run no promoted driver serves, bank 2's statements: it settles
+    // The Runner, carrying out a run no promoted driver serves, a transfer at bank 2: it settles
     // before any browser opens.
     const { runId } = await createRun(
       control,
       {
-        task: 'download-statements',
+        task: 'transfer',
         bank: 'example',
         clientId: null,
-        inputs: { bank: 'example', memberId: MEMBER, account: ACCOUNT, months: ['2026-01'] },
+        inputs: {
+          bank: 'example',
+          memberId: MEMBER,
+          from: ACCOUNT,
+          to: '7255',
+          amountCents: 100,
+          idempotencyKey: 'recorder-no-crawler',
+        },
       },
       KEY,
     );

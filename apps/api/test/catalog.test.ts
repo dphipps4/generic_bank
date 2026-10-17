@@ -19,7 +19,7 @@ beforeAll(async () => {
   app = await buildServer({ oauth: o, sql: db, sealKey: SEAL, enqueue: async () => undefined });
   const c = await o.createClient({
     name: 't',
-    scopes: ['tasks:read', 'tasks:balance', 'tasks:statements', 'tasks:transfer'],
+    scopes: ['tasks:read', 'tasks:balance', 'tasks:transfer'],
     createdBy: 'a',
   });
   token = (await o.exchangeCode(c.clientId, c.clientSecret, c.code)).access_token;
@@ -100,9 +100,7 @@ describe('the API describes itself, and the descriptions agree', () => {
       'list_banks',
       'check_balance',
       'transfer',
-      'download_statements',
       'get_task',
-      'get_statement',
     ]);
   });
 
@@ -170,7 +168,7 @@ describe('the API describes itself, and the descriptions agree', () => {
       422,
       true,
     ]);
-    const none = await get('/statements/st_0000000000000000_2026-05');
+    const none = await get('/tasks/run_0000000000000000');
     expect([none.statusCode, toolResult(none.statusCode, none.json()).isError]).toEqual([
       404,
       true,
@@ -186,34 +184,41 @@ describe('the registry decides which banks can do what', () => {
     expect(banks.map((b: { id: string }) => b.id)).toEqual(['generic', 'example']);
     expect(banks[0].tasks).toEqual([
       { task: 'check-balance', crawlerVersion: 'v1' },
-      { task: 'download-statements', crawlerVersion: 'v1' },
       { task: 'transfer', crawlerVersion: 'v1' },
     ]);
     expect(banks[1].tasks).toEqual([{ task: 'check-balance', crawlerVersion: 'v1' }]);
   });
 
   it('refuses a task on a bank with no promoted crawler, naming the banks that have one', async () => {
-    await promote('example', 'transfer', 3);
-    expect((await get('/banks')).json()[1].tasks).toEqual([
-      { task: 'check-balance', crawlerVersion: 'v1' },
-      { task: 'transfer', crawlerVersion: 'v3' },
-    ]);
-    const call = (bank: string) =>
+    const call = (bank: string, key: string) =>
       app.inject({
         method: 'POST',
-        url: '/tasks/download-statements',
+        url: '/tasks/transfer',
         headers: { authorization: `Bearer ${token}` },
-        payload: { bank, memberId: '40017732', account: '7890', months: ['2026-01'] },
+        payload: {
+          bank,
+          memberId: '40017732',
+          from: '7890',
+          to: '7255',
+          amountCents: 100,
+          idempotencyKey: key,
+        },
       });
-    const notYet = await call('example');
+    const notYet = await call('example', 'catalog-no-crawler');
     expect([notYet.statusCode, notYet.json().code, notYet.json().banksThatSupportIt]).toEqual([
       404,
       'task_not_available',
       ['generic'],
     ]);
-    const unknown = await call('nonesuch');
+    const unknown = await call('nonesuch', 'catalog-unknown-bank');
     expect([unknown.statusCode, unknown.json().code]).toEqual([404, 'unknown_bank']);
-    expect((await call('generic')).statusCode).toBe(202);
+    expect((await call('generic', 'catalog-generic')).statusCode).toBe(202);
+    // Once a crawler for it is promoted, the bank lists it.
+    await promote('example', 'transfer', 3);
+    expect((await get('/banks')).json()[1].tasks).toEqual([
+      { task: 'check-balance', crawlerVersion: 'v1' },
+      { task: 'transfer', crawlerVersion: 'v3' },
+    ]);
   });
 
   it('shows a client limited to some banks only those banks', async () => {

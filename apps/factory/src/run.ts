@@ -58,7 +58,7 @@ const packText = (p: Pack) =>
 
 /** The task a factory run serves: the one the hazard check and the outcome table cover. */
 export const TASK = 'check-balance';
-const BUILD_GOALS: Goal[] = ['check-balance', 'download-statements', 'transfer'];
+const BUILD_GOALS: Goal[] = ['check-balance', 'transfer'];
 
 export async function factoryRun(
   deps: FactoryDeps,

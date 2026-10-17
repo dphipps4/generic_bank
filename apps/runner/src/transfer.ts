@@ -1,8 +1,8 @@
 // A transfer run (plan, §6): prepared up to the bank's review page, parked for a person's
 // approval while the Runner holds the browser, submitted once under the grant the approval issued,
 // and confirmed in the account's history. Where a run resumes is decided by what it wrote down: a
-// journaled press goes to the history and never to the button (§6, §A.2), and an approval
-// already asked for is waited on again, never asked twice.
+// press whose intent is in the trail goes to the history and never to the button (§6, §A.2), and
+// an approval already asked for is waited on again, never asked twice.
 import {
   countInHistory,
   type DriverContext,
@@ -21,11 +21,10 @@ import {
   approvalOf,
   awaitDecision,
   type Ending,
-  journal,
-  journaled,
   openHumanTask,
   type Review,
   type Sql,
+  stepTaken,
 } from '@gb/runs';
 
 /** A transfer run's sealed inputs: the driver's input, with the memo token the API minted. */
@@ -88,11 +87,11 @@ export async function runTransfer(r: TransferRun): Promise<Ending> {
   const input: TransferInput = { ...r.input };
   const intent = pressIntent(r.profile, input.memoToken);
   try {
-    if (await journaled(r.sql, r.runId, intent)) return await fromHistory(r, input);
+    if (await stepTaken(r.sql, r.runId, intent)) return await fromHistory(r, input);
     return await prepareAndSubmit(r, input);
   } catch (e) {
     // After the press, a failure of our own is an unclear result like any other.
-    if (await journaled(r.sql, r.runId, intent).catch(() => true)) return AMBIGUOUS;
+    if (await stepTaken(r.sql, r.runId, intent).catch(() => true)) return AMBIGUOUS;
     throw e;
   }
 }
@@ -157,7 +156,7 @@ async function prepareAndSubmit(r: TransferRun, input: TransferInput): Promise<E
       r.granted?.(g);
       return g.ok ? { ok: true } : { ok: false, reason: g.reason };
     },
-    journal: async (line) => void (await journal(r.sql, r.runId, line)),
+    intend: (intent) => r.note('submit', intent),
     supervisorCode: async () => {
       const code = await r.ask(
         'supervisor_code',
@@ -174,13 +173,13 @@ async function prepareAndSubmit(r: TransferRun, input: TransferInput): Promise<E
 
 /** A run that resumes after its press: the history decides, and the button is never pressed. */
 async function fromHistory(r: TransferRun, input: TransferInput): Promise<Ending> {
-  await r.note('resume', 'the submit was journaled before the run stopped; reading the history');
+  await r.note(
+    'resume',
+    "the submit's intent is in the trail from before the run stopped; reading the history",
+  );
   const { ctx } = await r.hold();
   const found = await countInHistory(ctx, input).catch(() => -1);
-  await journal(r.sql, r.runId, {
-    intent: 'find the memo token in the history',
-    result: `${found} found`,
-  });
+  await r.note('history', `${found} found carrying the memo token`);
   return found === 1
     ? { status: 'succeeded', data: { confirmation: input.memoToken, seenInHistory: true } }
     : AMBIGUOUS;

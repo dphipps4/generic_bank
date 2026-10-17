@@ -19,14 +19,14 @@ const REFUSALS = Object.keys(CODES.business_outcome);
 
 /** What a claim can be about: a part of a bank's profile. */
 const ABOUT = new RegExp(
-  `^(words\\.(${WORDS.join('|')})|refusals\\.(${REFUSALS.join('|')})|screens\\.[a-z_]+(\\.[a-z_]+)*|statementsKept)$`,
+  `^(words\\.(${WORDS.join('|')})|refusals\\.(${REFUSALS.join('|')})|screens\\.[a-z_]+(\\.[a-z_]+)*)$`,
 );
 
 export const Claim = z.object({
   about: z
     .string()
     .describe(
-      `The part of the profile: words.<thing> (${WORDS.join(', ')}), screens.<screen> for words that mark a screen (screens.login.signin), refusals.<code> (${REFUSALS.join(', ')}), or statementsKept`,
+      `The part of the profile: words.<thing> (${WORDS.join(', ')}), screens.<screen> for words that mark a screen (screens.login.signin), or refusals.<code> (${REFUSALS.join(', ')})`,
     ),
   value: z.string().trim().min(1).max(300).describe('The site’s own words, as they are on screen'),
   basis: z
@@ -114,14 +114,14 @@ const GLOSSARY = `What each word is to the driver, which finds a control by the 
 - words.memberNumber: the label of the field the member number is typed into.
 - words.search: the button that runs the search.
 - words.transfer: the way to the transfer form. words.continue: the form's button to the review page. words.submitTransfer: the review page's submit, which the factory never presses.
-- words.statements: an account's way to its statements. words.statement: a statement row's button. words.activity: an account's way to its activity.
+- words.activity: an account's way to its activity.
 - words.menu: the control that opens a menu holding the places to go; claimed only when they are not on the page.
 - words.dismiss: the button that moves past a page after sign-in (screens.login.notice, or a terms page).
 - screens.<screen>: words always on that screen and on no other, such as screens.console.home for the home page after sign-in.`;
 
 const SYSTEM = `You are the Supervisor, and the Scout's run at this site has reached its goals. Draft the site's profile from the frames of the run, with the recommend tool.
 
-Each claim is one thing about the site in its own words, exactly as on screen: its word for a thing (its sign-in button, its member search, its transfer form's way to the review page, its statements), words that mark one of its screens, or its words when it refuses a transfer. Each cites the frames it rests on.
+Each claim is one thing about the site in its own words, exactly as on screen: its word for a thing (its sign-in button, its member search, its transfer form's way to the review page), words that mark one of its screens, or its words when it refuses a transfer. Each cites the frames it rests on.
 
 Mark a claim seen only when it is on every frame it cites. Anything no frame shows, such as a refusal the site never made, is a guess: say so, and cite the frames it is inferred from. Never present a guess as seen: a person approves this profile, and a guess taken for a fact could be costly. A claim with no frame is refused.
 
@@ -149,7 +149,7 @@ Call recommend once with every changed claim. If it is refused, correct what it 
 
 /** What a repair starts from: the profile that serves, and where the failing run stopped. */
 export interface RepairOf {
-  profile: Pick<Profile, 'words' | 'refusals' | 'statementsKept' | 'screens'>;
+  profile: Pick<Profile, 'words' | 'refusals' | 'screens'>;
   /** The failing run's frames, in order: the last is where it stopped. */
   failing: Shown[];
   /** Why it stopped, in the driver's words: the screens closest to the last one, and what each lacked. */
@@ -181,7 +181,6 @@ export async function recommend(o: {
     words: r.profile.words,
     screens: r.profile.screens ?? {},
     refusals: r.profile.refusals,
-    statementsKept: r.profile.statementsKept,
   };
   const ask = (agent: Agent) =>
     turn(agent, {

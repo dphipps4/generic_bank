@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Readable, Writable } from 'node:stream';
-import { Cdp, CdpError, CdpTimeout, type Transport } from './cdp.js';
+import { Cdp, CdpError, type Transport } from './cdp.js';
 import { clientHints, type Identity, identityCommands, MAC, macChrome } from './identity.js';
 
 /** Where Chrome is: CHROME_PATH, `just browser`'s install, or the Runner image's Debian chromium. */
@@ -243,14 +243,6 @@ export interface FrameSession {
   url: string;
 }
 
-/** A document a new window received, exactly as the server sent it. */
-export interface OpenedDocument {
-  url: string;
-  status: number;
-  contentType: string;
-  body: Buffer;
-}
-
 export class Page {
   /** Sessions of frames from other origins, by their target id. */
   readonly frames = new Map<string, FrameSession>();
@@ -262,8 +254,6 @@ export class Page {
   /** Requests refused because their host is not allowed: host and path, never the query. */
   readonly refused: { host: string; path: string; document: boolean }[] = [];
   private offs: (() => void)[] = [];
-  /** The page that opened this window; null for a page of its own. */
-  opener: Page | null = null;
 
   constructor(
     readonly cdp: Cdp,
@@ -381,82 +371,6 @@ export class Page {
     await this.prepare(this.sessionId, kind, { extra: guard, resume });
   }
 
-  /**
-   * The window an action opens (a page of search results), as a page of its own to read and act
-   * on. The window is caught before its first request and given this page's identity, so it is
-   * the same browser to the bank. The caller closes it when done, if the window has not closed
-   * itself.
-   */
-  async openedWindow(action: () => Promise<unknown>, timeoutMs = 30_000): Promise<Page> {
-    const cdp = this.cdp;
-    let off = () => {};
-    const caught = new Promise<Page>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new CdpTimeout('a new window', timeoutMs)), timeoutMs);
-      let taken: string | null = null;
-      off = cdp.on((e) => {
-        if (e.method !== 'Target.attachedToTarget' || e.sessionId) return;
-        const info = e.params.targetInfo as { targetId: string; openerId?: string };
-        const sessionId = e.params.sessionId as string;
-        const go = (s: string) => cdp.call('Runtime.runIfWaitingForDebugger', {}, { sessionId: s });
-        // The window's own session, attached below, is announced too: it is kept.
-        if (taken === info.targetId) return;
-        const ours =
-          info.openerId === this.targetId || (!!info.openerId && this.frames.has(info.openerId));
-        if (!ours || taken || e.params.waitingForDebugger !== true) {
-          // Any other page, this one included: let it go on, and let go of it.
-          void go(sessionId)
-            .catch(() => undefined)
-            .then(() => cdp.call('Target.detachFromTarget', { sessionId }))
-            .catch(() => undefined);
-          return;
-        }
-        taken = info.targetId;
-        // A session of its own: the one it was caught by ends when catching stops.
-        void cdp
-          .call<{ sessionId: string }>('Target.attachToTarget', {
-            targetId: info.targetId,
-            flatten: true,
-          })
-          .then(async ({ sessionId: own }) => {
-            const w = new Page(cdp, info.targetId, own, this.options, this.identity);
-            w.opener = this;
-            await w.init('window', () => go(sessionId));
-            return w;
-          })
-          .then(
-            (w) => {
-              clearTimeout(timer);
-              resolve(w);
-            },
-            (err: Error) => {
-              clearTimeout(timer);
-              reject(err);
-            },
-          );
-      });
-    });
-    caught.catch(() => undefined);
-    await cdp.call('Target.setAutoAttach', {
-      autoAttach: true,
-      waitForDebuggerOnStart: true,
-      flatten: true,
-      filter: [{ type: 'page' }],
-    });
-    try {
-      await action();
-      return await caught;
-    } finally {
-      off();
-      await cdp
-        .call('Target.setAutoAttach', {
-          autoAttach: false,
-          waitForDebuggerOnStart: false,
-          flatten: true,
-        })
-        .catch(() => undefined);
-    }
-  }
-
   /** What every session needs: page events, the layout domains, auto-attach, extra headers. */
   private async prepare(
     sessionId: string,
@@ -473,7 +387,7 @@ export class Page {
       if (kind === 'frame' && method === 'Emulation.setDeviceMetricsOverride') continue;
       commands.push([method, params as Record<string, unknown>]);
     }
-    // A window this page opened has its own interception (openedDocument).
+    // A window this page opened has its own interception.
     if (this.options.hosts && kind !== 'window')
       commands.push(['Fetch.enable', { patterns: [{ urlPattern: '*', requestStage: 'Request' }] }]);
     commands.push(
@@ -535,164 +449,6 @@ export class Page {
     return false;
   }
 
-  /**
-   * The document an action opens in a new window (a statement's PDF), as the server sent it. The
-   * window is caught before its first request, given this page's identity, and read at the network
-   * layer when its response arrives; then it is closed. Nothing runs in it, and it is never asked
-   * for the document a second time. With `orNavigation`, an action that navigates this page
-   * instead, and opens no window, answers null: the document is then on its way to this page.
-   */
-  async openedDocument(action: () => Promise<unknown>, timeoutMs?: number): Promise<OpenedDocument>;
-  async openedDocument(
-    action: () => Promise<unknown>,
-    timeoutMs: number,
-    o: { orNavigation: true },
-  ): Promise<OpenedDocument | null>;
-  async openedDocument(
-    action: () => Promise<unknown>,
-    timeoutMs = 30_000,
-    o: { orNavigation?: boolean } = {},
-  ): Promise<OpenedDocument | null> {
-    const cdp = this.cdp;
-    let popup: { sessionId: string; targetId: string } | null = null;
-    let off = () => {};
-    let timer: NodeJS.Timeout | undefined;
-    const caught = new Promise<OpenedDocument>((resolve, reject) => {
-      timer = setTimeout(
-        () => reject(new CdpTimeout('a document in a new window', timeoutMs)),
-        timeoutMs,
-      );
-      const done = (f: () => void) => {
-        clearTimeout(timer);
-        f();
-      };
-      off = cdp.on((e) => {
-        if (e.method === 'Target.attachedToTarget' && !e.sessionId) {
-          const info = e.params.targetInfo as { targetId: string; openerId?: string };
-          const sessionId = e.params.sessionId as string;
-          const go = (s: string) =>
-            cdp.call('Runtime.runIfWaitingForDebugger', {}, { sessionId: s });
-          // Only a window opened now is the one: a window still open from before is not.
-          if (info.openerId !== this.targetId || popup || e.params.waitingForDebugger !== true) {
-            // Any other page, this one included: let it go on, and let go of it.
-            void go(sessionId)
-              .catch(() => undefined)
-              .then(() => cdp.call('Target.detachFromTarget', { sessionId }))
-              .catch(() => undefined);
-            return;
-          }
-          popup = { sessionId, targetId: info.targetId };
-          const caughtAt = [
-            { urlPattern: '*', resourceType: 'Document', requestStage: 'Response' },
-          ];
-          void this.prepare(sessionId, 'window', {
-            extra: [['Fetch.enable', { patterns: caughtAt }]],
-            resume: () => go(sessionId),
-          }).catch((err: Error) => done(() => reject(err)));
-          return;
-        }
-        if (e.method !== 'Fetch.requestPaused' || !popup || e.sessionId !== popup.sessionId) return;
-        const p = e.params as {
-          requestId: string;
-          request: { url: string };
-          responseStatusCode?: number;
-          responseHeaders?: { name: string; value: string }[];
-          responseErrorReason?: string;
-        };
-        const sessionId = popup.sessionId;
-        const status = p.responseStatusCode ?? 0;
-        if (status >= 300 && status < 400) {
-          void cdp
-            .call('Fetch.continueRequest', { requestId: p.requestId }, { sessionId })
-            .catch(() => undefined);
-          return;
-        }
-        void (async () => {
-          if (p.responseErrorReason || !status)
-            throw new Error(`the new window's request failed: ${p.responseErrorReason ?? ''}`);
-          const r = await cdp.call<{ body: string; base64Encoded: boolean }>(
-            'Fetch.getResponseBody',
-            { requestId: p.requestId },
-            { sessionId, timeoutMs },
-          );
-          const contentType =
-            p.responseHeaders?.find((h) => h.name.toLowerCase() === 'content-type')?.value ?? '';
-          // The window has nothing more to do with it.
-          await cdp
-            .call(
-              'Fetch.failRequest',
-              { requestId: p.requestId, errorReason: 'Aborted' },
-              { sessionId },
-            )
-            .catch(() => undefined);
-          done(() =>
-            resolve({
-              url: p.request.url,
-              status,
-              contentType,
-              body: Buffer.from(r.body, r.base64Encoded ? 'base64' : 'utf8'),
-            }),
-          );
-        })().catch((err: Error) => done(() => reject(err)));
-      });
-    });
-    caught.catch(() => undefined);
-    // Pages are caught paused only while the action runs.
-    await cdp.call('Target.setAutoAttach', {
-      autoAttach: true,
-      waitForDebuggerOnStart: true,
-      flatten: true,
-      filter: [{ type: 'page' }],
-    });
-    const since = Date.now();
-    let over = false;
-    try {
-      await action();
-      if (!o.orNavigation) return await caught;
-      // A window is announced as the action opens it; a page that navigates instead, with no window
-      // a moment later, has its document coming to it.
-      const navigated = (async () => {
-        while (!over) {
-          if (popup) return caught;
-          const at = this.lastNavigationRequest;
-          if (at >= since && Date.now() - at > 1500) return null;
-          if (Date.now() - since > timeoutMs) return caught;
-          await new Promise((r) => setTimeout(r, 50));
-        }
-        return null;
-      })();
-      return await Promise.race([caught, navigated]);
-    } finally {
-      over = true;
-      clearTimeout(timer);
-      off();
-      await cdp
-        .call('Target.setAutoAttach', {
-          autoAttach: false,
-          waitForDebuggerOnStart: false,
-          flatten: true,
-        })
-        .catch(() => undefined);
-      const p = popup as { targetId: string } | null;
-      if (p) await this.closeWindow(p.targetId);
-    }
-  }
-
-  /**
-   * Closes a window and waits until it is gone: a page opening a window by the same name while the
-   * old one is still closing would load into the old one.
-   */
-  private async closeWindow(targetId: string) {
-    await this.cdp.call('Target.closeTarget', { targetId }).catch(() => undefined);
-    for (let i = 0; i < 50; i++) {
-      const { targetInfos } = await this.cdp
-        .call<{ targetInfos: { targetId: string }[] }>('Target.getTargets')
-        .catch(() => ({ targetInfos: [] }));
-      if (!targetInfos.some((t) => t.targetId === targetId)) return;
-      await new Promise((r) => setTimeout(r, 100));
-    }
-  }
-
   /** Answers the open dialog: accept (OK) or dismiss (Cancel). */
   async answerDialog(accept: boolean) {
     const d = this.dialog;
@@ -724,14 +480,6 @@ export class Page {
       },
     });
     return Buffer.from(r.data, 'base64');
-  }
-
-  /** Whether this page is still open: a window a page opened may close itself. */
-  async isOpen(): Promise<boolean> {
-    const { targetInfos } = await this.cdp
-      .call<{ targetInfos: { targetId: string }[] }>('Target.getTargets')
-      .catch(() => ({ targetInfos: [] }));
-    return targetInfos.some((t) => t.targetId === this.targetId);
   }
 
   async close() {

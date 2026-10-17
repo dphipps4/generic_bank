@@ -56,12 +56,6 @@ vi.mock('../../packages/screen/src/model.js', async (original) => {
 const BANKS = ['generic'] as const;
 const SEAL = 'k'.repeat(40);
 const ANSWER_KEY = 'q'.repeat(40);
-const lastMonth = () => {
-  const d = new Date();
-  d.setUTCDate(1);
-  d.setUTCMonth(d.getUTCMonth() - 1);
-  return d.toISOString().slice(0, 7);
-};
 
 /** Inputs for each task: the demo member, so the runs meet a name, balances and account numbers. */
 const CASES: Record<TaskName, (b: LiveBank) => Promise<Record<string, unknown>[]>> = {
@@ -86,17 +80,6 @@ const CASES: Record<TaskName, (b: LiveBank) => Promise<Record<string, unknown>[]
         amountCents: 2_500,
         memo: 'pii suite',
         idempotencyKey: `pii-suite-${b.id}-${Date.now()}`,
-      },
-    ];
-  },
-  'download-statements': async (b) => {
-    const demo = await accountsOf(b.db, MEMBERS.demo);
-    return [
-      {
-        bank: b.id,
-        memberId: MEMBERS.demo,
-        account: demo.find((a) => a.type === 'checking')!.number.slice(-4),
-        months: [lastMonth()],
       },
     ];
   },
@@ -171,7 +154,7 @@ beforeAll(async () => {
 
   const client = await o.createClient({
     name: 'pii suite',
-    scopes: ['tasks:read', 'tasks:balance', 'tasks:transfer', 'tasks:statements'],
+    scopes: ['tasks:read', 'tasks:balance', 'tasks:transfer'],
     createdBy: 'the pii suite',
   });
   const token = (await o.exchangeCode(client.clientId, client.clientSecret, client.code))

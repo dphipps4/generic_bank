@@ -40,8 +40,7 @@
             "type": "string",
             "enum": [
               "check-balance",
-              "transfer",
-              "download-statements"
+              "transfer"
             ]
           },
           "status": {
@@ -115,41 +114,6 @@
                 "required": [
                   "confirmation",
                   "seenInHistory"
-                ],
-                "additionalProperties": false
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "months": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "month": {
-                          "type": "string"
-                        },
-                        "statement": {
-                          "description": "A stored statement reference, or null.",
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "note": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "month",
-                        "statement"
-                      ],
-                      "additionalProperties": false
-                    }
-                  }
-                },
-                "required": [
-                  "months"
                 ],
                 "additionalProperties": false
               }
@@ -271,8 +235,7 @@
                   "type": "string",
                   "enum": [
                     "check-balance",
-                    "transfer",
-                    "download-statements"
+                    "transfer"
                   ]
                 },
                 "crawlerVersion": {
@@ -704,140 +667,6 @@
         }
       }
     },
-    "/tasks/download-statements": {
-      "post": {
-        "operationId": "download_statements",
-        "summary": "Fetches an account's monthly statements: one entry per month, either a reference for get_statement or the bank's own words for why it has none. Never changes anything at the bank.",
-        "tags": [
-          "tasks"
-        ],
-        "security": [
-          {
-            "client": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "bank": {
-                    "type": "string",
-                    "pattern": "^[a-z][a-z0-9-]{1,30}$",
-                    "description": "The bank, by its id from GET /banks."
-                  },
-                  "memberId": {
-                    "type": "string",
-                    "pattern": "^\\d{6,10}$",
-                    "description": "The bank's member number, exactly as a member-services employee would type it."
-                  },
-                  "account": {
-                    "type": "string",
-                    "minLength": 2,
-                    "maxLength": 40,
-                    "description": "The account's last four digits, or its nickname as the bank shows it."
-                  },
-                  "months": {
-                    "minItems": 1,
-                    "maxItems": 24,
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}$"
-                    },
-                    "description": "Months as YYYY-MM."
-                  }
-                },
-                "required": [
-                  "bank",
-                  "memberId",
-                  "account",
-                  "months"
-                ],
-                "additionalProperties": false
-              },
-              "examples": {
-                "bank1": {
-                  "summary": "Bank 1, Generic Bank: one month's statement",
-                  "value": {
-                    "bank": "generic",
-                    "memberId": "40017732",
-                    "account": "Everyday Checking",
-                    "months": [
-                      "2026-09"
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "202": {
-            "description": "Accepted: running, or waiting on a person (`pending` names the kind of answer and its deadline). Location names the run.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TaskResult"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The input did not match the schema; the field that failed is named.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "A valid bearer access token is required.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "insufficient_scope: the client lacks tasks:statements, or may not use this bank.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No such bank, or no promoted crawler serves this task on it.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too many requests; see Retry-After.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/tasks/{runId}": {
       "get": {
         "operationId": "get_task",
@@ -928,75 +757,6 @@
           },
           "503": {
             "description": "failed, and a retry may help; see Retry-After.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/statements/{ref}": {
-      "get": {
-        "operationId": "get_statement",
-        "summary": "Fetches a statement a download_statements run kept, by the reference in its result: the PDF exactly as the bank sent it. Needs tasks:statements. Never contacts the bank, and never returns a statement another client's run kept.",
-        "tags": [
-          "tasks"
-        ],
-        "security": [
-          {
-            "client": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "ref",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^st_([0-9a-f]{16})_(\\d{4}-(?:0[1-9]|1[0-2]))$",
-              "description": "A statement reference from a download_statements result."
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The statement.",
-            "content": {
-              "application/pdf": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "A valid bearer access token is required.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The client may not use tasks:statements, or this bank.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No statement by that reference for this client: no_such_statement.",
             "content": {
               "application/problem+json": {
                 "schema": {

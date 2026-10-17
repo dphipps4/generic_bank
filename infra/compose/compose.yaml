@@ -118,7 +118,6 @@ services:
     mem_limit: 192m
     env_file: [../../config/app.env, ../../.run/env/api.env]
     ports: ['127.0.0.1:${API_PORT}:8000']
-    volumes: ['evidence:/data/evidence:ro']
     networks: [app]
     depends_on: { postgres: { condition: service_healthy } }
     healthcheck:

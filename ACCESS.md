@@ -20,7 +20,7 @@ below.
 | Console runs, with each run's frames | http://localhost:8080/runs | the same |
 | Hazard lab | http://localhost:8080/lab | the same |
 | Recommendations (the factory's drafts) | http://localhost:8080/recommendations | the same |
-| Journal, Freezes | http://localhost:8080/journal, http://localhost:8080/freezes | the same |
+| Freezes | http://localhost:8080/freezes | the same |
 | Database tables (AdminJS) | http://localhost:8080/admin | the same |
 | Task API, Swagger UI | http://localhost:8000/docs | press Authorize, enter the local client's id and secret (secrets/credentials.txt) |
 | API reference, static | http://localhost:8099 | none (`just api-docs` serves it) |
@@ -196,14 +196,4 @@ again and you get the same run back, never a second transfer:
 curl -s -X POST http://localhost:8000/tasks/transfer \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"bank":"generic","memberId":"40017732","from":"Everyday Checking","to":"Rainy Day Savings","amountCents":2500,"memo":"rent","idempotencyKey":"try-transfer-0001"}'
-```
-
-Statements, for last month. The result names each month's document in its `statement` field;
-fetch it:
-
-```sh
-curl -s -X POST http://localhost:8000/tasks/download-statements \
-  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{"bank":"generic","memberId":"40017732","account":"Everyday Checking","months":["<YYYY-MM>"]}'
-curl -s -o statement.pdf http://localhost:8000/statements/<statement> -H "Authorization: Bearer $TOKEN"
 ```

@@ -11,7 +11,6 @@ import {
   type Box,
   choose,
   click,
-  CdpTimeout,
   type Control,
   type KnownPicture,
   namePictures,
@@ -67,9 +66,6 @@ const CODE_SENT =
 // An offer to send another code: one was sent, though a site that draws its words says so in a picture.
 const RESENT = /\bnew code\b|\bresend\b|\bsend (it |the code )?again\b/i;
 
-// A click that opens a window opens it at once; most clicks open none, and wait this long to say so.
-const WINDOW_MS = 1_500;
-
 const ref = z
   .string()
   .regex(/^c\d{1,4}$/)
@@ -107,8 +103,7 @@ function view(f: Seen, m: ScreenModel, mask: (s: string) => string) {
 
 export function scout(deps: ScoutDeps) {
   const { trail } = deps;
-  // The page the Scout is on: the console's, or a window a click opened from it.
-  let page = deps.page;
+  const page = deps.page;
   const known = trail.policy.known;
   known.push(deps.credentials.operatorId, deps.credentials.password);
   let last: ScreenModel | null = null;
@@ -189,37 +184,8 @@ export function scout(deps: ScoutDeps) {
           throw new ToolRefusal(
             `${c.ref} is a picture no one has named, and an unnamed picture is never clicked`,
           );
-        const from = page;
-        const opened = await from
-          .openedWindow(() => click(from, c), WINDOW_MS)
-          .catch((e) => {
-            if (e instanceof CdpTimeout) return null;
-            throw e;
-          });
-        if (opened) {
-          page = opened;
-          return see('click', `clicked the ${c.role} ${c.ref}; it opened a window, shown here`);
-        }
-        if (from.opener && !(await from.isOpen())) {
-          page = from.opener;
-          return see(
-            'click',
-            `clicked the ${c.role} ${c.ref}; the window closed, and this is the page that opened it`,
-          );
-        }
+        await click(page, c);
         return see('click', `clicked the ${c.role} ${c.ref}`);
-      },
-    },
-    browser_close_window: {
-      description:
-        'Closes the window a click opened, and goes back to the page that opened it. Use it when the window is done with.',
-      input: z.object({}),
-      async run() {
-        const w = page;
-        if (!w.opener) throw new ToolRefusal('this is not a window a click opened');
-        page = w.opener;
-        await w.close();
-        return see('close', 'closed the window; this is the page that opened it');
       },
     },
     browser_type: {

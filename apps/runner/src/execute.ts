@@ -1,13 +1,7 @@
 // One task run, carried out: a browser held for the run, the bank's driver, every step recorded and
 // every frame masked before it is stored, a person asked when only a person can answer, and exactly
 // one result.
-import {
-  type BalanceInput,
-  checkBalance,
-  type DriverContext,
-  downloadStatements,
-  type StepRecord,
-} from '@gb/drivers';
+import { type BalanceInput, checkBalance, type DriverContext, type StepRecord } from '@gb/drivers';
 import { type FrameStore, frameOf } from '@gb/evidence';
 import {
   addFrame,
@@ -35,7 +29,6 @@ import {
 } from '@gb/screen';
 import { JOBS } from '@gb/guardrails';
 import { runGuard } from './guard.js';
-import { keepStatements } from './statements.js';
 import { runTransfer, type TransferTask } from './transfer.js';
 
 export interface RunDeps {
@@ -204,16 +197,7 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
             deadline,
             ...(deps.pollMs ? { pollMs: deps.pollMs } : {}),
           })
-        : run.task === 'download-statements'
-          ? await keepStatements(
-              runId,
-              await downloadStatements((await hold()).ctx, {
-                ...(input as unknown as BalanceInput),
-                months: (input.months as string[] | undefined) ?? [],
-              }),
-              deps.store,
-            )
-          : await balance((await hold()).ctx, input as unknown as BalanceInput);
+        : await balance((await hold()).ctx, input as unknown as BalanceInput);
   } catch (e) {
     // Our own failures are ours to say: the bank too slow, a screen we could not act on, or
     // something we did not expect, which a person should look at.

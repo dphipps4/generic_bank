@@ -8,7 +8,6 @@ export const TOOLS: Readonly<Record<Role, readonly string[]>> = {
     'browser_open',
     'browser_look',
     'browser_click',
-    'browser_close_window',
     'browser_type',
     'browser_choose',
     'browser_press',

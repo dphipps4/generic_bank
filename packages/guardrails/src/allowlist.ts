@@ -59,11 +59,7 @@ export class GuardError extends Error {
 /** The screen an entry names when it holds on every screen, an unknown one too. */
 export const ANY = 'any';
 
-export const JOBS = [
-  'check-balance',
-  'download-statements',
-  'transfer',
-] as const satisfies readonly TaskName[];
+export const JOBS = ['check-balance', 'transfer'] as const satisfies readonly TaskName[];
 
 const dir = join(import.meta.dirname, '../allowlists');
 

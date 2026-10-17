@@ -9,12 +9,7 @@ export interface Sql {
   query<R = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<{ rows: R[] }>;
 }
 
-export const TASK_SCOPES = [
-  'tasks:read',
-  'tasks:balance',
-  'tasks:statements',
-  'tasks:transfer',
-] as const;
+export const TASK_SCOPES = ['tasks:read', 'tasks:balance', 'tasks:transfer'] as const;
 export type TaskScope = (typeof TASK_SCOPES)[number];
 
 /** A task scope, or `bank:<id>` to limit a client to named banks. */

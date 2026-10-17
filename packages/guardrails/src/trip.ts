@@ -1,7 +1,6 @@
-// A guard trip (plan, §9): the bank is frozen until a person clears it on the Freezes page, the
-// run ends escalated: guard_tripped, and the journal records why. The freeze is written here; the
-// journal line and the ending are returned for the Runner, which owns the run's journal and its
-// result.
+// A guard trip (plan, §9): the bank is frozen until a person clears it on the Freezes page, and the
+// run ends escalated: guard_tripped. The freeze is written here; the ending is returned for the
+// Runner, which owns the run's result.
 import { randomBytes } from 'node:crypto';
 import type { Sql } from './grants.js';
 
@@ -14,8 +13,6 @@ export interface Trip {
 
 export interface Tripped {
   freezeId: string;
-  /** For the run's journal, in the journal's own shape. */
-  line: { intent: string; action: string; result: string };
   ending: { status: 'escalated'; code: 'guard_tripped' };
 }
 
@@ -27,11 +24,6 @@ export async function tripGuard(sql: Sql, t: Trip, now = new Date()): Promise<Tr
   );
   return {
     freezeId,
-    line: {
-      intent: `stop: the ${t.layer} guard refused (${t.rule})`,
-      action: `froze ${t.bank}`,
-      result: 'escalated: guard_tripped',
-    },
     ending: { status: 'escalated', code: 'guard_tripped' },
   };
 }
