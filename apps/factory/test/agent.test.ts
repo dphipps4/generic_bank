@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { controlDb } from '../../../packages/oauth/test/control.js';
-import { type Agent, turn } from '../src/agent.js';
+import { type Agent, turn, unwrapped } from '../src/agent.js';
 import { gateway } from '../src/gateway.js';
 import { sqlLedger } from '../src/ledger.js';
 import { PRICES, type Provider } from '../src/models.js';
@@ -120,5 +120,16 @@ describe.each([DEFAULT_ROLES.scout.provider] as const)('a turn on %s', (provider
     await expect(
       turn(agent(), { system: 'You echo.', say: 'Break.', tools: [echo], maxTokens: 1000 }),
     ).rejects.toThrow('the browser is gone');
+  });
+});
+
+describe('an answer a model fenced or listed', () => {
+  it('is read as the answer inside', () => {
+    const a = '{"next":"wait","reason":"loading","frames":["f1"]}';
+    expect(unwrapped(a)).toBe(a);
+    expect(unwrapped(`\`\`\`json\n${a}\n\`\`\``)).toBe(a);
+    expect(unwrapped(` \`\`\`\n[${a}]\n\`\`\` `)).toBe(a);
+    expect(unwrapped(`[${a},${a}]`)).toBe(`[${a},${a}]`);
+    expect(unwrapped('not an answer')).toBe('not an answer');
   });
 });

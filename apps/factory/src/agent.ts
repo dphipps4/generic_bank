@@ -102,6 +102,18 @@ function modelOf(a: Agent): Model<Api> {
   } as Model<Api>;
 }
 
+/** Some models fence an answer as code or wrap it in a one-item list, schema or not; the answer is inside. */
+export function unwrapped(text: string): string {
+  const t = text.trim();
+  const inner = /^```(?:json)?\s*([\s\S]*?)\s*```$/.exec(t)?.[1] ?? t;
+  try {
+    const v: unknown = JSON.parse(inner);
+    return Array.isArray(v) && v.length === 1 ? JSON.stringify(v[0]) : inner;
+  } catch {
+    return inner;
+  }
+}
+
 /** The answer's schema in the request, in the provider's own form. */
 function withAnswer(api: keyof typeof API, schema: Record<string, unknown>) {
   return (payload: unknown) => {
@@ -194,8 +206,9 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
         ]
       : [],
   );
+  const text = last.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n');
   return {
-    text: last.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'),
+    text: i.answer ? unwrapped(text) : text,
     conversation: [...messages],
     refused,
   };
