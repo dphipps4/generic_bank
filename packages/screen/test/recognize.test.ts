@@ -72,6 +72,19 @@ describe('recognizing screens', () => {
     });
   });
 
+  it('puts first the screen whose checks the page mostly meets, not one it fails outright', () => {
+    const sigs = [
+      { id: 'login.error', requires: ['do not match'] },
+      {
+        id: 'console.home',
+        requires: ['to begin', 'Branch Console'],
+        controls: [{ name: 'Menu' }],
+      },
+    ];
+    const m = model([text('Use Member Inquiry to begin.', 5)], [control('link', 'Menu', 20)]);
+    expect(recognize(m, sigs).closest.map((c) => c.id)).toEqual(['console.home', 'login.error']);
+  });
+
   it('reads business outcomes as screens', () => {
     expect(recognize(model([text('No member found with that number.', 5)], []), SIGS).screen).toBe(
       'error.no_member',
