@@ -9,6 +9,7 @@ import type { Frame } from '@gb/runtime';
 const MAX_FRAMES = 60;
 
 export interface Trail {
+  readonly runId: string;
   /** Values masked wherever they appear; the runtime masks each frame by them as it is taken. */
   readonly known: string[];
   /** Records a step and, for a page, its frame (masked already); returns the frame's reference. */
@@ -60,6 +61,7 @@ export async function openTrail(o: {
   let since = Date.now();
 
   return {
+    runId,
     known: o.known,
     async step(s, frame) {
       stepSeq++;
@@ -118,6 +120,24 @@ async function shownAt(sql: Sql, store: FrameStore, runId: string, seq: number) 
       .map(leaf)
       .filter((t): t is string => !!t),
   } satisfies Shown;
+}
+
+/** A stored frame of any run, picture and words, as masked when it was kept; null if there is none. */
+export async function frameAt(
+  sql: Sql,
+  store: FrameStore,
+  runId: string,
+  seq: number,
+): Promise<{ shown: Shown; picture: Buffer | null } | null> {
+  const shown = await shownAt(sql, store, runId, seq);
+  if (!shown) return null;
+  const k = (
+    await sql.query<{ key: string | null }>(
+      `SELECT "imageKey" AS key FROM "TrailFrame" WHERE "runId" = $1 AND seq = $2`,
+      [runId, seq],
+    )
+  ).rows[0]?.key;
+  return { shown, picture: (k && (await store.get(k))) || null };
 }
 
 /** Every stored frame of a run, in order: what a repair is shown of the run that failed. */
