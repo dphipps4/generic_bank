@@ -362,6 +362,15 @@ export async function addStep(
   );
 }
 
+/** Whether a run's trail holds a step with this action: what a resumed run reads before acting. */
+export async function stepTaken(sql: Sql, runId: string, action: string): Promise<boolean> {
+  const r = await sql.query('SELECT 1 FROM "Step" WHERE "runId" = $1 AND action = $2 LIMIT 1', [
+    runId,
+    action,
+  ]);
+  return r.rows.length > 0;
+}
+
 /** Where a run's trail ends so far: a run that resumes after a crash carries on from there. */
 export async function trailEnd(sql: Sql, runId: string): Promise<{ step: number; frame: number }> {
   const r = await sql.query<{ step: number | null; frame: number | null }>(
@@ -783,13 +792,4 @@ export async function approvalOf(
 }
 
 export { forcedHazardsOf, HAZARD_HEADER, hazardHeader } from './hazards.js';
-export {
-  hashOf,
-  journal,
-  journaled,
-  type JournalLine,
-  type Verdict,
-  verifyJournal,
-} from './journal.js';
-export { statementKey, statementOf, statementRef } from './statements.js';
 export { closeRepairCase, driverFault, openRepairCase, profileOf, serving } from './registry.js';

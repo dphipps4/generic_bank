@@ -1,29 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { distance, MAX_DISTANCE, type ScreenModel, type Text } from '@gb/screen';
+import { distance, MAX_DISTANCE } from '@gb/screen';
 import { lastFour } from '../src/corelink/check-balance.js';
-import { statementRow } from '../src/corelink/download-statements.js';
 import { GENERIC_BANK, PROFILES } from '../src/corelink/profiles.js';
 import { isAccount } from '../src/corelink/transfer.js';
 
 // The hand-written profiles, and the pure parts of the driver they feed: the factory starts its
 // repairs from these, so each must be whole, and must say what its bank draws.
-
-const text = (t: string, x: number, y: number): Text => ({
-  text: t,
-  box: { x, y, w: 60, h: 12 },
-  frame: 'top',
-});
-const model = (texts: Text[]): ScreenModel => ({
-  url: 'x',
-  title: '',
-  frames: [],
-  controls: [],
-  texts,
-  structureKey: '',
-  screenshot: Buffer.alloc(0),
-  dropped: 0,
-  animated: [],
-});
 
 describe('the CoreLink profiles', () => {
   it('cover both banks, each in the same shape as Generic Bank’s', () => {
@@ -66,29 +48,5 @@ describe('the CoreLink profiles', () => {
       // Labels and headings are words, never a member's values: safe to show in evidence.
       expect(p.safePictures.every((n) => p.pictures.some((x) => x.name === n))).toBe(true);
     }
-  });
-});
-
-describe('a month’s statement row', () => {
-  const row = (date: string, type: string, y: number) => [text(date, 10, y), text(type, 200, y)];
-
-  it('is the row of that month whose document type is a statement', () => {
-    const m = model([
-      ...row('2026-09-30', 'Statement', 20),
-      ...row('2026-08-31', 'Statement', 44),
-      ...row('2026-07-15', 'Privacy Notice', 68),
-    ]);
-    expect(statementRow(m, '2026-08')).toMatchObject({ text: '2026-08-31' });
-    expect(statementRow(m, '2026-07')).toBeNull();
-  });
-
-  it('beside a tax form of the same date, is still that month’s statement', () => {
-    const m = model([...row('2026-01-31', 'Statement', 20), ...row('2026-01-31', 'Tax Form', 44)]);
-    expect(statementRow(m, '2026-01')).toMatchObject({ box: { y: 20 } });
-  });
-
-  it('is never guessed between two statements of one month', () => {
-    const m = model([...row('2026-01-31', 'Statement', 20), ...row('2026-01-15', 'Statement', 44)]);
-    expect(statementRow(m, '2026-01')).toBe('ambiguous');
   });
 });

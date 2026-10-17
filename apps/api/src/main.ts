@@ -1,7 +1,6 @@
 import { DBOSClient } from '@dbos-inc/dbos-sdk';
 import { loadConfig, port, secret } from '@gb/config';
 import { sql } from '@gb/db';
-import { fileStore } from '@gb/evidence';
 import { oauth, TASK_SCOPES } from '@gb/oauth';
 import { WORKFLOW } from '@gb/runs';
 import { z } from 'zod';
@@ -15,7 +14,6 @@ const cfg = loadConfig({
   RUN_SEAL_KEY: secret(),
   CONTROL_DATABASE_URL: z.string().startsWith('postgresql://'),
   API_PORT: port(8000),
-  EVIDENCE_DIR: z.string().min(1).default('/data/evidence'),
   HAZARDS_FORCEABLE: z.enum(['true', 'false']).default('false'),
 });
 const control = sql(cfg.CONTROL_DATABASE_URL);
@@ -42,8 +40,6 @@ const app = await buildServer({
   sql: control,
   sealKey: cfg.RUN_SEAL_KEY,
   enqueue,
-  // The statements the Runner kept, on the same volume as its evidence.
-  documents: fileStore(cfg.EVIDENCE_DIR),
   logger: true,
 });
 // The hazard lab starts runs with hazards forced, only where the banks obey them (plan, §A.3).

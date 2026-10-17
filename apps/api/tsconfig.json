@@ -16,9 +16,6 @@
       "path": "../../packages/db"
     },
     {
-      "path": "../../packages/evidence"
-    },
-    {
       "path": "../../packages/oauth"
     },
     {

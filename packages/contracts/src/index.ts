@@ -54,22 +54,10 @@ export const TransferInput = z.object({
     ),
 });
 
-export const DownloadStatementsInput = z.object({
-  bank: BankId,
-  memberId: MemberId,
-  account: AccountRef,
-  months: z
-    .array(z.string().regex(/^\d{4}-\d{2}$/))
-    .min(1)
-    .max(24)
-    .describe('Months as YYYY-MM.'),
-});
-
 /** The catalog an agent reads to discover tasks by name. */
 export const TASKS = {
   'check-balance': CheckBalanceInput,
   transfer: TransferInput,
-  'download-statements': DownloadStatementsInput,
 } as const;
 export type TaskName = keyof typeof TASKS;
 
@@ -162,31 +150,20 @@ export const TransferData = z.object({
   seenInHistory: z.boolean().describe('The transfer was read back from the account history.'),
 });
 
-export const StatementsData = z.object({
-  months: z.array(
-    z.object({
-      month: z.string(),
-      statement: z.string().nullable().describe('A stored statement reference, or null.'),
-      note: z.string().optional(),
-    }),
-  ),
-});
-
 /** The success data of each task: what a run returns, and what a person finishing by hand records. */
 export const RESULT_DATA = {
   'check-balance': BalanceData,
   transfer: TransferData,
-  'download-statements': StatementsData,
 } as const satisfies Record<TaskName, z.ZodType>;
 
 export const TaskResult = z.object({
   runId: z.string(),
-  task: z.enum(['check-balance', 'transfer', 'download-statements']),
+  task: z.enum(['check-balance', 'transfer']),
   status: TaskStatus,
   code: z.string().optional(),
   retryable: z.boolean().optional(),
   message: z.string().optional().describe('A fixed, customer-safe sentence.'),
-  data: z.union([BalanceData, TransferData, StatementsData]).optional(),
+  data: z.union([BalanceData, TransferData]).optional(),
   escalationId: z
     .string()
     .optional()
@@ -252,7 +229,7 @@ export const HUMAN_BODIES = {
   finish: z.object({
     reason: Reason,
     data: z
-      .union([BalanceData, TransferData, StatementsData])
+      .union([BalanceData, TransferData])
       .optional()
       .describe('What the person did, in the same shape as an automatic result.'),
   }),
@@ -337,9 +314,6 @@ export function problem(
 
 // ── Tools ────────────────────────────────────────────────────────────────────
 
-/** A stored statement's reference, as a download_statements result gives it: the run and the month. */
-export const STATEMENT_REF = /^st_([0-9a-f]{16})_(\d{4}-(?:0[1-9]|1[0-2]))$/;
-
 /** Reading a run's result: what the get_task tool takes. */
 export const GetTaskInput = z.object({
   runId: z.string().describe('The runId a task call returned.'),
@@ -350,14 +324,6 @@ export const GetTaskInput = z.object({
     .max(30)
     .optional()
     .describe('Seconds to wait for the run to settle, up to 30.'),
-});
-
-/** Fetching a stored statement: what the get_statement tool takes. */
-export const GetStatementInput = z.object({
-  ref: z
-    .string()
-    .regex(STATEMENT_REF, 'a statement reference from a download_statements result')
-    .describe('A statement reference from a download_statements result.'),
 });
 
 /**
@@ -399,7 +365,7 @@ export const BankInfo = z.object({
   productVersion: z.string(),
   tasks: z.array(
     z.object({
-      task: z.enum(['check-balance', 'transfer', 'download-statements']),
+      task: z.enum(['check-balance', 'transfer']),
       crawlerVersion: z.string(),
     }),
   ),

@@ -11,14 +11,12 @@ import { runScout, type Scout, type Supervisor } from './scout.js';
 import { type Tool, toolsOf } from './tools.js';
 import type { Trail } from './trail.js';
 
-/** The three things the product does, as goals for a run on a member's accounts. */
+/** The two things the product does, as goals for a run on a member's accounts. */
 export const GOALS = {
   'check-balance': (member: string) =>
     `Find member ${member} and reach the page that shows the balances of the member's accounts.`,
   transfer: (member: string) =>
     `Find member ${member} and prepare a transfer of $1.00 from the member's first account to their second, up to the review page. The review page is the end: never submit the transfer.`,
-  'download-statements': (member: string) =>
-    `Find member ${member} and reach the list of statements for the member's first account.`,
 } as const;
 
 export type Goal = keyof typeof GOALS;

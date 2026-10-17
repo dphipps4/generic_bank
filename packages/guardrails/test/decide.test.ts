@@ -123,7 +123,7 @@ describe('the allowlist', () => {
     expect(decide('transfer', 'member.summary', 'press', 'Transfer Funds')).toEqual({
       allowed: true,
     });
-    expect(decide('download-statements', 'member.summary', 'open', 'Statements')).toEqual({
+    expect(decide('transfer', 'transfer.review', 'open', 'Submit transfer', { grant })).toEqual({
       allowed: true,
     });
     expect(decide('transfer', 'transfer.form', 'type', 'Continue')).toMatchObject({
@@ -155,7 +155,7 @@ describe('the allowlist', () => {
       layer: 'task allowlist',
     });
     expect(
-      decide('download-statements', 'transfer.review', 'press', 'Submit transfer', { grant }),
+      decide('check-balance', 'transfer.review', 'press', 'Submit transfer', { grant }),
     ).toMatchObject({ allowed: false, layer: 'element' });
     expect(decide('check-balance', 'member.summary', 'open', 'Transfer Funds')).toMatchObject({
       allowed: false,

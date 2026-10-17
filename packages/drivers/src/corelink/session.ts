@@ -265,15 +265,11 @@ export async function onTheWay(sess: Session, s: Seen, memberId: string): Promis
       if (counts.searches++ >= 3)
         return stop('escalated', 'stuck', 'searched three times without a result');
       await type(page, field(s.model, w.memberNumber), memberId);
-      const press = () => click(page, button(s.model, w.search));
-      // The result is drawn by script into the same page, or into a window of its own.
-      const inWindow = ctx.profile.searchResults === 'window';
-      let where = page;
-      if (inWindow) where = await page.openedWindow(press);
-      else await press();
+      // The result is drawn by script into the same page.
+      await click(page, button(s.model, w.search));
       await sess.record('member search', s.screen, s.model, 'searched by member number');
-      try {
-        const r = await see({ ...ctx, page: where }, sess.sigs, {
+      {
+        const r = await see(ctx, sess.sigs, {
           until: (m) =>
             m.controls.some((c) => c.name === 'Open') ||
             m.texts.some((t) =>
@@ -310,16 +306,12 @@ export async function onTheWay(sess: Session, s: Seen, memberId: string): Promis
           );
         }
         if (open) {
-          await click(where, button(r.model, 'Open'));
+          await click(page, button(r.model, 'Open'));
           await sess.record('member search', 'member.found', r.model, 'opened the member');
         } else {
+          // The bank's answer is read on the next turn of the loop.
           await sess.record('member search', r.screen, r.model, undefined, r.screen ?? 'no result');
-          // The bank's answer in a window is read there; on the page, on the next turn of the loop.
-          if (inWindow && r.screen && r.screen !== 'member.search')
-            await onTheWay(sess, r, memberId);
         }
-      } finally {
-        if (where !== page) await where.close();
       }
       return true;
     }

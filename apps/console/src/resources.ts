@@ -1,5 +1,5 @@
 // What the Console shows in M0: every model, newest first. Evidence is read-only: nothing in
-// the trail, the journal or the audit log can be edited or deleted from the Console.
+// the trail or the audit log can be edited or deleted from the Console.
 import { getModelByName } from '@adminjs/prisma';
 import type { PrismaClient } from '@gb/db';
 import { SCOPE_CHOICES } from './api-clients.js';
@@ -32,7 +32,6 @@ const MODELS: { name: string; sortBy: string; nav: string; evidence?: boolean }[
   { name: 'TrailFrame', sortBy: 'at', nav: 'Runs', evidence: true },
   { name: 'HumanTask', sortBy: 'openedAt', nav: 'Inbox' },
   { name: 'ApprovalGrant', sortBy: 'expiresAt', nav: 'Inbox', evidence: true },
-  { name: 'JournalEntry', sortBy: 'at', nav: 'Runs', evidence: true },
   { name: 'Driver', sortBy: 'tenant', nav: 'Drivers' },
   { name: 'DriverVersion', sortBy: 'createdAt', nav: 'Drivers' },
   { name: 'RegistryEvent', sortBy: 'at', nav: 'Drivers', evidence: true },

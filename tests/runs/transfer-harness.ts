@@ -126,10 +126,10 @@ export async function transferHarness() {
       return Number(r.rows[0]!.n);
     },
 
-    async journalOf(runId: string) {
+    async stepsOf(runId: string) {
       return (
-        await db.query<{ intent: string; action: string | null; result: string | null }>(
-          'SELECT intent, action, result FROM "JournalEntry" WHERE "runId" = $1 ORDER BY seq',
+        await db.query<{ name: string; action: string | null; outcome: string | null }>(
+          'SELECT name, action, outcome FROM "Step" WHERE "runId" = $1 ORDER BY seq',
           [runId],
         )
       ).rows;

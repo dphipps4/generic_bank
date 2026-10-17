@@ -5,13 +5,6 @@ export {
   checkBalance,
   readTile,
 } from './corelink/check-balance.js';
-export {
-  downloadStatements,
-  statementRow,
-  type StatementMonth,
-  type Statements,
-  type StatementsInput,
-} from './corelink/download-statements.js';
 export { BASES, GENERIC_BANK, PROFILES, profileFrom } from './corelink/profiles.js';
 export {
   beside,

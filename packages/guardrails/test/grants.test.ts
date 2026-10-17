@@ -104,7 +104,7 @@ describe('approval grants', () => {
 });
 
 describe('a guard trip', () => {
-  it('freezes the bank and hands back the journal line and the ending', async () => {
+  it('freezes the bank and hands back the ending', async () => {
     const { runId } = await parkedRun(db);
     const t = await tripGuard(db, {
       runId,
@@ -114,8 +114,6 @@ describe('a guard trip', () => {
     });
     const freeze = (await db.query('SELECT * FROM "Freeze" WHERE id = $1', [t.freezeId])).rows[0];
     expect(freeze).toMatchObject({ tenant: 'generic', layer: 'element', runId, clearedAt: null });
-    expect(t.line.result).toBe('escalated: guard_tripped');
-    expect(t.line.intent).toContain('"Pay now"');
     expect(t.ending).toEqual({ status: 'escalated', code: 'guard_tripped' });
   });
 });

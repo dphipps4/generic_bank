@@ -19,8 +19,6 @@ const REFUSALS: Profile['refusals'] = [
   },
 ];
 
-const KEPT = 'Only the last 12 months of statements are available online.';
-
 export const GENERIC_BANK: Omit<Profile, 'url'> = {
   bank: 'generic',
   words: {
@@ -33,17 +31,13 @@ export const GENERIC_BANK: Omit<Profile, 'url'> = {
     transfer: ['Transfer Funds'],
     continue: ['Continue'],
     submitTransfer: ['Submit transfer'],
-    statements: ['Statements'],
-    statement: ['Statement'],
     activity: ['Activity'],
     menu: [],
     dismiss: [],
   },
   refusals: REFUSALS,
-  statementsKept: KEPT,
   accountWording: /Account ending in (\d{4})/,
   codeStyle: 'sent',
-  searchResults: 'page',
   pictures: [],
   safePictures: [],
 };
@@ -88,17 +82,13 @@ export const EXAMPLE_CU: Omit<Profile, 'url'> = {
     transfer: ['Move Money'],
     continue: ['Next'],
     submitTransfer: ['Confirm'],
-    statements: ['Statements'],
-    statement: ['Statement'],
     activity: ['Activity'],
     menu: [],
     dismiss: [],
   },
   refusals: REFUSALS,
-  statementsKept: KEPT,
   accountWording: /Share \*{4}(\d{4})-S01/,
   codeStyle: 'sent',
-  searchResults: 'page',
   // Some labels and the review's Confirm are pictures of their words, named once.
   pictures: EXAMPLE_PICTURES,
   safePictures: EXAMPLE_PICTURES.map((p) => p.name),
@@ -119,7 +109,6 @@ const base = (p: Omit<Profile, 'url'>): Omit<Profile, 'url'> => ({
   bank: p.bank,
   accountWording: p.accountWording,
   codeStyle: p.codeStyle,
-  searchResults: p.searchResults,
   pictures: p.pictures,
   safePictures: p.safePictures,
 });
@@ -143,7 +132,6 @@ export function profileFrom<P extends Omit<Profile, 'url'>>(
   const claimed = new Set<string>();
   const refusals = new Map(base.refusals.map((r) => [r.code, r.text]));
   const screens = { ...base.screens };
-  let statementsKept = base.statementsKept;
   for (const c of claims) {
     const [part, ...rest] = c.about.split('.');
     const name = rest.join('.');
@@ -153,13 +141,11 @@ export function profileFrom<P extends Omit<Profile, 'url'>>(
       claimed.add(w);
     } else if (part === 'refusals' && name) refusals.set(name as ResultCode, c.value);
     else if (part === 'screens' && name) screens[name] = c.value;
-    else if (part === 'statementsKept') statementsKept = c.value;
   }
   return {
     ...base,
     words,
     refusals: [...refusals].map(([code, text]) => ({ text, code })),
-    statementsKept,
     screens,
   };
 }

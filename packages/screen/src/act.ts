@@ -60,8 +60,7 @@ export function guardActions(page: Page, guard: Guard) {
   guards.set(page, guard);
 }
 
-const guardOf = (page: Page | null): Guard | undefined =>
-  page ? (guards.get(page) ?? guardOf(page.opener)) : undefined;
+const guardOf = (page: Page | null): Guard | undefined => (page ? guards.get(page) : undefined);
 
 const ask = async (page: Page, a: Action) => await guardOf(page)?.(a);
 

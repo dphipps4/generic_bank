@@ -23,7 +23,6 @@ const NAV: [href: string, label: string][] = [
   ['/inbox', 'Inbox'],
   ['/runs', 'Runs'],
   ['/recommendations', 'Recommendations'],
-  ['/journal', 'Journal'],
   ['/freezes', 'Freezes'],
   ['/admin/resources/TaskRun', 'Data'],
 ];

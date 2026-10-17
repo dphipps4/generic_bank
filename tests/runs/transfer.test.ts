@@ -1,16 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import {
-  type ApprovalContext,
-  createRun,
-  resultOf,
-  verifyJournal,
-} from '../../packages/runs/src/index.js';
+import { type ApprovalContext, createRun, resultOf } from '../../packages/runs/src/index.js';
 import { MEMBERS } from '../../apps/bank/src/seed.js';
 import { type Harness, KEY, transferHarness } from './transfer-harness.js';
 
 // A transfer run end to end (plan, §6): the Runner prepares it up to the bank's review page and
 // parks there holding its browser; a person approves from the Console; the run submits once under
 // the grant and finds the transfer in the history. The bank's ledger counts what moved.
+
+/** The step the driver records once it has pressed the bank's submit. */
+const PRESSED = 'pressed submit, under the grant';
 
 let h: Harness;
 beforeAll(async () => {
@@ -68,7 +66,7 @@ describe('a transfer run', () => {
     expect((result!.data as { confirmation: string }).confirmation).toMatch(/^GB-/);
     expect(await h.postings(memoToken)).toBe(1);
 
-    // The grant is spent, the journal holds the intent, the press and the checks, and verifies.
+    // The grant is spent, and the trail holds the intent, written before the one press.
     const grant = (
       await h.db.query<{ usedAt: Date | null }>(
         'SELECT "usedAt" FROM "ApprovalGrant" WHERE "runId" = $1',
@@ -77,8 +75,11 @@ describe('a transfer run', () => {
     ).rows;
     expect(grant).toHaveLength(1);
     expect(grant[0]!.usedAt).not.toBeNull();
-    expect((await h.journalOf(runId)).filter((l) => l.action === 'pressed')).toHaveLength(1);
-    expect(await verifyJournal(h.db, runId)).toMatchObject({ ok: true, entries: 4 });
+    const steps = (await h.stepsOf(runId)).map((s) => s.action);
+    const intent = steps.indexOf(`press Submit transfer for ${memoToken}`);
+    expect(intent).toBeGreaterThanOrEqual(0);
+    expect(steps.filter((a) => a === PRESSED)).toHaveLength(1);
+    expect(steps.indexOf(PRESSED)).toBeGreaterThan(intent);
     // The browser was held while parked: one browser, one sign-in, one code asked of a person.
     expect(h.browsers.length - launched).toBe(1);
     const codes = await h.db.query(
@@ -99,9 +100,9 @@ describe('a transfer run', () => {
       data: { confirmation: memoToken, seenInHistory: true },
     });
     // No confirmation ever came: the history found it. One press, one posting, by the bank's ledger.
-    const journal = await h.journalOf(runId);
-    expect(journal.some((l) => l.intent === 'read the confirmation')).toBe(false);
-    expect(journal.filter((l) => l.action === 'pressed')).toHaveLength(1);
+    const steps = (await h.stepsOf(runId)).map((s) => s.action);
+    expect(steps).not.toContain('read the confirmation');
+    expect(steps.filter((a) => a === PRESSED)).toHaveLength(1);
     expect(await h.postings(memoToken)).toBe(1);
   }, 180_000);
 

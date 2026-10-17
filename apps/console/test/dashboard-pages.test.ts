@@ -52,7 +52,7 @@ describe('the Dashboard', () => {
     expect(page).toContain('1 staff codes');
     expect(page).toContain('<span class="pill escalated">frozen</span>');
     expect(page).toContain('pressed Pay now');
-    expect(page).toMatch(/Generic Bank.*check-balance, download-statements, transfer/s);
+    expect(page).toMatch(/Generic Bank.*check-balance, transfer/s);
     expect(page).toContain(`href="/runs/${runId}"`);
     expect(page).toContain('href="http://localhost:18000/docs"');
     expect(page).toContain('href="http://localhost:18089"');

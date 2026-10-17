@@ -15,7 +15,6 @@ import { ADMIN_BAR_JS, showLabInNav } from './pages/layout.js';
 import { dashboardPages, landOnDashboard } from './pages/dashboard.js';
 import { freezePages } from './pages/freezes.js';
 import { inboxPages } from './pages/inbox.js';
-import { journalPages } from './pages/journal.js';
 import { labPages, throughTheApi } from './pages/lab.js';
 import { recommendationPages } from './pages/recommendations.js';
 import { runPages, type Viewer } from './pages/runs.js';
@@ -125,7 +124,6 @@ inboxPages(app, {
     )),
 });
 recommendationPages(app, { sql: control, whoIs });
-journalPages(app, { sql: control, whoIs });
 if (cfg.HAZARDS_FORCEABLE === 'true') {
   showLabInNav();
   labPages(app, {

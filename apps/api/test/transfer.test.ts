@@ -215,7 +215,7 @@ describe('POST /tasks/transfer', () => {
   });
 
   it('answers 403 insufficient_scope to a client without tasks:transfer, and starts nothing', async () => {
-    const t = await client(['tasks:read', 'tasks:balance', 'tasks:statements']);
+    const t = await client(['tasks:read', 'tasks:balance']);
     const body = fresh();
     const r = await post(t, body);
     expect([r.statusCode, r.json().code]).toEqual([403, 'insufficient_scope']);

@@ -56,7 +56,6 @@ describe('the Task API, with OAuth2', () => {
     expect(r.json().tasks.map((x: { name: string }) => x.name)).toEqual([
       'check-balance',
       'transfer',
-      'download-statements',
     ]);
   });
 
@@ -153,7 +152,7 @@ describe('the Task API, with OAuth2', () => {
   });
 
   it('answers 403 insufficient_scope for a task, or a bank, the client may not use', async () => {
-    const t = await tokensFor(['tasks:read', 'tasks:balance', 'tasks:statements', 'bank:example']);
+    const t = await tokensFor(['tasks:read', 'tasks:balance', 'tasks:transfer', 'bank:example']);
     const call = (bank: string, task = 'check-balance', more: Record<string, unknown> = {}) =>
       app.inject({
         method: 'POST',
@@ -165,11 +164,10 @@ describe('the Task API, with OAuth2', () => {
     expect(wrongBank.statusCode).toBe(403);
     expect(wrongBank.json().code).toBe('insufficient_scope');
     expect(wrongBank.headers['www-authenticate']).toContain('insufficient_scope');
-    expect((await call('example', 'download-statements')).statusCode).toBe(400);
+    expect((await call('example', 'transfer')).statusCode).toBe(400);
     // The scope allows it; the registry then says no crawler serves it there yet.
-    expect(
-      (await call('example', 'download-statements', { months: ['2026-01'] })).json().code,
-    ).toBe('task_not_available');
+    const transfer = { from: '7890', to: '7255', amountCents: 100, idempotencyKey: 'no-crawler-1' };
+    expect((await call('example', 'transfer', transfer)).json().code).toBe('task_not_available');
   });
 
   it('refuses invalid input with the field that failed', async () => {

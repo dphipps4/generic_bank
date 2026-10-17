@@ -30,9 +30,6 @@ export interface Profile {
     transfer: string[];
     continue: string[];
     submitTransfer: string[];
-    /** An account tile's way to its statements, and a statement row's button. */
-    statements: string[];
-    statement: string[];
     /** An account tile's way to its activity. */
     activity: string[];
     /** The control that opens a menu holding the places to go; none when they are on the page. */
@@ -47,8 +44,6 @@ export interface Profile {
   screens?: Record<string, string>;
   /** The bank's own words when it refuses a transfer, and the business outcome each one is. */
   refusals: { text: string; code: ResultCode }[];
-  /** The bank's own words, on its statements page, for the months it does not list. */
-  statementsKept: string;
   /**
    * An account's wording on screen. Its groups, read in order, are the account's last four digits:
    * one group, or several when the bank draws a dash among them ("Acct 1234-5678-90").
@@ -56,8 +51,6 @@ export interface Profile {
   accountWording: RegExp;
   /** How codes arrive: sent (with or without a chooser), or from an authenticator app. */
   codeStyle: 'sent' | 'authenticator';
-  /** Where member search shows what it found: on its own page, or in a window it opens. */
-  searchResults: 'page' | 'window';
   /** Pictures of text the factory has named, by fingerprint. */
   pictures: KnownPicture[];
   /** Pictures safe to show unmasked in evidence (a learned button, not a value). */
@@ -90,7 +83,7 @@ export interface DriverContext {
    * now on they are masked wherever they appear, starting with the next step's frame.
    */
   learn(values: string[]): void;
-  /** Records a step; the runner adds the frame and the journal. */
+  /** Records a step; the runner adds the frame. */
   step(record: StepRecord, model: ScreenModel | null): Promise<void> | void;
   now(): Date;
 }
