@@ -103,6 +103,7 @@ Each hazard was forced on the whole walk, so it shows wherever the bank fires it
 | Hazard | What the page showed | The crawler does |
 |---|---|---|
 | `confirm-dialog` | "This member has 2 unread alerts. View them now?" ([11](hazard-confirm-dialog/11.png)) | The runtime dismisses it and records it; nothing is committed |
+| (none) | A code typed after its five minutes: "That code has expired." ([01](code-expired/01.png), from a live run in Docker) | Presses "Send a new code"; the code page then asks a person for the new one |
 | `promo` | "New in CoreLink" in place of home ([07](hazard-promo/07.png)) | Treats it as home: presses "Member Search" in the nav |
 | `service-unavailable` | "The server is temporarily unable to service your request." ([02](hazard-service-unavailable/02.png)) | Starts again from home, at most twice, never after Submit; then `unavailable` |
 | `js-error-fatal` | "An unexpected error has occurred. Reference ERR-…" ([09](hazard-js-error-fatal/09.png)) | The same; then `app_error` |

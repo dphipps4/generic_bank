@@ -30,10 +30,19 @@ export const bank1: Table = {
       page: 'code',
       screen: 'staff_code',
       shows: ['Enter the 6-digit code we sent'],
+      never: ['That code has expired.'],
       do: {
         any: [{ type: 'Code', value: '$code' }, { press: 'Verify' }],
       },
       frame: 'happy/05',
+    },
+    {
+      // A code typed after its five minutes: a fresh one is sent, and the code page runs again.
+      page: 'code expired',
+      screen: 'staff_code',
+      shows: ['That code has expired.'],
+      do: { any: [{ press: 'Send a new code' }] },
+      frame: 'code-expired/01',
     },
     {
       page: 'home',
