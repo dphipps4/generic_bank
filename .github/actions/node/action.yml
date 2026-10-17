@@ -1,0 +1,30 @@
+name: node and the dependencies
+description: Node 26, node_modules from the cache when package-lock.json has not changed, and the Prisma client.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 26
+    # node_modules itself, keyed on the lockfile: a hit skips npm ci altogether. A miss installs
+    # from npm's own cache, which is kept the same way.
+    - id: modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          node_modules
+          apps/*/node_modules
+          packages/*/node_modules
+        key: modules-${{ runner.os }}-node26-${{ hashFiles('package-lock.json') }}
+    - if: steps.modules.outputs.cache-hit != 'true'
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+        restore-keys: npm-${{ runner.os }}-
+    - if: steps.modules.outputs.cache-hit != 'true'
+      shell: bash
+      run: npm ci --no-audit --no-fund --prefer-offline
+    - shell: bash
+      run: npm run --silent db:generate
