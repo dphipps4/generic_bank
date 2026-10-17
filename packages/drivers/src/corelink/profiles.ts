@@ -104,107 +104,9 @@ export const EXAMPLE_CU: Omit<Profile, 'url'> = {
   safePictures: EXAMPLE_PICTURES.map((p) => p.name),
 };
 
-const SAMPLE_HEADINGS: KnownPicture[] = [
-  {
-    name: 'Enter the 6-digit code we sent.',
-    hash: 'aaaaaaaa9956424fadd5564f2c8dc247accdc24f2cb5d6e9cc55c24daaaaaaaa',
-    aspect: 17.27,
-  },
-  {
-    name: 'Where should we send your code?',
-    hash: 'aaaaaaaa1d6929452869294328a91a423cab1a42a8ab1a42ad1929c7aaaaaaaa',
-    aspect: 17.27,
-  },
-  {
-    name: 'Terms updated',
-    hash: '000000002a99252b12b96a135b797add1a592a9952e96ad50d98a68b00000000',
-    aspect: 7.45,
-  },
-  {
-    name: 'New in CoreLink',
-    hash: '000000009a28abb5b22856a536195aaf16094aa736095ea59a28b2f500000000',
-    aspect: 8.55,
-  },
-  {
-    name: 'Review transfer',
-    hash: '000000005928aca71348d4a9524896a95248a5297248b5299d38d4a500000000',
-    aspect: 8.55,
-  },
-  {
-    name: 'Supervisor approval required',
-    hash: '000000004d72ac651531aca39535ecd32576edb777364cb5acb7245b52a54a95',
-    aspect: 15.64,
-  },
-  {
-    name: 'Transfer posted',
-    hash: '00000000562a8aa75655cea95555cca956948d69529491694a735ae500000000',
-    aspect: 8.55,
-  },
-];
-
-export const SAMPLE_SAVINGS: Omit<Profile, 'url'> = {
-  bank: 'sample',
-  words: {
-    operatorId: ['Staff number'],
-    password: ['PIN'],
-    signIn: ['Enter'],
-    memberSearch: ['Member Inquiry'],
-    memberNumber: ['Member number or last name'],
-    search: ['Inquire'],
-    transfer: ['Internal Transfer'],
-    continue: ['Proceed'],
-    submitTransfer: ['Post'],
-    statements: ['Statements'],
-    // A row's statement is in its Options menu.
-    statement: ['View'],
-    activity: ['Activity'],
-    menu: [],
-    dismiss: [],
-  },
-  refusals: REFUSALS,
-  statementsKept: KEPT,
-  // "Acct 1234-5678-90": the last four digits are drawn on both sides of the last dash.
-  accountWording: /Acct \d{4}-\d{2}(\d{2})-(\d{2})/,
-  codeStyle: 'sent',
-  searchResults: 'page',
-  // Every heading is a picture of its words: those the screens are known by, named once.
-  pictures: SAMPLE_HEADINGS,
-  safePictures: SAMPLE_HEADINGS.map((p) => p.name),
-};
-
-export const PLACEHOLDER_FCU: Omit<Profile, 'url'> = {
-  bank: 'placeholder',
-  words: {
-    operatorId: ['User'],
-    password: ['Password'],
-    signIn: ['Continue'],
-    memberSearch: ['Search'],
-    memberNumber: ['Member'],
-    search: ['Search'],
-    transfer: ['Transfer'],
-    // The form is two pages: the amount, then the accounts.
-    continue: ['Accounts', 'Review'],
-    submitTransfer: ['Authorize'],
-    statements: ['Documents'],
-    statement: ['Statement'],
-    activity: ['Activity'],
-    menu: [],
-    dismiss: [],
-  },
-  refusals: REFUSALS,
-  statementsKept: KEPT,
-  accountWording: /··· (\d{4})/,
-  codeStyle: 'authenticator',
-  searchResults: 'window',
-  pictures: [],
-  safePictures: [],
-};
-
 export const PROFILES: Record<string, Omit<Profile, 'url'>> = {
   generic: GENERIC_BANK,
   example: EXAMPLE_CU,
-  sample: SAMPLE_SAVINGS,
-  placeholder: PLACEHOLDER_FCU,
 };
 
 /**
@@ -225,8 +127,6 @@ const base = (p: Omit<Profile, 'url'>): Omit<Profile, 'url'> => ({
 export const BASES: Record<string, Omit<Profile, 'url'>> = {
   generic: GENERIC_BANK,
   example: base(EXAMPLE_CU),
-  sample: base(SAMPLE_SAVINGS),
-  placeholder: base(PLACEHOLDER_FCU),
 };
 
 /**

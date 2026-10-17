@@ -26,8 +26,8 @@ const model = (texts: Text[]): ScreenModel => ({
 });
 
 describe('the CoreLink profiles', () => {
-  it('cover all four banks, each in the same shape as Generic Bank’s', () => {
-    expect(Object.keys(PROFILES).sort()).toEqual(['example', 'generic', 'placeholder', 'sample']);
+  it('cover both banks, each in the same shape as Generic Bank’s', () => {
+    expect(Object.keys(PROFILES).sort()).toEqual(['example', 'generic']);
     for (const [bank, p] of Object.entries(PROFILES)) {
       expect(p.bank).toBe(bank);
       expect(Object.keys(p).sort()).toEqual(Object.keys(GENERIC_BANK).sort());
@@ -38,12 +38,10 @@ describe('the CoreLink profiles', () => {
     }
   });
 
-  it('read the last four digits from each bank’s account wording, a dash among them or not', () => {
+  it('read the last four digits from each bank’s account wording', () => {
     const drawn: Record<string, string> = {
       generic: 'Account ending in 1195',
       example: 'Share ****1195-S01',
-      sample: 'Acct 1509-2611-95',
-      placeholder: '··· 1195',
     };
     for (const [bank, wording] of Object.entries(drawn)) {
       expect(lastFour(PROFILES[bank]!.accountWording, wording), bank).toBe('1195');
