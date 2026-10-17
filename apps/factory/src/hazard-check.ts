@@ -23,7 +23,7 @@ export interface Sandbox {
   /** The signed header that makes the bank force these hazards. */
   forced(hazards: HazardName[]): Record<string, string>;
   credentials(): Promise<Credentials>;
-  /** A sign-in code: the one the bank sent, or the authenticator's at a bank that uses one. */
+  /** A sign-in code: the one the bank sent. */
   code(): Promise<string>;
   /** The account's available balance in the bank's own ledger. */
   ledger(memberId: string, account: string): Promise<number | null>;

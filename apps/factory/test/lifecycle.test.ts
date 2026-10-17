@@ -38,12 +38,16 @@ const driver =
 let db: Awaited<ReturnType<typeof controlDb>>;
 beforeEach(async () => {
   db = await controlDb();
+  // Bank 2 as the factory meets it: without the balance driver written for it by hand.
+  for (const table of ['RegistryEvent', 'DriverVersion'])
+    await db.query(`DELETE FROM "${table}" WHERE "driverId" = 'drv_example_check_balance'`);
+  await db.query(`DELETE FROM "Driver" WHERE id = 'drv_example_check_balance'`);
   await db.query(
     `INSERT INTO "FactoryRun" (id, tenant, task, mode, phase, status)
-     VALUES ('run1', 'sample', 'check-balance', 'build', 'REVIEW GATE', 'done')`,
+     VALUES ('run1', 'example', 'check-balance', 'build', 'REVIEW GATE', 'done')`,
   );
   await db.query(
-    `INSERT INTO "Recommendation" (id, "factoryRunId", tenant, claims) VALUES ('rec1', 'run1', 'sample', $1)`,
+    `INSERT INTO "Recommendation" (id, "factoryRunId", tenant, claims) VALUES ('rec1', 'run1', 'example', $1)`,
     [JSON.stringify(CLAIMS)],
   );
 });
@@ -53,12 +57,12 @@ const approve = () =>
   db.query(
     `UPDATE "Recommendation" SET status = 'approved', "decidedBy" = 'ada' WHERE id = 'rec1'`,
   );
-const served = async () => (await banks(db)).find((b) => b.id === 'sample')!.tasks;
+const served = async () => (await banks(db)).find((b) => b.id === 'example')!.tasks;
 const events = async () =>
   (
     await db.query<{ fromState: string; toState: string; reason: string }>(
       `SELECT "fromState", "toState", reason FROM "RegistryEvent" e JOIN "Driver" d ON d.id = e."driverId"
-        WHERE d.tenant = 'sample' ORDER BY e.at, e.ctid`,
+        WHERE d.tenant = 'example' ORDER BY e.at, e.ctid`,
     )
   ).rows;
 
@@ -107,7 +111,7 @@ describe('candidate, probation, promoted', () => {
     await approve();
     const v = await candidate(db, 'rec1');
     expect(v).toMatchObject({
-      tenant: 'sample',
+      tenant: 'example',
       task: 'check-balance',
       version: 1,
       state: 'candidate',

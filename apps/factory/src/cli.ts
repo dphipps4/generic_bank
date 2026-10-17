@@ -99,7 +99,7 @@ async function sandboxAt(bank: string): Promise<Sandbox> {
     browser,
     forced: (names) => hazardHeader(names, cfg.HAZARD_HMAC_KEY),
     credentials: async () => credentials,
-    // The bank's own word for the teller's code: the one it sent, or its authenticator's.
+    // The bank's own word for the teller's code: the one it sent.
     code: async () => (await get<{ code: string }>(`/operators/${cfg.BANK_OPERATOR_ID}/code`)).code,
     ledger: async (member, account) =>
       (

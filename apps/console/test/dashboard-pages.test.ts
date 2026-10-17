@@ -45,7 +45,7 @@ describe('the Dashboard', () => {
       { bank: 'generic', prompt: 'The bank sent a code.' },
       new Date(Date.now() + 5 * 60_000),
     );
-    await tripGuard(db, { runId, bank: 'sample', layer: 'element', rule: 'pressed Pay now' });
+    await tripGuard(db, { runId, bank: 'example', layer: 'element', rule: 'pressed Pay now' });
 
     const page = (await app.inject({ url: '/dashboard', headers: { host: 'localhost:18080' } }))
       .body;

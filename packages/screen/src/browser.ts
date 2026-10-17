@@ -119,7 +119,7 @@ export class Browser {
     const height = o.height ?? 900;
     const bin = findChrome();
     // In the stack the banks are plain HTTP on Docker's network, where Chrome would leave out the
-    // headers every real browser sends (Sec-Fetch-*), and banks 2 to 4 would turn it away.
+    // headers every real browser sends (Sec-Fetch-*), and bank 2 would turn it away.
     const secureOrigins =
       o.secureOrigins ?? (process.env.BANK_ORIGINS ?? '').split(',').filter(Boolean);
     const child = spawn(
