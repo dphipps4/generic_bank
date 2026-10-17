@@ -63,6 +63,27 @@ export const PAGES: Record<string, string> = {
      <button onclick="document.getElementById('out').textContent='saved'">Save</button><p id="out">not saved</p>`,
   ),
 
+  // The same link twice: in the nav, and in the section a person means.
+  '/twice': doc(
+    `<div style="float:left;width:150px"><a href="#" onclick="document.getElementById('out').textContent='from the nav'">Transfer Funds</a></div>
+     <div style="margin-left:300px"><b>Member Summary</b><br><a href="#" onclick="document.getElementById('out').textContent='from the summary'">Transfer Funds</a></div>
+     <p id="out">nothing yet</p>`,
+  ),
+
+  // An error page: words, and nothing to act on. It is a page all the same.
+  '/unavailable': doc(`<h1>Service Unavailable</h1><p>Please try again later.</p>`),
+
+  // A page that moves on by itself as it is being looked at.
+  '/moves-on': doc(
+    `<p>One moment</p>`,
+    `<script>setTimeout(function(){location.href='/label'},300)</script>`,
+  ),
+
+  // A submit the bank swallowed: it says it is processing, forever.
+  '/processing': doc(
+    `<p>Processing your request… please wait.</p><a href="/processing">Refresh</a>`,
+  ),
+
   // A visible button with something drawn over it.
   '/covered': doc(
     `<button id="b" style="position:absolute;left:20px;top:20px">Pay</button>
