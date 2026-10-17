@@ -163,7 +163,10 @@ describe('record_lesson', () => {
       trail,
       extra: memoryTools,
     });
-    const offered = (sent[before]!.tools as { name: string }[]).map((t) => t.name);
+    // A tool is named at the top in Anthropic's form, under function in OpenAI's.
+    const offered = (sent[before]!.tools as { name?: string; function?: { name: string } }[]).map(
+      (t) => t.name ?? t.function?.name,
+    );
     expect(offered).toContain('memory_query');
     expect(offered).not.toContain('record_lesson');
     expect(steps).toContainEqual({

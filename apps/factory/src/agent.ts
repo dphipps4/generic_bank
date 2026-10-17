@@ -72,18 +72,18 @@ const PROVIDER = {
   openrouter: { api: null, prefix: '/openrouter', models: OPENROUTER_MODELS },
 };
 
-/** Which wire format this model speaks: from the provider, or from the model's own catalog entry. */
-function apiOf(a: Agent): keyof typeof API {
-  const p = PROVIDER[a.model.provider];
+/** Which wire format a model speaks: from its provider, or from the model's own catalog entry. */
+export function apiOf(m: RoleModel): keyof typeof API {
+  const p = PROVIDER[m.provider];
   if (p.api) return p.api;
-  const known = (p.models as Record<string, Model<Api>>)[a.model.model];
+  const known = (p.models as Record<string, Model<Api>>)[m.model];
   return (known?.api as keyof typeof API) ?? 'openai-completions';
 }
 
 /** The role's model as pi knows it, pointed at the gateway. A model pi does not list still runs. */
 function modelOf(a: Agent): Model<Api> {
   const p = PROVIDER[a.model.provider];
-  const api = apiOf(a);
+  const api = apiOf(a.model);
   const id = a.model.model;
   const known = (p.models as Record<string, Model<Api>>)[id];
   return {
@@ -123,7 +123,7 @@ function withAnswer(api: keyof typeof API, schema: Record<string, unknown>) {
 
 export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
   const model = modelOf(a);
-  const api = apiOf(a);
+  const api = apiOf(a.model);
   const send = API[api].send as typeof anthropicStream;
   // A tool that fails for any reason but a refusal stops the turn, and the error is the turn's.
   let failure: unknown;
