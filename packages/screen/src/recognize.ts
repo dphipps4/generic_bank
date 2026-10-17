@@ -72,11 +72,17 @@ function check(sig: Signature, m: ScreenModel, text: string) {
 
 export function recognize(m: ScreenModel, signatures: Signature[]): Recognition {
   const text = reading(m);
-  const results = signatures.map((sig) => ({
-    id: sig.id,
-    missing: check(sig, m, text),
-    hint: sig.pathHint?.test(m.url) ?? false,
-  }));
+  const results = signatures.map((sig) => {
+    const checks =
+      (sig.requires?.length ?? 0) + (sig.forbids?.length ?? 0) + (sig.controls?.length ?? 0);
+    const missing = check(sig, m, text);
+    return {
+      id: sig.id,
+      missing,
+      met: checks ? (checks - missing.length) / checks : 0,
+      hint: sig.pathHint?.test(m.url) ?? false,
+    };
+  });
   const full = results.filter((r) => r.missing.length === 0);
   let matched = full.map((r) => r.id);
   // A path hint never decides alone, but it settles a tie between full matches.
@@ -84,9 +90,11 @@ export function recognize(m: ScreenModel, signatures: Signature[]): Recognition 
     const hinted = full.filter((r) => r.hint).map((r) => r.id);
     if (hinted.length === 1) matched = hinted;
   }
+  // Closest is the screen most of whose checks the page meets: a near miss, not a screen with one
+  // check that the page fails outright.
   const closest = results
     .filter((r) => r.missing.length > 0)
-    .sort((a, b) => a.missing.length - b.missing.length)
+    .sort((a, b) => b.met - a.met || a.missing.length - b.missing.length)
     .slice(0, 3)
     .map(({ id, missing }) => ({ id, missing }));
   return { screen: matched.length === 1 ? matched[0]! : null, matched, closest };
