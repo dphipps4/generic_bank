@@ -90,9 +90,9 @@ describe('the hazard lab’s door', () => {
   });
 
   it('refuses a bank with no crawler for the task', async () => {
-    const r = await lab(await client(), {
-      task: 'check-balance',
-      input: { ...input, bank: 'sample' },
+    const r = await lab(await client(['tasks:read', 'tasks:statements']), {
+      task: 'download-statements',
+      input: { ...input, bank: 'example', months: ['2026-01'] },
       hazards: [],
     });
     expect([r.statusCode, r.json().code]).toEqual([404, 'task_not_available']);

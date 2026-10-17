@@ -153,21 +153,23 @@ describe('the Task API, with OAuth2', () => {
   });
 
   it('answers 403 insufficient_scope for a task, or a bank, the client may not use', async () => {
-    const t = await tokensFor(['tasks:read', 'tasks:balance', 'bank:sample']);
-    const call = (bank: string, task = 'check-balance') =>
+    const t = await tokensFor(['tasks:read', 'tasks:balance', 'tasks:statements', 'bank:example']);
+    const call = (bank: string, task = 'check-balance', more: Record<string, unknown> = {}) =>
       app.inject({
         method: 'POST',
         url: `/tasks/${task}`,
         headers: bearer(t.access_token),
-        payload: { bank, memberId: '40017732', account: '7890' },
+        payload: { bank, memberId: '40017732', account: '7890', ...more },
       });
     const wrongBank = await call('generic');
     expect(wrongBank.statusCode).toBe(403);
     expect(wrongBank.json().code).toBe('insufficient_scope');
     expect(wrongBank.headers['www-authenticate']).toContain('insufficient_scope');
-    expect((await call('sample', 'download-statements')).statusCode).toBe(400);
+    expect((await call('example', 'download-statements')).statusCode).toBe(400);
     // The scope allows it; the registry then says no crawler serves it there yet.
-    expect((await call('sample')).json().code).toBe('task_not_available');
+    expect(
+      (await call('example', 'download-statements', { months: ['2026-01'] })).json().code,
+    ).toBe('task_not_available');
   });
 
   it('refuses invalid input with the field that failed', async () => {

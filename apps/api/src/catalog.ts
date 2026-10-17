@@ -196,8 +196,7 @@ const AGAIN = {
 
 /**
  * Requests that work on a fresh stack, one per bank that serves the task, so Swagger UI's Try it
- * out starts from one (a dropdown when there are several). Bank 3 shows what a bank the factory
- * hasn't learned yet answers.
+ * out starts from one (a dropdown when there are several).
  */
 type Example = { summary: string; value: Record<string, unknown> };
 const demo = { memberId: '40017732' };
@@ -217,10 +216,6 @@ const EXAMPLES: Record<Task, Record<string, Example>> = {
     bank2: {
       summary: 'Bank 2, Example Credit Union: an account by its last four digits',
       value: { bank: 'example', ...demo, account: '7255' },
-    },
-    bank3: {
-      summary: 'Bank 3, Sample Savings Bank: no crawler until the factory learns it (404)',
-      value: { bank: 'sample', ...demo, account: 'Everyday Checking' },
     },
   },
   transfer: {

@@ -424,14 +424,6 @@
                     "memberId": "40017732",
                     "account": "7255"
                   }
-                },
-                "bank3": {
-                  "summary": "Bank 3, Sample Savings Bank: no crawler until the factory learns it (404)",
-                  "value": {
-                    "bank": "sample",
-                    "memberId": "40017732",
-                    "account": "Everyday Checking"
-                  }
                 }
               }
             }
