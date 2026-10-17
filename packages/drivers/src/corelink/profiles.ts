@@ -1,7 +1,6 @@
 // Bank profiles for CoreLink Branch Console, each written by hand. The factory starts from a bank's
 // base below and writes its own over it. The console's address comes from the registry at run time.
 import type { ResultCode } from '@gb/contracts';
-import type { KnownPicture } from '@gb/screen';
 import type { Profile } from '../sdk.js';
 
 /** The product's own words for each refusal: every CoreLink bank uses them. */
@@ -42,80 +41,18 @@ export const GENERIC_BANK: Omit<Profile, 'url'> = {
   safePictures: [],
 };
 
-const EXAMPLE_PICTURES: KnownPicture[] = [
-  {
-    name: 'Username:',
-    hash: '000000002912a540212a950d232ade0c293366402e629d2d892add04d90add45',
-    aspect: 6.22,
-  },
-  {
-    name: 'Passcode:',
-    hash: '00000000899324c0a522d50d26225d0c99925d40145add2d17122404173324c5',
-    aspect: 6.22,
-  },
-  {
-    name: 'Member number:',
-    hash: '108442116351535148915a924891549a69515751489152924a11624a63416348',
-    aspect: 9.56,
-  },
-  {
-    name: 'Amount:',
-    hash: '00000000c964a500994da59a9248a4988248a4809349a89a9142249893622492',
-    aspect: 4.89,
-  },
-  {
-    name: 'Confirm',
-    hash: '000000000000000008a54dd62235c95e2225c8d222250d5208a50d1200000000',
-    aspect: 3.69,
-  },
-];
-
-export const EXAMPLE_CU: Omit<Profile, 'url'> = {
-  bank: 'example',
-  words: {
-    operatorId: ['Username'],
-    password: ['Passcode'],
-    signIn: ['Log In'],
-    memberSearch: ['Find Member'],
-    memberNumber: ['Member number'],
-    search: ['Find'],
-    transfer: ['Move Money'],
-    continue: ['Next'],
-    submitTransfer: ['Confirm'],
-    activity: ['Activity'],
-    menu: [],
-    dismiss: [],
-  },
-  refusals: REFUSALS,
-  accountWording: /Share \*{4}(\d{4})-S01/,
-  codeStyle: 'sent',
-  // Some labels and the review's Confirm are pictures of their words, named once.
-  pictures: EXAMPLE_PICTURES,
-  safePictures: EXAMPLE_PICTURES.map((p) => p.name),
-};
-
+/** The profiles written by hand: bank 1's alone. Bank 2 is the factory's to learn. */
 export const PROFILES: Record<string, Omit<Profile, 'url'>> = {
   generic: GENERIC_BANK,
-  example: EXAMPLE_CU,
 };
 
 /**
- * Where the factory starts at each bank: the vendor's words, with what a claim cannot say set by
- * hand (how an account is worded, how codes arrive, where search results open, the pictures of
- * words). The claims a person approves go over it.
+ * Where the factory starts at each bank: the product's own words, bank 1's, and nothing written by
+ * hand about the bank itself. The claims a person approves go over it.
  */
-const base = (p: Omit<Profile, 'url'>): Omit<Profile, 'url'> => ({
-  ...GENERIC_BANK,
-  bank: p.bank,
-  accountWording: p.accountWording,
-  codeStyle: p.codeStyle,
-  pictures: p.pictures,
-  safePictures: p.safePictures,
-});
-
 export const BASES: Record<string, Omit<Profile, 'url'>> = {
   generic: GENERIC_BANK,
-  example: base(EXAMPLE_CU),
+  example: { ...GENERIC_BANK, bank: 'example' },
 };
 
 /**

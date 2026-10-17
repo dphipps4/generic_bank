@@ -179,14 +179,14 @@ describe('the API describes itself, and the descriptions agree', () => {
 });
 
 describe('the registry decides which banks can do what', () => {
-  it('lists the two banks; the drivers written by hand, bank 1’s and bank 2’s balance, are promoted from the start', async () => {
+  it('lists the two banks; bank 1’s crawlers, written by hand, are promoted from the start, and bank 2 has none yet', async () => {
     const banks = (await get('/banks')).json();
     expect(banks.map((b: { id: string }) => b.id)).toEqual(['generic', 'example']);
     expect(banks[0].tasks).toEqual([
       { task: 'check-balance', crawlerVersion: 'v1' },
       { task: 'transfer', crawlerVersion: 'v1' },
     ]);
-    expect(banks[1].tasks).toEqual([{ task: 'check-balance', crawlerVersion: 'v1' }]);
+    expect(banks[1].tasks).toEqual([]);
   });
 
   it('refuses a task on a bank with no promoted crawler, naming the banks that have one', async () => {
@@ -216,7 +216,6 @@ describe('the registry decides which banks can do what', () => {
     // Once a crawler for it is promoted, the bank lists it.
     await promote('example', 'transfer', 3);
     expect((await get('/banks')).json()[1].tasks).toEqual([
-      { task: 'check-balance', crawlerVersion: 'v1' },
       { task: 'transfer', crawlerVersion: 'v3' },
     ]);
   });

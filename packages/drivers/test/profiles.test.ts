@@ -8,8 +8,8 @@ import { isAccount } from '../src/corelink/transfer.js';
 // repairs from these, so each must be whole, and must say what its bank draws.
 
 describe('the CoreLink profiles', () => {
-  it('cover both banks, each in the same shape as Generic Bank’s', () => {
-    expect(Object.keys(PROFILES).sort()).toEqual(['example', 'generic']);
+  it('hold bank 1’s alone, whole: bank 2 is the factory’s to learn', () => {
+    expect(Object.keys(PROFILES)).toEqual(['generic']);
     for (const [bank, p] of Object.entries(PROFILES)) {
       expect(p.bank).toBe(bank);
       expect(Object.keys(p).sort()).toEqual(Object.keys(GENERIC_BANK).sort());
@@ -20,10 +20,9 @@ describe('the CoreLink profiles', () => {
     }
   });
 
-  it('read the last four digits from each bank’s account wording', () => {
+  it('read the last four digits from bank 1’s account wording', () => {
     const drawn: Record<string, string> = {
       generic: 'Account ending in 1195',
-      example: 'Share ****1195-S01',
     };
     for (const [bank, wording] of Object.entries(drawn)) {
       expect(lastFour(PROFILES[bank]!.accountWording, wording), bank).toBe('1195');
