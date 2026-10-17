@@ -201,7 +201,7 @@ services:
     <<: *node
     command: ['node', 'apps/bank/dist/main.js']
     # Password hashing (argon2, 19 MB a hash) runs on worker threads, and glibc gives each thread
-    # its own malloc arena that it rarely hands back. Two arenas, measured on bank 4 (two origins):
+    # its own malloc arena that it rarely hands back. Two arenas, measured on a bank with two origins:
     # 32 MB at rest and 68 MB after three sign-ins, against 47 and 86 without; seeding peaks near
     # 106 MB once. A cap on the JavaScript heap made no difference: the memory is not there.
     mem_limit: 128m
@@ -242,34 +242,6 @@ services:
       - '127.0.0.1:${BANK_EXAMPLE_SECOND_PORT}:8092'
       - '127.0.0.1:${BANK_EXAMPLE_ADMIN_PORT}:9000'
 
-  bank-sample:
-    <<: *bank
-    profiles: [more-banks]
-    # BANK_REDESIGN: '1' turns on the vendor's redesign: an interstitial after sign-in, new names
-    # and the nav in a Menu, over the same ledger. Off when absent.
-    environment:
-      TENANT: sample
-      MALLOC_ARENA_MAX: '2'
-      PORT: '8083'
-      ADMIN_PORT: '9000'
-      # BANK_REDESIGN: '1'
-    ports: ['127.0.0.1:${BANK_SAMPLE_PORT}:8083', '127.0.0.1:${BANK_SAMPLE_ADMIN_PORT}:9000']
-
-  bank-placeholder:
-    <<: *bank
-    profiles: [more-banks]
-    environment:
-      TENANT: placeholder
-      MALLOC_ARENA_MAX: '2'
-      PORT: '8084'
-      SECOND_PORT: '8094'
-      ADMIN_PORT: '9000'
-      # BANK_REDESIGN: '1'
-    ports:
-      - '127.0.0.1:${BANK_PLACEHOLDER_PORT}:8084'
-      - '127.0.0.1:${BANK_PLACEHOLDER_SECOND_PORT}:8094'
-      - '127.0.0.1:${BANK_PLACEHOLDER_ADMIN_PORT}:9000'
-
   # The staff inbox, where codes arrive. On its own network: people reach it, the Runner and the
   # factory cannot, so a code is always a human step.
   bank-inbox:
@@ -277,7 +249,7 @@ services:
     command: ['node', 'apps/bank/dist/inbox-main.js']
     mem_limit: 96m
     env_file: [../../config/app.env, ../../.run/env/bank-inbox.env]
-    environment: { PORT: '8089', BANKS: 'generic,example,sample,placeholder' }
+    environment: { PORT: '8089', BANKS: 'generic,example' }
     ports: ['127.0.0.1:${BANK_INBOX_PORT}:8089']
     networks: [edge, bankdb]
     depends_on: { bank-db: { condition: service_healthy } }

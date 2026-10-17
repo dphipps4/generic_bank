@@ -34,7 +34,6 @@ backend := "api"
 console := "console"
 crawlers := "runner"
 bank := "bank-db bank-generic bank-example bank-inbox"
-bank_more := "bank-sample bank-placeholder"
 factory := "factory"
 
 # A hash of everything that goes into the image. The image carries it as a label, so a stale
@@ -149,12 +148,12 @@ image:
     @have="$(docker image inspect -f '{{{{ index .Config.Labels "gb.source" }}' $GB_RUNNER_IMAGE 2>/dev/null || true)"; \
       if [[ "$have" != "{{source_stamp}}" ]]; then echo "==> The image is out of date with the source; building"; just build; fi
 
-# Start everything: data, memory and its seed, back end, console, crawlers, all four banks, the factory
+# Start everything: data, memory and its seed, back end, console, crawlers, both banks, the factory
 [group('Run')]
 up: env image
     @just data
     @just memory-seed
-    @just backend console crawlers bank bank-more factory
+    @just backend console crawlers bank factory
     @just credentials
     @just urls
 
@@ -229,18 +228,12 @@ crawlers: env image
 bank: env image
     @{{compose}} up -d --wait {{bank}}
 
-# Banks 3 and 4
-[group('Run')]
-bank-more: env image
-    @{{compose}} --profile more-banks up -d --wait {{bank_more}}
-    @echo "  Sample Savings Bank   http://localhost:$BANK_SAMPLE_PORT/online/branch/"; echo "  Placeholder FCU       http://127.0.0.1:$BANK_PLACEHOLDER_PORT/cu/ib/"
-
 # The factory box: the software factory (its models need OPENROUTER_API_KEY)
 [group('Run')]
 factory: env image
     @{{compose}} --profile factory up -d --wait {{factory}}
 
-# The factory learns a bank, then runs the gate once you approve: just onboard sample
+# The factory learns a bank, then runs the gate once you approve: just onboard example
 [group('Factory')]
 onboard bank: factory
     @{{compose}} --profile factory-run run --rm factory-run onboard {{bank}}
@@ -387,6 +380,6 @@ later name:
 _services +groups:
     @for g in {{groups}}; do case "$g" in \
       data) echo -n "{{data}} " ;; backend) echo -n "{{backend}} " ;; console) echo -n "{{console}} " ;; \
-      crawlers) echo -n "{{crawlers}} " ;; bank) echo -n "{{bank}} " ;; bank-more) echo -n "{{bank_more}} " ;; \
-      factory) echo -n "{{factory}} " ;; *) echo "unknown group: $g (data, backend, console, crawlers, bank, bank-more, factory)" >&2; exit 1 ;; \
+      crawlers) echo -n "{{crawlers}} " ;; bank) echo -n "{{bank}} " ;; \
+      factory) echo -n "{{factory}} " ;; *) echo "unknown group: $g (data, backend, console, crawlers, bank, factory)" >&2; exit 1 ;; \
       esac; done
