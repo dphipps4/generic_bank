@@ -196,6 +196,11 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
   const last = replies.at(-1);
   if (!last || last.stopReason === 'error' || last.stopReason === 'aborted')
     throw new Error(`the ${a.model.provider} model failed: ${last?.errorMessage ?? 'no answer'}`);
+  // A model that spends its whole allowance thinking says nothing; that is a failure, not an answer.
+  if (last.stopReason === 'length' && !last.content.some((b) => b.type !== 'thinking'))
+    throw new Error(
+      `the ${a.model.provider} model used all ${i.maxTokens} tokens thinking and gave no answer`,
+    );
   const refused = added.flatMap((m) =>
     m.role === 'toolResult' && m.isError && !ran.has(m.toolCallId)
       ? [

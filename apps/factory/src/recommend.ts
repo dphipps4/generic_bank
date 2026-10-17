@@ -177,7 +177,8 @@ export async function recommend(o: {
     ].join('\n\n'),
     tools: [recommendTool(o)],
     calls: 3,
-    maxTokens: 16_000,
+    // Drafting a profile from every frame is the Supervisor's longest thinking.
+    maxTokens: 48_000,
   });
   const kept = await o.sql.query<{ claims: Claim[] }>(
     `SELECT claims FROM "Recommendation" WHERE "factoryRunId" = $1`,

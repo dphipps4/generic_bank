@@ -304,7 +304,7 @@ export async function writeLessons(o: {
     ]),
     answer: ANSWER_SCHEMA,
     calls: MAX_LESSONS + 3,
-    maxTokens: 16_000,
+    maxTokens: 32_000,
   });
   const learned: Learned = { lessons, reliedOn: [], contradicted: [] };
   let a: z.infer<typeof Answer> | null = null;
