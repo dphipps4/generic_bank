@@ -72,6 +72,10 @@ setup: requirements tools secrets-init build env
     @echo; echo "Ready. Next: just up, then open http://localhost:$CONSOLE_PORT"; echo "Console sign-in: $CONSOLE_ADMIN_EMAIL, password: just console-password"
     @{{scripts}}/model-mode.sh
 
+# To develop, in one go: Node 26, dependencies, Chromium, every CI check, then the API reference in Chrome
+[group('Start here')]
+dev: dev-setup ci api-docs
+
 # Once, to develop: Node dependencies, the Prisma client, Chromium for the tests
 [group('Start here')]
 dev-setup: requirements-dev install browser

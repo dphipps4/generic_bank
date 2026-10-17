@@ -49,16 +49,16 @@ Every choice runs on an 8 GB laptop, keeps the risky parts in code we own, and i
 | Perception | **Chrome DevTools Protocol** through our client's sessions: `DOMSnapshot`, the `Accessibility` tree, screenshots, across every frame | Read from outside, so the page can't see or fake it; nothing is injected |
 | Pictures of text | **Image fingerprints** (perceptual hashes), named once by the factory's vision model, kept in the bank's profile | Image-only buttons get names without reading pixels |
 | Image work | **Our own PNG code** in `packages/screen`, no image library | Masking boxes, fingerprints, the "fully rendered" frame check |
-| Vision model | Claude via the model gateway, **factory time only** | Judges each Scout step from the frame |
+| Vision model | Through the model gateway, **factory time only** | Judges each Scout step from the frame |
 
 ## 6. Models and the factory
 
 | Element | Choice | Why |
 |---|---|---|
 | Agent harness | **pi** ([pi.dev](https://pi.dev)), one session per role | Switches model providers by configuration; gives us a prompt loop, a tool-call hook that can veto, and a session file as a checkpoint |
-| Model gateway | Our metering endpoint, per configured provider (Anthropic by default, OpenAI possible) | The spend meter and caps sit where the model can't touch them |
-| Scout model (default; configurable) | `claude-sonnet-5-5`, low effort | Navigates as the Supervisor directs; cheaper than Opus |
-| Supervisor model (default; configurable) | `claude-opus-5-5`, high effort | Reasons over every frame and drafts the profile |
+| Model gateway | Our metering endpoint, through OpenRouter to any model in its catalog | The spend meter and caps sit where the model can't touch them |
+| Scout model (default; configurable) | `qwen/qwen3.8-max-prime`, low effort | Navigates as the Supervisor directs |
+| Supervisor model (default; configurable) | `qwen/qwen3.8-max-prime`, high effort | Reasons over every frame and drafts the profile |
 | Mock mode | Recorded responses replayed by the gateway | A whole factory run without an API key |
 | Embeddings | **@huggingface/transformers** with **bge-small-en-v1.5** (384 dimensions, CPU) | Runs in the Memory process: about 130 MB, no API cost |
 | Prompt files (Part 2) | Markdown with YAML frontmatter; answers in **JSON Schema**, checked by **ajv** | Prompts are reviewed and versioned like code |
