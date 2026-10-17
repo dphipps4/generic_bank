@@ -121,7 +121,7 @@ image:
 [group('Run')]
 up: env image
     @just data
-    @just backend console crawlers bank factory
+    @just backend console crawlers bank factory-up
     @just credentials
     @just urls
 
