@@ -51,12 +51,13 @@ const ANSWER_SCHEMA = {
 
 const Answer = z.object({
   next: z.string().trim().min(1).max(400),
+  // A reason is kept to 300 characters: a model that writes more is cut short, not unread.
   reason: z
     .string()
     .trim()
     .min(1)
-    .max(300)
-    .refine((s) => !s.includes('\n'), 'the reason is one line'),
+    .refine((s) => !s.includes('\n'), 'the reason is one line')
+    .transform((s) => (s.length > 300 ? `${s.slice(0, 299)}…` : s)),
   frames: z.array(z.string()).min(1).max(20),
 });
 export type Answer = z.infer<typeof Answer>;
