@@ -2,10 +2,7 @@
 // recommend tool refuses a claim with no frame, a frame that is not this run's, and a claim marked
 // seen that its frames do not show, and keeps the rest with the run. The Supervisor's model is a
 // fake fetch behind the real gateway; no request leaves the process.
-import { mkdtemp, rm } from 'node:fs/promises';
 import type { AddressInfo } from 'node:net';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import { gateway } from '../src/gateway.js';
@@ -134,14 +131,9 @@ describe('the recommend tool', () => {
 });
 
 describe('the Supervisor recommending', () => {
-  let dir: string;
   let app: ReturnType<typeof buildServer>;
-  beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'gb-recommend-'));
-  });
   afterEach(async () => {
     await app?.close();
-    await rm(dir, { recursive: true, force: true });
   });
 
   it('drafts from the run’s frames, is refused a claim with no frame, and corrects it', async () => {
@@ -159,12 +151,10 @@ describe('the Supervisor recommending', () => {
             asked.push(r);
             return replies.shift()!;
           }),
-          dir,
         ),
         prices: PRICES,
       }),
       token: TOKEN,
-      mode: 'live',
     });
     await app.listen({ host: '127.0.0.1', port: 0 });
     const { port } = app.server.address() as AddressInfo;

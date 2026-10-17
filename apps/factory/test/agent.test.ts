@@ -1,10 +1,7 @@
 // A role's turn as a pi session, on each provider behind the real gateway: its tools run one at a
 // time, a call pi turns away is reported, the turn stops at its call limit, and a tool that breaks
-// stops the turn. The models are scripted fakes; no request leaves the process.
-import { mkdtemp, rm } from 'node:fs/promises';
+// stops the turn. The models are fakes that answer from a list; no request leaves the process.
 import type { AddressInfo } from 'node:net';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { controlDb } from '../../../packages/oauth/test/control.js';
@@ -21,7 +18,6 @@ import { fakeModels, OPENAI_TEST_MODEL, type Reply, TEST_PRICE } from './fakes.j
 const TOKEN = 'gateway-token-for-tests-0123456789abcdef';
 
 let db: Awaited<ReturnType<typeof controlDb>>;
-let dir: string;
 let app: ReturnType<typeof buildServer>;
 let replies: Reply[];
 
@@ -31,19 +27,14 @@ beforeEach(async () => {
     `INSERT INTO "FactoryRun" (id, tenant, task, mode, phase, status)
      VALUES ('run1', 'generic', 'check-balance', 'build', 'SCOUT', 'running')`,
   );
-  dir = await mkdtemp(join(tmpdir(), 'gb-agent-'));
   replies = [];
   app = buildServer({
     gateway: gateway({
       ledger: sqlLedger(db),
-      upstream: live(
-        fakeModels(() => replies.shift() ?? { text: 'Done.' }),
-        dir,
-      ),
+      upstream: live(fakeModels(() => replies.shift() ?? { text: 'Done.' })),
       prices: { ...PRICES, [OPENAI_TEST_MODEL]: TEST_PRICE },
     }),
     token: TOKEN,
-    mode: 'live',
   });
   await app.listen({ host: '127.0.0.1', port: 0 });
 });
@@ -51,7 +42,6 @@ beforeEach(async () => {
 afterEach(async () => {
   await app.close();
   await db.close();
-  await rm(dir, { recursive: true, force: true });
 });
 
 describe.each([DEFAULT_ROLES.scout.provider] as const)('a turn on %s', (provider: Provider) => {

@@ -1,10 +1,7 @@
 // The Supervisor's answer: its fixed form, the frames it cites, and when it stops the run, on the
 // Anthropic defaults and with OpenAI configured. Its model is a fake fetch behind the real gateway;
 // no request leaves the process.
-import { mkdtemp, rm } from 'node:fs/promises';
 import net, { type AddressInfo } from 'node:net';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import { apiOf } from '../src/agent.js';
@@ -16,14 +13,13 @@ import type { Scout } from '../src/scout.js';
 import { buildServer } from '../src/server.js';
 import { readAnswer, supervisor } from '../src/supervisor.js';
 import type { Trail } from '../src/trail.js';
-import { live, upstreamFor } from '../src/upstream.js';
+import { live } from '../src/upstream.js';
 import { fakeModels, OPENAI_TEST_MODEL, TEST_PRICE } from './fakes.js';
 
 const TOKEN = 'gateway-token-for-tests-0123456789abcdef';
 const PNG = Buffer.from('a masked screenshot');
 
 let db: Awaited<ReturnType<typeof controlDb>>;
-let dir: string;
 let app: ReturnType<typeof buildServer>;
 let answers: string[];
 let sent: Record<string, unknown>[];
@@ -41,19 +37,17 @@ beforeEach(async () => {
     `INSERT INTO "FactoryRun" (id, tenant, task, mode, phase, status)
      VALUES ('run1', 'generic', 'check-balance', 'build', 'SCOUT', 'running')`,
   );
-  dir = await mkdtemp(join(tmpdir(), 'gb-supervisor-'));
   answers = [];
   sent = [];
-  // The model: each request is answered with the next scripted text.
+  // The model: each request is answered with the next text in `answers`.
   const models = fakeModels(() => ({ text: answers.shift() ?? 'nothing left' }), sent);
   app = buildServer({
     gateway: gateway({
       ledger: sqlLedger(db),
-      upstream: live(models, dir),
+      upstream: live(models),
       prices: { ...PRICES, [OPENAI_TEST_MODEL]: TEST_PRICE },
     }),
     token: TOKEN,
-    mode: 'live',
   });
   await app.listen({ host: '127.0.0.1', port: 0 });
 });
@@ -61,7 +55,6 @@ beforeEach(async () => {
 afterEach(async () => {
   await app.close();
   await db.close();
-  await rm(dir, { recursive: true, force: true });
 });
 
 const answer = (next: string, frames = ['f1'], reason = 'the sign-in form is on screen') =>
@@ -216,24 +209,14 @@ describe.each([DEFAULT_ROLES.supervisor.provider] as const)('the Supervisor on %
     ]);
   });
 
-  it('in mock mode, with no key, reaches nothing but the gateway', async () => {
+  it('reaches nothing but the gateway', async () => {
     answers = [answer('Sign in.')];
-    expect(await setUp(provider).s.next(null)).toBe('Sign in.');
-    // The same call again, replayed: pi's only connection is to the gateway, on this machine.
-    const mock = buildServer({
-      gateway: gateway({
-        ledger: sqlLedger(db),
-        upstream: upstreamFor({}, dir),
-        prices: { ...PRICES, [OPENAI_TEST_MODEL]: TEST_PRICE },
-      }),
-      token: TOKEN,
-      mode: 'mock',
-    });
-    await mock.listen({ host: '127.0.0.1', port: 0 });
+    // pi's only connection is to the gateway, on this machine; the gateway's fake model is in
+    // the process.
     const connect = vi.spyOn(net.Socket.prototype, 'connect');
     try {
-      expect(await setUp(provider, undefined, mock).s.next(null)).toBe('Sign in.');
-      const { port } = mock.server.address() as AddressInfo;
+      expect(await setUp(provider).s.next(null)).toBe('Sign in.');
+      const { port } = app.server.address() as AddressInfo;
       expect(connect).toHaveBeenCalled();
       // Node hands connect its options in an array.
       for (const args of connect.mock.calls)
@@ -241,7 +224,6 @@ describe.each([DEFAULT_ROLES.supervisor.provider] as const)('the Supervisor on %
       expect(sent).toHaveLength(1);
     } finally {
       connect.mockRestore();
-      await mock.close();
     }
   });
 });

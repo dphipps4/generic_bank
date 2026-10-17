@@ -1,12 +1,9 @@
-// Where the gateway's answers come from: the model itself, each call recorded, or a recording
-// replayed (mock mode). A recording is one file per run, one call per line, in order.
-import { appendFile, mkdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { isDeepStrictEqual } from 'node:util';
+// Where the gateway's answers come from: the model itself, through its provider's SDK. With no
+// key for a provider, a call to it is refused and names the key; nothing stands in for the model.
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { TURN_MS } from './agent.js';
-import type { Provider, Role, Usage } from './models.js';
+import type { Provider, Usage } from './models.js';
 
 export type Request = Record<string, unknown>;
 
@@ -17,17 +14,8 @@ export interface Answer {
   usage?: Usage;
 }
 
-/** One line of a recording. */
-export interface Recorded extends Answer {
-  role: Role;
-  provider: Provider;
-  request: Request;
-}
-
 export interface Upstream {
-  /** False when nothing is spent: a replay. */
-  readonly spends: boolean;
-  answer(runId: string, role: Role, provider: Provider, request: Request): Promise<Answer>;
+  answer(provider: Provider, request: Request): Promise<Answer>;
 }
 
 /** A request the gateway turns away, as an Anthropic error body (OpenAI's SDK reads it too). */
@@ -49,8 +37,6 @@ export const isPicture = (v: unknown) => {
   const type = (v as { type?: unknown } | null)?.type;
   return type === 'image' || type === 'image_url';
 };
-
-const file = (dir: string, runId: string) => join(dir, `${runId}.jsonl`);
 
 async function anthropic(client: Anthropic, request: Request): Promise<Answer> {
   const { stream: streamed, ...params } = request;
@@ -127,19 +113,14 @@ const KEYS = {
   openrouter: 'OPENROUTER_API_KEY',
 } as const;
 
-/** Each provider's model, through its SDK; every call is recorded. */
-export function live(
-  clients: {
-    anthropic?: Anthropic;
-    openai?: OpenAI;
-    openrouter?: { anthropic: Anthropic; openai: OpenAI };
-  },
-  recordings: string,
-): Upstream {
+/** Each provider's model, through its SDK. */
+export function live(clients: {
+  anthropic?: Anthropic;
+  openai?: OpenAI;
+  openrouter?: { anthropic: Anthropic; openai: OpenAI };
+}): Upstream {
   return {
-    spends: true,
-    async answer(runId, role, provider, request) {
-      let answer;
+    async answer(provider, request) {
       if (provider === 'openrouter') {
         const or = clients.openrouter;
         if (!or)
@@ -148,26 +129,17 @@ export function live(
             body: new Refusal(401, 'authentication_error', `${KEYS[provider]} is not set`).body,
           };
         // pi puts the system prompt at the top level only in Anthropic Messages.
-        answer =
-          'system' in request
-            ? await anthropic(or.anthropic, request)
-            : await openai(or.openai, request);
-      } else {
-        const client = clients[provider];
-        if (!client)
-          return {
-            status: 401,
-            body: new Refusal(401, 'authentication_error', `${KEYS[provider]} is not set`).body,
-          };
-        answer =
-          provider === 'anthropic'
-            ? await anthropic(client as Anthropic, request)
-            : await openai(client as OpenAI, request);
+        return 'system' in request ? anthropic(or.anthropic, request) : openai(or.openai, request);
       }
-      await mkdir(recordings, { recursive: true });
-      const line: Recorded = { role, provider, request, ...answer };
-      await appendFile(file(recordings, runId), `${JSON.stringify(line)}\n`);
-      return answer;
+      const client = clients[provider];
+      if (!client)
+        return {
+          status: 401,
+          body: new Refusal(401, 'authentication_error', `${KEYS[provider]} is not set`).body,
+        };
+      return provider === 'anthropic'
+        ? anthropic(client as Anthropic, request)
+        : openai(client as OpenAI, request);
     },
   };
 }
@@ -175,132 +147,30 @@ export function live(
 /** OpenRouter's base URL, with two API surfaces: /api for Anthropic Messages, /api/v1 for OpenAI. */
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api';
 
-/** With a key, the model; with none at all, mock mode, and no client is ever made. */
-export function upstreamFor(
-  keys: { anthropic?: string; openai?: string; openrouter?: string },
-  recordings: string,
-): Upstream {
-  if (!keys.anthropic && !keys.openai && !keys.openrouter) return replay(recordings);
-  return live(
-    {
-      anthropic: keys.anthropic
-        ? new Anthropic({ apiKey: keys.anthropic, timeout: TURN_MS })
-        : undefined,
-      openai: keys.openai ? new OpenAI({ apiKey: keys.openai, timeout: TURN_MS }) : undefined,
-      openrouter: keys.openrouter
-        ? {
-            anthropic: new Anthropic({
-              apiKey: keys.openrouter,
-              baseURL: OPENROUTER_BASE_URL,
-              timeout: TURN_MS,
-            }),
-            openai: new OpenAI({
-              apiKey: keys.openrouter,
-              baseURL: `${OPENROUTER_BASE_URL}/v1`,
-              timeout: TURN_MS,
-            }),
-          }
-        : undefined,
-    },
-    recordings,
-  );
-}
-
-// What a replayed request must repeat exactly: the agents' own turns (system and assistant), the
-// order and shape of the conversation, the tool calls and the request's settings. What the bank
-// showed (page text, screenshots, tool results read from a live page) may differ between the
-// recording and the replay, where the page moves or the bank's state is not the same, so only its
-// shape is kept. The same rule serves Anthropic's Messages and OpenAI's Chat Completions.
-type Block = { type?: unknown; tool_use_id?: unknown; is_error?: unknown };
-const shapeOf = (b: unknown): unknown => {
-  if (typeof b === 'string') return { type: 'text' };
-  const block = b as Block;
-  if (block.type === 'tool_result')
-    return {
-      type: 'tool_result',
-      tool_use_id: block.tool_use_id,
-      is_error: block.is_error ?? false,
-    };
-  return { type: block.type };
-};
-type Message = { role: string; content: unknown; tool_call_id?: unknown };
-export const unpictured = (r: Request): unknown => ({
-  ...r,
-  messages: ((r.messages ?? []) as Message[]).map((m) =>
-    m.role === 'assistant' || m.role === 'system'
-      ? m
-      : {
-          role: m.role,
-          ...(m.tool_call_id !== undefined ? { tool_call_id: m.tool_call_id } : {}),
-          content: Array.isArray(m.content) ? m.content.map(shapeOf) : shapeOf(m.content),
-        },
-  ),
-});
-
-/** Where two requests first differ, as a path such as messages[3].content[0].is_error; or null. */
-function differs(a: unknown, b: unknown, path: string): string | null {
-  if (isDeepStrictEqual(a, b)) return null;
-  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null)
-    return path || 'the request';
-  if (Array.isArray(a) !== Array.isArray(b)) return path || 'the request';
-  const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])];
-  for (const k of keys) {
-    const at = Array.isArray(a) ? `${path}[${k}]` : path ? `${path}.${k}` : k;
-    const d = differs((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k], at);
-    if (d) return d;
-  }
-  return path || 'the request';
-}
-
-/** A request without its model's name: a recording replays whichever model config/app.env names. */
-const modelless = (r: unknown) =>
-  r && typeof r === 'object' ? { ...(r as Record<string, unknown>), model: undefined } : r;
-
-/** OpenRouter's Anthropic models speak Anthropic Messages; a recording made on one replays on the other. */
-const sameApi = (a: string, b: string) =>
-  a === b || [a, b].sort().join(',') === 'anthropic,openrouter';
-
-/** Mock mode: each request must be the next one in the run's recording, which answers it. */
-export function replay(recordings: string): Upstream {
-  const runs = new Map<string, { calls: Recorded[]; next: number }>();
-  return {
-    spends: false,
-    async answer(runId, role, provider, request) {
-      let run = runs.get(runId);
-      if (!run) {
-        // A run with no recording of its own replays the one kept for its kind: repair-generic
-        // for the run repair-generic-1a2b3c4d.
-        const kind = runId.replace(/-[0-9a-f]{8}$/, '');
-        const text = await readFile(file(recordings, runId), 'utf8')
-          .catch(() => readFile(file(recordings, kind), 'utf8'))
-          .catch(() => {
-            throw new Refusal(400, 'invalid_request_error', `no recording for run ${runId}`);
-          });
-        const calls = text
-          .split('\n')
-          .filter(Boolean)
-          .map((l) => JSON.parse(l) as Recorded);
-        run = { calls, next: 0 };
-        runs.set(runId, run);
-      }
-      const n = run.next + 1;
-      const call = run.calls[run.next];
-      if (!call)
-        throw new Refusal(400, 'invalid_request_error', `the recording ends before call ${n}`);
-      const where =
-        call.role !== role
-          ? `the role (${role}, recorded ${call.role})`
-          : !sameApi(call.provider, provider)
-            ? `the provider (${provider}, recorded ${call.provider})`
-            : differs(modelless(unpictured(call.request)), modelless(unpictured(request)), '');
-      if (where)
-        throw new Refusal(
-          400,
-          'invalid_request_error',
-          `call ${n} differs from the recording at ${where}`,
-        );
-      run.next = n;
-      return call;
-    },
-  };
+/** A client for each provider whose key is set; a call to any other is refused. */
+export function upstreamFor(keys: {
+  anthropic?: string;
+  openai?: string;
+  openrouter?: string;
+}): Upstream {
+  return live({
+    anthropic: keys.anthropic
+      ? new Anthropic({ apiKey: keys.anthropic, timeout: TURN_MS })
+      : undefined,
+    openai: keys.openai ? new OpenAI({ apiKey: keys.openai, timeout: TURN_MS }) : undefined,
+    openrouter: keys.openrouter
+      ? {
+          anthropic: new Anthropic({
+            apiKey: keys.openrouter,
+            baseURL: OPENROUTER_BASE_URL,
+            timeout: TURN_MS,
+          }),
+          openai: new OpenAI({
+            apiKey: keys.openrouter,
+            baseURL: `${OPENROUTER_BASE_URL}/v1`,
+            timeout: TURN_MS,
+          }),
+        }
+      : undefined,
+  });
 }

@@ -14,14 +14,13 @@ type Req = FastifyRequest<{ Params: { runId: string; role: string }; Body: unkno
 export function buildServer(opts: {
   gateway: ReturnType<typeof gateway>;
   token: string;
-  mode: 'live' | 'mock';
   logger?: boolean;
 }) {
   // A conversation of screenshots runs to megabytes; the API itself takes up to 32 MB.
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 32 * 1024 * 1024 });
   const token = digest(opts.token);
 
-  app.get('/healthz', async () => ({ ok: true, service: 'factory', mode: opts.mode }));
+  app.get('/healthz', async () => ({ ok: true, service: 'factory' }));
 
   const route = (provider: Provider) => async (req: Req, reply: FastifyReply) => {
     // Anthropic's SDK sends the key as x-api-key, OpenAI's as a bearer token.
@@ -34,7 +33,7 @@ export function buildServer(opts: {
       return reply.code(404).send(error('not_found_error', 'no such run or role'));
     if (typeof req.body !== 'object' || req.body === null || Array.isArray(req.body))
       return reply.code(400).send(error('invalid_request_error', 'a JSON object is required'));
-    // Anthropic's betas travel as a header; the request is recorded and replayed with them.
+    // Anthropic's betas travel as a header; the request carries them on to the model.
     const betas = req.headers['anthropic-beta'];
     const body = req.body as Record<string, unknown>;
     const request =

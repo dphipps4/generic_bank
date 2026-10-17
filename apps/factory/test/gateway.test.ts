@@ -1,10 +1,7 @@
-// The model gateway: caps before every request, spend after it, and mock mode, on Anthropic's
-// route. No test reaches a model: the live path runs each real SDK against a fake
+// The model gateway: caps before every request, spend after it, and a refusal with no key, on
+// Anthropic's route. No test reaches a model: the live path runs each real SDK against a fake
 // fetch, with a key that is not one.
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import net from 'node:net';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import Anthropic from '@anthropic-ai/sdk';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { controlDb } from '../../../packages/oauth/test/control.js';
@@ -45,7 +42,6 @@ const EVENTS = [
 const SSE = EVENTS.map((e) => `event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`).join('');
 
 let db: Awaited<ReturnType<typeof controlDb>>;
-let dir: string;
 let sent: Record<string, unknown>[];
 let release: Promise<void>;
 
@@ -75,7 +71,6 @@ function factory(
   const app = buildServer({
     gateway: gateway({ ledger, upstream, prices: TEST_PRICES }),
     token: TOKEN,
-    mode: 'live',
   });
   return (runId: string, role: string, body: Record<string, unknown>, token = TOKEN) =>
     app.inject({
@@ -110,7 +105,6 @@ beforeEach(async () => {
        ('run1', 'generic', 'check-balance', 'build', 'SCOUT', 'running'),
        ('run2', 'generic', 'check-balance', 'build', 'SCOUT', 'running')`,
   );
-  dir = await mkdtemp(join(tmpdir(), 'gb-recordings-'));
   sent = [];
   release = Promise.resolve();
 });
@@ -119,7 +113,6 @@ afterEach(async () => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   await db.close();
-  await rm(dir, { recursive: true, force: true });
 });
 
 describe('the caps', () => {
@@ -147,7 +140,7 @@ describe('the caps', () => {
 
 describe('the model gateway', () => {
   it('refuses a request that would pass the run’s cap before it is sent', async () => {
-    const post = factory(live({ anthropic: fakeModel() }, dir));
+    const post = factory(live({ anthropic: fakeModel() }));
     await spent('run1', 23.5);
     // 64,000 output tokens could cost $1.28: past the $24 a run may spend before the lessons.
     const r = await post('run1', 'scout', ask({ max_tokens: 64_000 }));
@@ -160,14 +153,14 @@ describe('the model gateway', () => {
   });
 
   it('keeps the reserve for the lessons', async () => {
-    const post = factory(live({ anthropic: fakeModel() }, dir));
+    const post = factory(live({ anthropic: fakeModel() }));
     await spent('run1', 23.9);
     expect((await post('run1', 'supervisor', ask({ max_tokens: 20_000 }))).statusCode).toBe(402);
     expect((await post('run1', 'lessons', ask({ max_tokens: 20_000 }))).statusCode).toBe(200);
   });
 
   it('refuses at the week’s cap across runs, counting only the last seven days', async () => {
-    const post = factory(live({ anthropic: fakeModel() }, dir));
+    const post = factory(live({ anthropic: fakeModel() }));
     await spent('run2', 149.5, 8);
     expect((await post('run1', 'scout', ask({ max_tokens: 64_000 }))).statusCode).toBe(200);
     await spent('run2', 149.5);
@@ -178,7 +171,7 @@ describe('the model gateway', () => {
   it('holds a request in flight against the cap', async () => {
     let go!: () => void;
     release = new Promise((r) => (go = r));
-    const post = factory(live({ anthropic: fakeModel() }, dir));
+    const post = factory(live({ anthropic: fakeModel() }));
     await spent('run1', 22);
     // Each could cost about $1.28; one fits under $24, two do not.
     const first = post('run1', 'scout', ask({ max_tokens: 64_000 }));
@@ -189,7 +182,7 @@ describe('the model gateway', () => {
   });
 
   it('refuses server tools, an unknown run and a bad token', async () => {
-    const post = factory(live({ anthropic: fakeModel() }, dir));
+    const post = factory(live({ anthropic: fakeModel() }));
     const search = ask({ tools: [{ type: 'web_search_20260209', name: 'web_search' }] });
     expect((await post('run1', 'scout', search)).statusCode).toBe(400);
     expect((await post('nope', 'scout', ask())).statusCode).toBe(404);
@@ -203,13 +196,13 @@ describe('the model gateway', () => {
       spend: () => Promise.reject(new Error('connection refused')),
       record: () => Promise.resolve(),
     };
-    const r = await factory(live({ anthropic: fakeModel() }, dir), broken)('run1', 'scout', ask());
+    const r = await factory(live({ anthropic: fakeModel() }), broken)('run1', 'scout', ask());
     expect(r.statusCode).toBe(503);
     expect(sent).toHaveLength(0);
   });
 
   it('records tokens and cost per run and role', async () => {
-    const post = factory(live({ anthropic: fakeModel() }, dir));
+    const post = factory(live({ anthropic: fakeModel() }));
     const streamed = await post('run1', 'scout', ask({ stream: true }));
     expect(streamed.headers['content-type']).toMatch(/^text\/event-stream/);
     expect(streamed.body).toBe(SSE);
@@ -230,89 +223,18 @@ describe('the model gateway', () => {
   });
 });
 
-describe('mock mode', () => {
-  it('replays a recording exactly, without a key or the network', async () => {
-    // A live run, recorded.
-    const recorder = factory(live({ anthropic: fakeModel() }, dir));
-    const calls = [
-      ['scout', ask({ stream: true })],
-      ['supervisor', ask({ messages: [{ role: 'user', content: 'What next?' }] })],
-    ] as const;
-    const recorded: string[] = [];
-    for (const [role, body] of calls) recorded.push((await recorder('run1', role, body)).body);
-    expect((await readFile(join(dir, 'run1.jsonl'), 'utf8')).trim().split('\n')).toHaveLength(2);
-
-    // The same run with no key: nothing may leave the process.
-    vi.stubGlobal('fetch', () => Promise.reject(new Error('mock mode used the network')));
+describe('with no model key', () => {
+  it('refuses every call, names the key, and reaches no model', async () => {
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('a call left the process')));
     const connect = vi.spyOn(net.Socket.prototype, 'connect');
-    await db.query(`DELETE FROM "ModelCall"`);
-    const upstream = upstreamFor({}, dir);
-    expect(upstream.spends).toBe(false);
-    const post = factory(upstream);
-    for (const [i, [role, body]] of calls.entries()) {
-      const r = await post('run1', role, body);
-      expect(r.statusCode).toBe(200);
-      expect(r.body).toBe(recorded[i]);
-    }
+    const r = await factory(upstreamFor({}))('run1', 'scout', ask());
+    expect(r.statusCode).toBe(401);
+    expect(r.json().error).toEqual({
+      type: 'authentication_error',
+      message: 'ANTHROPIC_API_KEY is not set',
+    });
     expect(connect).not.toHaveBeenCalled();
-    expect(sent).toHaveLength(2);
-
-    const rows = await db.query<{ role: string; usd: string }>(
-      `SELECT role, "costUsd"::text AS usd FROM "ModelCall" ORDER BY role`,
-    );
-    expect(rows.rows).toEqual([
-      { role: 'scout', usd: '0.0000' },
-      { role: 'supervisor', usd: '0.0000' },
-    ]);
-    // Past the end of the recording, or a run with none, is refused.
-    expect((await post('run1', 'scout', ask())).statusCode).toBe(400);
-    expect((await post('run2', 'scout', ask())).json().error.message).toBe(
-      'no recording for run run2',
-    );
-  });
-
-  it('refuses a request that differs from the recording', async () => {
-    await factory(live({ anthropic: fakeModel() }, dir))('run1', 'scout', ask());
-    const post = factory(upstreamFor({}, dir));
-    const r = await post('run1', 'scout', ask({ max_tokens: 999 }));
-    expect(r.statusCode).toBe(400);
-    expect(r.json().error.message).toBe('call 1 differs from the recording at max_tokens');
-  });
-
-  it('replays what the bank showed by its shape, and refuses a turn of the model that differs', async () => {
-    const shot = (data: string, text: string, earlier = 'Open the sign-in page.') =>
-      ask({
-        messages: [
-          { role: 'user', content: 'Reach the balance.' },
-          { role: 'assistant', content: [{ type: 'text', text: earlier }] },
-          {
-            role: 'user',
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: 'image/png', data } },
-              { type: 'text', text },
-            ],
-          },
-        ],
-      });
-    await factory(live({ anthropic: fakeModel() }, dir))(
-      'run1',
-      'supervisor',
-      shot('AAAA', 'Page one'),
-    );
-    await factory(live({ anthropic: fakeModel() }, dir))(
-      'run2',
-      'supervisor',
-      shot('AAAA', 'Page one'),
-    );
-    const post = factory(upstreamFor({}, dir));
-    // The page moved and its text changed between the recording and the replay: still the same call.
-    expect((await post('run1', 'supervisor', shot('BBBB', 'Page one, redrawn'))).statusCode).toBe(
-      200,
-    );
-    // The model's own earlier turn is not what was recorded: refused.
-    expect(
-      (await post('run2', 'supervisor', shot('AAAA', 'Page one', 'Open the help page.')))
-        .statusCode,
-    ).toBe(400);
+    const rows = await db.query(`SELECT 1 FROM "ModelCall"`);
+    expect(rows.rows).toHaveLength(0);
   });
 });

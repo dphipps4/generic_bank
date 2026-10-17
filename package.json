@@ -15,7 +15,7 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "depcruise": "depcruise apps packages --config .dependency-cruiser.cjs",
+    "depcruise": "depcruise apps packages tests --config .dependency-cruiser.cjs",
     "db:generate": "prisma generate --schema packages/db/prisma/schema.prisma",
     "db:validate": "prisma validate --schema packages/db/prisma/schema.prisma",
     "check": "npm run db:generate && npm run typecheck && npm run lint && npm run test && npm run depcruise"
