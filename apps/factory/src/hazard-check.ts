@@ -12,7 +12,7 @@ import {
   type Outcome,
   type Profile,
 } from '@gb/drivers';
-import type { Browser } from '@gb/screen';
+import { type Browser, normalize, TargetError } from '@gb/screen';
 
 // The profile from approved claims is the drivers' own, so the Runner serves what this checked.
 export { profileFrom } from '@gb/drivers';
@@ -45,22 +45,49 @@ export function attemptOn(sandbox: Sandbox, profile: Profile): Attempt {
     try {
       if (hazards.length)
         await page.call('Network.setExtraHTTPHeaders', { headers: sandbox.forced(hazards) });
-      return await checkBalance(
-        {
-          page,
-          profile,
-          credentials: sandbox.credentials,
-          askHuman: sandbox.code,
-          learn: record?.learn ?? (() => undefined),
-          step: record?.step ?? (() => undefined),
-          now: () => new Date(),
-        },
-        { memberId: HEALTHY.memberId, account: HEALTHY.account },
+      return await named(profile, () =>
+        checkBalance(
+          {
+            page,
+            profile,
+            credentials: sandbox.credentials,
+            askHuman: sandbox.code,
+            learn: record?.learn ?? (() => undefined),
+            step: record?.step ?? (() => undefined),
+            now: () => new Date(),
+          },
+          { memberId: HEALTHY.memberId, account: HEALTHY.account },
+        ),
       );
     } finally {
       await page.close();
     }
   };
+}
+
+/**
+ * A control the driver could not find, said with the profile's entries that name it: the claim a
+ * repair has to change, as well as the words it looked for.
+ */
+export async function named<T>(profile: Profile, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (e) {
+    if (!(e instanceof TargetError)) throw e;
+    const quoted = /"([^"]+)"/.exec(e.what)?.[1];
+    if (!quoted) throw e;
+    const entries = [
+      ...Object.entries(profile.words).map(([k, v]) => [`words.${k}`, v] as const),
+      ...Object.entries(profile.screens ?? {}).map(([k, v]) => [`screens.${k}`, v] as const),
+    ];
+    const keys = entries
+      .filter(([, v]) =>
+        (Array.isArray(v) ? v : [v]).some((x) => normalize(String(x)) === normalize(quoted)),
+      )
+      .map(([k]) => k);
+    if (!keys.length) throw e;
+    throw new Error(`${e.message} (the profile's ${keys.join(', ')})`, { cause: e });
+  }
 }
 
 /** One run's result beside the one the table expects: null for the control run. */
