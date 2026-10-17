@@ -3,7 +3,7 @@
   "info": {
     "title": "Generic Bank Task API",
     "version": "1",
-    "description": "Typed tasks at banks that have no API, done by operating each bank’s website the way a person would. No money moves without a person’s approval. Get a token with `just api-token`, press Authorize, and paste it."
+    "description": "Typed tasks at banks that have no API, done by operating each bank’s website the way a person would. No money moves without a person’s approval. Press Authorize and enter the client id and secret from secrets/credentials.txt; curl takes a token from `just api-token`."
   },
   "tags": [
     {
