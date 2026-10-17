@@ -1,7 +1,7 @@
 // The registry (plan, §7): which version of a bank's crawler serves a task. The first fault demotes
 // the version that served: the one before it serves again, or with none, nothing does, and a repair
 // case opens.
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 interface Sql {
   query<R = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<{ rows: R[] }>;
@@ -93,4 +93,63 @@ export async function closeRepairCase(sql: Sql, tenant: string, task: string) {
       WHERE tenant = $1 AND task = $2 AND status = 'open'`,
     [tenant, task],
   );
+}
+
+/** The tasks a bank's table serves: one approval promotes it for both. */
+const TASKS = ['check-balance', 'transfer'] as const;
+
+/**
+ * A learned table, approved by a person, serves its bank: for each task, a new version holding the
+ * table becomes the active one, the one it replaces becomes the version a fault falls back to, and
+ * the task's repair case closes. Nothing promotes a table but this, and nothing calls this but a
+ * person's approval in the Console.
+ */
+export async function promoteTable(
+  sql: Sql,
+  o: { tenant: string; table: unknown; factoryRunId: string; by: string; reason: string },
+): Promise<string[]> {
+  const sha = createHash('sha256').update(JSON.stringify(o.table)).digest('hex');
+  const versions: string[] = [];
+  for (const task of TASKS) {
+    const d = (
+      await sql.query<{ id: string; active: string | null; state: string }>(
+        `INSERT INTO "Driver" (id, tenant, task, state) VALUES ($1, $2, $3, 'draft')
+         ON CONFLICT (tenant, task) DO UPDATE SET tenant = EXCLUDED.tenant
+         RETURNING id, "activeVersionId" AS active, state`,
+        [id('drv'), o.tenant, task],
+      )
+    ).rows[0]!;
+    const v = id('ver');
+    await sql.query(
+      `INSERT INTO "DriverVersion" (id, "driverId", version, sha256, kind, state, "sourceFactoryRunId", "table")
+       SELECT $1, $2, COALESCE(MAX(version), 0) + 1, $3, 'table', 'promoted', $4, $5
+         FROM "DriverVersion" WHERE "driverId" = $2`,
+      [v, d.id, sha, o.factoryRunId, JSON.stringify(o.table)],
+    );
+    await sql.query(
+      `UPDATE "Driver" SET state = 'promoted', "previousVersionId" = "activeVersionId", "activeVersionId" = $2
+        WHERE id = $1`,
+      [d.id, v],
+    );
+    if (d.active)
+      await sql.query(`UPDATE "DriverVersion" SET state = 'retired' WHERE id = $1`, [d.active]);
+    await sql.query(
+      `INSERT INTO "RegistryEvent" (id, "driverId", "fromState", "toState", by, reason)
+       VALUES ($1, $2, $3::"DriverState", 'promoted', $4, $5)`,
+      [id('re'), d.id, d.state, o.by, o.reason],
+    );
+    await closeRepairCase(sql, o.tenant, task);
+    versions.push(v);
+  }
+  return versions;
+}
+
+/** The table a version holds, if it is a learned one; null for one that runs its bank's own. */
+export async function tableOf(sql: Sql, versionId: string | null): Promise<unknown> {
+  if (!versionId) return null;
+  const r = await sql.query<{ table: unknown }>(
+    `SELECT "table" FROM "DriverVersion" WHERE id = $1`,
+    [versionId],
+  );
+  return r.rows[0]?.table ?? null;
 }

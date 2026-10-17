@@ -56,6 +56,7 @@ enum DriverState {
 enum BundleKind {
   profile
   code
+  table
 }
 
 enum EvalOutcome {
@@ -216,6 +217,8 @@ model DriverVersion {
   kind               BundleKind
   state              DriverState @default(draft)
   sourceFactoryRunId String?
+  /// A learned crawler's table; none for a version that runs its bank's hand-written one.
+  table              Json?
   createdAt          DateTime    @default(now())
 
   @@unique([driverId, version])
@@ -259,7 +262,10 @@ model Recommendation {
   factoryRunId String     @unique
   factoryRun   FactoryRun @relation(fields: [factoryRunId], references: [id])
   tenant       String
-  claims       Json
+  claims       Json       @default("[]")
+  /// The table the factory wrote, and its live check.
+  table        Json?
+  check        Json?
   status       String     @default("open")
   createdAt    DateTime   @default(now())
   decidedBy    String?
