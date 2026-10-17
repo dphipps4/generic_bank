@@ -21,4 +21,12 @@ export {
   submitTransfer,
   type Task,
 } from './crawl.js';
-export type { Answer, Goal, Row, Step, Table, Trouble } from './table.js';
+export {
+  type Answer,
+  type Goal,
+  readOf,
+  type Row,
+  type Step,
+  type Table,
+  type Trouble,
+} from './table.js';

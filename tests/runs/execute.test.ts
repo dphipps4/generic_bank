@@ -85,7 +85,7 @@ describe('the Runner carries out a run', () => {
       data: {
         availableCents: acct.availableCents,
         currentCents: acct.currentCents,
-        accountLabel: expect.stringMatching(/, Account ending in \*{4}$/),
+        accountLabel: expect.stringMatching(/, ending in \*{4}$/),
       },
     });
 

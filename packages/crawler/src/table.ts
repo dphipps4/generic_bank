@@ -42,6 +42,22 @@ export interface Trouble {
   frame: string;
 }
 
+/**
+ * A read as the pattern it matches against the page's visible words, one per line: the text as it
+ * is, each `{placeholder}` the words on its line up to what follows it.
+ */
+export function readOf(template: string, member = ''): RegExp {
+  const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const src = template
+    .split(/(\{\w+\})/)
+    .map((p) => {
+      const ph = /^\{(\w+)\}$/.exec(p);
+      return ph ? `(?<${ph[1]}>.+?)` : escape(p).replace(/\\\$member/g, escape(member));
+    })
+    .join('');
+  return new RegExp(`^${src}$`, 'gm');
+}
+
 export interface Table {
   bank: string;
   /** The console's home, an address the frames show, from the bank's URL; the sign-in follows if it must. */
@@ -55,20 +71,18 @@ export interface Table {
   trouble: Trouble[];
   /** The one press that moves money: never in a row, pressed once under a person's approval. */
   submit: { press: string; frame: string };
-  /** Reading values off a page, unmasked; the groups are named. */
+  /**
+   * Reading values off a page. Each read is visible text, one line per `\n`, with `{placeholders}`
+   * for the values and `$member` for the member's number; see `readOf`.
+   */
   reads: {
-    /** On the summary, per account, one line of visible text each: `name`, `last4`, `available`, `current`. */
-    balance: RegExp;
-    /** On the review: `from`, `to`, `amount`, `memo`. */
-    review: RegExp;
-    /** On the posted page: `confirmation`. */
-    confirmation: RegExp;
-    /** In the activity: a row of the transfer, with `$memo` in place of the memo. */
-    history: string;
-    /**
-     * Where the member's name shows, with `$member` for their number: learned when it first shows,
-     * and masked from then on. Each pattern is matched against the visible words, one per line.
-     */
+    /** On the summary, per account: `{name}`, `{last4}`, `{available}`, `{current}`. */
+    balance: string;
+    /** On the review: `{from}`, `{to}`, `{amount}`, `{memo}`. */
+    review: string;
+    /** On the posted page: `{confirmation}`. */
+    confirmation: string;
+    /** Where the member's name shows, `{name}`: learned when it first shows, masked from then on. */
     name: string[];
   };
 }

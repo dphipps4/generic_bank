@@ -74,7 +74,7 @@ describe.concurrent('bank 1, crawled', { timeout: 240_000 }, () => {
     expect(await checkBalance(s, balance)).toMatchObject({
       availableCents: checking!.availableCents,
       currentCents: checking!.currentCents,
-      accountLabel: 'Everyday Checking, Account ending in ****',
+      accountLabel: 'Everyday Checking, ending in ****',
     });
     const byLast4 = await checkBalance(s, { ...balance, account: checking!.number.slice(-4) });
     expect(byLast4.availableCents).toBe(checking!.availableCents);
