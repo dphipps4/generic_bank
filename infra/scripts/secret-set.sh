@@ -48,5 +48,5 @@ stored="$(decrypt "$FILE" | grep -E "^${KEY}=" | tail -1 | cut -d= -f2-)"
 [[ "$stored" == "$value" ]] || die "read-back did not match; check $target"
 [[ "$from_clipboard" == 1 ]] && pbcopy </dev/null
 ok "$KEY set in $target (${#value} characters$([[ $from_clipboard == 1 ]] && echo ', clipboard cleared'))"
-if [[ "$FILE" == factory ]]; then echo "  Next: ${B}just factory${N} (or ${B}just up${N}) restarts the factory with it."
+if [[ "$FILE" == factory ]]; then echo "  Next: ${B}just up${N} restarts the factory with it."
 else echo "  Next: ${B}just up${N} restarts the services that use it."; fi
