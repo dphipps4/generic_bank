@@ -301,12 +301,22 @@ describe('a bank redesigns, the crawl breaks, the factory repairs it', () => {
       {
         sql: db,
         sandbox: sandbox(),
+        store,
         memory: memoryClient(memory.factory),
         hazards: ['service-unavailable'],
       },
       recommendationId!,
     );
     expect(v.state).toBe('promoted');
+    // The control run is kept as a run of its own, settled, with its frames.
+    const check = (
+      await db.query<{ id: string; status: string; frames: number }>(
+        `SELECT r.id, r.status, (SELECT count(*)::int FROM "TrailFrame" f WHERE f."runId" = r.id) AS frames
+           FROM "TaskRun" r WHERE r.id LIKE 'check-generic-%'`,
+      )
+    ).rows;
+    expect(check).toEqual([expect.objectContaining({ status: 'succeeded' })]);
+    expect(check[0]!.frames).toBeGreaterThan(0);
     // Memory read the promotion from its probation runs: the lesson the repair saw is confirmed,
     // and its guess, the onboarding's guess too, stays a proposal.
     expect(await lessonsOf(runId)).toEqual([

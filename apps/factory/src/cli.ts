@@ -115,7 +115,10 @@ async function gateOf(recommendationId: string) {
       recommendationId,
     ])
   ).rows[0]!.tenant;
-  const v = await gate({ sql, sandbox: await sandboxAt(bank), memory, log }, recommendationId);
+  const v = await gate(
+    { sql, sandbox: await sandboxAt(bank), store, memory, log },
+    recommendationId,
+  );
   log(`version ${v.id} is ${v.state}`);
 }
 

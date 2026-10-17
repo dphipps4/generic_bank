@@ -2,12 +2,18 @@
 // version, its profile runs the hazard check against the bank, and on probation two clean runs
 // promote it. A repaired version's promotion closes the bank's repair case, and memory is told, so
 // its rules confirm what the probation runs bore out. The profile checked is the one the Runner
-// will serve: the registry's, built from the same claims over the same base.
+// will serve: the registry's, built from the same claims over the same base. A control run that
+// fails keeps its frames and opens the bank's repair case, so the Supervisor repairs the version
+// from where it stopped.
+import { randomBytes } from 'node:crypto';
 import type { HazardName } from '@gb/contracts';
+import type { FrameStore } from '@gb/evidence';
+import type { ScreenModel } from '@gb/screen';
 import { closeRepairCase, profileOf, type Sql } from '@gb/runs';
 import { attemptOn, hazardCheck, HEALTHY, judge, type Sandbox } from './hazard-check.js';
 import { candidate, checked, CLEAN_RUNS, probationRun, type Version } from './lifecycle.js';
 import { type Memory, sendPromotion } from './memory.js';
+import { openTrail } from './trail.js';
 
 /** Waits until a person decides the recommendation in the Console; true when approved. */
 export async function decided(
@@ -33,6 +39,8 @@ export async function gate(
   o: {
     sql: Sql;
     sandbox: Sandbox;
+    /** Where the control run's frames are kept; without one, a failed control opens no case. */
+    store?: FrameStore;
     memory?: Memory;
     log?: (line: string) => void;
     /** Only these hazards in the hazard check (a test's short list); every hazard otherwise. */
@@ -52,10 +60,44 @@ export async function gate(
 
   if (v.state === 'candidate') {
     log(`v${v.version}: the hazard check`);
-    const check = await hazardCheck(attempt, sandbox.ledger, o.hazards);
+    const runId = `check-${v.tenant}-${randomBytes(4).toString('hex')}`;
+    const c = await sandbox.credentials();
+    const trail = o.store
+      ? await openTrail({
+          sql,
+          store: o.store,
+          runId,
+          task: v.task,
+          bank: v.tenant,
+          known: [c.operatorId, c.password],
+        })
+      : null;
+    const record = trail && {
+      step: async (s: { name: string; action?: string; outcome?: string }, m: ScreenModel | null) =>
+        void (await trail.step({ name: s.name, action: s.action, outcome: s.outcome }, m)),
+      learn: (values: string[]) => void trail.policy.known.push(...values),
+    };
+    const check = await hazardCheck(attempt, sandbox.ledger, o.hazards, record ?? undefined);
+    const control = check.verdicts[0]!;
+    if (trail)
+      await sql.query(
+        `UPDATE "TaskRun" SET status = $2::"TaskStatus", "settledAt" = now() WHERE id = $1`,
+        [
+          runId,
+          control.passed
+            ? 'succeeded'
+            : control.got.startsWith('escalated')
+              ? 'escalated'
+              : 'failed',
+        ],
+      );
     v = await checked(sql, v.id, check);
     if (!check.passed) {
       log(`  failed: ${check.failed.join(', ')}`);
+      if (trail && !control.passed) {
+        await openCaseAt(sql, { tenant: v.tenant, task: v.task, runId, versionId: v.id });
+        log(`  ${control.got}; a repair case is open: just repair ${v.tenant}`);
+      }
       return v;
     }
   }
@@ -77,4 +119,22 @@ export async function gate(
     }
   }
   return v;
+}
+
+/**
+ * The bank's repair case, pointed at the version whose control run failed and at that run: a
+ * repair starts from that version's profile and is shown that run's frames.
+ */
+async function openCaseAt(
+  sql: Sql,
+  c: { tenant: string; task: string; runId: string; versionId: string },
+) {
+  await sql.query(
+    `INSERT INTO "RepairCase" (id, tenant, task, "consecutiveFailures", "lastFailureAt", "runId", "versionId")
+     VALUES ($1, $2, $3, 1, now(), $4, $5)
+     ON CONFLICT (tenant, task) WHERE status = 'open'
+     DO UPDATE SET "consecutiveFailures" = "RepairCase"."consecutiveFailures" + 1,
+       "lastFailureAt" = now(), "runId" = EXCLUDED."runId", "versionId" = EXCLUDED."versionId"`,
+    [`rc_${randomBytes(8).toString('hex')}`, c.tenant, c.task, c.runId, c.versionId],
+  );
 }

@@ -8,6 +8,7 @@ import {
   type Balance,
   checkBalance,
   type Credentials,
+  type DriverContext,
   type Outcome,
   type Profile,
 } from '@gb/drivers';
@@ -28,15 +29,18 @@ export interface Sandbox {
   ledger(memberId: string, account: string): Promise<number | null>;
 }
 
+/** Where a run's steps and frames are kept: the control run's, which a repair reads. */
+export type Recorder = Pick<DriverContext, 'step' | 'learn'>;
+
 /** One run of the profile's driver with these hazards forced, in a page of its own. */
-export type Attempt = (hazards: HazardName[]) => Promise<Outcome<Balance>>;
+export type Attempt = (hazards: HazardName[], record?: Recorder) => Promise<Outcome<Balance>>;
 
 const CASES = OUTCOMES['check-balance'];
 /** Every hazard is forced on the outcome table's healthy member. */
 export const HEALTHY = CASES.members[0]!;
 
 export function attemptOn(sandbox: Sandbox, profile: Profile): Attempt {
-  return async (hazards) => {
+  return async (hazards, record) => {
     const page = await sandbox.browser.newPage();
     try {
       if (hazards.length)
@@ -47,8 +51,8 @@ export function attemptOn(sandbox: Sandbox, profile: Profile): Attempt {
           profile,
           credentials: sandbox.credentials,
           askHuman: sandbox.code,
-          learn: () => undefined,
-          step: () => undefined,
+          learn: record?.learn ?? (() => undefined),
+          step: record?.step ?? (() => undefined),
           now: () => new Date(),
         },
         { memberId: HEALTHY.memberId, account: HEALTHY.account },
@@ -73,12 +77,13 @@ export async function judge(
   ledger: Sandbox['ledger'],
   hazard: HazardName | null,
   want: Expected,
+  record?: Recorder,
 ): Promise<Verdict> {
   const expected = describeExpected(want);
   let got: string;
   let passed = false;
   try {
-    const o = await attempt(hazard ? [hazard] : []);
+    const o = await attempt(hazard ? [hazard] : [], record);
     got = describeExpected(o.status === 'succeeded' ? o : { status: o.status, code: o.code });
     passed = o.status === want.status && (o.status === 'succeeded' || o.code === want.code);
     if (passed && o.status === 'succeeded') {
@@ -110,10 +115,12 @@ export async function hazardCheck(
   attempt: Attempt,
   ledger: Sandbox['ledger'],
   only?: readonly HazardName[],
+  /** Keeps the control run's steps and frames. */
+  control?: Recorder,
 ): Promise<HazardCheck> {
-  const control = await judge(attempt, ledger, null, HEALTHY.expected);
-  if (!control.passed) return { passed: false, verdicts: [control], failed: ['control'] };
-  const verdicts = [control];
+  const first = await judge(attempt, ledger, null, HEALTHY.expected, control);
+  if (!first.passed) return { passed: false, verdicts: [first], failed: ['control'] };
+  const verdicts = [first];
   // One at a time: one staff operator signing in from two places invalidates their own codes.
   const cases = only ? CASES.hazards.filter((c) => only.includes(c.hazard)) : CASES.hazards;
   for (const c of cases) verdicts.push(await judge(attempt, ledger, c.hazard, c.expected));
