@@ -28,7 +28,7 @@ export const Claim = z.object({
     .describe(
       `The part of the profile: words.<thing> (${WORDS.join(', ')}), screens.<screen> for words that mark a screen (screens.login.signin), refusals.<code> (${REFUSALS.join(', ')}), or statementsKept`,
     ),
-  value: z.string().trim().min(1).max(300).describe("The site’s own words, as they are on screen"),
+  value: z.string().trim().min(1).max(300).describe('The site’s own words, as they are on screen'),
   basis: z
     .enum(['seen', 'guess'])
     .describe(
@@ -77,7 +77,7 @@ export function recommendTool(o: { sql: Sql; trail: Trail; runId: string; bank: 
   return {
     name: 'recommend',
     description:
-      "Recommends the site’s profile, as claims, each citing the frames of this run it rests on and marked seen or guess. Refused, with the reasons, if any claim does not stand; then nothing is kept.",
+      'Recommends the site’s profile, as claims, each citing the frames of this run it rests on and marked seen or guess. Refused, with the reasons, if any claim does not stand; then nothing is kept.',
     input: Input,
     async run(input) {
       const { claims } = Input.parse(input);

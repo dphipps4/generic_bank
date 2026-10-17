@@ -1,5 +1,6 @@
 // Each role's provider, model and effort, read from the factory's settings, and the prices the
 // meter charges (plan §7). The models themselves are set in config/app.env, nowhere else.
+import { OPENROUTER_MODELS } from '@earendil-works/pi-ai/providers/openrouter.models';
 import { z } from 'zod';
 
 export const ROLE_NAMES = ['scout', 'supervisor', 'lessons'] as const;
@@ -53,14 +54,26 @@ export interface Price {
 
 // Cache writes are charged at the one-hour rate, the dearer of the two, so the meter never
 // counts low. A model of another provider (OpenAI, for one) goes here the same way, at its
-// maker's prices, before a role is set to it.
+// maker's prices, before a role is set to it. Every OpenRouter model is priced from pi's catalog,
+// at its dearest tier.
+type Rates = Price & { tiers?: Price[] };
+const dearest = (c: Rates): Price => {
+  const all = [c, ...(c.tiers ?? [])];
+  const most = (k: keyof Price) => Math.max(...all.map((t) => t[k]));
+  return {
+    input: most('input'),
+    output: most('output'),
+    cacheRead: most('cacheRead'),
+    cacheWrite: most('cacheWrite'),
+  };
+};
+const OPENROUTER_PRICES = Object.fromEntries(
+  Object.entries(OPENROUTER_MODELS).map(([id, m]) => [id, dearest(m.cost as Rates)]),
+);
 export const PRICES: Readonly<Record<string, Price>> = {
+  ...OPENROUTER_PRICES,
   'claude-opus-5-5': { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 8 },
   'claude-sonnet-5-5': { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 4 },
-  // OpenRouter model ids carry the provider prefix; the prices are the maker's.
-  'anthropic/claude-opus-4.6': { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 },
-  'anthropic/claude-opus-4.8': { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 },
-  'anthropic/claude-sonnet-5.5': { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 4 },
 };
 
 export const priceOf = (model: unknown, prices: Readonly<Record<string, Price>> = PRICES): Price =>

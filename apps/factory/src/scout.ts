@@ -149,13 +149,9 @@ export function scout(deps: ScoutDeps) {
   const tools = {
     browser_open: {
       description:
-        "Opens a page of the site being learned: its start page, or a path on the site. The host is set by the run; no other site can be opened.",
+        'Opens a page of the site being learned: its start page, or a path on the site. The host is set by the run; no other site can be opened.',
       input: z.object({
-        path: z
-          .string()
-          .max(300)
-          .optional()
-          .describe("A path on the site, such as /corelink/"),
+        path: z.string().max(300).optional().describe('A path on the site, such as /corelink/'),
       }),
       async run({ path }: { path?: string }) {
         const url = new URL(path ?? deps.start, deps.start);

@@ -46,5 +46,8 @@ export function buildServer(opts: {
   };
   app.post('/gateway/:runId/:role/v1/messages', route('anthropic'));
   app.post('/gateway/:runId/:role/v1/chat/completions', route('openai'));
+  // OpenRouter models use whichever API fits: Anthropic Messages or OpenAI Completions.
+  app.post('/gateway/:runId/:role/openrouter/v1/messages', route('openrouter'));
+  app.post('/gateway/:runId/:role/openrouter/v1/chat/completions', route('openrouter'));
   return app;
 }
