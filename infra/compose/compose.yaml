@@ -1,5 +1,5 @@
 # Generic Bank, locally. Every service has a memory limit (everything just up starts fits in
-# about 3.9 GB, 4.7 GB while a factory run is going), and networks enforce who may reach whom:
+# about 3.8 GB, 4.6 GB while a factory run is going), and networks enforce who may reach whom:
 #   app      the app box to the data box    data     the data box only (no route out)
 #   world    the banks, reached by the runner (and later the factory's browser)
 #   bankdb   the banks and their own database only (no route out)
@@ -34,7 +34,9 @@ networks:
 
 volumes:
   postgres-data: {}
-  minio-data: {}
+  # Masked screenshots, screen models and statements, as files: the Runner and a factory run
+  # write them, the Console and the API read them.
+  evidence: {}
   bank-db-data: {}
   memory-models: {}
 
@@ -52,18 +54,6 @@ services:
     # Over TCP: on first start the image runs its init script on a socket-only server, which a
     # socket check would call ready before the real server listens.
     healthcheck: { <<: *health, test: ['CMD', 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres'] }
-
-  minio:
-    image: cgr.dev/chainguard/minio:latest
-    restart: unless-stopped
-    mem_limit: 128m
-    user: '0'
-    command: ['server', '/data', '--console-address', ':9001']
-    env_file: [../../.run/env/minio.env]
-    ports: ['127.0.0.1:${MINIO_PORT}:9000', '127.0.0.1:${MINIO_CONSOLE_PORT}:9001']
-    volumes: [minio-data:/data]
-    networks: [app, data]
-    healthcheck: { <<: *health, test: ['CMD', 'mc', 'ready', 'local'] }
 
   # Memory's own schema, applied to its own database before the service starts.
   memory-migrate:
@@ -128,6 +118,7 @@ services:
     mem_limit: 192m
     env_file: [../../config/app.env, ../../.run/env/api.env]
     ports: ['127.0.0.1:${API_PORT}:8000']
+    volumes: ['evidence:/data/evidence:ro']
     networks: [app]
     depends_on: { postgres: { condition: service_healthy } }
     healthcheck:
@@ -148,6 +139,7 @@ services:
     # The host ports, which a second copy moves (config/local.env): the Dashboard links to them.
     environment: { API_PORT: '${API_PORT}', BANK_INBOX_PORT: '${BANK_INBOX_PORT}' }
     ports: ['127.0.0.1:${CONSOLE_PORT}:8080']
+    volumes: ['evidence:/data/evidence:ro']
     networks: [app]
     depends_on: { postgres: { condition: service_healthy } }
     healthcheck:
@@ -172,6 +164,7 @@ services:
     env_file: [../../config/app.env, ../../.run/env/runner.env]
     # Not a dependency: runs never wait on memory; their episodes wait in the outbox instead.
     environment: { MEMORY_URL: 'http://memory:8470' }
+    volumes: ['evidence:/data/evidence']
     networks: [app, world]
     depends_on: { postgres: { condition: service_healthy } }
     healthcheck:
@@ -295,5 +288,6 @@ services:
     mem_limit: 768m
     env_file: [../../config/app.env, ../../.run/env/factory.env]
     environment: { MEMORY_URL: 'http://memory:8470' }
+    volumes: ['evidence:/data/evidence']
     networks: [factory, app, world]
     depends_on: { memory: { condition: service_healthy } }

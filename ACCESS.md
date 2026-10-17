@@ -27,7 +27,6 @@ below.
 | Bank 1, Generic Bank (2003 frameset) | http://localhost:8081/corelink/ | `teller0412` and its password |
 | Bank 2, Example Credit Union | http://localhost:8082/ | the same |
 | Staff inbox (the bank staff's phone and email) | http://localhost:8089 | none |
-| MinIO console (evidence and statements) | http://localhost:9001 | MinIO user and password |
 
 Bank 2 also serves pages from a second origin on 8092. You reach those through the bank's own
 pages, not directly. Supervisor `supervisor0901` signs in just like
@@ -45,7 +44,6 @@ Banks send their sign-in codes to the staff inbox.
 | Bank admin API, banks 1 and 2 | http://localhost:9081 and 9082 | `Authorization: Bearer` the bank admin token |
 | Memory | http://localhost:8470 | `Authorization: Bearer` a memory role token |
 | Factory gateway | http://localhost:8200 | `Authorization: Bearer` the factory gateway token |
-| MinIO S3 API | http://localhost:9000 | MinIO user and password |
 
 The bank admin API reads a bank's own state, which is how tests judge what really happened:
 `/state`, `/members/{member}/balances`, `/hazards` (the hazard log) and `/messages` (the codes
@@ -65,7 +63,6 @@ Each answers 200 when the service is up.
 | Banks 1 and 2 | http://localhost:8081/healthz, :8082 |
 | Bank admin APIs | http://localhost:9081/healthz, :9082 |
 | Staff inbox | http://localhost:8089/healthz |
-| MinIO | http://localhost:9000/minio/health/live |
 
 All of them at once:
 

@@ -29,7 +29,7 @@ compose := "docker compose -f infra/compose/compose.yaml --env-file config/app.e
 scripts := "infra/scripts"
 
 # Service groups, for up, down, logs and rebuild.
-data := "postgres minio memory"
+data := "postgres memory"
 backend := "api"
 console := "console"
 crawlers := "runner"
@@ -187,7 +187,6 @@ urls:
       echo "  Generic Bank   http://localhost:$BANK_GENERIC_PORT/corelink/"; \
       echo "  Example CU     http://localhost:$BANK_EXAMPLE_PORT/"; \
       echo "  Staff inbox    http://localhost:$BANK_INBOX_PORT  (sign-in and approval codes)"; \
-      echo "  MinIO          http://localhost:$MINIO_CONSOLE_PORT"; \
       echo; echo "  Every URL: ACCESS.md. Logins: secrets/credentials.txt"
     @{{scripts}}/model-mode.sh
     @echo
@@ -202,10 +201,10 @@ credentials:
 hazard-header hazards:
     @{{scripts}}/hazard-header.sh "{{hazards}}"
 
-# The data box: Postgres, MinIO, Memory
+# The data box: Postgres and Memory
 [group('Run')]
 data: env image
-    @{{compose}} up -d --wait postgres minio
+    @{{compose}} up -d --wait postgres
     @{{compose}} up -d --wait memory
 
 # The app box's back end: the Task API (and its migrations)

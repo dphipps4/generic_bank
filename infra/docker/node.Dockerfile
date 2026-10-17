@@ -38,7 +38,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 COPY --from=build --chown=node:node /app /app
-# Memory's embedding model is kept here, in a volume that takes this directory's owner.
-RUN mkdir /models && chown node:node /models
+# Memory's embedding model, and the evidence (frames as files), are kept in volumes mounted
+# here; each takes its directory's owner.
+RUN mkdir -p /models /data/evidence && chown node:node /models /data/evidence
 ENV NODE_ENV=production ADMIN_JS_SKIP_BUNDLE=true
 USER node

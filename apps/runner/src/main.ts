@@ -5,7 +5,7 @@ import Fastify from 'fastify';
 import { z } from 'zod';
 import { loadConfig, port, secret } from '@gb/config';
 import { sql } from '@gb/db';
-import { s3Store } from '@gb/evidence';
+import { fileStore } from '@gb/evidence';
 import { WORKFLOW } from '@gb/runs';
 import { startRecorder } from './recorder.js';
 import { registerTaskWorkflow } from './workflow.js';
@@ -17,9 +17,7 @@ const cfg = loadConfig(
     CONTROL_DATABASE_URL: z.string().startsWith('postgresql://'),
     RUN_SEAL_KEY: secret(),
     ANSWER_SEAL_KEY: secret(),
-    MINIO_ENDPOINT: z.string().url().default('http://minio:9000'),
-    MINIO_ROOT_USER: z.string().min(3),
-    MINIO_ROOT_PASSWORD: secret(),
+    EVIDENCE_DIR: z.string().min(1).default('/data/evidence'),
     BANK_SERVICE_PASSWORD: z.string().min(16),
     BANK_OPERATOR_ID: z.string().min(8),
     BANK_SUPERVISOR_ID: z.string().min(8),
@@ -30,22 +28,10 @@ const cfg = loadConfig(
     MEMORY_SIGNING_KEY: secret(),
   },
   process.env,
-  [
-    'RUN_SEAL_KEY',
-    'ANSWER_SEAL_KEY',
-    'MINIO_ROOT_PASSWORD',
-    'MEMORY_TOKEN_RUNNER',
-    'MEMORY_SIGNING_KEY',
-  ],
+  ['RUN_SEAL_KEY', 'ANSWER_SEAL_KEY', 'MEMORY_TOKEN_RUNNER', 'MEMORY_SIGNING_KEY'],
 );
 
-const store = s3Store({
-  endpoint: cfg.MINIO_ENDPOINT,
-  bucket: 'evidence',
-  accessKey: cfg.MINIO_ROOT_USER,
-  secretKey: cfg.MINIO_ROOT_PASSWORD,
-});
-await store.ensureBucket();
+const store = fileStore(cfg.EVIDENCE_DIR);
 
 DBOS.setConfig({
   name: 'generic-bank',

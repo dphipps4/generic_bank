@@ -164,7 +164,6 @@ infra/secrets/keys.txt
 # Local runtime state and volumes created by docker compose
 .data/
 .volumes/
-minio-data/
 postgres-data/
 
 # Run evidence: trails, frames, run folders, exports. Never committed.

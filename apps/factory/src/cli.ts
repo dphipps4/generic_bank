@@ -9,7 +9,7 @@
 // model ever sees that port or its token.
 import { loadConfig, secret } from '@gb/config';
 import { sql as connect } from '@gb/db';
-import { s3Store } from '@gb/evidence';
+import { fileStore } from '@gb/evidence';
 import { hazardHeader } from '@gb/runs';
 import { Browser } from '@gb/screen';
 import { Agent as Dispatcher, setGlobalDispatcher } from 'undici';
@@ -26,9 +26,7 @@ const cfg = loadConfig(
     CONTROL_DATABASE_URL: z.string().startsWith('postgresql://'),
     FACTORY_URL: z.string().url().default('http://factory:8200'),
     FACTORY_GATEWAY_TOKEN: secret(),
-    MINIO_ENDPOINT: z.string().url().default('http://minio:9000'),
-    MINIO_ROOT_USER: z.string().min(3),
-    MINIO_ROOT_PASSWORD: secret(),
+    EVIDENCE_DIR: z.string().min(1).default('/data/evidence'),
     BANK_SERVICE_PASSWORD: z.string().min(16),
     BANK_OPERATOR_ID: z.string().min(8),
     ANSWER_SEAL_KEY: secret(),
@@ -48,7 +46,6 @@ const cfg = loadConfig(
   process.env,
   [
     'FACTORY_GATEWAY_TOKEN',
-    'MINIO_ROOT_PASSWORD',
     'ANSWER_SEAL_KEY',
     'HAZARD_HMAC_KEY',
     'MEMORY_TOKEN_FACTORY',
@@ -67,12 +64,7 @@ if (!['onboard', 'repair', 'gate'].includes(command ?? '') || !arg) {
 }
 
 const sql = connect(cfg.CONTROL_DATABASE_URL);
-const store = s3Store({
-  endpoint: cfg.MINIO_ENDPOINT,
-  bucket: 'evidence',
-  accessKey: cfg.MINIO_ROOT_USER,
-  secretKey: cfg.MINIO_ROOT_PASSWORD,
-});
+const store = fileStore(cfg.EVIDENCE_DIR);
 const credentials = { operatorId: cfg.BANK_OPERATOR_ID, password: cfg.BANK_SERVICE_PASSWORD };
 const memory = memoryClient({
   url: cfg.MEMORY_URL,

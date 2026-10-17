@@ -54,11 +54,6 @@ The banks' admin API, header Authorization: Bearer <token>
   ports           ${BANK_GENERIC_ADMIN_PORT:-9081} and ${BANK_EXAMPLE_ADMIN_PORT:-9082}, banks 1 and 2
   token           $(get BANK_ADMIN_TOKEN "$local_env")
 
-MinIO: the evidence store
-  address         http://localhost:${MINIO_CONSOLE_PORT:-9001}
-  user            $(get MINIO_ROOT_USER "$local_env")
-  password        $(get MINIO_ROOT_PASSWORD "$local_env")
-
 Task API: Swagger UI's Authorize takes this client id and secret
   Swagger UI      http://localhost:${API_PORT:-8000}/docs
   client id       $(get API_LOCAL_CLIENT_ID "$local_env")
