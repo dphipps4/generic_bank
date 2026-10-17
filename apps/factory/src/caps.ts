@@ -1,7 +1,7 @@
 // The factory's caps (plan §7). This file imports nothing, so no other module shapes them.
 export const CAPS = {
   /** Model spend per run, in US dollars. */
-  runUsd: 10,
+  runUsd: 25,
   /** Model spend across every run in the last seven days, in US dollars. */
   weekUsd: 150,
   scoutTurns: 6,

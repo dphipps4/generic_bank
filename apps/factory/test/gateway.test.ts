@@ -118,7 +118,7 @@ afterEach(async () => {
 describe('the caps', () => {
   it('are the plan’s defaults', () => {
     expect(CAPS).toEqual({
-      runUsd: 10,
+      runUsd: 25,
       weekUsd: 150,
       scoutTurns: 6,
       liveSignInsPerRun: 6,
@@ -141,8 +141,8 @@ describe('the caps', () => {
 describe('the model gateway', () => {
   it('refuses a request that would pass the run’s cap before it is sent', async () => {
     const post = factory(live({ anthropic: fakeModel() }));
-    await spent('run1', 8.5);
-    // 64,000 output tokens could cost $1.28: past the $9 a run may spend before the lessons.
+    await spent('run1', 23.5);
+    // 64,000 output tokens could cost $1.28: past the $24 a run may spend before the lessons.
     const r = await post('run1', 'scout', ask({ max_tokens: 64_000 }));
     expect(r.statusCode).toBe(402);
     expect(r.json().error.type).toBe('billing_error');
@@ -154,7 +154,7 @@ describe('the model gateway', () => {
 
   it('keeps the reserve for the lessons', async () => {
     const post = factory(live({ anthropic: fakeModel() }));
-    await spent('run1', 8.9);
+    await spent('run1', 23.9);
     expect((await post('run1', 'supervisor', ask({ max_tokens: 20_000 }))).statusCode).toBe(402);
     expect((await post('run1', 'lessons', ask({ max_tokens: 20_000 }))).statusCode).toBe(200);
   });
@@ -172,8 +172,8 @@ describe('the model gateway', () => {
     let go!: () => void;
     release = new Promise((r) => (go = r));
     const post = factory(live({ anthropic: fakeModel() }));
-    await spent('run1', 7);
-    // Each could cost about $1.28; one fits under $9, two do not.
+    await spent('run1', 22);
+    // Each could cost about $1.28; one fits under $24, two do not.
     const first = post('run1', 'scout', ask({ max_tokens: 64_000 }));
     await vi.waitFor(() => expect(sent).toHaveLength(1));
     expect((await post('run1', 'supervisor', ask({ max_tokens: 64_000 }))).statusCode).toBe(402);
