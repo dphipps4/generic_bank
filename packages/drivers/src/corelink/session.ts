@@ -357,10 +357,10 @@ export async function onTheWay(sess: Session, s: Seen, memberId: string): Promis
 
 /** A screen no job knows: stop where it is, with what was closest. */
 export async function unknown(sess: Session, s: Seen): Promise<never> {
-  await sess.record('unknown', null, s.model, undefined, 'unknown screen');
-  return stop(
-    'escalated',
-    'unknown_screen',
-    s.recognition.closest.map((c) => `${c.id}: missing ${c.missing.join(', ')}`).join('; '),
-  );
+  const closest = s.recognition.closest
+    .map((c) => `${c.id}: missing ${c.missing.join(', ')}`)
+    .join('; ');
+  // The step says what was closest and what it lacked: a repair reads it as where the run stopped.
+  await sess.record('unknown', null, s.model, undefined, `unknown screen; closest ${closest}`);
+  return stop('escalated', 'unknown_screen', closest);
 }

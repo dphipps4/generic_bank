@@ -12,7 +12,7 @@ import type { ScreenModel } from '@gb/screen';
 import { closeRepairCase, profileOf, type Sql } from '@gb/runs';
 import { attemptOn, hazardCheck, HEALTHY, judge, type Sandbox } from './hazard-check.js';
 import { candidate, checked, CLEAN_RUNS, probationRun, type Version } from './lifecycle.js';
-import { type Memory, sendPromotion } from './memory.js';
+import { type Memory, sendPromotion, vendorOf } from './memory.js';
 import { openTrail } from './trail.js';
 
 /** Waits until a person decides the recommendation in the Console; true when approved. */
@@ -97,6 +97,10 @@ export async function gate(
       if (trail && !control.passed) {
         await openCaseAt(sql, { tenant: v.tenant, task: v.task, runId, versionId: v.id });
         log(`  ${control.got}; a repair case is open: just repair ${v.tenant}`);
+        if (o.memory) {
+          const why = await sendFailure(o.memory, sql, v, runId, control.got);
+          log(why ? `  memory has not taken the failure (${why})` : '  memory told of the failure');
+        }
       }
       return v;
     }
@@ -137,4 +141,52 @@ async function openCaseAt(
        "lastFailureAt" = now(), "runId" = EXCLUDED."runId", "versionId" = EXCLUDED."versionId"`,
     [`rc_${randomBytes(8).toString('hex')}`, c.tenant, c.task, c.runId, c.versionId],
   );
+}
+
+/**
+ * A control run that failed, as memory's episode of it: a run of this version with its outcome,
+ * and one attempt whose failure says what the driver looked for and did not find. The next run's
+ * knowledge pack serves it among the bank's latest attempts.
+ */
+async function sendFailure(
+  memory: Memory,
+  sql: Sql,
+  v: Version,
+  runId: string,
+  got: string,
+): Promise<string | null> {
+  const outcome = got.startsWith('escalated') ? 'escalated' : 'failed';
+  const stopped = (
+    await sql.query<{ outcome: string | null; at: Date }>(
+      `SELECT outcome, "startedAt" AS at FROM "Step" WHERE "runId" = $1 ORDER BY seq DESC LIMIT 1`,
+      [runId],
+    )
+  ).rows[0];
+  const vendor = await vendorOf(sql, v.tenant);
+  const at = stopped?.at ?? new Date();
+  try {
+    const run = await memory.write('episodes/runs', {
+      id: runId,
+      kind: 'task',
+      bank: v.tenant,
+      ...(vendor ? { vendor } : {}),
+      task: v.task,
+      driver: v.id,
+      outcome,
+      startedAt: at,
+    });
+    if (run.status >= 300 && run.body.error !== 'run_exists') return `${run.status}`;
+    const attempt = await memory.write('episodes/attempts', {
+      runId,
+      n: 1,
+      outcome,
+      failure: (stopped?.outcome ?? got).slice(0, 200),
+      at,
+    });
+    return attempt.status >= 300 && attempt.body.error !== 'attempt_exists'
+      ? `${attempt.status}`
+      : null;
+  } catch (e) {
+    return `memory did not answer: ${(e as Error).message}`;
+  }
 }

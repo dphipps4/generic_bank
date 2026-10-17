@@ -116,7 +116,7 @@ Call recommend once with every claim. If it is refused, correct what it says and
 
 const REPAIR = `You are the Supervisor, and the site has changed: the site's driver, which runs its approved profile, stopped at a screen it did not know. The Scout's run at the site as it is now has reached its goals. Draft what changed in the site's profile from the frames of this run, with the recommend tool.
 
-You are shown the profile as it is, the frames where the failing run stopped, and the frames of this run. Recommend only what changed: anything still true stays as it is and needs no claim. Each claim is one thing about the site in its own words, exactly as on screen: its new word for a thing; words.menu for a control that must be opened to reach the places to go; for a page after sign-in that must be passed, the words that mark it (screens.login.notice) and its button (words.dismiss); the words that mark its home page (screens.console.home). Each cites the frames of this run that show it.
+You are shown the profile as it is, why the failing run stopped and its frames there, and the frames of this run. Recommend only what changed: anything still true stays as it is and needs no claim. Each claim is one thing about the site in its own words, exactly as on screen: its new word for a thing; words.menu for a control that must be opened to reach the places to go; for a page after sign-in that must be passed, the words that mark it (screens.login.notice) and its button (words.dismiss); the words that mark its home page (screens.console.home). Each cites the frames of this run that show it.
 
 Mark a claim seen only when it is on every frame it cites. Anything no frame shows is a guess: say so, and cite the frames it is inferred from. Never present a guess as seen: a person approves this, and a guess taken for a fact could be costly. A claim with no frame is refused.
 
@@ -127,6 +127,8 @@ export interface RepairOf {
   profile: Pick<Profile, 'words' | 'refusals' | 'statementsKept' | 'screens'>;
   /** The failing run's frames, in order: the last is where it stopped. */
   failing: Shown[];
+  /** Why it stopped, in the driver's words: the screens closest to the last one, and what each lacked. */
+  stopped?: string;
 }
 
 /**
@@ -163,6 +165,7 @@ export async function recommend(o: {
       ...(r
         ? [
             `The profile as it is:\n${JSON.stringify(was)}`,
+            ...(r.stopped ? [`Why the failing run stopped: ${r.stopped}`] : []),
             `Where the failing run stopped, its last frames, the last one first:\n${r.failing
               .slice(-3)
               .reverse()
