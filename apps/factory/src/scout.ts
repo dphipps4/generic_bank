@@ -63,6 +63,8 @@ const MONEY =
 // The bank says it sent a code, or asks for one from the authenticator app.
 const CODE_SENT =
   /\bcode (we|was|has been) sent\b|\bsent (you )?a code\b|\bcode from your authenticator\b/i;
+// An offer to send another code: one was sent, though a site that draws its words says so in a picture.
+const RESENT = /\bnew code\b|\bresend\b|\bsend (it |the code )?again\b/i;
 
 const ref = z
   .string()
@@ -271,8 +273,10 @@ export function scout(deps: ScoutDeps) {
         'Types the code a person gives into a field, by its reference, once the site shows it sent a code. The code is never shown.',
       input: z.object({ ref }),
       async run(i: { ref: string }) {
-        if (!last?.texts.some((t) => CODE_SENT.test(t.text)))
-          throw new ToolRefusal('the site has not shown that it sent a code');
+        const sent =
+          last?.texts.some((t) => CODE_SENT.test(t.text)) ||
+          last?.controls.some((c) => RESENT.test(c.name));
+        if (!sent) throw new ToolRefusal('the site has not shown that it sent a code');
         const c = control(i.ref);
         if (c.role !== 'textbox')
           throw new ToolRefusal(`${c.ref} is a ${c.role}, not a text field`);
