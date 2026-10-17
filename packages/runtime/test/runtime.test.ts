@@ -99,6 +99,13 @@ describe('the runtime: see first, then click', () => {
     expect(f.controls.map((c) => c.name)).toContain('Ready');
   });
 
+  it('sees a page whose badge a script flashes forever, and records it as animated', async () => {
+    const p = await open('/blink');
+    const f = await see(p, { limitMs: 15_000 });
+    expect(f.animated.length).toBe(1);
+    expect(f.controls.map((c) => c.name)).toContain('Statements');
+  });
+
   it('waits out a blank, still page until there is something to act on', async () => {
     const p = await open('/late');
     const t = Date.now();
