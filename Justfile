@@ -193,8 +193,13 @@ bank: env image
 
 # The factory box: the software factory (its models need OPENROUTER_API_KEY)
 [private]
-factory: env image
+factory-up: env image
     @{{compose}} --profile factory up -d --wait {{factory}}
+
+# The factory learns a bank, or repairs it if a case is open, then the gate: just factory example 40017732 1234 5678
+[group('Factory')]
+factory bank member from to: factory-up
+    @{{compose}} --profile factory-run run --rm factory-run {{bank}} {{member}} {{from}} {{to}}
 
 # Apply database migrations
 [private]

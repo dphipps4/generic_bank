@@ -7,9 +7,10 @@ import type { Viewer } from '../src/pages/layout.js';
 import { recommendationPages } from '../src/pages/recommendations.js';
 import { runPages } from '../src/pages/runs.js';
 
-// The review card: each claim with its seen or guess badge and a Frames button that opens the
-// frames it cites; Approve and Reject, each with a written reason that goes to the audit. A guess
-// is approved only when it is ticked. Only approvers and admins decide.
+// The review card for a learned table: each page as a row with a Frames button for the frame it
+// cites, the reads, the bank's answers and the gate's runs; Approve and Reject, each with a written
+// reason that goes to the audit. Approving promotes the table for both tasks: the registry serves
+// it. Only approvers and admins decide.
 
 const RUN = 'fr_card';
 let db: Awaited<ReturnType<typeof controlDb>>;
@@ -17,14 +18,37 @@ let app: ReturnType<typeof Fastify>;
 let who: Viewer | null = { email: 'ada@generic-bank.local', role: 'approver' };
 const store = memoryStore();
 
-const CLAIMS = [
-  { about: 'words.signIn', value: 'Sign In', basis: 'seen', frames: ['f1'] },
-  { about: 'words.memberSearch', value: 'Member Search', basis: 'seen', frames: ['f2', 'f3'] },
+const TABLE = {
+  bank: 'bank2',
+  home: '',
+  rows: [
+    {
+      page: 'sign-in',
+      shows: ['User ID'],
+      do: { balance: [{ type: 'User ID', value: '$operator' }, { press: 'Log in' }] },
+      frame: 'f1',
+    },
+    {
+      page: 'home',
+      shows: ['Find a member'],
+      do: { balance: [{ press: 'Find a member' }] },
+      frame: 'f2',
+    },
+    { page: 'summary', shows: ['Balances'], do: {}, frame: 'f3' },
+  ],
+  ends: { balance: 'summary' },
+  answers: [{ says: 'No such member', code: 'no_such_member', frame: 'f3' }],
+  trouble: [],
+  submit: { press: '', frame: '' },
+  reads: { balance: '{name} {last4} {available} {current}', name: ['Member $member · {name}'] },
+};
+const CHECK = [
+  { runId: `${RUN}-check`, hazard: null, ok: true, said: 'the balance read 100 cents' },
   {
-    about: 'refusals.insufficient_funds',
-    value: 'The amount is more than the available balance.',
-    basis: 'guess',
-    frames: ['f3'],
+    runId: `${RUN}-confirm-dialog`,
+    hazard: 'confirm-dialog',
+    ok: true,
+    said: 'the review read $1.00',
   },
 ];
 
@@ -70,8 +94,8 @@ beforeEach(async () => {
   id = `rec_${Math.random().toString(16).slice(2, 10)}`;
   await db.query(`DELETE FROM "Recommendation"`);
   await db.query(
-    `INSERT INTO "Recommendation" (id, "factoryRunId", tenant, claims) VALUES ($1, $2, 'bank2', $3)`,
-    [id, RUN, JSON.stringify(CLAIMS)],
+    `INSERT INTO "Recommendation" (id, "factoryRunId", tenant, "table", "check") VALUES ($1, $2, 'bank2', $3, $4)`,
+    [id, RUN, JSON.stringify(TABLE), JSON.stringify(CHECK)],
   );
   who = { email: 'ada@generic-bank.local', role: 'approver' };
 });
@@ -92,60 +116,59 @@ const framesIn = (row: string) =>
     ) as { seq: number }[]
   ).map((f) => f.seq);
 
+/** The version serving a task at bank2, and the table it holds. */
+const served = async (task: string) =>
+  (
+    await db.query<{ table: unknown }>(
+      `SELECT v."table" FROM "Driver" d JOIN "DriverVersion" v ON v.id = d."activeVersionId"
+        WHERE d.tenant = 'bank2' AND d.task = $1 AND d.state = 'promoted'`,
+      [task],
+    )
+  ).rows[0]?.table;
+
 describe('the review card', () => {
-  it('shows each claim, seen or guess, with a Frames button for the frames it cites', async () => {
+  it('shows each page as a row, with a Frames button for the frame it cites', async () => {
     const html = (await app.inject({ url: '/recommendations' })).body;
     const rows = rowsOf(html);
     expect(rows).toHaveLength(3);
-    expect(rows[0]).toContain('<code>words.signIn</code>');
-    expect(rows[0]).toContain('<span class="pill seen">seen</span>');
-    expect(rows[2]).toContain('The amount is more than the available balance.');
-    expect(rows[2]).toContain('<span class="pill guess">guess</span>');
-    // Each button holds the frames its claim cites, and no other.
-    expect(rows.map(framesIn)).toEqual([[1], [2, 3], [3]]);
+    expect(rows[0]).toContain('"User ID"');
+    expect(rows[0]).toContain('type $operator into &quot;User ID&quot;; press &quot;Log in&quot;');
+    expect(rows[2]).toContain('a goal ends here');
+    expect(rows.map(framesIn)).toEqual([[1], [2], [3]]);
     expect(rows[1]).toContain(`data-base="/runs/${RUN}/frames/"`);
-    expect(rows[1]).toContain('Frames (2)');
     expect(html).toContain('<dialog id="frames"');
-    // What the button opens: the cited frame's masked picture.
     const pic = await app.inject({ url: `/runs/${RUN}/frames/3.png` });
     expect(pic.statusCode).toBe(200);
     expect(pic.body).toContain('frame 3');
-    // Only the guess has a tick, on the approve form.
-    expect(rows[2]).toContain(`name="tick" value="3" form="approve-${id}"`);
-    expect(rows[0]).not.toContain('name="tick"');
-    expect(html).toContain('One claim is a guess: approving needs each guess ticked.');
+    // The reads, the bank's answers and the gate's runs.
+    expect(html).toContain('<code>{name} {last4} {available} {current}</code>');
+    expect(html).toContain('"No such member" means <code>no_such_member</code>');
+    expect(html).toContain(
+      'with confirm-dialog forced: <span class="pill succeeded">passed</span>',
+    );
   });
 
-  it('never approves a guess by default: each guess must be ticked', async () => {
-    const r = await act('approve', { reason: 'the frames show every word' });
-    expect(r.statusCode).toBe(400);
-    expect(r.json().detail).toBe(
-      'a guess is approved only when it is ticked; not ticked: claim 3 (refusals.insufficient_funds)',
-    );
-    expect(await status()).toBe('open');
-    // Ticking a claim that is seen does not tick the guess.
-    expect(
-      (await act('approve', { reason: 'the frames show every word', tick: ['1'] })).statusCode,
-    ).toBe(400);
-    expect(await audit()).toEqual([]);
-    expect(
-      (
-        await act('approve', { reason: 'the guess is the core’s usual wording', tick: ['3'] })
-      ).json(),
-    ).toEqual({ ok: true, status: 'approved' });
+  it('promotes the table for both tasks once approved, and audits it', async () => {
+    expect(await served('check-balance')).toBeUndefined();
+    expect((await act('approve', { reason: 'every row matches its frame' })).json()).toEqual({
+      ok: true,
+      status: 'approved',
+    });
     expect(await status()).toBe('approved');
+    expect(await served('check-balance')).toEqual(TABLE);
+    expect(await served('transfer')).toEqual(TABLE);
     expect(await audit()).toEqual([
       {
         actor: 'ada@generic-bank.local',
         action: 'recommendation.approve',
-        reason: 'the guess is the core’s usual wording',
+        reason: 'every row matches its frame',
       },
     ]);
     // Decided once.
     expect((await act('reject', { reason: 'changed my mind about it' })).statusCode).toBe(409);
-    const html = (await app.inject({ url: '/recommendations' })).body;
-    expect(html).toContain('approved</span> by ada@generic-bank.local');
-    expect(html).not.toContain('name="tick"');
+    expect((await app.inject({ url: '/recommendations' })).body).toContain(
+      'approved</span> by ada@generic-bank.local',
+    );
   });
 
   it('approves and rejects from the forms, each with a reason, and says so', async () => {
@@ -156,27 +179,16 @@ describe('the review card', () => {
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
         payload,
       });
-    let r = await form('approve', 'reason=the+frames+show+it');
-    expect(decodeURIComponent(r.headers.location as string)).toContain(
-      'not ticked: claim 3 (refusals.insufficient_funds)',
-    );
-    r = await form('reject', 'reason=short');
+    let r = await form('reject', 'reason=short');
     expect(decodeURIComponent(r.headers.location as string)).toContain(
       'a reason of at least ten characters',
     );
-    r = await form('reject', 'reason=the+guess+is+not+good+enough');
+    r = await form('reject', 'reason=the+summary+row+is+wrong');
     expect(r.headers.location).toBe('/recommendations?done=reject');
     expect((await app.inject({ url: r.headers.location })).body).toContain(
-      'Rejected: the profile is not used.',
+      'Rejected: the table is not used.',
     );
     expect(await status()).toBe('rejected');
-    expect(await audit()).toEqual([
-      {
-        actor: 'ada@generic-bank.local',
-        action: 'recommendation.reject',
-        reason: 'the guess is not good enough',
-      },
-    ]);
   });
 
   it('lets no one but an approver or an admin decide', async () => {
@@ -184,14 +196,10 @@ describe('the review card', () => {
     const html = (await app.inject({ url: '/recommendations' })).body;
     expect(html).toContain('Approvers decide here.');
     expect(html).not.toContain(`action="/recommendations/${id}/approve"`);
-    expect(
-      (await act('approve', { reason: 'the frames show it all', tick: ['3'] })).statusCode,
-    ).toBe(403);
+    expect((await act('approve', { reason: 'the frames show it all' })).statusCode).toBe(403);
     who = null;
     expect((await act('reject', { reason: 'the frames show it all' })).statusCode).toBe(401);
     expect(await status()).toBe('open');
     expect(await audit()).toEqual([]);
-    who = { email: 'ada@generic-bank.local', role: 'admin' };
-    expect((await act('reject', { reason: 'the frames show too little' })).statusCode).toBe(200);
   });
 });

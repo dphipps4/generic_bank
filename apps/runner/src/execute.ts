@@ -1,7 +1,15 @@
 // One task run, carried out: a browser held for the run, the bank's crawler, every page it sees
 // recorded and its masked frame stored, a person asked when only a person can answer, and exactly
 // one result.
-import { type Action, checkBalance, type Seen, type Session, Stop, TABLES } from '@gb/crawler';
+import {
+  type Action,
+  checkBalance,
+  type Seen,
+  type Session,
+  Stop,
+  type Table,
+  TABLES,
+} from '@gb/crawler';
 import type { FrameStore } from '@gb/evidence';
 import { GuardError, JOBS } from '@gb/guardrails';
 import {
@@ -17,6 +25,7 @@ import {
   serving,
   settleRun,
   type Sql,
+  tableOf,
   trailEnd,
 } from '@gb/runs';
 import { type Browser, type Frame, launch, newPage, type Page } from '@gb/runtime';
@@ -58,7 +67,9 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
   ).rows[0];
   // The version serving the task now; a frozen bank, or one with no crawler, runs nothing.
   const served = await serving(deps.sql, run.bank, run.task);
-  const table = TABLES[run.bank];
+  // A learned table, if the version serving holds one; else the bank's own, written by hand.
+  const table =
+    ((served && (await tableOf(deps.sql, served.versionId))) as Table | null) ?? TABLES[run.bank];
   if (!bank || !served || !table || !TASKS.has(run.task)) {
     const e: Ending = { status: 'failed', code: 'no_driver', retryable: false };
     await settleRun(deps.sql, runId, e);
