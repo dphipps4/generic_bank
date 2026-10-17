@@ -354,7 +354,9 @@ export async function readAgain(read: () => Promise<number>, times = 3): Promise
 async function historyOnce(sess: Session, input: TransferInput): Promise<number> {
   const { ctx } = sess;
   const page = ctx.page;
-  await page.goto(ctx.profile.url);
+  // The console, not the bank's front page: a session that is still signed in goes straight
+  // there, so a person isn't asked for a second code; a lost one is sent to sign in.
+  await page.goto(new URL('console', ctx.profile.url).href);
   for (let i = 0; i < 30; i++) {
     const s = await next(sess);
     if (!s || (await onTheWay(sess, s, input.memberId))) continue;
