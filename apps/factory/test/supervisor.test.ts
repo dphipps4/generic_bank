@@ -190,6 +190,17 @@ describe.each([DEFAULT_ROLES.supervisor.provider] as const)('the Supervisor on %
     expect(await s.next('Nothing happened.')).toBe('Sign in.');
     expect(await s.next('Nothing happened.')).toBeNull();
     expect(s.ended()).toBe('the same step 3 times in a row: no progress');
+
+    // Worded differently each time, on a page that never changes: three steps, and no fourth.
+    ({ s } = setUp(provider));
+    answers = ['Open Money.', 'Click Transfer.', 'Open Tools.', 'Try the menu again.'].map((n) =>
+      answer(n),
+    );
+    expect(await s.next(null)).toBe('Open Money.');
+    expect(await s.next('Nothing loaded.')).toBe('Click Transfer.');
+    expect(await s.next('Nothing loaded.')).toBe('Open Tools.');
+    expect(await s.next('Nothing loaded.')).toBeNull();
+    expect(s.ended()).toBe('3 steps on the same page already: no progress');
   });
 
   it('stops at the run’s hours cap without asking the model', async () => {

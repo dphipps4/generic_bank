@@ -24,7 +24,8 @@ export const GOALS = {
 export type Goal = keyof typeof GOALS;
 
 const UNREADABLE_IN_A_ROW = 3;
-// The stall rule (§7): no progress for three turns ends the run.
+// The stall rule (§7): no progress for three turns ends the run. A page whose content comes back
+// unchanged is no progress either, however the step is worded: three steps on it, and no fourth.
 const STALL = 3;
 // The most questions to memory in one step, before the answer.
 const QUERIES = 2;
@@ -102,6 +103,7 @@ export function supervisor(o: {
   const steps: string[] = [];
   let asked: string | null = null;
   let repeats = 0;
+  const stepsOn = new Map<string, number>();
   let ended: string | null = null;
   const mask = (s: string) => maskText(s, o.trail.policy);
   const tools = toolsOf('supervisor', o.tools ?? []);
@@ -165,6 +167,13 @@ export function supervisor(o: {
             repeats = a.next === asked ? repeats + 1 : 1;
             if (repeats >= STALL) {
               ended = `the same step ${STALL} times in a row: no progress`;
+              return null;
+            }
+            const content = JSON.stringify(f.view);
+            const on = (stepsOn.get(content) ?? 0) + 1;
+            stepsOn.set(content, on);
+            if (on > STALL) {
+              ended = `${STALL} steps on the same page already: no progress`;
               return null;
             }
             asked = a.next;
