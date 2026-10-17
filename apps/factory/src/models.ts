@@ -20,10 +20,10 @@ export type Roles = Readonly<Record<Role, RoleModel>>;
 
 /** The settings, for loadConfig. The Supervisor reasons, so it thinks harder than the Scout. */
 export const ROLE_SETTINGS = {
-  FACTORY_SCOUT_PROVIDER: z.enum(PROVIDERS).default('anthropic'),
+  FACTORY_SCOUT_PROVIDER: z.enum(PROVIDERS).default('openrouter'),
   FACTORY_SCOUT_MODEL: z.string().min(1),
   FACTORY_SCOUT_EFFORT: z.enum(EFFORTS).default('low'),
-  FACTORY_SUPERVISOR_PROVIDER: z.enum(PROVIDERS).default('anthropic'),
+  FACTORY_SUPERVISOR_PROVIDER: z.enum(PROVIDERS).default('openrouter'),
   FACTORY_SUPERVISOR_MODEL: z.string().min(1),
   FACTORY_SUPERVISOR_EFFORT: z.enum(EFFORTS).default('high'),
 };
