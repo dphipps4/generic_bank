@@ -77,7 +77,9 @@ async function known(): Promise<string[]> {
 }
 
 it(`walks bank 1: ${name}`, async () => {
-  const out = join(ROOT, 'docs/evidence/bank-1', name);
+  // One file per walk (<name>.json) holds every frame; the pictures sit in a folder beside it.
+  const base = join(ROOT, 'docs/evidence/bank-1');
+  const out = join(base, name);
   rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
   const hide = await known();
@@ -85,26 +87,25 @@ it(`walks bank 1: ${name}`, async () => {
     browser,
     scenario.hazards ? { headers: bank.forced(scenario.hazards) } : {},
   );
-  const index: string[] = [`# Bank 1, ${name}`, '', '| Frame | Step | Address |', '|---|---|---|'];
-  let n = 0;
+  const frames: Record<string, unknown>[] = [];
+  let stopped: string | undefined;
   // A page the happy walk already kept at the same step, word for word, is kept once: here, a
   // pointer to it.
-  const happy = join(ROOT, 'docs/evidence/bank-1/happy');
+  const happy = existsSync(join(base, 'happy.json'))
+    ? (JSON.parse(readFileSync(join(base, 'happy.json'), 'utf8')) as {
+        frames: { frame: string; did: string; tree?: string }[];
+      })
+    : { frames: [] };
   const keep = async (did: string, f: Frame) => {
-    const id = String(++n).padStart(2, '0');
+    const frame = String(frames.length + 1).padStart(2, '0');
     const { picture: _, ...rest } = f;
-    const twin = join(happy, `${id}.json`);
-    if (name !== 'happy' && !f.dialogs.length && existsSync(twin)) {
-      const h = JSON.parse(readFileSync(twin, 'utf8')) as { did: string; tree: string };
-      if (h.did === did && h.tree === f.tree) {
-        writeFileSync(join(out, `${id}.json`), `${JSON.stringify({ did, same: `happy/${id}` })}\n`);
-        index.push(`| [${id}](../happy/${id}.png) | ${did} | as the happy walk |`);
-        return;
-      }
+    const twin = happy.frames.find((h) => h.frame === frame);
+    if (name !== 'happy' && !f.dialogs.length && twin?.did === did && twin.tree === f.tree) {
+      frames.push({ frame, did, same: `happy/${frame}` });
+      return;
     }
-    writeFileSync(join(out, `${id}.png`), f.picture);
-    writeFileSync(join(out, `${id}.json`), `${JSON.stringify({ did, ...rest }, null, 2)}\n`);
-    index.push(`| [${id}](${id}.png) | ${did} | ${f.address.replace(bank.origin, '')} |`);
+    writeFileSync(join(out, `${frame}.png`), f.picture);
+    frames.push({ frame, picture: `${name}/${frame}.png`, did, ...rest });
   };
   for (const s of scenario.steps) {
     let did = '';
@@ -125,13 +126,12 @@ it(`walks bank 1: ${name}`, async () => {
       await keep(did, await see(page, { known: hide, limitMs: 60_000 }));
     } catch (e) {
       // Where a step could not be done is evidence too: what the page showed instead.
-      index.push(
-        `| | ${did || JSON.stringify(s)}: stopped, ${(e as Error).message.split('\n')[0]} | |`,
-      );
+      stopped = `${did || JSON.stringify(s)}: ${(e as Error).message.split('\n')[0]}`;
       const after = await see(page, { known: hide, limitMs: 30_000 }).catch(() => null);
       if (after) await keep(`after: ${(e as Error).message.split('\n')[0]}`, after);
       break;
     }
   }
-  writeFileSync(join(out, 'index.md'), `${index.join('\n')}\n`);
+  const walk = { walk: name, frames, ...(stopped && { stopped }) };
+  writeFileSync(join(base, `${name}.json`), `${JSON.stringify(walk, null, 1)}\n`);
 });

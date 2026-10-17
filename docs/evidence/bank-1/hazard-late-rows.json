@@ -1,0 +1,60 @@
+{
+ "walk": "hazard-late-rows",
+ "frames": [
+  {
+   "frame": "01",
+   "did": "open ./",
+   "same": "happy/01"
+  },
+  {
+   "frame": "02",
+   "did": "type $operator into \"Operator ID\"",
+   "same": "happy/02"
+  },
+  {
+   "frame": "03",
+   "did": "type $password into \"Password\"",
+   "same": "happy/03"
+  },
+  {
+   "frame": "04",
+   "did": "press \"Sign In\"",
+   "same": "happy/04"
+  },
+  {
+   "frame": "05",
+   "did": "press \"Send code\"",
+   "same": "happy/05"
+  },
+  {
+   "frame": "06",
+   "did": "type $code into \"Code\"",
+   "same": "happy/06"
+  },
+  {
+   "frame": "07",
+   "did": "press \"Verify\"",
+   "same": "happy/07"
+  },
+  {
+   "frame": "08",
+   "did": "press \"Member Search\"",
+   "same": "happy/08"
+  },
+  {
+   "frame": "09",
+   "did": "type $member.demo into \"Member number\"",
+   "same": "happy/09"
+  },
+  {
+   "frame": "10",
+   "did": "press \"Search\"",
+   "same": "happy/10"
+  },
+  {
+   "frame": "11",
+   "did": "press \"Open\"",
+   "same": "happy/11"
+  }
+ ]
+}

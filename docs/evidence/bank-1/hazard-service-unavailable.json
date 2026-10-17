@@ -1,0 +1,28 @@
+{
+ "walk": "hazard-service-unavailable",
+ "frames": [
+  {
+   "frame": "01",
+   "picture": "hazard-service-unavailable/01.png",
+   "did": "open ./",
+   "at": "2026-10-17T18:04:01.036Z",
+   "address": "http://localhost:63774/corelink/",
+   "tree": "- heading \"Service Unavailable\" [level=1]\n- paragraph: The server is temporarily unable to service your request. Please try again later.\n- separator\n- text: CoreLink Gateway",
+   "controls": [],
+   "dialogs": [],
+   "animated": []
+  },
+  {
+   "frame": "02",
+   "picture": "hazard-service-unavailable/02.png",
+   "did": "after: no field beside the label \"Operator ID\"",
+   "at": "2026-10-17T18:04:03.513Z",
+   "address": "http://localhost:63774/corelink/",
+   "tree": "- heading \"Service Unavailable\" [level=1]\n- paragraph: The server is temporarily unable to service your request. Please try again later.\n- separator\n- text: CoreLink Gateway",
+   "controls": [],
+   "dialogs": [],
+   "animated": []
+  }
+ ],
+ "stopped": "no field beside the label \"Operator ID\""
+}
