@@ -45,15 +45,12 @@ just down                       # stop everything; the data stays
 just help                       # every recipe, grouped, with what each does
 ```
 
-`just setup` generates every secret it can. The only one it can't is the model key, because someone
-else issues it. `just setup` explains it. Run `just secret-set factory OPENROUTER_API_KEY` and paste
-the key when it asks; what you paste stays hidden. An Anthropic or OpenAI key works the same way
-(`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`). All three can stay blank; the factory then runs in mock
-mode.
+`just setup` generates every secret it can. The only one it can't is the OpenRouter key, because
+OpenRouter issues it. Run `just secret-set factory OPENROUTER_API_KEY` and paste the key when it
+asks; what you paste stays hidden. Left blank, the factory runs in mock mode.
 
-Each factory role's model is set in one place, `config/app.env`: `FACTORY_SCOUT_MODEL` and
-`FACTORY_SUPERVISOR_MODEL`, `FACTORY_SCOUT_EFFORT` and `FACTORY_SUPERVISOR_EFFORT`, and
-`FACTORY_SCOUT_PROVIDER` and `FACTORY_SUPERVISOR_PROVIDER` (`anthropic`, `openai` or `openrouter`).
+Each factory role's model and effort are set in one place, `config/app.env`: `FACTORY_SCOUT_MODEL`
+and `FACTORY_SUPERVISOR_MODEL`, `FACTORY_SCOUT_EFFORT` and `FACTORY_SUPERVISOR_EFFORT`.
 
 `just up` starts everything: all four banks, the staff inbox, the factory and memory. From there,
 **[ACCESS.md](ACCESS.md)** lists every page, API and health check you can reach, the logins
@@ -77,8 +74,8 @@ rolling week).
 
 | Role | What it does | Default model | Effort |
 |---|---|---|---|
-| Scout | Navigates the bank, one simple step at a time | `claude-sonnet-5-5` | low |
-| Supervisor | Looks at every frame, reasons, directs the Scout, drafts the bank's profile | `claude-opus-5-5` | high |
+| Scout | Navigates the bank, one simple step at a time | `qwen/qwen3.8-flash` | low |
+| Supervisor | Looks at every frame, reasons, directs the Scout, drafts the bank's profile | `qwen/qwen3.8-flash` | high |
 
 With no API key, the factory runs in **mock mode**: recorded answers stand in for the model, so
 nothing is sent to one and nothing is spent.
@@ -94,27 +91,14 @@ just factory
 To change a role's model or effort, edit it in `config/app.env`, then run `just factory`:
 
 ```sh
-FACTORY_SUPERVISOR_MODEL=anthropic/claude-opus-4.6
+FACTORY_SUPERVISOR_MODEL=qwen/qwen3.8-max-prime
 FACTORY_SUPERVISOR_EFFORT=high
 FACTORY_SCOUT_EFFORT=medium
 ```
 
-The agents run on [pi](https://pi.dev), which talks to many providers, so switching provider is a
-config change, not a code change. The default is OpenRouter, which routes to Claude, OpenAI and
-others at the same API. To run a role directly on Anthropic or OpenAI, enter the key, then name the
-provider and model:
-
-```sh
-just secret-set factory ANTHROPIC_API_KEY
-```
-
-```sh
-FACTORY_SCOUT_PROVIDER=anthropic
-FACTORY_SCOUT_MODEL=claude-opus-4.6
-```
-
-Add the model's price to `apps/factory/src/models.ts` so the caps count it; a model with no price
-there runs, but costs nothing on the meter.
+Every model is reached through OpenRouter, with the one key. Any model in its catalog works, from
+Qwen, Google, OpenAI and others, named as OpenRouter lists it, maker first. The caps price each one
+from that catalog.
 
 ## A second copy, side by side
 
@@ -126,16 +110,15 @@ on http://localhost:18080).
 ## Develop
 
 ```sh
-just requirements-dev           # just requirements, plus Node 26
-just dev-setup                  # once: Node dependencies, the Prisma client, Chromium for the tests
-just check                      # the quick checks: types, lint, tests, import boundaries, secrets
-just ci                         # what GitHub's CI checks, on this machine; no Actions needed
-just api-docs                   # write the API reference from the contracts and open it in Chrome
-just all                        # start again from nothing: deletes the data, rebuilds the images; then just up
+just dev
 ```
 
-GitHub's CI is free for a public repository and its forks. If you don't have it, `just ci` runs
-the same jobs on your machine.
+It installs Node 26, the dependencies and Chromium, runs everything GitHub's CI checks, then opens
+the API reference in Chrome and serves it until Ctrl-C. Each step is a recipe of its own too;
+`just help` lists them.
+
+To start again from nothing, `just all` deletes every database and rebuilds every image. It asks
+first. Then run `just up`.
 
 ## Documents
 

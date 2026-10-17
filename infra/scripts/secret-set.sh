@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Set ONE secret without the value ever being seen.
 #
-#   just secret-set factory ANTHROPIC_API_KEY              asks for the value; what you paste is hidden
-#   just secret-set factory ANTHROPIC_API_KEY clipboard    the value from the clipboard, then cleared
+#   just secret-set factory OPENROUTER_API_KEY             asks for the value; what you paste is hidden
+#   just secret-set factory OPENROUTER_API_KEY clipboard   the value from the clipboard, then cleared
 #   just secret-set local SOME_TOKEN ~/token.txt           the value from a file
 #
 # The value lives only in a shell variable and a pipe into `sops set --value-stdin`: never on

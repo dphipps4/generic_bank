@@ -161,8 +161,7 @@ Copy your OpenRouter key to the clipboard, then:
 just secret-set factory OPENROUTER_API_KEY
 ```
 
-You should see `✓ OPENROUTER_API_KEY set in …`, with the clipboard cleared. An Anthropic key works
-the same way, as `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`). A run stops before it spends $25, and
+You should see `✓ OPENROUTER_API_KEY set in …`, with the clipboard cleared. A run stops before it spends $25, and
 all runs together before $150
 in a week. The Console's **Model calls** table shows what each call cost.
 
