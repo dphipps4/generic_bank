@@ -726,6 +726,14 @@ export class Page {
     return Buffer.from(r.data, 'base64');
   }
 
+  /** Whether this page is still open: a window a page opened may close itself. */
+  async isOpen(): Promise<boolean> {
+    const { targetInfos } = await this.cdp
+      .call<{ targetInfos: { targetId: string }[] }>('Target.getTargets')
+      .catch(() => ({ targetInfos: [] }));
+    return targetInfos.some((t) => t.targetId === this.targetId);
+  }
+
   async close() {
     for (const off of this.offs) off();
     await this.cdp.call('Target.closeTarget', { targetId: this.targetId }).catch(() => undefined);
