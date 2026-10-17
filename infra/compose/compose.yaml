@@ -89,19 +89,6 @@ services:
           "fetch('http://127.0.0.1:8470/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
         ]
 
-  # The starting knowledge, through memory's own door as the curator (just memory-seed).
-  memory-seed:
-    <<: *node
-    restart: 'no'
-    profiles: [seed]
-    command: ['node', 'apps/memory/dist/seed-cli.js']
-    mem_limit: 128m
-    env_file: [../../config/app.env, ../../.run/env/memory-seed.env]
-    environment: { MEMORY_URL: 'http://memory:8470', MEMORY_SEED_DIR: /seeds }
-    volumes: ['../../seeds/memory:/seeds:ro']
-    networks: [app]
-    depends_on: { memory: { condition: service_healthy } }
-
   # ── the app box ──────────────────────────────────────────────────────────────
   migrate:
     <<: *node

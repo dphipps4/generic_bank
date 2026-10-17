@@ -152,7 +152,6 @@ image:
 [group('Run')]
 up: env image
     @just data
-    @just memory-seed
     @just backend console crawlers bank factory
     @just credentials
     @just urls
@@ -263,11 +262,6 @@ logs *groups:
 rebuild +groups:
     @just build
     @{{compose}} --profile '*' up -d --wait --force-recreate $(just _services {{groups}})
-
-# Load the starting knowledge (seeds/memory) into memory, through its door, as the curator; again writes nothing
-[group('Run')]
-memory-seed: env image
-    @{{compose}} run --rm memory-seed
 
 # Open psql on the control database
 [group('Run')]
