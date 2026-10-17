@@ -25,6 +25,6 @@ local   HAZARD_HMAC_KEY          hex
 local   BANK_ADMIN_TOKEN         hex
 local   BANK_SERVICE_PASSWORD    password
 local   BANK_SUPERVISOR_PASSWORD password
-factory OPENROUTER_API_KEY       entered?  -- An OpenRouter API key, from openrouter.ai/settings/keys. Every factory model goes through it; left blank, the factory runs in mock mode.
+factory OPENROUTER_API_KEY       entered?  -- An OpenRouter API key, from openrouter.ai/settings/keys. Every factory model goes through it; left blank, the factory refuses every model call.
 local   MEMORY_TOKEN_FACTORY     hex
 factory FACTORY_GATEWAY_TOKEN    hex

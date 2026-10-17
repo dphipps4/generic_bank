@@ -122,8 +122,8 @@ describe('an escalation, as the agent and a person see it', () => {
     ]);
     expect(asks.rows[0]!.asks).toBeGreaterThanOrEqual(2);
 
-    // An unknown screen is a driver fault, so it took the driver out of service (repair.test.ts
-    // shows that path); this test is about the escalation, so the driver is put back.
+    // An unknown screen is a driver fault, so it took the driver out of service; this test is
+    // about the escalation, so the driver is put back.
     const demoted = await db.query(
       `UPDATE "Driver" SET state = 'promoted', "activeVersionId" = 'dv_generic_check_balance_1'
         WHERE tenant = 'generic' AND task = 'check-balance' AND state = 'demoted' RETURNING id`,

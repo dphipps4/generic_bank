@@ -47,7 +47,7 @@ just help                       # every recipe, grouped, with what each does
 
 `just setup` generates every secret it can. The only one it can't is the OpenRouter key, because
 OpenRouter issues it. Run `just secret-set factory OPENROUTER_API_KEY` and paste the key when it
-asks; what you paste stays hidden. Left blank, the factory runs in mock mode.
+asks; what you paste stays hidden. The factory needs it: without it, every model call is refused.
 
 Each factory role's model and effort are set in one place, `config/app.env`: `FACTORY_SCOUT_MODEL`
 and `FACTORY_SUPERVISOR_MODEL`, `FACTORY_SCOUT_EFFORT` and `FACTORY_SUPERVISOR_EFFORT`.
@@ -77,10 +77,10 @@ rolling week).
 | Scout | Navigates the bank, one simple step at a time | `qwen/qwen3.8-max-prime` | low |
 | Supervisor | Looks at every frame, reasons, directs the Scout, drafts the bank's profile | `qwen/qwen3.8-max-prime` | high |
 
-With no API key, the factory runs in **mock mode**: recorded answers stand in for the model, so
-nothing is sent to one and nothing is spent.
+The factory needs `OPENROUTER_API_KEY`. Without it, the factory still starts, but it refuses every
+model call and names the missing key. Nothing stands in for the model.
 
-To use a key, enter it once (sops keeps it encrypted). It asks for the key, then `just factory`
+Enter the key once (sops keeps it encrypted). It asks for the key, then `just factory`
 restarts the factory with it:
 
 ```sh

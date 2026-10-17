@@ -1,6 +1,6 @@
-// Each provider's model as a scripted fake fetch behind its real SDK, for the gateway's live
-// upstream. Nothing leaves the process and the key is not one. A script sees each request in one
-// form, whichever provider it was sent to, and answers with text or one tool call.
+// Each provider's model as a fake fetch behind its real SDK, for the gateway's live upstream.
+// Nothing leaves the process and the key is not one. The test's answer function sees each request
+// in one form, whichever provider it was sent to, and answers with text or one tool call.
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { readFileSync } from 'node:fs';

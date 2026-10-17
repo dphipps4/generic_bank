@@ -2,10 +2,7 @@
 // lesson only when it cites frames of this run, and the Scout cannot call it; at the run's end the
 // lessons reach memory as proposals, with the served lessons the run relied on and contradicted.
 // The models are fake fetches behind the real gateway, and memory is the real service over HTTP.
-import { mkdtemp, rm } from 'node:fs/promises';
 import type { AddressInfo } from 'node:net';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { memoryStore } from '../../../packages/evidence/src/index.js';
 import { controlDb } from '../../../packages/oauth/test/control.js';
@@ -52,7 +49,6 @@ const FRAMES: Record<string, Shown> = {
 let db: Awaited<ReturnType<typeof controlDb>>;
 let memory: Awaited<ReturnType<typeof memoryService>>;
 let app: ReturnType<typeof buildServer>;
-let dir: string;
 let script: (seen: Seen, results: number) => Reply;
 const sent: Record<string, unknown>[] = [];
 
@@ -63,15 +59,13 @@ beforeAll(async () => {
      VALUES ($1, 'example', 'check-balance', 'build', 'SCOUT', 'running')`,
     [RUN],
   );
-  dir = await mkdtemp(join(tmpdir(), 'gb-factory-memory-'));
   const models = fakeModels(
     (_p, seen) => script(seen, seen.items.filter((i) => 'result' in i).length),
     sent,
   );
   app = buildServer({
-    gateway: gateway({ ledger: sqlLedger(db), upstream: live(models, dir) }),
+    gateway: gateway({ ledger: sqlLedger(db), upstream: live(models) }),
     token: TOKEN,
-    mode: 'live',
   });
   await app.listen({ host: '127.0.0.1', port: 0 });
 });
@@ -80,7 +74,6 @@ afterAll(async () => {
   await app.close();
   await memory.close();
   await db.close();
-  await rm(dir, { recursive: true, force: true });
 });
 
 function trailOf() {

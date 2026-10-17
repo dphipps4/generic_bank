@@ -1,7 +1,7 @@
 // A role's turn with its model, as a pi session (plan §7): the one place the factory calls a
 // model, and the only code that knows the provider. The role's provider, model and effort come
-// from its settings; every request goes to the gateway, which meters it and replays it in mock
-// mode, and never to the provider itself.
+// from its settings; every request goes to the gateway, which meters it, and never to the
+// provider itself.
 import { Agent as PiAgent, type AgentMessage, type AgentTool } from '@earendil-works/pi-agent-core';
 import type {
   Api,

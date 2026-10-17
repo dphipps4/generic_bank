@@ -3,8 +3,8 @@
 //   onboard <bank>   a build run at the bank, then the gate once a person approves its profile
 //   repair <bank>    a repair run from the bank's open repair case, then the same gate
 //   gate <rec>       the gate alone, for a recommendation approved after its run's command ended
-// The models are reached only through the factory's gateway, which meters them and, with no key,
-// replays the recording kept for the run's kind (mock mode). The hazard check is the sandbox: it
+// The models are reached only through the factory's gateway, which meters them and holds them to
+// the caps; with no model key, every call is refused. The hazard check is the sandbox: it
 // judges each run by the bank's own records, through the bank's admin port, as the tests do; no
 // model ever sees that port or its token.
 import { loadConfig, secret } from '@gb/config';

@@ -97,7 +97,7 @@ export function gateway(opts: {
     held.set(runId, heldFor(runId) + worst);
     let recorded = false;
     try {
-      const answer = await upstream.answer(runId, role, provider, request);
+      const answer = await upstream.answer(provider, request);
       const u = answer.usage;
       if (u)
         await ledger.record({
@@ -107,14 +107,14 @@ export function gateway(opts: {
           tokensIn: u.input + u.cacheRead + u.cacheWrite,
           tokensOut: u.output,
           tokensCached: u.cacheRead,
-          costUsd: upstream.spends ? costUsd(price, u) : 0,
+          costUsd: costUsd(price, u),
         });
       recorded = true;
       const ok = answer.status === 200;
       const contentType = ok && request.stream === true ? 'text/event-stream' : 'application/json';
       return { status: answer.status, contentType, body: answer.body };
     } finally {
-      if (recorded || !upstream.spends) {
+      if (recorded) {
         const left = heldFor(runId) - worst;
         if (left > 1e-9) held.set(runId, left);
         else held.delete(runId);

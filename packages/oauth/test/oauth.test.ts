@@ -32,7 +32,7 @@ const fails = async (p: Promise<unknown>, error: string) => {
 describe('clients', () => {
   it('get a secret and a one-time code, of which only hashes are stored', async () => {
     const c = await o().createClient({
-      name: 'Member assistant',
+      name: 'Budgeting app',
       scopes: ['tasks:read', 'tasks:balance'],
       createdBy: 'admin@test',
     });

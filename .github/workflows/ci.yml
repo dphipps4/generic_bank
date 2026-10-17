@@ -1,5 +1,8 @@
 name: ci
 
+# A pull request gets the quick checks: about a minute, two jobs side by side, and one browser test
+# only when the crawler's code or a bank changed. A merge to master runs the whole suite, in
+# parallel, and builds the images.
 on:
   pull_request:
   push:
@@ -27,40 +30,64 @@ jobs:
       pull-requests: read
     outputs:
       code: ${{ steps.files.outputs.code }}
-      repair: ${{ steps.files.outputs.repair }}
-      appenv: ${{ steps.files.outputs.appenv }}
+      units: ${{ steps.files.outputs.units }}
+      browser: ${{ steps.files.outputs.browser }}
     steps:
       - id: files
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ github.event_name }}" != pull_request ]; then
-            echo "code=true" >> "$GITHUB_OUTPUT"; echo "repair=true" >> "$GITHUB_OUTPUT"
-            echo "appenv=true" >> "$GITHUB_OUTPUT"; exit 0
+            { echo "code=true"; echo "units=all"; echo "browser=true"; } >> "$GITHUB_OUTPUT"; exit 0
           fi
           files=$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" --jq '.[].filename')
           echo "$files"
           # Docs: the docs tree, Markdown and HTML anywhere, the license. Never tested.
           code=$(grep -vqE '^docs/|\.md$|\.html?$|^LICENSE$' <<< "$files" && echo true || echo false)
-          repair=$(grep -qE '^(apps/factory/|packages/drivers/|packages/screen/|tests/browser/repair\.test\.ts$|config/app\.env$)' <<< "$files" && echo true || echo false)
-          # config/app.env names the factory's models: its tests read it, and nothing else's do.
-          appenv=$(grep -qx 'config/app.env' <<< "$files" && echo true || echo false)
-          echo "code=$code" >> "$GITHUB_OUTPUT"; echo "repair=$repair" >> "$GITHUB_OUTPUT"
-          echo "appenv=$appenv" >> "$GITHUB_OUTPUT"
+          # The unit tests of each package the change touches. The files every test reads (the
+          # lockfile, the configs, the control database's migrations) run them all; the seeds are
+          # memory's, and config/app.env, which names the models, is the factory's.
+          if grep -qE '^(package(-lock)?\.json|vitest\.config\.ts|tsconfig[^/]*\.json|packages/db/prisma/)' <<< "$files"; then
+            units=all
+          else
+            units=$( { grep -oE '^(apps|packages)/[^/]+/' <<< "$files" || true
+                       grep -q '^seeds/' <<< "$files" && echo apps/memory/ || true
+                       grep -qx 'config/app.env' <<< "$files" && echo apps/factory/ || true; } | sort -u | tr '\n' ' ')
+          fi
+          # The crawler's code, the bank, or the harness that starts it: one browser test.
+          browser=$(grep -qE '^(apps/(bank|runner)/|packages/(screen|drivers)/|tests/support/|tests/runs/execute\.test\.ts$)' <<< "$files" && echo true || echo false)
+          { echo "code=$code"; echo "units=$units"; echo "browser=$browser"; } >> "$GITHUB_OUTPUT"
 
-  check:
-    name: typecheck, lint, boundaries
+  # Its name is the check the master branch's ruleset requires, so it must report on every pull
+  # request: skipped, for a change to the docs alone, counts as passed. It runs the secrets scan
+  # first (a pull request's own commits; on master, the whole history), then the types, lint and
+  # import boundaries.
+  checks:
+    name: no secrets in history
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 26
-          cache: npm
-      - run: npm ci --no-audit --no-fund
-      - run: npm run db:generate
+          # On master, the whole history; on a pull request, its own commits are fetched below.
+          fetch-depth: ${{ github.event_name == 'pull_request' && 1 || 0 }}
+      - name: No secrets (gitleaks)
+        env:
+          EVENT: ${{ github.event_name }}
+          COMMITS: ${{ github.event.pull_request.commits }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz | tar -xz -C "$RUNNER_TEMP" gitleaks
+          scan=("$RUNNER_TEMP/gitleaks" git --no-banner --redact --verbose --exit-code 1)
+          if [ "$EVENT" = pull_request ]; then
+            # The pull request's commits and the one under them, so the first has a parent.
+            git fetch -q --no-tags --depth=$((COMMITS + 1)) origin "$HEAD_SHA"
+            "${scan[@]}" --log-opts="--max-count=$COMMITS $HEAD_SHA" .
+          else
+            "${scan[@]}" .
+          fi
+      - uses: ./.github/actions/node
       - run: npx prisma validate --schema packages/db/prisma/schema.prisma
         env:
           CONTROL_DATABASE_URL: postgresql://ci:ci@localhost:5432/control
@@ -71,74 +98,72 @@ jobs:
       - run: npm run lint
       - run: npm run depcruise
 
-  # A pull request runs the tests its change touches; a change to migrations, seeds or the files
-  # tests read runs them all (vitest.config.ts, forceRerunTriggers). A merge to master runs the
-  # whole suite. The first failure stops the run.
-  tests:
-    name: tests
+  # The unit tests of the packages a pull request touches, with no browser.
+  unit:
+    name: unit tests
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: github.event_name == 'pull_request' && needs.changes.outputs.units != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          # The whole history, so a pull request's tests can be chosen by what it changed.
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 26
-          cache: npm
-      - run: npm ci --no-audit --no-fund
-      - run: npm run db:generate
-      - uses: actions/cache@v4
-        with:
-          path: .run/browser
-          key: chrome-${{ runner.os }}-${{ hashFiles('infra/scripts/browser.sh') }}
-      - name: Headless Chromium for the browser tests
-        run: '[ -d .run/browser/chrome ] || infra/scripts/browser.sh'
-      - name: The tests this change touches
-        if: github.event_name == 'pull_request'
-        run: npx vitest run --changed origin/${{ github.base_ref }} --passWithNoTests --bail=1 --exclude tests/browser/repair.test.ts
-      - name: The factory's tests, which read config/app.env
-        if: github.event_name == 'pull_request' && needs.changes.outputs.appenv == 'true'
-        run: npx vitest run apps/factory/test --bail=1
-      - name: The whole suite
-        if: github.event_name != 'pull_request'
-        run: npx vitest run --bail=1 --exclude tests/browser/repair.test.ts
+      - uses: ./.github/actions/node
+      - name: The touched packages' tests
+        env:
+          UNITS: ${{ needs.changes.outputs.units }}
+        run: |
+          if [ "$UNITS" = all ]; then dirs=$(ls -d apps/*/test packages/*/test)
+          else dirs=$(for p in $UNITS; do [ -d "${p}test" ] && echo "${p}test"; done); fi
+          [ -n "$dirs" ] || { echo "no tests in $UNITS"; exit 0; }
+          echo "$dirs"
+          # shellcheck disable=SC2086 # one argument per directory
+          npx vitest run $dirs --bail=1 --passWithNoTests --exclude '**/node_modules/**' --exclude packages/screen/test/model.test.ts
 
-  # The factory's repair drives the bank end to end for minutes, so it has a machine of its own,
-  # beside the other tests. A pull request runs it only when it changes the factory, the drivers,
-  # the screen code or the test itself; a merge to master always does.
-  repair:
-    name: the factory's repair
+  # One small browser test, on a pull request that changes the crawler's code or a bank: a balance
+  # checked end to end on bank 1.
+  browser:
+    name: a browser test
     needs: changes
-    if: needs.changes.outputs.repair == 'true'
+    if: github.event_name == 'pull_request' && needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 26
-          cache: npm
-      - run: npm ci --no-audit --no-fund && npm run db:generate
+      - uses: ./.github/actions/node
       - uses: actions/cache@v4
         with:
           path: .run/browser
           key: chrome-${{ runner.os }}-${{ hashFiles('infra/scripts/browser.sh') }}
       - name: Headless Chromium
         run: '[ -d .run/browser/chrome ] || infra/scripts/browser.sh'
-      - name: The repair test
-        run: npx vitest run tests/browser/repair.test.ts
+      - run: npx vitest run tests/runs/execute.test.ts -t 'checks a balance end to end'
 
-  secrets:
-    name: no secrets in history
+  # On master, the whole suite, in four parts at once.
+  suite:
+    name: the whole suite (${{ matrix.shard }} of 4)
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/node
+      - uses: actions/cache@v4
+        with:
+          path: .run/browser
+          key: chrome-${{ runner.os }}-${{ hashFiles('infra/scripts/browser.sh') }}
+      - name: Headless Chromium
+        run: '[ -d .run/browser/chrome ] || infra/scripts/browser.sh'
+      - run: npx vitest run --shard=${{ matrix.shard }}/4
+
+  # On master only: the Node image every service runs, and the Runner's on top of it.
+  images:
+    name: the images build
+    needs: changes
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: docker build -f infra/docker/node.Dockerfile -t generic-bank/node:ci .
+      - run: docker build -f infra/docker/runner.Dockerfile --build-arg BASE=generic-bank/node:ci -t generic-bank/runner:ci .

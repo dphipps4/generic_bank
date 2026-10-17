@@ -2,25 +2,18 @@ name: fresh clone
 
 # What someone who forks this does, on a machine with nothing cached: install just, set up, start
 # everything, and check every service answers. Each step is timed in the run's summary, so a
-# slower full build shows as plainly as a broken one.
+# slower full build shows as plainly as a broken one. It takes minutes, so it runs when asked for
+# and once a week, never on a pull request.
 on:
-  push:
-    branches: [master]
-  # Every pull request that can change what is built; a change to the docs alone cannot.
-  pull_request:
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
-      - '**/*.html'
-      - '**/*.htm'
-      - 'LICENSE'
   workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
 
 permissions:
   contents: read
 
 concurrency:
-  group: fresh-clone-${{ github.event_name == 'pull_request' && github.head_ref || github.run_id }}
+  group: fresh-clone
   cancel-in-progress: true
 
 jobs:

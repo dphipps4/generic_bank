@@ -235,7 +235,7 @@ bank-more: env image
     @{{compose}} --profile more-banks up -d --wait {{bank_more}}
     @echo "  Sample Savings Bank   http://localhost:$BANK_SAMPLE_PORT/online/branch/"; echo "  Placeholder FCU       http://127.0.0.1:$BANK_PLACEHOLDER_PORT/cu/ib/"
 
-# The factory box: the software factory (mock mode until a model key is set)
+# The factory box: the software factory (its models need OPENROUTER_API_KEY)
 [group('Run')]
 factory: env image
     @{{compose}} --profile factory up -d --wait {{factory}}

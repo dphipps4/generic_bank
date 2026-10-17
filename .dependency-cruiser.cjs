@@ -6,8 +6,21 @@ module.exports = {
       name: 'nothing-imports-the-bank',
       comment: 'The bank is the outside world. It is reached only over HTTP.',
       severity: 'error',
-      from: { pathNot: '^apps/bank/' },
+      // The end-to-end tests start the bank in process and read its seeded members; the next rule
+      // keeps its config from them.
+      from: { pathNot: '^(apps/bank/|tests/)' },
       to: { path: '^apps/bank/' },
+    },
+    {
+      name: 'only-the-bank-harness-reads-its-config',
+      comment:
+        "A bank's config (its words, labels and layout) is the answer key. Only the harness that starts a bank, the bank's own tests and the PII check's seeded values read it.",
+      severity: 'error',
+      from: {
+        path: '^(apps/factory/|tests/)',
+        pathNot: '^tests/(bank/|support/banks\\.ts$|pii/seeded\\.ts$)',
+      },
+      to: { path: '^apps/bank/src/tenants' },
     },
     {
       name: 'the-bank-imports-nothing-of-ours',

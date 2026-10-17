@@ -87,7 +87,7 @@ while IFS= read -r line; do
   fi
 done < <(grep -v '^\s*#' infra/secrets/secrets.spec | grep -v '^\s*$')
 if [[ $model == 0 ]]; then
-  warn "OPENROUTER_API_KEY is not set, so the factory runs in mock mode."
+  warn "OPENROUTER_API_KEY is not set, so the factory refuses every model call."
   echo "    Set it: ${B}just secret-set factory OPENROUTER_API_KEY${N}"
 fi
 [[ $any == 1 ]] || ok "nothing to enter"
