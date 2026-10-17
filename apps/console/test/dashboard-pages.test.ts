@@ -17,7 +17,7 @@ beforeAll(async () => {
   db = await controlDb();
   app = Fastify();
   landOnDashboard(app);
-  app.get('/admin/resources/TaskRun', async () => 'AdminJS');
+  app.get('/admin/resources/ApiClient', async () => 'AdminJS');
   dashboardPages(app, { sql: db, whoIs: () => who, apiPort: 18000, inboxPort: 18089 });
   await app.ready();
 });
@@ -64,7 +64,7 @@ describe('the Dashboard', () => {
       const r = await app.inject({ url });
       expect([r.statusCode, r.headers.location]).toEqual([302, '/dashboard']);
     }
-    expect((await app.inject({ url: '/admin/resources/TaskRun' })).body).toBe('AdminJS');
+    expect((await app.inject({ url: '/admin/resources/ApiClient' })).body).toBe('AdminJS');
     who = null;
     expect((await app.inject({ url: '/dashboard' })).headers.location).toBe('/admin/login');
   });

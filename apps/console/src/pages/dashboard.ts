@@ -123,7 +123,7 @@ export function dashboardPages(app: FastifyInstance, deps: DashboardDeps) {
       `<a href="http://${esc(host)}:${deps.apiPort}/docs">Task API (Swagger UI)</a>`,
       `<a href="http://${esc(host)}:${deps.inboxPort}">Staff inbox (sign-in codes)</a>`,
       ...(inNav('/lab') ? ['<a href="/lab">Hazard lab</a>'] : []),
-      '<a href="/admin/resources/TaskRun">Data (every table)</a>',
+      '<a href="/admin/resources/ApiClient">API clients, Console users and the audit log</a>',
     ];
 
     return reply.type('text/html; charset=utf-8').send(

@@ -24,7 +24,7 @@ const NAV: [href: string, label: string][] = [
   ['/runs', 'Runs'],
   ['/recommendations', 'Recommendations'],
   ['/freezes', 'Freezes'],
-  ['/admin/resources/TaskRun', 'Data'],
+  ['/admin/resources/ApiClient', 'API clients'],
 ];
 
 /** Whether the bar links this page. */
@@ -80,7 +80,7 @@ img.thumb{display:block;max-width:260px;border:1px solid var(--line);border-radi
 <main>${body}</main></body></html>`;
 }
 
-/** Injected into AdminJS's pages: a bar back to the Console's pages, and a trail link on a run. */
+/** Injected into AdminJS's pages: a bar back to the Console's own pages. */
 export const ADMIN_BAR_JS = `(function () {
   function bar() {
     if (document.getElementById('gb-bar')) return;
@@ -90,17 +90,5 @@ export const ADMIN_BAR_JS = `(function () {
     b.innerHTML = '<a href="/runs" style="color:#fff;text-decoration:none">Runs, screen by screen</a>';
     document.body.appendChild(b);
   }
-  function trail() {
-    var m = location.pathname.match(/\\/admin\\/resources\\/TaskRun\\/records\\/([^/]+)\\/show/);
-    var link = document.getElementById('gb-trail');
-    if (!m) { if (link) link.remove(); return; }
-    if (link && link.dataset.run === m[1]) return;
-    if (link) link.remove();
-    var a = document.createElement('a');
-    a.id = 'gb-trail'; a.dataset.run = m[1]; a.href = '/runs/' + encodeURIComponent(m[1]);
-    a.textContent = 'Open this run, screen by screen';
-    a.style.cssText = 'position:fixed;right:16px;bottom:56px;z-index:9999;background:#fff;color:#1f4d7a;border:1px solid #1f4d7a;border-radius:20px;padding:6px 14px;font:13px -apple-system,Segoe UI,Arial;text-decoration:none';
-    document.body.appendChild(a);
-  }
-  setInterval(function () { bar(); trail(); }, 500);
+  setInterval(bar, 500);
 })();`;
