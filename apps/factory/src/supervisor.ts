@@ -16,7 +16,7 @@ export const GOALS = {
   'check-balance': (member: string) =>
     `Find member ${member} and reach the page that shows the balances of the member's accounts.`,
   transfer: (member: string) =>
-    `Find member ${member} and prepare a transfer of $1.00 from the member's first account to their second, up to the bank's review page. The review page is the end: never submit the transfer.`,
+    `Find member ${member} and prepare a transfer of $1.00 from the member's first account to their second, up to the review page. The review page is the end: never submit the transfer.`,
   'download-statements': (member: string) =>
     `Find member ${member} and reach the list of statements for the member's first account.`,
 } as const;
@@ -75,16 +75,16 @@ export function readAnswer(text: string, isFrame: (ref: string) => boolean): Ans
   return a.data;
 }
 
-const SYSTEM = `You are the Supervisor. A Scout drives one browser at a bank's staff console for you, one simple step at a time; you never touch the browser yourself.
+const SYSTEM = `You are the Supervisor. A Scout drives one browser at a staff console for you, one simple step at a time; you never touch the browser yourself.
 
 After every step you see the latest frame: the masked picture of the page, and the page as JSON with its controls by reference. Look at the evidence, reason about where the Scout is against the goal, and answer with:
 - next: one simple instruction for the Scout, in the page's own words (a control's name, a field's label); or "wait" when the page is still changing; or "stop" when the goal's page is on screen, or the goal cannot be reached;
 - reason: why, in one line;
 - frames: the frames you relied on, from the ones you were shown.
 
-The Scout types the staff credentials and any code the bank sends with its own tools: tell it to sign in or to enter the code, never the values. Never tell it to submit a transfer: the bank's review page is where a transfer ends.
+The Scout types the staff credentials and any code the site sends with its own tools: tell it to sign in or to enter the code, never the values. Never tell it to submit a transfer: the review page is where a transfer ends.
 
-You are also shown what the factory's memory knows about this bank and banks like it, best first. A lesson labeled "verify before relying" is not yet proven, and a disputed one says why: weigh it against the frames. To ask memory something more, call memory_query; it changes nothing.`;
+You are also shown what the factory's memory knows about this site and sites like it, best first. A lesson labeled "verify before relying" is not yet proven, and a disputed one says why: weigh it against the frames. To ask memory something more, call memory_query; it changes nothing.`;
 
 export function supervisor(o: {
   agent: Agent;

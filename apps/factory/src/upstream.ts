@@ -120,26 +120,49 @@ async function openai(client: OpenAI, request: Request): Promise<Answer> {
   }
 }
 
-const KEYS = { anthropic: 'ANTHROPIC_API_KEY', openai: 'OPENAI_API_KEY' } as const;
+const KEYS = {
+  anthropic: 'ANTHROPIC_API_KEY',
+  openai: 'OPENAI_API_KEY',
+  openrouter: 'OPENROUTER_API_KEY',
+} as const;
 
 /** Each provider's model, through its SDK; every call is recorded. */
 export function live(
-  clients: { anthropic?: Anthropic; openai?: OpenAI },
+  clients: {
+    anthropic?: Anthropic;
+    openai?: OpenAI;
+    openrouter?: { anthropic: Anthropic; openai: OpenAI };
+  },
   recordings: string,
 ): Upstream {
   return {
     spends: true,
     async answer(runId, role, provider, request) {
-      const client = clients[provider];
-      if (!client)
-        return {
-          status: 401,
-          body: new Refusal(401, 'authentication_error', `${KEYS[provider]} is not set`).body,
-        };
-      const answer =
-        provider === 'anthropic'
-          ? await anthropic(client as Anthropic, request)
-          : await openai(client as OpenAI, request);
+      let answer;
+      if (provider === 'openrouter') {
+        const or = clients.openrouter;
+        if (!or)
+          return {
+            status: 401,
+            body: new Refusal(401, 'authentication_error', `${KEYS[provider]} is not set`).body,
+          };
+        // pi puts the system prompt at the top level only in Anthropic Messages.
+        answer =
+          'system' in request
+            ? await anthropic(or.anthropic, request)
+            : await openai(or.openai, request);
+      } else {
+        const client = clients[provider];
+        if (!client)
+          return {
+            status: 401,
+            body: new Refusal(401, 'authentication_error', `${KEYS[provider]} is not set`).body,
+          };
+        answer =
+          provider === 'anthropic'
+            ? await anthropic(client as Anthropic, request)
+            : await openai(client as OpenAI, request);
+      }
       await mkdir(recordings, { recursive: true });
       const line: Recorded = { role, provider, request, ...answer };
       await appendFile(file(recordings, runId), `${JSON.stringify(line)}\n`);
@@ -148,16 +171,31 @@ export function live(
   };
 }
 
+/** OpenRouter's base URL, with two API surfaces: /api for Anthropic Messages, /api/v1 for OpenAI. */
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api';
+
 /** With a key, the model; with none at all, mock mode, and no client is ever made. */
 export function upstreamFor(
-  keys: { anthropic?: string; openai?: string },
+  keys: { anthropic?: string; openai?: string; openrouter?: string },
   recordings: string,
 ): Upstream {
-  if (!keys.anthropic && !keys.openai) return replay(recordings);
+  if (!keys.anthropic && !keys.openai && !keys.openrouter) return replay(recordings);
   return live(
     {
       anthropic: keys.anthropic ? new Anthropic({ apiKey: keys.anthropic }) : undefined,
       openai: keys.openai ? new OpenAI({ apiKey: keys.openai }) : undefined,
+      openrouter: keys.openrouter
+        ? {
+            anthropic: new Anthropic({
+              apiKey: keys.openrouter,
+              baseURL: OPENROUTER_BASE_URL,
+            }),
+            openai: new OpenAI({
+              apiKey: keys.openrouter,
+              baseURL: `${OPENROUTER_BASE_URL}/v1`,
+            }),
+          }
+        : undefined,
     },
     recordings,
   );
@@ -213,6 +251,10 @@ function differs(a: unknown, b: unknown, path: string): string | null {
 const modelless = (r: unknown) =>
   r && typeof r === 'object' ? { ...(r as Record<string, unknown>), model: undefined } : r;
 
+/** OpenRouter's Anthropic models speak Anthropic Messages; a recording made on one replays on the other. */
+const sameApi = (a: string, b: string) =>
+  a === b || [a, b].sort().join(',') === 'anthropic,openrouter';
+
 /** Mock mode: each request must be the next one in the run's recording, which answers it. */
 export function replay(recordings: string): Upstream {
   const runs = new Map<string, { calls: Recorded[]; next: number }>();
@@ -243,7 +285,7 @@ export function replay(recordings: string): Upstream {
       const where =
         call.role !== role
           ? `the role (${role}, recorded ${call.role})`
-          : call.provider !== provider
+          : !sameApi(call.provider, provider)
             ? `the provider (${provider}, recorded ${call.provider})`
             : differs(modelless(unpictured(call.request)), modelless(unpictured(request)), '');
       if (where)

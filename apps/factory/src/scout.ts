@@ -149,13 +149,9 @@ export function scout(deps: ScoutDeps) {
   const tools = {
     browser_open: {
       description:
-        "Opens a page of the bank being learned: its start page, or a path on the bank's own site. The host is set by the run; no other site can be opened.",
+        'Opens a page of the site being learned: its start page, or a path on the site. The host is set by the run; no other site can be opened.',
       input: z.object({
-        path: z
-          .string()
-          .max(300)
-          .optional()
-          .describe('A path on the bank’s site, such as /corelink/'),
+        path: z.string().max(300).optional().describe('A path on the site, such as /corelink/'),
       }),
       async run({ path }: { path?: string }) {
         const url = new URL(path ?? deps.start, deps.start);
@@ -272,11 +268,11 @@ export function scout(deps: ScoutDeps) {
     },
     browser_enter_code: {
       description:
-        'Types the code a person gives into a field, by its reference, once the bank shows it sent a code. The code is never shown.',
+        'Types the code a person gives into a field, by its reference, once the site shows it sent a code. The code is never shown.',
       input: z.object({ ref }),
       async run(i: { ref: string }) {
         if (!last?.texts.some((t) => CODE_SENT.test(t.text)))
-          throw new ToolRefusal('the bank has not shown that it sent a code');
+          throw new ToolRefusal('the site has not shown that it sent a code');
         const c = control(i.ref);
         if (c.role !== 'textbox')
           throw new ToolRefusal(`${c.ref} is a ${c.role}, not a text field`);
@@ -351,11 +347,11 @@ export interface Supervisor {
   next(report: string | null): Promise<string | null>;
 }
 
-const SYSTEM = `You are the Scout. You drive one browser at a bank's staff console, one simple step at a time, as the Supervisor directs.
+const SYSTEM = `You are the Scout. You drive one browser at a staff console, one simple step at a time, as the Supervisor directs.
 
 Do only the step you are given, with the fewest tool calls, then reply in one or two sentences: what you did and what page you are on now. Every tool returns the page after it: its controls, each with a reference such as c3, and its text. Act on controls by those references; choose in a list by the option's position.
 
-You never see credentials or codes. Type the user ID or password with browser_type_credential, and a code the bank sent with browser_enter_code. If a step cannot be done, say why and stop. memory_query asks what the factory knows about sites like this one; it changes nothing.`;
+You never see credentials or codes. Type the user ID or password with browser_type_credential, and a code the site sent with browser_enter_code. If a step cannot be done, say why and stop. memory_query asks what the factory knows about sites like this one; it changes nothing.`;
 
 /**
  * The Scout's side of a run: each instruction from the Supervisor is one turn of the Scout's model

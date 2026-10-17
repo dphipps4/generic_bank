@@ -67,7 +67,7 @@ export function scripted(bank: TenantId, member: string) {
     'Have the code sent.': [
       (p) => ({ tool: 'browser_click', input: { ref: ref(p, null, 'Send code') } }),
     ],
-    'Enter the code the bank sent.': [
+    'Enter the code the site sent.': [
       (p) => ({ tool: 'browser_enter_code', input: { ref: ref(p, 'textbox') } }),
       (p) => ({ tool: 'browser_click', input: { ref: ref(p, null, 'Verify') } }),
     ],
@@ -120,7 +120,7 @@ export function scripted(bank: TenantId, member: string) {
     if (p.controls.some((c) => c.role === 'password'))
       return 'Sign in as the staff service account.';
     if (has(p, 'Send code')) return 'Have the code sent.';
-    if (has(p, 'Verify')) return 'Enter the code the bank sent.';
+    if (has(p, 'Verify')) return 'Enter the code the site sent.';
     if (has(p, 'Continue to Online Banking')) return 'Press Continue to Online Banking.';
     const summary = p.texts.some((t) => t.includes('Available balance'));
     const search = has(p, 'Open')
@@ -207,7 +207,7 @@ export function scripted(bank: TenantId, member: string) {
           }
         : frames.some((f) => f.controls.includes('Send code'))
           ? {
-              text: 'This bank waits for the operator to ask for the staff code with a button after the password; nothing arrives until then.',
+              text: 'This site sends the staff code only when asked, with a button after the password; nothing arrives until then.',
               area: 'sign-in',
               scope: 'tenant',
               confidence: 'high',
@@ -215,7 +215,7 @@ export function scripted(bank: TenantId, member: string) {
               frames: [where(frames, (f) => f.controls.includes('Send code'), 'the code page')],
             }
           : {
-              text: 'This bank sends the staff code as soon as the password is accepted and asks for it on the next page, with no button to have it sent.',
+              text: 'This site sends the staff code as soon as the password is accepted and asks for it on the next page, with no button to have it sent.',
               area: 'sign-in',
               scope: 'tenant',
               confidence: 'high',
@@ -241,7 +241,7 @@ export function scripted(bank: TenantId, member: string) {
     const results = r.items.filter((x) => 'result' in x).length;
     if (r.system.includes('Write down what it taught')) return lessons(said[0]!, results);
     if (r.system.includes('with the recommend tool'))
-      return recommending(said[0]!, r.system.includes('the bank has changed'), results);
+      return recommending(said[0]!, r.system.includes('the site has changed'), results);
     if (r.system.startsWith('You are the Supervisor')) {
       const text = said[0]!;
       const goal = /^Goal: (.*)$/m.exec(text)![1]!;

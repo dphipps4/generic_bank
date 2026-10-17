@@ -64,7 +64,7 @@ info "Secrets you enter"
 # A value someone else issues (an API key) cannot be generated. Each is explained here and entered
 # by a person with just secret-set; setup does not go on while a required one is blank.
 # The model keys are one choice: whichever is set is reported, a blank one is not.
-MODEL_KEYS=" ANTHROPIC_API_KEY OPENAI_API_KEY "
+MODEL_KEYS=" ANTHROPIC_API_KEY OPENAI_API_KEY OPENROUTER_API_KEY "
 missing=0 any=0 model=0
 while IFS= read -r line; do
   read -r f key how _ <<<"$line"
@@ -88,7 +88,7 @@ while IFS= read -r line; do
 done < <(grep -v '^\s*#' infra/secrets/secrets.spec | grep -v '^\s*$')
 if [[ $model == 0 ]]; then
   warn "No model key is set, so the factory runs in mock mode."
-  echo "    To use Claude: ${B}just secret-set factory ANTHROPIC_API_KEY${N}, which asks for the key (or OPENAI_API_KEY for OpenAI)."
+  echo "    Set one: ${B}just secret-set factory OPENROUTER_API_KEY${N} (or ANTHROPIC_API_KEY / OPENAI_API_KEY)."
 fi
 [[ $any == 1 ]] || ok "nothing to enter"
 [[ $missing == 0 ]] || die "Enter the values marked ✗ with just secret-set, then run just setup again."

@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { controlDb } from '../../../packages/oauth/test/control.js';
+import { apiOf } from '../src/agent.js';
 import { gateway } from '../src/gateway.js';
 import { sqlLedger } from '../src/ledger.js';
 import { PRICES, type Provider, type RoleModel } from '../src/models.js';
@@ -31,6 +32,7 @@ let sent: Record<string, unknown>[];
 const MODELS: Record<Provider, RoleModel> = {
   anthropic: DEFAULT_ROLES.supervisor,
   openai: { ...DEFAULT_ROLES.supervisor, provider: 'openai', model: OPENAI_TEST_MODEL },
+  openrouter: DEFAULT_ROLES.supervisor,
 };
 
 beforeEach(async () => {
@@ -115,7 +117,7 @@ describe('the Supervisor’s answer', () => {
   });
 });
 
-describe.each(['anthropic'] as const)('the Supervisor on %s', (provider) => {
+describe.each([DEFAULT_ROLES.supervisor.provider] as const)('the Supervisor on %s', (provider) => {
   it('is asked of the Supervisor’s model with the frame’s picture, in a fixed form, at its effort', async () => {
     const { s, steps } = setUp(provider);
     answers = [answer('Sign in as the staff service account.')];
@@ -127,16 +129,20 @@ describe.each(['anthropic'] as const)('the Supervisor on %s', (provider) => {
     const said = body.messages.find((m) => m.role === 'user')!.content;
     expect(said.find((b) => b.type === 'text')!.text).toContain('Latest frame, f1:');
     expect(body.model).toBe(MODELS[provider].model);
-    if (provider === 'anthropic') {
-      // pi sets the role's effort from the conversation's start; thinking cannot be turned off.
-      expect(body.messages.find((m) => m.role === 'system')!.output_config).toEqual({
-        effort: 'high',
-      });
+    if (apiOf(MODELS[provider]) === 'anthropic-messages') {
+      // pi sets adaptive thinking and the answer schema; effort is on the top-level output_config.
       expect(body.thinking).toMatchObject({ type: 'adaptive' });
-      expect((body.output_config as { format: { type: string } }).format.type).toBe('json_schema');
+      const oc = body.output_config as { effort?: string; format?: { type: string } };
+      expect(oc.effort).toBe('high');
+      expect(oc.format?.type).toBe('json_schema');
       expect(said.map((b) => b.type)).toEqual(['image', 'text']);
     } else {
-      expect(body.reasoning_effort).toBe('high');
+      // OpenRouter takes effort in its own nested field.
+      const effort =
+        provider === 'openrouter'
+          ? (body.reasoning as { effort?: string } | undefined)?.effort
+          : body.reasoning_effort;
+      expect(effort).toBe('high');
       expect(body.response_format).toMatchObject({
         type: 'json_schema',
         json_schema: { strict: true },

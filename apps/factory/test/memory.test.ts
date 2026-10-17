@@ -104,7 +104,7 @@ const agent = (role: Role) => ({
 });
 
 const LESSON: Lesson = {
-  text: 'This bank sends the staff code as soon as the password is accepted.',
+  text: 'This site sends the staff code as soon as the password is accepted.',
   area: 'sign-in',
   scope: 'tenant',
   confidence: 'high',
@@ -163,7 +163,10 @@ describe('record_lesson', () => {
       trail,
       extra: memoryTools,
     });
-    const offered = (sent[before]!.tools as { name: string }[]).map((t) => t.name);
+    // A tool is named at the top in Anthropic's form, under function in OpenAI's.
+    const offered = (sent[before]!.tools as { name?: string; function?: { name: string } }[]).map(
+      (t) => t.name ?? t.function?.name,
+    );
     expect(offered).toContain('memory_query');
     expect(offered).not.toContain('record_lesson');
     expect(steps).toContainEqual({

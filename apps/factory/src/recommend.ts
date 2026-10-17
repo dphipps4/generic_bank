@@ -28,7 +28,7 @@ export const Claim = z.object({
     .describe(
       `The part of the profile: words.<thing> (${WORDS.join(', ')}), screens.<screen> for words that mark a screen (screens.login.signin), refusals.<code> (${REFUSALS.join(', ')}), or statementsKept`,
     ),
-  value: z.string().trim().min(1).max(300).describe('The bank’s own words, as they are on screen'),
+  value: z.string().trim().min(1).max(300).describe('The site’s own words, as they are on screen'),
   basis: z
     .enum(['seen', 'guess'])
     .describe(
@@ -55,7 +55,7 @@ export async function check(claims: Claim[], trail: Trail): Promise<string[]> {
   const wrong: string[] = [];
   for (const [i, c] of claims.entries()) {
     const n = `claim ${i + 1} (${c.about})`;
-    if (!ABOUT.test(c.about)) wrong.push(`${n} is not about a part of a bank's profile`);
+    if (!ABOUT.test(c.about)) wrong.push(`${n} is not about a part of the site's profile`);
     if (!c.frames.length) {
       wrong.push(`${n} cites no frame: every claim rests on frames of this run`);
       continue;
@@ -77,7 +77,7 @@ export function recommendTool(o: { sql: Sql; trail: Trail; runId: string; bank: 
   return {
     name: 'recommend',
     description:
-      'Recommends the bank’s profile, as claims, each citing the frames of this run it rests on and marked seen or guess. Refused, with the reasons, if any claim does not stand; then nothing is kept.',
+      'Recommends the site’s profile, as claims, each citing the frames of this run it rests on and marked seen or guess. Refused, with the reasons, if any claim does not stand; then nothing is kept.',
     input: Input,
     async run(input) {
       const { claims } = Input.parse(input);
@@ -106,17 +106,17 @@ export function recommendTool(o: { sql: Sql; trail: Trail; runId: string; bank: 
   };
 }
 
-const SYSTEM = `You are the Supervisor, and the Scout's run at this bank has reached its goals. Draft the bank's profile from the frames of the run, with the recommend tool.
+const SYSTEM = `You are the Supervisor, and the Scout's run at this site has reached its goals. Draft the site's profile from the frames of the run, with the recommend tool.
 
-Each claim is one thing about the bank in its own words, exactly as on screen: its word for a thing (its sign-in button, its member search, its transfer form's way to the review page, its statements), words that mark one of its screens, or its words when it refuses a transfer. Each cites the frames it rests on.
+Each claim is one thing about the site in its own words, exactly as on screen: its word for a thing (its sign-in button, its member search, its transfer form's way to the review page, its statements), words that mark one of its screens, or its words when it refuses a transfer. Each cites the frames it rests on.
 
-Mark a claim seen only when it is on every frame it cites. Anything no frame shows, such as a refusal the bank never made, is a guess: say so, and cite the frames it is inferred from. Never present a guess as seen: a person approves this profile, and a guess taken for a fact could be costly. A claim with no frame is refused.
+Mark a claim seen only when it is on every frame it cites. Anything no frame shows, such as a refusal the site never made, is a guess: say so, and cite the frames it is inferred from. Never present a guess as seen: a person approves this profile, and a guess taken for a fact could be costly. A claim with no frame is refused.
 
 Call recommend once with every claim. If it is refused, correct what it says and call it again.`;
 
-const REPAIR = `You are the Supervisor, and the bank has changed: the bank's driver, which runs its approved profile, stopped at a screen it did not know. The Scout's run at the bank as it is now has reached its goals. Draft what changed in the bank's profile from the frames of this run, with the recommend tool.
+const REPAIR = `You are the Supervisor, and the site has changed: the site's driver, which runs its approved profile, stopped at a screen it did not know. The Scout's run at the site as it is now has reached its goals. Draft what changed in the site's profile from the frames of this run, with the recommend tool.
 
-You are shown the profile as it is, the frames where the failing run stopped, and the frames of this run. Recommend only what changed: anything still true stays as it is and needs no claim. Each claim is one thing about the bank in its own words, exactly as on screen: its new word for a thing; words.menu for a control that must be opened to reach the places to go; for a page after sign-in that must be passed, the words that mark it (screens.login.notice) and its button (words.dismiss); the words that mark its home page (screens.console.home). Each cites the frames of this run that show it.
+You are shown the profile as it is, the frames where the failing run stopped, and the frames of this run. Recommend only what changed: anything still true stays as it is and needs no claim. Each claim is one thing about the site in its own words, exactly as on screen: its new word for a thing; words.menu for a control that must be opened to reach the places to go; for a page after sign-in that must be passed, the words that mark it (screens.login.notice) and its button (words.dismiss); the words that mark its home page (screens.console.home). Each cites the frames of this run that show it.
 
 Mark a claim seen only when it is on every frame it cites. Anything no frame shows is a guess: say so, and cite the frames it is inferred from. Never present a guess as seen: a person approves this, and a guess taken for a fact could be costly. A claim with no frame is refused.
 

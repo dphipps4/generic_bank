@@ -14,6 +14,7 @@ import { streamSimple as anthropicStream } from '@earendil-works/pi-ai/api/anthr
 import { streamSimple as openaiStream } from '@earendil-works/pi-ai/api/openai-completions';
 import { ANTHROPIC_MODELS } from '@earendil-works/pi-ai/providers/anthropic.models';
 import { OPENAI_MODELS } from '@earendil-works/pi-ai/providers/openai.models';
+import { OPENROUTER_MODELS } from '@earendil-works/pi-ai/providers/openrouter.models';
 import { z } from 'zod';
 import type { RoleModel } from './models.js';
 import { type Tool, ToolRefusal } from './tools.js';
@@ -58,20 +59,31 @@ const png = (b: Buffer): ImageContent => ({
 });
 
 // Each provider's wire protocol in pi. OpenAI is spoken as Chat Completions, which most
-// OpenAI-compatible servers speak too.
-const PROVIDER = {
-  anthropic: {
-    api: 'anthropic-messages',
-    path: '',
-    models: ANTHROPIC_MODELS,
-    send: anthropicStream,
-  },
-  openai: { api: 'openai-completions', path: '/v1', models: OPENAI_MODELS, send: openaiStream },
+// OpenAI-compatible servers speak too. OpenRouter speaks both; its Anthropic models use Anthropic
+// Messages, the rest use OpenAI Completions. The gateway path for OpenRouter is /openrouter so the
+// gateway routes the request to the OpenRouter client, not to Anthropic's or OpenAI's.
+const API = {
+  'anthropic-messages': { path: '', send: anthropicStream },
+  'openai-completions': { path: '/v1', send: openaiStream },
 } as const;
+const PROVIDER = {
+  anthropic: { api: 'anthropic-messages' as const, prefix: '', models: ANTHROPIC_MODELS },
+  openai: { api: 'openai-completions' as const, prefix: '', models: OPENAI_MODELS },
+  openrouter: { api: null, prefix: '/openrouter', models: OPENROUTER_MODELS },
+};
+
+/** Which wire format a model speaks: from its provider, or from the model's own catalog entry. */
+export function apiOf(m: RoleModel): keyof typeof API {
+  const p = PROVIDER[m.provider];
+  if (p.api) return p.api;
+  const known = (p.models as Record<string, Model<Api>>)[m.model];
+  return (known?.api as keyof typeof API) ?? 'openai-completions';
+}
 
 /** The role's model as pi knows it, pointed at the gateway. A model pi does not list still runs. */
 function modelOf(a: Agent): Model<Api> {
   const p = PROVIDER[a.model.provider];
+  const api = apiOf(a.model);
   const id = a.model.model;
   const known = (p.models as Record<string, Model<Api>>)[id];
   return {
@@ -84,17 +96,17 @@ function modelOf(a: Agent): Model<Api> {
       contextWindow: 200_000,
       maxTokens: 32_000,
     }),
-    api: p.api,
+    api,
     provider: a.model.provider,
-    baseUrl: `${a.url}${p.path}`,
+    baseUrl: `${a.url}${p.prefix}${API[api].path}`,
   } as Model<Api>;
 }
 
 /** The answer's schema in the request, in the provider's own form. */
-function withAnswer(provider: RoleModel['provider'], schema: Record<string, unknown>) {
+function withAnswer(api: keyof typeof API, schema: Record<string, unknown>) {
   return (payload: unknown) => {
     const p = payload as Record<string, unknown>;
-    if (provider === 'anthropic')
+    if (api === 'anthropic-messages')
       return {
         ...p,
         output_config: { ...(p.output_config as object), format: { type: 'json_schema', schema } },
@@ -111,7 +123,8 @@ function withAnswer(provider: RoleModel['provider'], schema: Record<string, unkn
 
 export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
   const model = modelOf(a);
-  const send = PROVIDER[a.model.provider].send as typeof anthropicStream;
+  const api = apiOf(a.model);
+  const send = API[api].send as typeof anthropicStream;
   // A tool that fails for any reason but a refusal stops the turn, and the error is the turn's.
   let failure: unknown;
   const ran = new Set<string>();
@@ -154,7 +167,7 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
         ...options,
         apiKey: a.token,
         maxTokens: i.maxTokens,
-        ...(i.answer ? { onPayload: withAnswer(a.model.provider, i.answer) } : {}),
+        ...(i.answer ? { onPayload: withAnswer(api, i.answer) } : {}),
       }),
     finishTurn: () => (i.calls !== undefined && ++calls >= i.calls ? { action: 'end' } : undefined),
   });

@@ -37,7 +37,7 @@ const textOf = (c: unknown): string =>
 export function seen(provider: Provider, body: Record<string, unknown>): Seen {
   const out: Seen = { system: '', items: [] };
   const messages = body.messages as { role: string; content: unknown }[];
-  if (provider === 'anthropic') out.system = textOf(body.system);
+  if (provider !== 'openai') out.system = textOf(body.system);
   for (const m of messages) {
     if (m.role === 'system' || m.role === 'developer') {
       if (provider === 'openai' && !out.system) out.system = textOf(m.content);
@@ -129,17 +129,18 @@ function openaiSse(n: number, model: string, reply: Reply): string {
 export function fakeModels(
   script: (provider: Provider, request: Seen, body: Record<string, unknown>) => Reply,
   sent: Record<string, unknown>[] = [],
-): { anthropic: Anthropic; openai: OpenAI } {
-  const fetch = (provider: Provider) => async (_url: unknown, init?: RequestInit) => {
-    const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
-    sent.push(body);
-    const reply = script(provider, seen(provider, body), body);
-    const model = String(body.model);
-    const sse = provider === 'anthropic' ? anthropicSse : openaiSse;
-    return new Response(sse(sent.length, model, reply), {
-      headers: { 'content-type': 'text/event-stream' },
-    });
-  };
+): { anthropic: Anthropic; openai: OpenAI; openrouter: { anthropic: Anthropic; openai: OpenAI } } {
+  const fetch =
+    (apiProvider: 'anthropic' | 'openai') => async (_url: unknown, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      sent.push(body);
+      const reply = script(apiProvider, seen(apiProvider, body), body);
+      const model = String(body.model);
+      const sse = apiProvider === 'anthropic' ? anthropicSse : openaiSse;
+      return new Response(sse(sent.length, model, reply), {
+        headers: { 'content-type': 'text/event-stream' },
+      });
+    };
   return {
     anthropic: new Anthropic({
       apiKey: 'not-a-real-key',
@@ -151,5 +152,17 @@ export function fakeModels(
       fetch: fetch('openai') as never,
       maxRetries: 0,
     }),
+    openrouter: {
+      anthropic: new Anthropic({
+        apiKey: 'not-a-real-key',
+        fetch: fetch('anthropic') as never,
+        maxRetries: 0,
+      }),
+      openai: new OpenAI({
+        apiKey: 'not-a-real-key',
+        fetch: fetch('openai') as never,
+        maxRetries: 0,
+      }),
+    },
   };
 }

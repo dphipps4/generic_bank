@@ -37,6 +37,7 @@ value="${value%$'\n'}"
 case "$KEY" in
   ANTHROPIC_API_KEY) shape='^sk-ant-[A-Za-z0-9_-]{20,}$' name='an Anthropic key (sk-ant-…)' ;;
   OPENAI_API_KEY) shape='^sk-[A-Za-z0-9_-]{20,}$' name='an OpenAI key (sk-…)' ;;
+  OPENROUTER_API_KEY) shape='^sk-or-[A-Za-z0-9_-]{20,}$' name='an OpenRouter key (sk-or-…)' ;;
   *) shape='' ;;
 esac
 [[ -z "$shape" || "$value" =~ $shape ]] \
