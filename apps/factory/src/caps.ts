@@ -4,11 +4,6 @@ export const CAPS = {
   runUsd: 25,
   /** Model spend across every run in the last seven days, in US dollars. */
   weekUsd: 150,
-  scoutTurns: 6,
-  liveSignInsPerRun: 6,
-  activeHoursPerRun: 4,
-  failedCheckTurns: 3,
-  liveVerifications: 2,
   /** Kept back from each run's spend for writing the lessons, in US dollars. */
   lessonsReserveUsd: 1,
 } as const;

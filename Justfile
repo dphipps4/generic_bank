@@ -231,11 +231,6 @@ logs *groups:
 db-shell:
     @{{compose}} exec postgres psql -U postgres control
 
-# A task under a forced hazard: just try late-rows [task] [member] [account] [bank]
-[group('Run')]
-try hazard task="" member="" account="" bank_id="":
-    @{{compose}} exec -T -e CONSOLE_PORT=$CONSOLE_PORT api node apps/api/dist/try-cli.js "{{task}}" "{{hazard}}" "{{member}}" "{{account}}" "{{bank_id}}"
-
 # An access token for curl (15 minutes), from the local client just setup made
 [private]
 api-token:

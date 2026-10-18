@@ -120,11 +120,6 @@ describe('the caps', () => {
     expect(CAPS).toEqual({
       runUsd: 25,
       weekUsd: 150,
-      scoutTurns: 6,
-      liveSignInsPerRun: 6,
-      activeHoursPerRun: 4,
-      failedCheckTurns: 3,
-      liveVerifications: 2,
       lessonsReserveUsd: 1,
     });
   });

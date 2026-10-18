@@ -152,8 +152,6 @@ services:
     # approval holds one and never holds up the other tasks.
     mem_limit: 1536m
     env_file: [../../config/app.env, ../../.run/env/runner.env]
-    # Not a dependency: runs never wait on memory; their episodes wait in the outbox instead.
-    environment: { MEMORY_URL: 'http://memory:8470' }
     # The banks' cookies, kept between runs so a code is entered once. Only the runner mounts it.
     volumes: ['evidence:/data/evidence', 'sessions:/data/sessions']
     networks: [app, world]

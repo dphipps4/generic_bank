@@ -29,7 +29,7 @@ Each requirement of the brief, how it's met, and the code or test that shows it.
 | The brief asks for | How it's met |
 |---|---|
 | A repository with the system, the target app and a README | This one |
-| Run both tasks locally in a few minutes | `just setup`, `just up`, then Swagger UI or `just try` |
+| Run both tasks locally in a few minutes | `just setup`, `just up`, then Swagger UI and the Console's hazard lab |
 | Tests where they help, especially the error taxonomy and escalation | The outcome, escalation, transfer, guard, PII, crawler and factory tests |
 | A README on how it fits together, how it meets the task, and 80 to 100, with a diagram | [README](../README.md), [the architecture](architecture.md), [80 to 100](80-to-100.md) |
 

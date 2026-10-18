@@ -45,11 +45,8 @@ enum HumanTaskStatus {
 
 enum DriverState {
   draft
-  candidate
-  probation
   promoted
   demoted
-  frozen
   stuck
   retired
 }
@@ -98,7 +95,6 @@ model TaskRun {
   steps           Step[]
   frames          TrailFrame[]
   humanTasks      HumanTask[]
-  episodes        EpisodeOutbox[]
 
   @@unique([clientId, idempotencyKey])
   @@index([bank, task, startedAt])
@@ -175,24 +171,6 @@ model ApprovalGrant {
   nonce       String    @unique
   expiresAt   DateTime
   usedAt      DateTime?
-}
-
-/// A settled run's episode on its way to memory (plan §A.6). Each settlement is one attempt of the
-/// run, written with the settlement itself; the recorder sends it when memory answers. It holds the
-/// outcome and when, never the run's inputs or result.
-model EpisodeOutbox {
-  runId   String
-  run     TaskRun   @relation(fields: [runId], references: [id])
-  n       Int
-  outcome String
-  failure String?
-  at      DateTime  @default(now())
-  sentAt  DateTime?
-  /// Why memory refused it for good, such as its privacy screen; a refused episode is not sent again.
-  refused String?
-
-  @@id([runId, n])
-  @@index([sentAt])
 }
 
 model Driver {
