@@ -1,0 +1,82 @@
+{
+  "page": "review",
+  "controls": [
+    {
+      "kind": "link",
+      "name": "Find Member",
+      "box": {
+        "x": 432.453125,
+        "y": 104,
+        "w": 86.25,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Move Money",
+      "box": {
+        "x": 555.703125,
+        "y": 104,
+        "w": 82.984375,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Statements",
+      "box": {
+        "x": 675.6875,
+        "y": 104,
+        "w": 74.734375,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Sign Out",
+      "box": {
+        "x": 787.421875,
+        "y": 104,
+        "w": 57.125,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Edit",
+      "box": {
+        "x": 268,
+        "y": 454.25,
+        "w": 25.1875,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Cancel",
+      "box": {
+        "x": 304.4375,
+        "y": 454.25,
+        "w": 43.5,
+        "h": 17
+      }
+    },
+    {
+      "kind": "button",
+      "name": "",
+      "box": {
+        "x": 278,
+        "y": 398.25,
+        "w": 108,
+        "h": 34
+      }
+    }
+  ],
+  "labelPictures": [],
+  "pictureWords": [
+    "Username:",
+    "Passcode:",
+    "Member number:",
+    "Amount:"
+  ]
+}

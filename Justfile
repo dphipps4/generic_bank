@@ -215,6 +215,22 @@ factory bank member from to: factory-up
     pkill -P "$watchdog" 2>/dev/null; kill "$watchdog" 2>/dev/null
     exit "$status"
 
+# Measure the models' sight on bank 2's captured pages, before any live run (about $1), under a 5-minute hard limit
+[group('Factory')]
+measure: factory-up
+    #!/usr/bin/env bash
+    set -uo pipefail
+    limit=300
+    name="gb-measure-$$"
+    echo "  the measurement's hard limit: 5 minutes"
+    ( sleep "$limit"; docker stop -t 5 "$name" >/dev/null 2>&1 && echo "  ✗ stopped at the hard limit of 5 minutes" ) &
+    watchdog=$!
+    disown "$watchdog"
+    {{compose}} --profile factory-run run --rm --name "$name" --entrypoint node factory-run apps/factory/dist/measure-cli.js
+    status=$?
+    pkill -P "$watchdog" 2>/dev/null; kill "$watchdog" 2>/dev/null
+    exit "$status"
+
 # Apply database migrations
 [private]
 migrate: env image

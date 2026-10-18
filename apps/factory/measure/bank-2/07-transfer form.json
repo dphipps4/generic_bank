@@ -1,0 +1,119 @@
+{
+  "page": "transfer form",
+  "controls": [
+    {
+      "kind": "link",
+      "name": "Find Member",
+      "box": {
+        "x": 432.453125,
+        "y": 104,
+        "w": 86.25,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Move Money",
+      "box": {
+        "x": 555.703125,
+        "y": 104,
+        "w": 82.984375,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Statements",
+      "box": {
+        "x": 675.6875,
+        "y": 104,
+        "w": 74.734375,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Sign Out",
+      "box": {
+        "x": 787.421875,
+        "y": 104,
+        "w": 57.125,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Back to member summary",
+      "box": {
+        "x": 267,
+        "y": 423.25,
+        "w": 174.09375,
+        "h": 17
+      }
+    },
+    {
+      "kind": "field",
+      "name": "",
+      "box": {
+        "x": 364,
+        "y": 297.5,
+        "w": 300,
+        "h": 29
+      }
+    },
+    {
+      "kind": "field",
+      "name": "",
+      "box": {
+        "x": 364,
+        "y": 334.5,
+        "w": 300,
+        "h": 29
+      }
+    },
+    {
+      "kind": "list",
+      "name": "",
+      "box": {
+        "x": 364,
+        "y": 223.5,
+        "w": 300,
+        "h": 29
+      }
+    },
+    {
+      "kind": "list",
+      "name": "",
+      "box": {
+        "x": 364,
+        "y": 260.5,
+        "w": 300,
+        "h": 29
+      }
+    },
+    {
+      "kind": "button",
+      "name": "Next",
+      "box": {
+        "x": 364,
+        "y": 371.5,
+        "w": 54.359375,
+        "h": 29.75
+      }
+    }
+  ],
+  "labelPictures": [
+    {
+      "x": 270,
+      "y": 303,
+      "w": 88,
+      "h": 18
+    }
+  ],
+  "pictureWords": [
+    "Username:",
+    "Passcode:",
+    "Member number:",
+    "Amount:"
+  ]
+}

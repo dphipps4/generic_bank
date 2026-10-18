@@ -1,0 +1,52 @@
+{
+  "page": "code",
+  "controls": [
+    {
+      "kind": "link",
+      "name": "Verify",
+      "box": {
+        "x": 314.65625,
+        "y": 247.5,
+        "w": 44.4375,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Send a new code",
+      "box": {
+        "x": 267,
+        "y": 288.25,
+        "w": 113.53125,
+        "h": 17
+      }
+    },
+    {
+      "kind": "field",
+      "name": "",
+      "box": {
+        "x": 314.65625,
+        "y": 176.75,
+        "w": 300,
+        "h": 29
+      }
+    },
+    {
+      "kind": "checkbox",
+      "name": "",
+      "box": {
+        "x": 318.65625,
+        "y": 216.75,
+        "w": 13,
+        "h": 13
+      }
+    }
+  ],
+  "labelPictures": [],
+  "pictureWords": [
+    "Username:",
+    "Passcode:",
+    "Member number:",
+    "Amount:"
+  ]
+}
