@@ -132,6 +132,9 @@ async function report(runId: string) {
       steps.filter((s) => s.name === 'supervisor thought').length
     } Supervisor thoughts kept`,
   );
+  // Every slow judgment, with its packet to replay on its frame.
+  for (const s of steps.filter((x) => x.name === 'slow judgment'))
+    log(`slow judgment at ${s.action}: ${s.outcome}`);
 }
 
 /** The lessons the run sent to memory. */

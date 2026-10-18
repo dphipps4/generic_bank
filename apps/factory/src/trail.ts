@@ -19,6 +19,11 @@ export interface Trail {
   ): Promise<Seen | null>;
   /** Whether a frame reference, such as f3, names a stored frame of this run. */
   has(ref: string): boolean;
+  /**
+   * Keeps anything else a judgment or a look was made from (a packet, a close-up), beside the run's
+   * frames, so it can be replayed exactly; returns its key.
+   */
+  keep(name: string, body: Buffer, contentType: string): Promise<string | null>;
   /** What a stored frame of this run shows, masked: its page and its words; null for any other. */
   shown(ref: string): Promise<Shown | null>;
 }
@@ -90,6 +95,15 @@ export async function openTrail(o: {
       }
     },
     has,
+    async keep(name, body, contentType) {
+      const key = `runs/${runId}/${name}`;
+      try {
+        await store.put(key, body, contentType);
+        return key;
+      } catch {
+        return null;
+      }
+    },
     async shown(ref) {
       return has(ref) ? shownAt(sql, store, runId, Number(ref.slice(1))) : null;
     },

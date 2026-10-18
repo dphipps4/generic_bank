@@ -153,7 +153,7 @@ export function uncoveredShare(img: Image, b: Box): number | null {
   }
   return all === 0 ? null : open / all;
 }
-const MASK_GREYS = [255, 190, 120];
+const MASK_GREYS = [255, 190, 120, 40];
 
 /**
  * A PNG's text, apart from its pixels: every chunk but the image data, where a writer could leave

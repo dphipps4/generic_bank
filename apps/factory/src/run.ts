@@ -75,7 +75,8 @@ export const GOALS: Record<Goal, (i: RunInput) => string> = {
     `Reach the activity of member ${i.member}'s account ${i.from}: the list of its recent transactions.`,
 };
 
-const SCOUT = `You are the Scout. You work a bank's staff console in a browser, as a person at the desk would, until the goal is reached. Do not fail: failing is the last resort, after every way you can think of has been tried.
+/** The Scout's instructions. */
+export const SCOUT = `You are the Scout. You work a bank's staff console in a browser, as a person at the desk would, until the goal is reached. Do not fail: failing is the last resort, after every way you can think of has been tried.
 Your product is a route: an ordered list of the screens from the bank's first screen to the goal's screen. Each screen is recognized by words it shows, whatever the layout, and holds the steps a person takes on it, so that code with no model can follow it. You own both the goal and the route.
 Each tool shows you the page once it is ready: its picture, its controls (each with an id, such as c3, and a box), and its words. Look at the picture before you act. Act on one thing at a time, with a reason that says what you expect, and after the action, say what actually changed.
 Act on a control by its id. An id belongs to the look it came with; a new page has new ids. A label drawn as a picture is not in the words: then list_page what you see, and act with type_item, press_item or choose_item.
@@ -353,7 +354,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
                 {
                   name: 'scout thought',
                   action: goal,
-                  outcome: maskText(said, trail.known).slice(0, 12_000),
+                  outcome: maskText(said, trail.known),
                 },
                 null,
               );
