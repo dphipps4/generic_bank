@@ -41,6 +41,9 @@ const app = await buildServer({
   sealKey: cfg.RUN_SEAL_KEY,
   enqueue,
   logger: true,
+  // A balance answers in one call: the POST waits up to 60 seconds for it. A run that needs a
+  // person answers at once, so time waiting on a person never counts.
+  answerWithin: 60,
 });
 // The hazard lab starts runs with hazards forced, only where the banks obey them (plan, §A.3).
 if (cfg.HAZARDS_FORCEABLE === 'true')

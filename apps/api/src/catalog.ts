@@ -32,8 +32,10 @@ export async function banks(sql: Sql): Promise<BankInfo[]> {
     productVersion: string;
     task: string | null;
     version: number | null;
+    crawled: boolean;
   }>(
-    `SELECT b.id, b.brand, b."productVersion", d.task, v.version
+    `SELECT b.id, b.brand, b."productVersion", d.task, v.version,
+            EXISTS (SELECT 1 FROM "Driver" x JOIN "DriverVersion" y ON y."driverId" = x.id WHERE x.tenant = b.id) AS crawled
        FROM "Bank" b
        LEFT JOIN "Driver" d ON d.tenant = b.id AND d.state = 'promoted'
              AND NOT EXISTS (SELECT 1 FROM "Freeze" f WHERE f.tenant = b.id AND f."clearedAt" IS NULL)
@@ -46,6 +48,7 @@ export async function banks(sql: Sql): Promise<BankInfo[]> {
       id: row.id,
       brand: row.brand,
       productVersion: row.productVersion,
+      stub: !row.crawled,
       tasks: [],
     };
     if (row.task && row.task in TASKS && row.version !== null)
@@ -213,6 +216,10 @@ const EXAMPLES: Record<Task, Record<string, Example>> = {
   },
 };
 
+/** Each task call links to the page of every response it can give, which opens in a new tab. */
+const EVERY_RESPONSE =
+  '<a href="/docs/responses" target="_blank" rel="noopener">Every response this call can give</a>';
+
 export function openapi(): Record<string, unknown> {
   const taskPaths = Object.fromEntries(
     (Object.keys(TASKS) as Task[]).map((t) => [
@@ -220,6 +227,7 @@ export function openapi(): Record<string, unknown> {
       {
         post: {
           ...about(TASK_TOOLS[t].tool),
+          description: EVERY_RESPONSE,
           tags: ['tasks'],
           security: [{ client: [] }],
           requestBody: {
@@ -227,9 +235,15 @@ export function openapi(): Record<string, unknown> {
             content: { 'application/json': { schema: schema(TASKS[t]), examples: EXAMPLES[t] } },
           },
           responses: {
+            '200': {
+              description: 'Done, in the same call: a balance comes back within 60 seconds.',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/TaskResult' } },
+              },
+            },
             '202': {
               description:
-                'Accepted: running, or waiting on a person (`pending` names the kind of answer and its deadline). Location names the run.',
+                'Waiting on a person (`pending` names the kind of answer and its deadline), or still running. Location names the run; GET it later.',
               content: {
                 'application/json': { schema: { $ref: '#/components/schemas/TaskResult' } },
               },
@@ -296,7 +310,7 @@ export function openapi(): Record<string, unknown> {
       '/tasks': {
         get: {
           operationId: 'list_tasks',
-          tags: ['catalog'],
+          tags: ['tasks'],
           security: [{ client: [] }],
           summary: 'The tasks and their input schemas.',
           responses: { '200': { description: 'The catalog.' } },

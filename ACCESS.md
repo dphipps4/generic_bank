@@ -20,7 +20,6 @@ The Postgres login isn't in it; read that one with `just secrets-edit local`.
 | Freezes | http://localhost:8080/freezes | the same |
 | API clients, Console users, the audit log (AdminJS) | http://localhost:8080/admin | the same |
 | Task API, Swagger UI | http://localhost:8000/docs | press Authorize, enter the local client's id and secret (secrets/credentials.txt) |
-| API reference, static | http://localhost:8099 | none (`just api-docs` serves it) |
 | Bank 1, Generic Bank (2003 frameset) | http://localhost:8081/corelink/ | `teller0412` and its password |
 | Bank 2, Example Credit Union | http://localhost:8082/ | the same |
 | Staff inbox (the bank staff's phone and email) | http://localhost:8089 | none |
@@ -139,7 +138,6 @@ curl -s http://localhost:9081/members/40017732/balances -H "Authorization: Beare
 |---|---|
 | `just try …` | one task under a forced hazard, with its expected result |
 | `just api-token` | an access token for curl, from the local client (8 hours) |
-| `just api-docs` | writes and serves the API reference on port 8099 |
 | `just ps`, `just logs` | what's running, and its logs |
 | `just db-shell` | psql on the control database |
 | `just urls` | the main pages, printed |
