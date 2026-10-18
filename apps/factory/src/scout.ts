@@ -15,8 +15,10 @@ import {
   control,
   type Control,
   field,
+  fingerprint,
   type Frame,
   knows,
+  labelPicture,
   NotReady,
   type Page,
   press,
@@ -192,6 +194,8 @@ export function scout(deps: ScoutDeps, task: Task) {
         `${what} finds another control than the one you chose; name it by words drawn nearer to it`,
       );
   };
+  /** Sign-ins typed this run: a third means the first two were refused. */
+  let signIns = 0;
   const mayAct = () => {
     if (stopped) throw new ToolRefusal('the Supervisor said stop');
     if (waiting) throw new ToolRefusal('the Supervisor said wait: wait or look first');
@@ -269,9 +273,13 @@ export function scout(deps: ScoutDeps, task: Task) {
     },
     browser_type: {
       description:
-        "Types one of the task's values into the field a label names. The sign-in and a person's code are typed by the server and never shown.",
+        "Types one of the task's values into the field you choose, by id or position, and the label beside it: its words, or, where the label is a picture of words, the words the picture shows. The sign-in and a person's code are typed by the server and never shown.",
       input: which.extend({
-        label: z.string().min(1).max(60).describe('The words drawn beside the field'),
+        label: z
+          .string()
+          .min(1)
+          .max(60)
+          .describe("The label's words, as drawn or as its picture shows them"),
         value: z.enum(['user_id', 'password', 'code', 'member', 'amount', 'memo']),
       }),
       async run(i: {
@@ -284,10 +292,23 @@ export function scout(deps: ScoutDeps, task: Task) {
       }) {
         mayAct();
         const c = chosen(i);
-        const f = await field(page, i.label).catch((e: Error) => {
-          throw new ToolRefusal(`the runtime finds no field by "${i.label}": ${e.message}`);
+        if (i.value === 'password' && ++signIns > 2)
+          throw new Error('two sign-ins did not get past the sign-in page: stopping for a person');
+        const label = i.label;
+        // Words beside the field first. Where there are none, the label is a picture of words: it
+        // is known from now on by its fingerprint, under the words the Scout read off it.
+        const f = await field(page, label, t.pictures).catch(async (e: Error) => {
+          const pic = await labelPicture(page, c.box);
+          if (!pic) throw new ToolRefusal(`the runtime finds no field by "${label}": ${e.message}`);
+          t.pictures = [
+            ...(t.pictures ?? []).filter((p) => p.name !== label),
+            { name: label, print: fingerprint(pic) },
+          ];
+          return field(page, label, t.pictures).catch((e2: Error) => {
+            throw new ToolRefusal(`the runtime finds no field by "${label}": ${e2.message}`);
+          });
         });
-        same(f.box, c, `the field by "${i.label}"`);
+        same(f.box, c, `the field by "${label}"`);
         const text =
           i.value === 'user_id'
             ? deps.credentials.operatorId
@@ -301,7 +322,16 @@ export function scout(deps: ScoutDeps, task: Task) {
                     ? ((task.amountCents ?? 0) / 100).toFixed(2)
                     : (task.memo ?? '');
         if (i.value === 'code' && !known.includes(text)) known.push(text);
-        await type(page, i.label, text);
+        await type(page, label, text, t.pictures);
+        // The sign-in and the code go into fields the allowlists know by their own names: the bank's
+        // name for each is kept, so the guard knows them when the table runs.
+        const listed = { user_id: 'Operator ID', password: 'Password', code: 'Code' }[
+          i.value as 'user_id' | 'password' | 'code'
+        ];
+        if (listed && listed !== label) {
+          t.names ??= {};
+          t.names[listed] = [...new Set([...(t.names[listed] ?? []), label])];
+        }
         const token = {
           user_id: '$operator',
           password: '$password',
@@ -310,8 +340,8 @@ export function scout(deps: ScoutDeps, task: Task) {
           amount: '$amount',
           memo: '$memo',
         }[i.value];
-        visit.push({ type: i.label, value: token });
-        return look(`typed the ${i.value.replace('_', ' ')} beside "${i.label}"`, i.why);
+        visit.push({ type: label, value: token });
+        return look(`typed the ${i.value.replace('_', ' ')} into "${label}"`, i.why);
       },
     },
     browser_choose: {

@@ -9,7 +9,7 @@ import type { Goal, Table } from '@gb/crawler';
 import type { FrameStore } from '@gb/evidence';
 import type { Sql } from '@gb/runs';
 import { newPage, type Browser } from '@gb/runtime';
-import { type Agent, type Conversation, turn } from './agent.js';
+import { type Agent, type Conversation, OutOfTime, ThoughtTooLong, turn } from './agent.js';
 import {
   type Memory,
   memoryQueryTool,
@@ -83,6 +83,9 @@ memory_query asks what the factory has learned about this console and ones like 
 /** Model calls the Scout may make toward one goal. */
 const SCOUT_CALLS = 60;
 
+/** A factory run's clock: a demo learns a bank in minutes, or stops and says why. */
+const RUN_MS = Number(process.env.FACTORY_RUN_MINUTES ?? 3) * 60_000;
+
 const packText = (p: Pack) =>
   JSON.stringify(Object.fromEntries(Object.entries(p.tiers).filter(([, items]) => items.length)));
 
@@ -110,6 +113,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
   const knowledge = packText(pack);
   const runId = `${mode}-${input.bank}-${randomBytes(4).toString('hex')}`;
   const startedAt = new Date();
+  const until = startedAt.getTime() + RUN_MS;
   await sql.query(
     `INSERT INTO "FactoryRun" (id, tenant, task, mode, phase, status) VALUES ($1, $2, 'check-balance', $3, 'SCOUT', 'running')`,
     [runId, input.bank, mode],
@@ -172,32 +176,55 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
         task,
       );
       log(`${runId}: ${goal}`);
-      const said = await turn(agent('scout'), {
-        system: SCOUT,
-        conversation,
-        say: [
-          `Goal: ${GOALS[goal](input)}`,
-          ...(reached.length === 0 && knowledge ? [`What memory knows:\n${knowledge}`] : []),
-          ...(input.repair && reached.length === 0
-            ? [
-                `This run repairs a table that broke; change only what moved. Where it broke: ${input.repair.diagnosis}`,
-              ]
-            : []),
-          ...(table?.rows.length
-            ? [
-                `The pages named so far: ${table.rows.map((r) => `"${r.page}" (${r.shows.join('; ')})`).join(', ')}`,
-              ]
-            : []),
-          'Begin by looking at the page.',
-        ].join('\n\n'),
-        tools: [...s.tools('scout'), ...toolsOf('scout', [queryTool])],
-        calls: SCOUT_CALLS,
-        maxTokens: 8000,
-      });
+      const ask = (nudge?: string) =>
+        turn(agent('scout'), {
+          system: SCOUT,
+          conversation,
+          say: [
+            `Goal: ${GOALS[goal](input)}`,
+            ...(reached.length === 0 && knowledge ? [`What memory knows:\n${knowledge}`] : []),
+            ...(input.repair && reached.length === 0
+              ? [
+                  `This run repairs a table that broke; change only what moved. Where it broke: ${input.repair.diagnosis}`,
+                ]
+              : []),
+            ...(table?.rows.length
+              ? [
+                  `The pages named so far: ${table.rows.map((r) => `"${r.page}" (${r.shows.join('; ')})`).join(', ')}`,
+                ]
+              : []),
+            'Begin by looking at the page.',
+            ...(nudge ? [nudge] : []),
+          ].join('\n\n'),
+          tools: [...s.tools('scout'), ...toolsOf('scout', [queryTool])],
+          calls: SCOUT_CALLS,
+          maxTokens: 8000,
+          until,
+        });
+      let said: Awaited<ReturnType<typeof ask>>;
+      try {
+        // A turn that thinks through its whole allowance and says nothing gets one more chance.
+        said = await ask().catch((e: unknown) => {
+          if (!(e instanceof ThoughtTooLong)) throw e;
+          log(`${runId}: the Scout gave no answer; asking once more`);
+          return ask('Think briefly, then act: one tool call now.');
+        });
+      } catch (e) {
+        // Out of time, no answer twice, or the sign-in refused twice: the run stops and says why.
+        diagnosis =
+          e instanceof OutOfTime
+            ? `out of time: the run's ${RUN_MS / 60_000} minutes ran out during the ${goal} goal`
+            : `${goal} stopped: ${(e as Error).message}`;
+        outcome = `${goal} not reached`;
+        break;
+      }
       conversation = said.conversation;
       table = s.table();
       if (!table.ends[goal]) {
-        diagnosis = await sup.diagnose();
+        diagnosis =
+          Date.now() >= until
+            ? `out of time: the run's ${RUN_MS / 60_000} minutes ran out during the ${goal} goal`
+            : await sup.diagnose();
         outcome = `${goal} not reached`;
         break;
       }
@@ -233,10 +260,12 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
         },
         learned,
       ).catch(() => undefined);
-    await sql.query(`UPDATE "FactoryRun" SET status = $2, phase = 'DONE' WHERE id = $1`, [
-      runId,
-      reached.length === 3 ? 'succeeded' : 'failed',
-    ]);
+    await sql.query(
+      `UPDATE "FactoryRun" SET status = $2, phase = 'DONE', "lastActivityAt" = now(),
+              "spendUsd" = COALESCE((SELECT SUM("costUsd") FROM "ModelCall" WHERE "factoryRunId" = $1), 0)
+        WHERE id = $1`,
+      [runId, reached.length === 3 ? 'succeeded' : 'failed'],
+    );
   }
   return {
     runId,

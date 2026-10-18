@@ -41,7 +41,8 @@ export interface KnownPicture {
 export async function pictureNamed(page: Page, known: KnownPicture): Promise<Locator | null> {
   const hits: Locator[] = [];
   for (const f of page.frames()) {
-    const imgs = f.getByRole('img');
+    // Every <img>: a label drawn as a picture often has an empty alt, which hides it from roles.
+    const imgs = f.locator('img');
     for (let i = 0; i < (await imgs.count()); i++) {
       const img = imgs.nth(i);
       if (!(await img.isVisible())) continue;
@@ -50,4 +51,32 @@ export async function pictureNamed(page: Page, known: KnownPicture): Promise<Loc
     }
   }
   return hits.length === 1 ? hits[0]! : null;
+}
+
+/**
+ * The picture drawn as a field's label: the nearest visible image just left of the field on its
+ * line, else just above it. Null when there is none, or when it is too small to be words.
+ */
+export async function labelPicture(
+  page: Page,
+  box: { x: number; y: number; w: number; h: number },
+): Promise<Buffer | null> {
+  let best: { img: Locator; d: number } | null = null;
+  for (const f of page.frames()) {
+    const imgs = f.locator('img');
+    for (let i = 0; i < (await imgs.count()); i++) {
+      const img = imgs.nth(i);
+      if (!(await img.isVisible())) continue;
+      const b = await img.boundingBox().catch(() => null);
+      if (!b || b.width < 12 || b.height < 6) continue;
+      const mid = b.y + b.height / 2;
+      const left = b.x + b.width <= box.x + 2 && mid >= box.y - 4 && mid <= box.y + box.h + 4;
+      const above =
+        b.y + b.height <= box.y + 2 && box.y - (b.y + b.height) < 40 && Math.abs(b.x - box.x) < 40;
+      if (!left && !above) continue;
+      const d = Math.hypot(box.x - (b.x + b.width), box.y - b.y);
+      if (!best || d < best.d) best = { img, d };
+    }
+  }
+  return best ? await best.img.screenshot().catch(() => null) : null;
 }
