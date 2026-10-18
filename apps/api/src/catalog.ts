@@ -269,7 +269,7 @@ export function openapi(): Record<string, unknown> {
       title: 'Generic Bank Task API',
       version: '1',
       description:
-        'Typed tasks at banks that have no API, done by operating each bank’s website the way a person would. No money moves without a person’s approval. Press Authorize and enter the client id and secret from secrets/credentials.txt; curl takes a token from `just api-token`.',
+        'Typed tasks at banks that have no API, done by operating each bank’s website the way a person would. No money moves without a person’s approval. Press Authorize and enter the client id and secret from ACCESS.md; curl takes a token from `just api-token`.',
     },
     tags: [{ name: 'tasks' }, { name: 'catalog' }, { name: 'oauth' }],
     components: {
@@ -279,7 +279,7 @@ export function openapi(): Record<string, unknown> {
         client: {
           type: 'oauth2',
           description:
-            "The Task API's client id and secret, under Task API in secrets/credentials.txt (not a bank login); Swagger UI gets the token.",
+            "The Task API's client id and secret, in ACCESS.md, under Logins (not a bank login); Swagger UI gets the token.",
           flows: { clientCredentials: { tokenUrl: '/oauth/token', scopes: {} } },
         },
       },

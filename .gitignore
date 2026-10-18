@@ -214,3 +214,6 @@ config/*.secrets.enc.env
 # Local overrides, never committed
 config/local.env
 plan/REVIEW.md
+
+# Written by just up for this machine: links, logins and tokens
+/ACCESS.md
