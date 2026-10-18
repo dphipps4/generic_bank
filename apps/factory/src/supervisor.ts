@@ -21,7 +21,6 @@ const ANSWER_SCHEMA = {
     verdict: { type: 'string', enum: ['continue', 'wait', 'stop', 'end'] },
     says: {
       type: 'string',
-      maxLength: 700,
       description:
         'What you see, for the Scout, citing a frame such as f3; a correction if it went wrong',
     },
@@ -102,6 +101,41 @@ export function readJudgment(text: string): Judgment | string {
   } catch {
     return 'the answer is not JSON';
   }
+}
+
+/**
+ * The verdict wherever the model gave it: its answer, or else the last whole verdict object in its
+ * words or its thinking. Run 14's Supervisor wrote a valid verdict in its thinking, then prose.
+ */
+export function findJudgment(...texts: string[]): Judgment | string {
+  const first = readJudgment(texts[0] ?? '');
+  if (typeof first !== 'string') return first;
+  for (const t of texts) {
+    // Every balanced {...} in the text, last first: the model's final word wins.
+    const objects: string[] = [];
+    for (let i = 0; i < t.length; i++) {
+      if (t[i] !== '{') continue;
+      let depth = 0;
+      let quoted = false;
+      for (let k = i; k < t.length; k++) {
+        const c = t[k];
+        if (quoted) {
+          if (c === '\\') k++;
+          else if (c === '"') quoted = false;
+        } else if (c === '"') quoted = true;
+        else if (c === '{') depth++;
+        else if (c === '}' && --depth === 0) {
+          objects.push(t.slice(i, k + 1));
+          break;
+        }
+      }
+    }
+    for (const o of objects.reverse()) {
+      const a = readJudgment(o);
+      if (typeof a !== 'string') return a;
+    }
+  }
+  return first;
 }
 
 const SYSTEM = `You are the Supervisor. A Scout works a bank's staff console toward a goal, like a person at the desk; you never touch the browser. Your job is to get the goal reached, with a route code can follow: the screens from the bank's first screen to the goal's, each recognized by words it shows as text, each with its own steps. Do not let the run fail when the evidence shows a way forward. You are the Scout's coach and its skeptic.
@@ -244,7 +278,11 @@ export function supervisor(o: {
       const say = [
         `The goal, the one the clock times: ${goal}`,
         ...(o.clock ? [`Time: ${o.clock.text()}.`] : []),
-        ...(toolList ? [`The Scout's tools:\n${toolList}`] : []),
+        ...(toolList
+          ? [
+              `The Scout's tools, which only the Scout can call (yours are open_frame and memory_query):\n${toolList}`,
+            ]
+          : []),
         ...(o.knowledge
           ? [`What memory knows (a proposed lesson is untested):\n${o.knowledge}`]
           : []),
@@ -266,6 +304,7 @@ export function supervisor(o: {
           : []),
         `The Scout: ${j.action}. Its reason: ${j.why}.`,
         `The page now, ${j.ref ?? 'not kept'}:\n${JSON.stringify(view)}`,
+        'Answer with the JSON verdict only: {"verdict": "continue" | "wait" | "stop" | "end", "says": "…", "extendSeconds": 0}.',
       ].join('\n\n');
       const ask = (conversation: Conversation, words: string, withTools: boolean) =>
         turn(o.agent, {
@@ -295,7 +334,17 @@ export function supervisor(o: {
         );
         thinking += `\n${said.thinking}`;
       }
-      let a = readJudgment(said.text);
+      let a = findJudgment(said.text, said.thinking);
+      // No verdict anywhere: once more, asking only for it.
+      if (typeof a === 'string') {
+        said = await ask(
+          answerable(said.conversation),
+          `Your answer could not be read (${a}). Give your verdict now, as the JSON object only.`,
+          false,
+        );
+        thinking += `\n${said.thinking}`;
+        a = findJudgment(said.text, said.thinking);
+      }
       // Over-long words are sent back once to be shortened, never cut unseen.
       if (typeof a !== 'string' && a.says.length > SAYS_MAX) {
         said = await ask(
@@ -304,7 +353,7 @@ export function supervisor(o: {
           false,
         );
         thinking += `\n${said.thinking}`;
-        a = readJudgment(said.text);
+        a = findJudgment(said.text, said.thinking);
         if (typeof a !== 'string' && a.says.length > SAYS_MAX)
           a = {
             ...a,
