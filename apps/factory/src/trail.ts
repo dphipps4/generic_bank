@@ -4,7 +4,7 @@
 import { leaf } from '@gb/crawler';
 import type { FrameStore } from '@gb/evidence';
 import { addFrame, addStep, type Sql } from '@gb/runs';
-import type { Frame } from '@gb/runtime';
+import { type Frame, maskText } from '@gb/runtime';
 
 const MAX_FRAMES = 60;
 
@@ -24,6 +24,11 @@ export interface Trail {
    * frames, so it can be replayed exactly; returns its key.
    */
   keep(name: string, body: Buffer, contentType: string): Promise<string | null>;
+  /**
+   * Masks the run's kept step text again with the values known now: a member's name learned late
+   * is hidden in what was written before it was learned.
+   */
+  remask(): Promise<number>;
   /** What a stored frame of this run shows, masked: its page and its words; null for any other. */
   shown(ref: string): Promise<Shown | null>;
 }
@@ -95,6 +100,24 @@ export async function openTrail(o: {
       }
     },
     has,
+    async remask() {
+      const rows = await sql.query<{ seq: number; action: string | null; outcome: string | null }>(
+        `SELECT seq, action, outcome FROM "Step" WHERE "runId" = $1`,
+        [runId],
+      );
+      let changed = 0;
+      for (const r of rows.rows) {
+        const action = r.action === null ? null : maskText(r.action, o.known);
+        const outcome = r.outcome === null ? null : maskText(r.outcome, o.known);
+        if (action === r.action && outcome === r.outcome) continue;
+        changed++;
+        await sql.query(
+          `UPDATE "Step" SET action = $3, outcome = $4 WHERE "runId" = $1 AND seq = $2`,
+          [runId, r.seq, action, outcome],
+        );
+      }
+      return changed;
+    },
     async keep(name, body, contentType) {
       const key = `runs/${runId}/${name}`;
       try {

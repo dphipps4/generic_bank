@@ -184,6 +184,21 @@ export function aboutMasking(text: string): string | null {
     : null;
 }
 
+/**
+ * Why a lesson that advises sending money is refused: the factory never presses a control that
+ * sends money, and a transfer ends at its review. Run 16 proposed "press submit first".
+ */
+export function sendsMoney(text: string): string | null {
+  // A sentence that advises submitting or sending, and is about moving money.
+  const advises =
+    /\b(press(es|ing)?|click|hit|tap)\s+(the\s+)?(submit|confirm|send)\b|\b(submit|send)\s+(it|first|the transfer|the move|the payment)\b/i;
+  const money = /\b(transfer|payment|money|funds|move)\b/i;
+  return text.split(/(?<=[.!?])\s+/).some((x) => advises.test(x) && money.test(x)) ||
+    (advises.test(text) && money.test(text))
+    ? 'a lesson that advises sending money contradicts the factory: a transfer ends at its review, never sent'
+    : null;
+}
+
 /** What is wrong with a lesson's frames, or null when each is a frame of this run. */
 export function framesWrong(frames: string[], trail: Trail): string | null {
   if (!frames.length)
@@ -204,6 +219,7 @@ export function recordLessonTool(trail: Trail, kept: Lesson[]): Tool {
       const wrong =
         framesWrong(l.frames, trail) ??
         aboutMasking(l.text) ??
+        sendsMoney(l.text) ??
         (kept.length >= MAX_LESSONS ? `a run records at most ${MAX_LESSONS} lessons` : null);
       if (wrong) {
         await trail.step({ name: 'record_lesson', action: 'refused', outcome: wrong }, null);
@@ -225,7 +241,7 @@ export function recordLessonTool(trail: Trail, kept: Lesson[]): Tool {
 
 const LESSONS = `You are the Supervisor, and the run at this site has ended. Write down what it taught, for the factory's next runs at this site and at sites like it.
 
-Values shown as █ were hidden by the factory, not by the site: never record a lesson about hidden, masked or starred values. Record each lesson with record_lesson: one to three sentences of advice, stated generally, with no names, numbers, codes or page data; its area; its scope (tenant: true of this site; vendor: of every site on the same product; pattern: everywhere); a confidence; the frames of this run that show it; and whether it was seen on them or is a guess. A lesson with no frame of this run is refused. Record only what the run taught.
+Values shown as █ were hidden by the factory, not by the site: never record a lesson about hidden, masked or starred values. The factory never sends money: never record a lesson that advises pressing a control that would send it. Record each lesson with record_lesson: one to three sentences of advice, stated generally, with no names, numbers, codes or page data; its area; its scope (tenant: true of this site; vendor: of every site on the same product; pattern: everywhere); a confidence; the frames of this run that show it; and whether it was seen on them or is a guess. A lesson with no frame of this run is refused. Record only what the run taught.
 
 Then answer with the lessons memory served that the run relied on, by id, and those it contradicted, each with why in one line and the frames of this run that show it.`;
 

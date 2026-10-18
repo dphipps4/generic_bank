@@ -87,7 +87,7 @@ Keep going until the goal is reached or the Supervisor ends you. A refusal or a 
 - when the Supervisor corrects a kind of mistake, say in your next reason how you are avoiding it.
 Your route, as you go:
 - name each screen with name_page before you leave it, by words it shows as text; leave never out;
-- note the bank's own answers with note_answer;
+- note the bank's own answers with note_answer, and a page that gets in the way and goes away on its own (a notice, a promotion) with note_trouble;
 - note how a value is read with note_read by pointing: each placeholder after the label you see before it. The tool writes the pattern, reads the page with the crawler's own code, and tells you what it read;
 - before goal_reached, check your route: every screen from the first one to here is named and holds its own steps. The Supervisor checks it too.
 Values shown as █ are hidden by us, not by the bank: the page shows other characters in the same places. Money and names are hidden whole; a number keeps its last four digits, so an account shows as the bank draws it (****8176). The tools know the real values: the server types the sign-in, the code and the amounts, and the choose tools pick an account by its last four digits. Leave "Trust this workstation" as it is. Never press anything that would send money: a transfer ends at its review page.
@@ -118,6 +118,11 @@ const packText = (p: Pack) =>
         ]),
     ),
   );
+
+/** Signing in again from the saved session, after the balance goal: what every later run meets. */
+export const SIGNIN =
+  'Sign in again. This browser is now remembered by the bank, so its sign-in may look different from the first time. Name the screen you see, act on it as a person at the desk would, and call goal_reached as soon as you reach a screen your route already names, such as the console home.';
+const SIGNIN_MS = 2.5 * 60_000;
 
 /**
  * The run's hard limit (the Justfile stops its container then), less what the gate and the lessons
@@ -251,6 +256,86 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
       clock: { text: () => clock?.text() ?? 'no clock running' },
     });
     let conversation: Conversation = [];
+    /**
+     * Signs in again from the session the run saved, as every later run on this workstation will: the
+     * bank may show another sign-in (bank 2: "Welcome back"). The Scout names it and acts on it, its
+     * steps filed for every goal, until it reaches a screen the route holds. Short, inside the run's
+     * time; a failure here is logged and the run goes on.
+     */
+    const signInAgain = async () => {
+      if (!session || !table) return;
+      const ms = Math.min(SIGNIN_MS, startedAt.getTime() + RUN_MS - AFTER_GOALS_MS - Date.now());
+      if (ms < 30_000) return;
+      const again = await newPage(deps.browser, { session });
+      await again.goto(bank.url).catch(() => undefined);
+      const ctrl = new AbortController();
+      const end = (why: string) => {
+        if (ctrl.signal.aborted) return;
+        ctrl.abort(why);
+        void again
+          .context()
+          .close()
+          .catch(() => undefined);
+      };
+      clock = goalClock(ms, () => end('out of time: signing in again'));
+      const s = scout(
+        {
+          page: again,
+          start: bank.url,
+          trail,
+          credentials: deps.credentials,
+          code: async () => {
+            clock?.pause();
+            try {
+              return await deps.code(runId);
+            } finally {
+              clock?.resume();
+            }
+          },
+          judge: async (j) => {
+            const v = await sup.judge(j);
+            if (v.verdict === 'end') end(`the Supervisor ended the Scout: ${v.says}`);
+            return v;
+          },
+          table,
+        },
+        {
+          goal: 'signin',
+          member: input.member,
+          from: input.from,
+          to: input.to,
+          amountCents: 100,
+          memo,
+        },
+      );
+      log(`${runId}: signing in again`);
+      sup.goalNow(SIGNIN);
+      const first = await s.call('scout', 'browser_look', {}).catch(() => null);
+      try {
+        await turn(agent('scout'), {
+          system: SCOUT,
+          say: [
+            `Goal: ${SIGNIN}`,
+            `The pages named so far: ${table.rows.map((r) => `"${r.page}" (${r.shows.join('; ')})`).join(', ')}`,
+            first ? `The page now:\n${first.text}` : 'Begin by looking at the page.',
+          ].join('\n\n'),
+          ...(first?.image ? { image: first.image } : {}),
+          tools: s.tools('scout'),
+          calls: 20,
+          maxTokens: 8000,
+          signal: ctrl.signal,
+          keep: 4,
+        });
+      } catch (e) {
+        log(`${runId}: signing in again stopped: ${(e as Error).message}`);
+      }
+      clock.stop();
+      table = s.table();
+      await again
+        .context()
+        .close()
+        .catch(() => undefined);
+    };
     for (const goal of ['balance', 'transfer', 'history'] as Goal[]) {
       const task: Task = {
         goal,
@@ -318,6 +403,9 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
         task,
       );
       log(`${runId}: ${goal}`);
+      // The goal starts from the page as it is now: the Scout sees it before its first call (run 16:
+      // a press made before looking was refused).
+      const first = await s.call('scout', 'browser_look', {}).catch(() => null);
       // The Supervisor times this goal, so it is told this goal.
       sup.goalNow(GOALS[goal](input));
       const ask = (nudge?: string) =>
@@ -337,9 +425,10 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
                   `The pages named so far: ${table.rows.map((r) => `"${r.page}" (${r.shows.join('; ')})`).join(', ')}`,
                 ]
               : []),
-            'Begin by looking at the page.',
+            first ? `The page now:\n${first.text}` : 'Begin by looking at the page.',
             ...(nudge ? [nudge] : []),
           ].join('\n\n'),
+          ...(first?.image ? { image: first.image } : {}),
           tools: [...s.tools('scout'), ...toolsOf('scout', [queryTool])],
           calls: SCOUT_CALLS,
           maxTokens: 8000,
@@ -395,6 +484,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
         .context()
         .storageState({ path: session })
         .catch(() => (session = undefined));
+      if (goal === 'balance') await signInAgain();
     }
     if (reached.length === 3) outcome = 'every goal reached';
   } catch (e) {

@@ -65,7 +65,7 @@ Bank 1's table was written from [a recorded walk through its pages](docs/evidenc
 On every page, the crawler first checks for the bank's own answers, by their exact words. If something goes wrong, it goes back to the home page and starts again, at most twice, and never after pressing Submit. If that doesn't work, the run fails. The outcome tests prove one of each kind, and `just hazards all` forces all 18 kinds of trouble the banks can throw.
 
 **Escalating when stuck.** A run stops and hands off to a person when:
-- it reaches a page no row recognizes;
+- it reaches a page no row recognizes, and the page is still there after one fresh start from home;
 - it sees the same page three times in a row;
 - after a transfer, the account's history doesn't show it exactly once;
 - the guard refuses an action;

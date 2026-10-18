@@ -85,7 +85,7 @@ describe('the Runner carries out a run', () => {
       data: {
         availableCents: acct.availableCents,
         currentCents: acct.currentCents,
-        accountLabel: expect.stringMatching(/, ending in \*{4}$/),
+        accountLabel: expect.stringMatching(/, ending in \d{4}$/),
       },
     });
 
@@ -112,7 +112,8 @@ describe('the Runner carries out a run', () => {
     ).rows;
     expect(frames.length).toBeGreaterThanOrEqual(steps.length - 1);
     expect(frames.every((f) => f.imageKey?.endsWith('.png'))).toBe(true);
-    // Nothing stored anywhere carries the member number, the account's digits or the password.
+    // Nothing stored anywhere carries the member number, the account's number or the password; an
+    // account shows its last four, as the masking rule keeps them.
     const stored = [
       ...(await Promise.all(
         store
@@ -125,7 +126,7 @@ describe('the Runner carries out a run', () => {
       JSON.stringify(frames),
     ].join('\n');
     // The member's name was not known before the run; the crawler learned it when the bank showed it.
-    for (const v of [MEMBERS.demo, acct.number, acct.number.slice(-4), PASSWORDS.service, 'Doe'])
+    for (const v of [MEMBERS.demo, acct.number, acct.number.slice(-5), PASSWORDS.service, 'Doe'])
       expect(stored).not.toContain(v);
   }, 120_000);
 });

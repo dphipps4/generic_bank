@@ -13,8 +13,12 @@ import type { Entry, Judging, Judgment } from './scout.js';
 import { type Tool, ToolRefusal, toolsOf } from './tools.js';
 import { frameAt, type Trail } from './trail.js';
 
-/** A judgment's whole output, thinking included: a few sentences, never a book. */
-export const JUDGMENT_TOKENS = 1200;
+/**
+ * A judgment's whole output, thinking included: a backstop, never the usual limit. The Supervisor's
+ * effort setting keeps its thinking short; at 1,200 tokens the cap cut 10 of run 16's 25 judgments,
+ * each then asked again, at about 30 s apiece.
+ */
+export const JUDGMENT_TOKENS = 2500;
 
 const UNREADABLE_IN_A_ROW = 3;
 
@@ -155,6 +159,7 @@ When the Scout says the goal is reached, you see its route. Check it against the
 Time is yours to keep: each judgment says how much of the goal's time is used and how much is left. When it is short, steer the Scout to the shortest way; do not stop early. When the goal is close and the clock is the only obstacle, extend it: extendSeconds adds up to 120 seconds, at most twice per goal; say which steps remain, citing the evidence. End only when the evidence shows the remaining steps cannot fit even with an extension, and say which steps those are.
 When you send the Scout to a field, name its label only if the page's words hold that label. A field whose label is not in the words has its label drawn as a picture: the Scout acts on it by its id, or with list_page and type_item.
 Judge from the evidence in front of you. Do not speculate about how a tool or the system works beyond what you are told here; if something is unclear, say what is missing and send the Scout to look. Think briefly: a judgment is a few sentences of reasoning, then the verdict.
+Say what is wrong and what to do next, in plain words: which screen, which value, which tool. Never write a tool's exact inputs (its parts, its words to point at): the Scout chooses them, and the tool checks them.
 Your verdicts:
 - continue: the action worked, or did no harm, and the Scout may act again;
 - wait: the page is still changing, or the Scout must look again or fix something first;
@@ -167,7 +172,11 @@ const MECHANICS = `How it works:
 - The Scout never sees or types the sign-in or a code. It names the value (user_id, password, code, member, amount, memo) and the server types it. When the bank sends a code, a person gives it, and the clock pauses for them.
 - After typing, the tool reports how many characters the field holds, or, for a secret, only that it is filled.
 - Values hidden by us show as █ in the words and as dark blocks in the picture: the value is there, hidden. A number keeps its last four digits; money and names are hidden whole.
-- A route is the screens, each named by words it shows as text, each with its steps; code follows it with no model. A read is a pattern the crawler applies to the page's words; note_read checks it with the crawler's own code before keeping it.`;
+- A route is the screens, each named by words it shows as text, each with its steps; code follows it with no model. A read is a pattern the crawler applies to the page's words; note_read checks it with the crawler's own code before keeping it.
+- A page that shows the member's number is kept only once a name read hides their name: on such a page the Scout's next step is note_read name, anchored on the member's number, and other actions are refused until then.
+- When a new screen is named, an earlier screen whose words all show on it is given a never-word by the tool, which says so. "Those words fit more than one named page" means the new name's words fit another screen too: pick words only this screen shows.
+- After the balance goal, the Scout signs in again from a browser the bank remembers, and may see another sign-in screen ("Welcome back"): it names it and goes through it.
+- note_trouble notes a page that gets in the way and goes away on its own (a notice, a promotion); the crawler starts again from home when it shows.`;
 
 const DIAGNOSE = `The goal was not reached. From the evidence, say in a few lines: where the run stopped, citing the frame; what was tried, and how each attempt failed; your best explanation; and the next test a run should try. Mark anything you did not test as a guess.`;
 
