@@ -1,7 +1,8 @@
-// Masking, before anything is kept. Playwright can only cover whole elements, and a balance is often
-// loose text in a cell, so the runs of drawn text are read from the browser's own layout over
-// DevTools (from outside the page) and only the matching characters are painted over. The same
-// values are masked in the saved page text and the address.
+// Masking, before anything is kept: the rule is in rule.ts, and every view follows it. Playwright can
+// only cover whole elements, and a balance is often loose text in a cell, so the runs of drawn text
+// are read from the browser's own layout over DevTools (from outside the page), and exactly the
+// hidden characters are painted over.
+import { maskText, spans } from './rule.js';
 import type { CDPSession, Page } from 'playwright-core';
 import { PNG } from 'pngjs';
 
@@ -12,30 +13,7 @@ export interface Box {
   h: number;
 }
 
-const DIGITS = /\d{4,}/g;
-const MONEY = /\$\s?[\d,]+(\.\d\d)?/g;
-const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-/** The spans of `text` to mask: long numbers, money, and any known value (a name, a password). */
-export function spans(text: string, known: string[] = []): [number, number][] {
-  const out: [number, number][] = [];
-  const res = [
-    DIGITS,
-    MONEY,
-    ...known.filter((k) => k.length >= 2).map((k) => new RegExp(escape(k), 'gi')),
-  ];
-  for (const re of res)
-    for (const m of text.matchAll(re)) out.push([m.index, m.index + m[0].length]);
-  return out;
-}
-
-/** Text with every span masked by asterisks. */
-export function maskText(text: string, known: string[] = []): string {
-  let out = text;
-  for (const [a, b] of spans(text, known).sort((x, y) => y[0] - x[0]))
-    out = out.slice(0, a) + '*'.repeat(Math.max(1, Math.min(8, b - a))) + out.slice(b);
-  return out;
-}
+export { HIDDEN, maskText, spans } from './rule.js';
 
 /** An address with no query or fragment, and its path masked: tokens never leave the browser. */
 export function maskAddress(url: string, known: string[] = []): string {
@@ -53,10 +31,14 @@ type Snapshot = {
     scrollOffsetX?: number;
     scrollOffsetY?: number;
     nodes: {
+      parentIndex?: number[];
+      nodeName?: number[];
+      nodeValue?: number[];
       inputValue?: { index: number[]; value: number[] };
+      optionSelected?: { index: number[] };
       contentDocumentIndex?: { index: number[]; value: number[] };
     };
-    layout: { nodeIndex: number[]; bounds: number[][]; text: number[] };
+    layout: { nodeIndex: number[]; bounds: number[][]; text: number[]; styles: number[][] };
     textBoxes: { layoutIndex: number[]; bounds: number[][]; start: number[]; length: number[] };
   }[];
 };
@@ -64,7 +46,7 @@ type Snapshot = {
 /** The boxes to paint, in screenshot coordinates, from one DevTools session's documents. */
 async function boxesFrom(cdp: CDPSession, known: string[], dx: number, dy: number): Promise<Box[]> {
   const snap = (await cdp.send('DOMSnapshot.captureSnapshot', {
-    computedStyles: [],
+    computedStyles: ['font-size'],
   })) as unknown as Snapshot;
   const str = (i: number) => (i >= 0 ? (snap.strings[i] ?? '') : '');
   const offsets = new Map<number, { x: number; y: number }>([[0, { x: dx, y: dy }]]);
@@ -80,34 +62,109 @@ async function boxesFrom(cdp: CDPSession, known: string[], dx: number, dy: numbe
       const b = d.layout.bounds[layoutOf.get(node) ?? -1];
       if (b) offsets.set(owners.value[k]!, { x: x0 + b[0]!, y: y0 + b[1]! });
     });
-    // A field holding a value to mask (a typed number, a password, a name) is covered whole. A
-    // radio button's or a checkbox's value is not typed: it stays, so the picture shows the choice.
+    const size = (li: number | undefined) =>
+      parseFloat(str(li === undefined ? -1 : (d.layout.styles[li]?.[0] ?? -1))) || 13;
+    // A field's value is drawn by the field, from just inside its left edge, in its own font size.
+    // Only its hidden characters are painted, so a typed "████7732" shows that it was typed.
     const inputs = d.nodes.inputValue;
     inputs?.index.forEach((node, k) => {
-      const b = d.layout.bounds[layoutOf.get(node) ?? -1];
-      if (b && spans(str(inputs.value[k]!), known).length)
-        out.push({ x: x0 + b[0]!, y: y0 + b[1]!, w: b[2]!, h: b[3]! });
+      const li = layoutOf.get(node);
+      const b = d.layout.bounds[li ?? -1];
+      const value = str(inputs.value[k]!);
+      if (b && value)
+        out.push(...drawnInside(value, known, x0 + b[0]!, y0 + b[1]!, b[2]!, b[3]!, size(li)));
     });
-    // Text: only the characters that match, by their share of the run's width.
+    // Text: the hidden characters of each drawn run, placed by their share of the run's width.
     d.textBoxes.layoutIndex.forEach((li, k) => {
       const text = str(d.layout.text[li] ?? -1).slice(
         d.textBoxes.start[k],
         d.textBoxes.start[k]! + d.textBoxes.length[k]!,
       );
       const b = d.textBoxes.bounds[k]!;
-      const per = text.length ? b[2]! / text.length : 0;
-      // Where a character falls is estimated from the run's width, so each span grows by a
-      // character on both sides: a leaked digit is a leak.
-      for (const [s, e] of spans(text, known))
-        out.push({
-          x: x0 + b[0]! + (s - 1) * per - 1,
-          y: y0 + b[1]! - 1,
-          w: (e - s + 2) * per + 2,
-          h: b[3]! + 2,
-        });
+      out.push(...hiddenBoxes(text, known, x0 + b[0]!, y0 + b[1]!, b[2]!, b[3]!));
+    });
+    // A list draws its chosen option itself, outside the text layout above.
+    const n = d.nodes;
+    const name = (i: number) => str(n.nodeName?.[i] ?? -1);
+    const selected = new Set(n.optionSelected?.index ?? []);
+    const textOf = (i: number) =>
+      (n.parentIndex ?? [])
+        .map((p, c) => (p === i && name(c) === '#text' ? str(n.nodeValue?.[c] ?? -1) : ''))
+        .join('');
+    (n.nodeName ?? []).forEach((_, i) => {
+      if (name(i) !== 'SELECT') return;
+      const li = layoutOf.get(i);
+      const b = li === undefined ? undefined : d.layout.bounds[li];
+      if (!b) return;
+      const options = (n.parentIndex ?? []).flatMap((p, c) =>
+        p === i && name(c) === 'OPTION' ? [c] : [],
+      );
+      const shown = options.find((o) => selected.has(o)) ?? options[0];
+      if (shown === undefined) return;
+      out.push(
+        ...drawnInside(textOf(shown), known, x0 + b[0]!, y0 + b[1]!, b[2]!, b[3]!, size(li)),
+      );
     });
   });
   return out;
+}
+
+/**
+ * How wide a character is, in ems, near enough to place a character inside a run: narrow, wide,
+ * capital, digit (all digits share one width in nearly every font), or other.
+ */
+function em(c: string): number {
+  if (/\s/.test(c)) return 0.28;
+  if (/[il.,:;'|!`]/.test(c)) return 0.28;
+  if (/[fjrtI()[\]{}-]/.test(c)) return 0.38;
+  if (/[mwMW@%]/.test(c)) return 0.88;
+  if (/\d/.test(c)) return 0.56;
+  if (/[A-Z]/.test(c)) return 0.68;
+  return 0.52;
+}
+
+/**
+ * The boxes over the hidden characters of a run drawn `w` wide from `x`. Where a character falls is
+ * estimated from the widths of the characters before it, scaled to the run's real width, and each
+ * box reaches a third of a character further on both sides: a leaked digit is a leak.
+ */
+function hiddenBoxes(
+  text: string,
+  known: string[],
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): Box[] {
+  const widths = [...text].map(em);
+  const total = widths.reduce((a, b) => a + b, 0) || 1;
+  const at = (i: number) => x + (w * widths.slice(0, i).reduce((a, b) => a + b, 0)) / total;
+  const pad = w / Math.max(1, text.length) / 3;
+  return spans(text, known).map(([a, b]) => {
+    const left = at(a) - pad;
+    return { x: left - 1, y: y - 1, w: at(b) + pad - left + 2, h: h + 2 };
+  });
+}
+
+/**
+ * The hidden characters of a value a field or a list draws itself: from just inside its left edge,
+ * in its font size, kept inside the control. A run longer than the control is cut off by it.
+ */
+function drawnInside(
+  text: string,
+  known: string[],
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  size: number,
+): Box[] {
+  const runW = [...text].map(em).reduce((a, b) => a + b, 0) * size;
+  return hiddenBoxes(text, known, x + 3, y, runW, h).flatMap((b) => {
+    const left = Math.max(b.x, x);
+    const right = Math.min(b.x + b.w, x + w);
+    return right > left ? [{ x: left, y, w: right - left, h }] : [];
+  });
 }
 
 /** Every box to mask on the page as drawn now, frames from other origins included. */

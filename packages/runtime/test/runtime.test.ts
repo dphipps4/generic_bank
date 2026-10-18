@@ -12,6 +12,7 @@ import {
   whatIsAt,
   field,
   knows,
+  nameIn,
   launch,
   maskBoxes,
   newPage,
@@ -168,7 +169,13 @@ describe('the runtime: see first, then click', () => {
   it('masks money, long numbers and known names in the picture, the page text and the address', async () => {
     const p = await open('/mask?token=abc123');
     const f = await see(p, { known: ['Alex Sample'], limitMs: 10_000 });
-    expect(f.tree).not.toMatch(/41,231|40017732|Alex Sample/);
+    expect(f.tree).not.toMatch(/41,231|40017732|Alex Sample|1,000/);
+    // One for one, so the text keeps the page's shape: an identifier keeps its last four, money and
+    // known names are hidden whole, and the bank's own mask is never hidden again.
+    expect(f.tree).toContain('Account ████7732');
+    expect(f.tree).toContain('Share ****8176-S01');
+    expect(f.tree).toContain('Checking, Share ****8176-S01, available █████████');
+    expect(f.tree).toContain('Current balance: ██████████ for ████ ██████');
     expect(f.address).not.toContain('token');
     expect(f.controls.map((c) => c.name).join(' ')).not.toContain('40017732');
     const img = PNG.sync.read(f.picture);
@@ -180,6 +187,47 @@ describe('the runtime: see first, then click', () => {
       const i = (y * img.width + x) * 4;
       expect([img.data[i], img.data[i + 1], img.data[i + 2]]).toEqual([255, 255, 255]);
     }
+  });
+
+  it('paints exactly the hidden characters, in text and in a list, and never the last four', async () => {
+    const p = await open('/mask');
+    const boxes = await maskBoxes(p, []);
+    // Where the browser really drew each word: the test may run script in the page; masking may not.
+    const rect = (id: string, word: string) =>
+      p.evaluate(
+        ([i, w]) => {
+          const el = document.getElementById(i!)!.firstChild!;
+          const at = el.textContent!.indexOf(w!);
+          const r = document.createRange();
+          r.setStart(el, at);
+          r.setEnd(el, at + w!.length);
+          const b = r.getBoundingClientRect();
+          return { x: b.x, y: b.y, w: b.width, h: b.height };
+        },
+        [id, word],
+      );
+    const covered = (r: { x: number; y: number; w: number; h: number }) =>
+      boxes.some(
+        (b) => b.x <= r.x && b.y <= r.y && b.x + b.w >= r.x + r.w && b.y + b.h >= r.y + r.h,
+      );
+    const touched = (r: { x: number; y: number; w: number; h: number }) =>
+      boxes.some((b) => b.x < r.x + r.w && r.x < b.x + b.w && b.y < r.y + r.h && r.y < b.y + b.h);
+    expect(covered(await rect('member', '4001'))).toBe(true);
+    expect(covered(await rect('member', '732'))).toBe(false);
+    expect(touched(await rect('share', '8176'))).toBe(false);
+    const list = (await p.locator('#from').boundingBox())!;
+    expect(
+      boxes.some((b) => b.x >= list.x && b.x + b.w <= list.x + list.width + 1 && b.y >= list.y - 2),
+    ).toBe(true);
+  });
+
+  it('names a control by its accessible name, as the runtime presses it', async () => {
+    const p = await open('/mask');
+    const f = await see(p, { limitMs: 10_000 });
+    expect(f.controls.find((c) => c.role === 'button')?.name).toBe('Submit');
+    expect(nameIn('- button "Submit"')).toBe('Submit');
+    expect(nameIn('- textbox "Memo": GBX 4CBE')).toBe('Memo');
+    expect(nameIn('- combobox:')).toBe('');
   });
 
   it('reads the page unmasked for the crawler, and keeps nothing', async () => {

@@ -54,7 +54,7 @@ describe('the hazard lab’s door', () => {
     ).rows[0]!.inputsMasked;
     expect(masked).toEqual({
       bank: 'generic',
-      memberId: '********',
+      memberId: '████7732',
       account: 'Everyday Checking',
       forcedHazards: ['late-rows', 'promo'],
     });

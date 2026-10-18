@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./rule": {
+      "types": "./dist/rule.d.ts",
+      "default": "./dist/rule.js"
     }
   },
   "devDependencies": {

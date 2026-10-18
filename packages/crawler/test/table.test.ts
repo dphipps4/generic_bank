@@ -46,18 +46,18 @@ describe("bank 1's table, against its evidence", () => {
   });
   it('reads the review on transfer/17 and the confirmation on transfer/18', () => {
     expect(readOf(bank1.reads.review).exec(lines('transfer/17'))?.groups).toMatchObject({
-      from: 'Everyday Checking, Account ending in ****',
+      from: 'Everyday Checking, Account ending in 9706',
       memo: 'GBX TEST lunch',
     });
     expect(readOf(bank1.reads.confirmation).exec(lines('transfer/18'))?.groups?.confirmation).toBe(
-      'GB-*****-G',
+      'GB-█8213-G',
     );
   });
   it("finds where the member's name shows, on happy/10 and happy/11", () => {
     const [results, summary] = bank1.reads.name;
-    // Masked letter for letter: the member number is eight, the happy member's name six.
-    expect(readOf(results!, '********').exec(lines('happy/10'))?.groups?.name).toBe('******');
-    expect(readOf(summary!, '********').exec(lines('happy/11'))?.groups?.name).toBe('******');
+    // Masked under the one rule: the member number keeps its last four, the name is hidden whole.
+    expect(readOf(results!, '████7732').exec(lines('happy/10'))?.groups?.name).toBe('██ ███');
+    expect(readOf(summary!, '████7732').exec(lines('happy/11'))?.groups?.name).toBe('██ ███');
   });
 
   it('has a row for every end, and nothing to do on an end for its goal', () => {

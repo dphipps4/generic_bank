@@ -63,7 +63,7 @@ describe('runs over HTTP', () => {
     const ok = await end({
       status: 'succeeded',
       data: {
-        accountLabel: 'Account ending in ****',
+        accountLabel: 'Account ending in 8176',
         availableCents: 1,
         currentCents: 2,
         asOf: '2026-06-15T00:00:00.000Z',

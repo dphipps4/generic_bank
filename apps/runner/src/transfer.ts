@@ -59,8 +59,8 @@ export const memoFor = (i: Pick<TransferTask, 'memo' | 'memoToken'>) =>
 /** What the trail says before the one press, so a resumed run never presses again. */
 export const pressIntent = (memoToken: string) => `press Submit transfer for ${memoToken}`;
 
-/** An account as a grant binds it: its label with every digit masked. */
-const masked = (label: string) => label.replace(/\d/g, '*');
+/** An account as a grant binds it and a person sees it: its label under the one masking rule. */
+const masked = (label: string) => maskText(label);
 /** What the screen shows, in the grant's terms. A memo without the run's token is another memo. */
 const valuesOf = (r: Shown, memoToken: string): TransferValues => ({
   fromRef: masked(r.from),

@@ -25,6 +25,13 @@ All of it lives in one Postgres database, with migrations in [`packages/db`](../
 
 - **The press that moves money.** It's never in a table row, and it's pressed once, only under a grant a person's approval issued, which binds the values the review page showed. Its intent is written to the trail before the press, so a run that stops after it reads the account's history and never presses again ([`transfer.ts`](../apps/runner/src/transfer.ts)).
 - **Every other action.** Each passes the job's allowlist before it reaches the browser, judged by the page's name in the table and the control's drawn name, and never by anything the page says. Words that change an account ("Close account", "Waive fee") are refused on every page ([`allowlist.ts`](../packages/guardrails/src/allowlist.ts)).
-- **Personal data.** The runtime paints every number, amount, name and secret out of the picture, the page text and the address before a frame is kept ([`mask.ts`](../packages/runtime/src/mask.ts)). It learns the member's name the first time the bank shows it, and masks it from then on. The model sees only masked frames.
+- **Personal data.** One masking rule, applied before anything is kept or shown to a model, and followed by every view: the picture, the page text, field and list values, the address, run inputs and the Console.
+  1. A number of five or more digits is an identifier: every digit but its last four is hidden (`40017732` becomes `████7732`). Digits joined by spaces, dashes or dots in groups of three or more count as one number.
+  2. Money is hidden whole, with or without a dollar sign.
+  3. A name or a secret the run knows (the member's name, a staff name, the sign-in, a code) is hidden whole, in any case.
+  4. What a bank already hides stays as the bank drew it: its `****8176` is never hidden again. A number of four digits or fewer is never hidden.
+  5. Each hidden character becomes `█`, one for one, so the text keeps the page's shape, and the picture paints exactly those characters.
+
+  The crawler learns the member's name the first time the bank shows it, and hides it from then on. The model sees only masked frames.
 - **Unknown pages.** Nothing guesses at a page no row knows. The run stops as 409 with its frames, the version comes out of service, and a person decides what happens next.
 - **Model spend.** The gateway refuses a call that would pass $25 a run or $150 a week before it is sent.

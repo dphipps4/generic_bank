@@ -129,8 +129,12 @@ async function value(s: Session, task: Task, v: string): Promise<string> {
       return (await s.credentials()).operatorId;
     case '$password':
       return (await s.credentials()).password;
-    case '$code':
-      return s.code();
+    case '$code': {
+      // A code is a secret: hidden whole wherever it shows, not as a number that keeps its last four.
+      const c = await s.code();
+      if (c && !s.known.includes(c)) s.known.push(c);
+      return c;
+    }
     case '$member':
       return task.member;
     case '$from':
@@ -199,11 +203,14 @@ async function look(s: Session, task: Task): Promise<Frame> {
   return (await learn(s, task)) ? see(s.page, o) : f;
 }
 
-/** The sign-in and the member's number join what is masked, before the first page is seen. */
+/**
+ * The sign-in joins what is hidden whole, before the first page is seen. The member's number is an
+ * identifier, and the masking rule keeps its last four, like any other.
+ */
 async function knowTask(s: Session, task: Task) {
   const { operatorId, password } = await s.credentials();
-  for (const v of [operatorId, password, task.member])
-    if (v && !s.known.includes(v)) s.known.push(v);
+  for (const v of [operatorId, password]) if (v && !s.known.includes(v)) s.known.push(v);
+  void task;
 }
 
 /** Runs the table from home until the goal's page, and returns that page. */
@@ -302,6 +309,9 @@ const leaves = async (page: Page) =>
     .map(leaf)
     .filter((l): l is string => l !== null);
 
+/** The last four digits of an account as a page draws it ("****8176-S01", "8176"). */
+const lastFour = (drawn: string) => drawn.match(/\d{4}(?!.*\d{4})/)?.[0] ?? '****';
+
 export async function checkBalance(s: Session, task: Task & { account: string }) {
   await crawl(s, task, 'balance');
   s.guard?.({ screen: screenOf(s.table, s.table.ends.balance), verb: 'read', control: 'Page' });
@@ -313,7 +323,7 @@ export async function checkBalance(s: Session, task: Task & { account: string })
   if (names.size !== 1) return stop('no_such_account', `${names.size} accounts match`);
   const g = tiles[0]!;
   return {
-    accountLabel: `${g.name}, ending in ****`,
+    accountLabel: `${g.name}, ending in ${lastFour(g.last4 ?? '')}`,
     availableCents: cents(g.available!),
     currentCents: cents(g.current!),
     asOf: new Date().toISOString(),

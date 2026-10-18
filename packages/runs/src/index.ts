@@ -3,6 +3,7 @@
 // of the contract's results. Human tasks carry what a person was asked, and a person's answer (a
 // staff code) is sealed and cleared once used; a person's approval issues the run's one grant. A run
 // that stops escalated is handed to a person, who resumes it, finishes it by hand or cancels it.
+import { HIDDEN, maskText } from '@gb/runtime/rule';
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from 'node:crypto';
 import {
   type HazardName,
@@ -55,9 +56,12 @@ export function unseal<T>(sealed: string, secret: string): T {
 export function maskInputs(inputs: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(inputs)) {
+    // The one masking rule: a member number keeps its last four, an account's last four stay.
     if (k === 'bank') out[k] = v;
-    else if (typeof v === 'string' && /\d{4}/.test(v)) out[k] = '*'.repeat(v.length);
-    else if (k === 'amountCents' || k === 'idempotencyKey') out[k] = '***';
+    // Money, and the caller's key, are hidden whole.
+    else if (k === 'amountCents' || k === 'idempotencyKey')
+      out[k] = HIDDEN.repeat(String(v).length);
+    else if (typeof v === 'string') out[k] = maskText(v);
     else out[k] = v;
   }
   return out;
