@@ -20,7 +20,11 @@ export const DEFAULT_ROLES: Roles = rolesOf(z.object(ROLE_SETTINGS).parse(appEnv
 export const OPENAI_TEST_MODEL = 'gpt-test';
 export const TEST_PRICE = { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 0 };
 
-export type Reply = { text: string } | { tool: string; input: object };
+export type Reply =
+  | { text: string }
+  | { tool: string; input: object }
+  /** The provider fails the request with this status and message. */
+  | { fail: number; message: string };
 
 /** A request as a script reads it: the system prompt, then the user's words and tool results in order. */
 export interface Seen {
@@ -135,6 +139,11 @@ export function fakeModels(
       const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
       sent.push(body);
       const reply = script(apiProvider, seen(apiProvider, body), body);
+      if ('fail' in reply)
+        return new Response(JSON.stringify({ error: { message: reply.message } }), {
+          status: reply.fail,
+          headers: { 'content-type': 'application/json' },
+        });
       const model = String(body.model);
       const sse = apiProvider === 'anthropic' ? anthropicSse : openaiSse;
       return new Response(sse(sent.length, model, reply), {
