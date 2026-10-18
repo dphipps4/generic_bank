@@ -55,7 +55,8 @@ async function aScout(judged: Judging[] = []) {
       code,
       judge: async (j) => (judged.push(j), { verdict: 'continue', says: 'Fine.' }),
     },
-    { goal: 'balance', member: MEMBERS.demo },
+    // The account the gate checks, as a run is always given it.
+    { goal: 'balance', member: MEMBERS.demo, from: 'Everyday Checking' },
   );
   /** The id of the latest page's control with this role and, if given, this name. */
   const id = (role: string, name?: string) => {

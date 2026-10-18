@@ -110,6 +110,28 @@ async function report(runId: string) {
   log(
     `corrections citing a frame: ${sup.filter((s) => s.action !== 'continue' && /\bf\d+\b/.test(s.outcome ?? '')).length}`,
   );
+  // The evidence is complete, or the report says where it is not: every action with its frame, every
+  // refusal with what was asked, every judgment whole, and the agents' thinking kept.
+  const framed = (
+    await sql.query<{ seq: number; framed: boolean }>(
+      `SELECT s.seq, EXISTS (SELECT 1 FROM "TrailFrame" f WHERE f."runId" = s."runId" AND f."stepSeq" = s.seq) AS framed
+         FROM "Step" s WHERE s."runId" = $1 AND s.name IN ('balance', 'transfer', 'history')`,
+      [runId],
+    )
+  ).rows;
+  const bare = framed.filter((r) => !r.framed).map((r) => r.seq);
+  const refusedBare = steps.filter(
+    (s) => s.name === 'refused' && !/ · input /.test(s.action ?? ''),
+  );
+  log(
+    `evidence: ${framed.length} actions, ${bare.length ? `${bare.length} without a frame (steps ${bare.join(', ')})` : 'each with its frame'}; ${
+      refusedBare.length
+        ? `${refusedBare.length} refusals without their input`
+        : 'every refusal with its input'
+    }; ${steps.filter((s) => s.name === 'scout thought').length} Scout replies and ${
+      steps.filter((s) => s.name === 'supervisor thought').length
+    } Supervisor thoughts kept`,
+  );
 }
 
 /** The lessons the run sent to memory. */
@@ -175,7 +197,16 @@ try {
         code,
         ...(cfg.HAZARD_HMAC_KEY ? { hazardKey: cfg.HAZARD_HMAC_KEY } : {}),
       },
-      { factoryRunId: run.runId, bank, url, table: run.table, member, from, to },
+      {
+        factoryRunId: run.runId,
+        bank,
+        url,
+        table: run.table,
+        member,
+        from,
+        to,
+        ...(run.session ? { session: run.session } : {}),
+      },
     );
     for (const r of g.runs)
       log(`gate ${r.hazard ?? 'plain'}: ${r.ok ? 'passed' : 'failed'}: ${r.said}`);

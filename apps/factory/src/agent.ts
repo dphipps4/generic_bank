@@ -52,11 +52,20 @@ export interface TurnInput {
   maxTokens: number;
   /** Aborting it ends the turn at once: the model call in flight, and any tool. */
   signal?: AbortSignal;
+  /**
+   * Keep only the latest this many tool results whole, pictures and all; older ones shrink to their
+   * first line, and older thinking is dropped. Each call then costs about what the first did.
+   */
+  keep?: number;
+  /** Each reply of the model as it comes, its thinking and its words: the evidence of its reasoning. */
+  onReply?(r: { thinking: string; text: string }): void | Promise<void>;
 }
 
 export interface TurnOutput {
   /** The model's last words: its report, or its answer as JSON. */
   text: string;
+  /** The model's thinking in this turn, every reply's, in order. */
+  thinking: string;
   conversation: Conversation;
   /** Calls refused before they reached the tool (no such tool, or input that does not fit). */
   refused: { name: string; why: string }[];
@@ -64,6 +73,41 @@ export interface TurnOutput {
 
 /** The longest one model call may take: a profile drafted at high effort can think for many minutes. */
 export const TURN_MS = 30 * 60_000;
+
+/** What a reply thought and said. */
+const partsOf = (m: AssistantMessage) => ({
+  thinking: m.content
+    .flatMap((b) => (b.type === 'thinking' ? [(b as { thinking?: string }).thinking ?? ''] : []))
+    .join('\n'),
+  text: m.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n'),
+});
+
+/**
+ * The conversation as the model is shown it: every message, in order, but only the latest `keep`
+ * tool results whole. An older result keeps its first line, without its picture, and an older reply
+ * keeps its words and its calls, not its thinking.
+ */
+export function compacted(messages: AgentMessage[], keep: number): AgentMessage[] {
+  const results = messages.flatMap((m, k) => (m.role === 'toolResult' ? [k] : []));
+  const old = new Set(results.slice(0, Math.max(0, results.length - keep)));
+  const lastUser = messages.map((m) => m.role).lastIndexOf('user');
+  const cutoff = results.length > keep ? results[results.length - keep]! : messages.length;
+  return messages.map((m, k) => {
+    if (old.has(k) && m.role === 'toolResult') {
+      const first = m.content
+        .flatMap((c) => (c.type === 'text' ? [c.text] : []))
+        .join(' ')
+        .split('\n')[0]!
+        .slice(0, 240);
+      return { ...m, content: [{ type: 'text', text: `${first} (older result, shortened)` }] };
+    }
+    if (k < cutoff && m.role === 'user' && k !== lastUser && Array.isArray(m.content))
+      return { ...m, content: m.content.filter((c) => c.type !== 'image') };
+    if (k < cutoff && m.role === 'assistant')
+      return { ...m, content: m.content.filter((c) => c.type !== 'thinking') };
+    return m;
+  }) as AgentMessage[];
+}
 
 const png = (b: Buffer): ImageContent => ({
   type: 'image',
@@ -177,6 +221,13 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
     };
   });
   let calls = 0;
+  // Each reply is reported once, as soon as the next call is about to be made, and at the end.
+  let reported = (i.conversation ?? []).length;
+  const report = async (messages: AgentMessage[]) => {
+    for (const m of messages.slice(reported))
+      if (m.role === 'assistant') await i.onReply?.(partsOf(m as AssistantMessage));
+    reported = messages.length;
+  };
   const session = new PiAgent({
     initialState: {
       systemPrompt: i.system,
@@ -187,6 +238,10 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
     },
     // One browser: its tools run one at a time.
     toolExecution: 'sequential',
+    transformContext: async (messages) => {
+      await report(messages);
+      return i.keep === undefined ? messages : compacted(messages, i.keep);
+    },
     streamFn: (m, context, options) =>
       send(m as never, context, {
         ...options,
@@ -212,6 +267,7 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
         : i.say,
     timestamp: Date.now(),
   });
+  await report(session.state.messages).catch(() => undefined);
   if (i.signal?.aborted) throw new Ended(String(i.signal.reason ?? 'ended'));
   if (failure !== undefined) throw failure;
   const messages = session.state.messages;
@@ -238,6 +294,10 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
   const text = last.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n');
   return {
     text: i.answer ? unwrapped(text) : text,
+    thinking: replies
+      .map((r) => partsOf(r).thinking)
+      .filter(Boolean)
+      .join('\n'),
     conversation: [...messages],
     refused,
   };

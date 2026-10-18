@@ -8,7 +8,7 @@
 // action before the next one. The server types the sign-in and a person's code; the model never
 // sees either. It never presses a control that could move money.
 import type { Answer, At, Goal, Row, Step, Table } from '@gb/crawler';
-import { leaf, readOf } from '@gb/crawler';
+import { accountsIn, cents, leaf, leaves, namesIn, readOf } from '@gb/crawler';
 import {
   type Box,
   choose,
@@ -21,6 +21,7 @@ import {
   findCrop,
   type Frame,
   knows,
+  maskText,
   NotReady,
   type Page,
   press,
@@ -29,6 +30,7 @@ import {
   type,
   typeAt,
   UnknownPage,
+  valueAt,
   whatIsAt,
 } from '@gb/runtime';
 import { z } from 'zod';
@@ -119,15 +121,102 @@ const words = (f: Frame) =>
     .filter((t): t is string => !!t);
 const shows = (f: Frame, w: string) => f.tree.toLowerCase().includes(w.toLowerCase());
 
-/** An account as a page draws it: a name as it is, last four digits as "ending in" them. */
 /** An account as the lists hold it: its last four digits, whatever words a bank puts around them. */
 const account = (ref = '') => ref;
+
+/**
+ * A read written from the page's own lines, where the Scout points: each placeholder after a label
+ * it sees, or at words it sees. It finds them in the lines as the masking rule shows them (what the
+ * Scout sees) and writes the pattern from the same lines as the crawler reads them (the same
+ * characters, one for one). The task's own member number becomes $member, and a balance's account
+ * number its {last4} where the Scout did not point at it.
+ */
+export function pointed(
+  what: string,
+  parts: { placeholder: string; after?: string; is?: string }[],
+  real: string[],
+  shown: string[],
+  task: { member: string; from?: string },
+): string {
+  const spans = new Map<number, [number, number, string][]>();
+  /** Lines a read holds without a value of their own: a label that is a line by itself. */
+  const labels = new Set<number>();
+  const add = (line: number, a: number, b: number, ph: string) => {
+    if (b <= a) throw new ToolRefusal(`{${ph}} points at nothing`);
+    spans.set(line, [...(spans.get(line) ?? []), [a, b, ph]]);
+  };
+  for (const p of parts) {
+    if (p.is) {
+      const line = shown.findIndex((l) => l.includes(p.is!));
+      if (line < 0) throw new ToolRefusal(`no line shows "${p.is}"`);
+      const a = shown[line]!.indexOf(p.is);
+      add(line, a, a + p.is.length, p.placeholder);
+    } else if (p.after) {
+      const label = p.after.trim();
+      const line = shown.findIndex((l) => l.includes(label));
+      if (line < 0) throw new ToolRefusal(`no line shows the label "${label}"`);
+      const l = shown[line]!;
+      const from = l.indexOf(label) + label.length;
+      if (!l.slice(from).trim()) {
+        // The label is a line of its own: its value is the next line, whole.
+        if (line + 1 >= shown.length) throw new ToolRefusal(`nothing follows "${label}"`);
+        labels.add(line);
+        add(line + 1, 0, shown[line + 1]!.length, p.placeholder);
+      } else {
+        // On the same line: the value runs to the next label pointed at, or to the end.
+        const start = from + (l.slice(from).length - l.slice(from).trimStart().length);
+        const next = parts
+          .filter((q) => q.after && q !== p)
+          .map((q) => l.indexOf(q.after!.trim(), start))
+          .filter((k) => k > start);
+        const stop = next.length ? Math.min(...next) : l.length;
+        add(line, start, start + l.slice(start, stop).trimEnd().length, p.placeholder);
+      }
+    } else
+      throw new ToolRefusal(`{${p.placeholder}}: give the label before it, or the words you see`);
+  }
+  if (!spans.size) throw new ToolRefusal('point at the values on this screen');
+  // A balance's account number, where the Scout did not point at it: the task's last four, on the
+  // line it pointed at.
+  if (what === 'balance' && !parts.some((p) => p.placeholder === 'last4') && task.from) {
+    const [line] = [...spans.keys()];
+    const at = real[line!]!.indexOf(task.from);
+    if (at >= 0) add(line!, at, at + task.from.length, 'last4');
+  }
+  const lines = [...spans.keys(), ...labels];
+  const lo = Math.min(...lines);
+  const hi = Math.max(...lines);
+  if (hi - lo > 12) throw new ToolRefusal('those values are too far apart to be one read');
+  const out: string[] = [];
+  for (let k = lo; k <= hi; k++) {
+    const ss = (spans.get(k) ?? []).sort((x, y) => x[0] - y[0]);
+    let line = '';
+    let at = 0;
+    for (const [a, b, ph] of ss) {
+      if (a < at) throw new ToolRefusal(`{${ph}} overlaps another value`);
+      line += real[k]!.slice(at, a) + `{${ph}}`;
+      at = b;
+    }
+    out.push(line + real[k]!.slice(at));
+  }
+  // The member's own number is the task's, never kept: any member's number fits there.
+  return out.join('\n').split(task.member).join('$member');
+}
 
 export function scout(deps: ScoutDeps, task: Task) {
   const { page, trail } = deps;
   const known = trail.known;
-  for (const v of [deps.credentials.operatorId, deps.credentials.password, task.member])
+  // The sign-in is hidden whole. The member's number is an identifier: the masking rule keeps its
+  // last four, the same for the gate and every run. The member's name joins once a read finds it.
+  for (const v of [deps.credentials.operatorId, deps.credentials.password])
     if (!known.includes(v)) known.push(v);
+  /** Learns the member's name where a noted name read finds it, as the crawler does. */
+  const learnName = async () => {
+    if (!t.reads.name?.length) return;
+    const words = (await leaves(page)).join('\n');
+    for (const part of namesIn(words, t.reads.name, task.member))
+      if (!known.includes(part)) known.push(part);
+  };
 
   // The table as the Scout writes it; a repair starts from the broken one.
   const t: Table = deps.table
@@ -173,6 +262,7 @@ export function scout(deps: ScoutDeps, task: Task) {
   async function look(action: string, why: string): Promise<ToolResult> {
     let f: Frame;
     try {
+      await learnName();
       // No long waits: a page that will not settle is given up on in seconds.
       f = await see(page, { known, limitMs: 15_000, everyMs: 150 });
     } catch (e) {
@@ -180,7 +270,9 @@ export function scout(deps: ScoutDeps, task: Task) {
       await trail.step({ name: 'not ready', action, outcome: e.message }, null);
       return { text: `${action}. The page never became ready: ${e.message}` };
     }
-    const seen = await trail.step({ name: task.goal, action: `${action} (${why})` }, f);
+    // The call's own input goes with its step, masked: the evidence shows what was asked for.
+    const asked = current ? ` · input ${maskText(JSON.stringify(current.input), known)}` : '';
+    const seen = await trail.step({ name: task.goal, action: `${action} (${why})${asked}` }, f);
     const ref = seen?.ref ?? null;
     const was = row;
     row = rowOf(f);
@@ -196,10 +288,13 @@ export function scout(deps: ScoutDeps, task: Task) {
     if (layout !== lastLayout) inventory = null;
     lastLayout = layout;
     latest = { frame: f, ref, controls };
+    // The close-up the Supervisor judges by is taken after the action, from the new picture.
+    if (current && closeUp) current.image = cropOf(f.picture, closeUp);
+    closeUp = null;
     const j =
       action === 'looked'
         ? null
-        : await deps.judge({ action, why, frame: f, ref, record: taken() });
+        : await deps.judge({ action, why, frame: f, ref, record: taken(), route: t });
     if (j?.verdict === 'stop') stopped = true;
     waiting = j?.verdict === 'wait';
     const view = {
@@ -249,6 +344,13 @@ export function scout(deps: ScoutDeps, task: Task) {
   let inventory: Item[] | null = null;
   /** Where the latest page's controls were: the list holds while they stay put. */
   let lastLayout = '';
+  /** The region an action works on, cut again from the picture after it, for the Supervisor. */
+  let closeUp: Box | null = null;
+  /** What a field holds after typing, by length only: the typing is confirmed, the value unseen. */
+  const holds = async (p: { x: number; y: number }) => {
+    const v = await valueAt(page, p).catch(() => '');
+    return v ? `; the field now holds ${v.length} characters` : '; the field reports no value';
+  };
   const taken = () => {
     const r = record;
     record = [];
@@ -288,7 +390,7 @@ export function scout(deps: ScoutDeps, task: Task) {
       w: Math.max(box.x + box.w, it.box.x + it.box.w) - Math.min(box.x, it.box.x) + 12,
       h: Math.max(box.y + box.h, it.box.y + it.box.h) - Math.min(box.y, it.box.y) + 12,
     };
-    if (current) current.image = cropOf(latest!.frame.picture, near);
+    closeUp = near;
     const a = centre(box);
     const c = centre(it.box);
     return {
@@ -360,13 +462,30 @@ export function scout(deps: ScoutDeps, task: Task) {
       async run(i: { id?: string; x?: number; y?: number; near?: string; why: string }) {
         mayAct();
         const c = chosen(i);
-        if (!c.name) throw new ToolRefusal('that control has no drawn name to press it by');
         if (MONEY.test(c.name))
           throw new ToolRefusal(`"${c.name}" could move money or change an account: never pressed`);
-        const found = await control(page, c.name, i.near).catch((e: Error) => {
-          throw new ToolRefusal(`the runtime cannot find "${c.name}": ${e.message}`);
-        });
-        same(found.box, c, `"${c.name}"`);
+        // By its name when the name finds it alone; otherwise (no name, or a name two controls share)
+        // by its position, with an anchor the crawler finds it by again.
+        const found = c.name ? await control(page, c.name, i.near).catch(() => null) : null;
+        if (!found || !(within(centre(found.box), c.box) || within(centre(c.box), found.box))) {
+          const it: Item = {
+            id: i.id ?? 'c',
+            kind: (await whatIsAt(page, centre(c.box))).kind,
+            label: c.name,
+            labelFrom: 'text',
+            box: c.box,
+          };
+          // Two controls can look alike (a menu's "Move Money" and the panel's): a wider crop holds
+          // what is around it too, and is found once.
+          const wide = { x: c.box.x - 40, y: c.box.y - 12, w: c.box.w + 80, h: c.box.h + 24 };
+          const at = await anchorOf(it, c.box).catch(() => anchorOf(it, wide));
+          await clickAt(page, centre(c.box));
+          visit.push({ press: c.name || 'Submit', at });
+          return look(
+            `pressed ${i.id ?? 'the control'} "${c.name}" by its position ${Math.round(centre(c.box).x)},${Math.round(centre(c.box).y)}`,
+            i.why,
+          );
+        }
         await press(page, c.name, i.near ? { near: i.near } : {});
         // Near the task's own account, the step says so, and fits any member's account.
         const near =
@@ -440,7 +559,8 @@ export function scout(deps: ScoutDeps, task: Task) {
           memo: '$memo',
         }[i.value];
         visit.push({ type: label, value: token });
-        return look(`typed the ${i.value.replace('_', ' ')} into "${label}"`, i.why);
+        const held = await holds(centre(f.box));
+        return look(`typed the ${i.value.replace('_', ' ')} into "${label}"${held}`, i.why);
       },
     },
     list_page: {
@@ -551,8 +671,9 @@ export function scout(deps: ScoutDeps, task: Task) {
           memo: '$memo',
         }[i.value];
         visit.push({ type: it.label, value: token, at });
+        const held = await holds(p);
         return look(
-          `typed the ${i.value.replace('_', ' ')} into ${it.id}, the ${it.kind} labeled "${it.label}" (${it.labelFrom}), by clicking ${Math.round(p.x)},${Math.round(p.y)}`,
+          `typed the ${i.value.replace('_', ' ')} into ${it.id}, the ${it.kind} labeled "${it.label}" (${it.labelFrom}), by clicking ${Math.round(p.x)},${Math.round(p.y)}${held}`,
           i.why,
         );
       },
@@ -647,7 +768,7 @@ export function scout(deps: ScoutDeps, task: Task) {
     },
     name_page: {
       description:
-        'Names the screen now, for your route, by words it shows as text that tell it apart from every other screen; `never` are words that would mean another screen. Name each screen before you leave it: the steps you take here are filed under it.',
+        'Names the screen now, for your route, by words it shows as text that tell it apart from every other screen. Name each screen before you leave it: the steps you take here are filed under it. Leave `never` out: the tool adds words of your other screens that this one does not show.',
       input: z.object({
         name: z.string().min(2).max(40),
         shows: z.array(z.string().min(2).max(80)).min(1).max(4),
@@ -670,12 +791,23 @@ export function scout(deps: ScoutDeps, task: Task) {
         }
         const wrong = (i.never ?? []).filter((w) => shows(f, w));
         if (wrong.length)
-          throw new ToolRefusal(`the page shows what you said it never does: ${wrong.join('; ')}`);
+          throw new ToolRefusal(
+            `the page shows what you said it never does: ${wrong.join('; ')}. Leave never out: the tool adds it`,
+          );
+        // Never-words: the other screens' own words that this screen does not show, so a menu that
+        // repeats on every screen is never one of them.
+        const never =
+          i.never ??
+          t.rows
+            .filter((r) => r.page !== i.name)
+            .flatMap((r) => r.shows)
+            .filter((w, k, all) => !shows(f, w) && all.indexOf(w) === k)
+            .slice(0, 3);
         const old = t.rows.find((r) => r.page === i.name);
         const next: Row = {
           page: i.name,
           shows: i.shows,
-          ...(i.never?.length ? { never: i.never } : {}),
+          ...(never.length ? { never } : {}),
           do: old?.do ?? {},
           frame: latest.ref,
         };
@@ -736,12 +868,27 @@ export function scout(deps: ScoutDeps, task: Task) {
     },
     note_read: {
       description:
-        "Notes how a value is read on this page: the visible text, one line per \\n, with {placeholders}. balance: one account's line, {name} {last4} {available} {current}. review: {from} {to} {amount} {memo}. confirmation: {confirmation}. name: where the member's name shows, {name}, with $member for their number. Masked values read as stars.",
+        "Notes how a value is read on this screen, for code to read it again. Point at each value: `parts` gives each placeholder with the label just before its value (`after`), or the words you see (`is`), and the tool writes the pattern from the page's own lines. Or write the pattern yourself in `text`: the visible lines, one per \\n, each value as a {placeholder}. balance: one account's line, {name} {last4} {available} {current}. review: {from} {to} {amount} {memo}. confirmation: {confirmation}. name: where the member's name shows, {name}. Characters shown as █ are hidden by us: a placeholder goes there, never the █. The tool reads the page with the crawler's own code, with the task's accounts, and keeps the read only if it works.",
       input: z.object({
         what: z.enum(['balance', 'review', 'confirmation', 'name']),
-        text: z.string().min(5).max(300),
+        text: z.string().min(5).max(400).optional(),
+        parts: z
+          .array(
+            z.object({
+              placeholder: z.string().min(2).max(20),
+              after: z.string().min(1).max(60).optional(),
+              is: z.string().min(1).max(80).optional(),
+            }),
+          )
+          .min(1)
+          .max(6)
+          .optional(),
       }),
-      async run(i: { what: 'balance' | 'review' | 'confirmation' | 'name'; text: string }) {
+      async run(i: {
+        what: 'balance' | 'review' | 'confirmation' | 'name';
+        text?: string;
+        parts?: { placeholder: string; after?: string; is?: string }[];
+      }) {
         if (!latest?.ref) throw new ToolRefusal('look at the page first');
         const need = {
           balance: ['name', 'last4', 'available', 'current'],
@@ -749,30 +896,128 @@ export function scout(deps: ScoutDeps, task: Task) {
           confirmation: ['confirmation'],
           name: ['name'],
         }[i.what];
-        const has = [...i.text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
+        // The page's lines, as the crawler reads them, and as the masking rule shows them: the same
+        // lines, character for character, so what the Scout sees points into what the crawler reads.
+        const real = await leaves(page);
+        const shown = real.map((l) => maskText(l, known));
+        const around = (hint: string) => {
+          const k = Math.max(
+            0,
+            shown.findIndex((l) => hint && l.includes(hint)),
+          );
+          return shown
+            .slice(Math.max(0, k - 3), k + 9)
+            .map((l, n) => `  ${Math.max(0, k - 3) + n + 1}: ${l}`)
+            .join('\n');
+        };
+        let text = i.text;
+        if (!text && i.parts) text = pointed(i.what, i.parts, real, shown, task);
+        if (!text) throw new ToolRefusal('give the read as parts, or as text');
+        if (text.includes('█'))
+          throw new ToolRefusal(
+            `█ is our masking, not the page's words: put a placeholder where a hidden value is. The page's lines:\n${around(text.split('█')[0]!.split('\n').at(-1)!.trim())}`,
+          );
+        const has = [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
         const lacking = need.filter((n) => !has.includes(n));
-        if (lacking.length) throw new ToolRefusal(`the text needs {${lacking.join('}, {')}}`);
-        // Frames are masked: the member's number shows as stars, like every value.
-        if (!readOf(i.text, '********').test(words(latest.frame).join('\n')))
-          throw new ToolRefusal('no visible text on this page fits that');
+        if (lacking.length)
+          throw new ToolRefusal(`the read needs {${lacking.join('}, {')}}: ${text}`);
+        const literal = text.replace(/\{\w+\}/g, '').replace(/\$member/g, '');
+        if (maskText(literal, known) !== literal)
+          throw new ToolRefusal(
+            `the pattern keeps a value the masking rule hides (${maskText(literal, known)}): put a placeholder there`,
+          );
+        const words = real.join('\n');
+        const first = text
+          .split('\n')[0]!
+          .split(/\{\w+\}|\$member/)[0]!
+          .trim();
+        const fail = (what: string): never => {
+          throw new ToolRefusal(
+            `the crawler, reading this page with your pattern, ${what}. Your pattern: ${JSON.stringify(text)}. The page's lines, as the crawler reads them, one pattern line each:\n${around(first)}`,
+          );
+        };
+        let found: string;
+        if (i.what === 'balance') {
+          const { all, matching } = accountsIn(words, text, task.member, task.from ?? '');
+          if (!all.length) fail('finds no account');
+          // With no account to check, it can only say the accounts are read.
+          if (!task.from) matching.splice(0, matching.length, all[0]!);
+          if (matching.length !== 1)
+            fail(
+              `finds ${all.length} accounts (${all.map((g) => maskText(`${g.name} / ${g.last4}`, known)).join('; ')}), and ${matching.length} of them hold the task's account ${task.from}`,
+            );
+          const g = matching[0]!;
+          if (Number.isNaN(cents(g.available ?? '')) || Number.isNaN(cents(g.current ?? '')))
+            fail('reads balances that are not amounts of money');
+          found = `${all.length} accounts; the task's account ${task.from} is "${g.name}" (${g.last4})`;
+        } else if (i.what === 'review') {
+          const g = readOf(text).exec(words)?.groups;
+          if (!g) fail('matches nothing');
+          const r = g!;
+          const holds = (v: string | undefined, a: string | undefined) =>
+            !!a && !!v && v.includes(a);
+          if (!holds(r.from, task.from) || !holds(r.to, task.to))
+            fail(
+              `reads From ${maskText(r.from ?? '', known)} and To ${maskText(r.to ?? '', known)}, which should hold ${task.from} and ${task.to}`,
+            );
+          if (cents(r.amount ?? '') !== task.amountCents)
+            fail("reads an amount that is not the task's");
+          if (task.memo && !(r.memo ?? '').includes(task.memo))
+            fail("reads a memo that is not the task's");
+          found = `From ${maskText(r.from!, known)}, To ${maskText(r.to!, known)}, the task's amount and memo`;
+        } else if (i.what === 'name') {
+          if (!readOf(text, task.member).exec(words)?.groups?.name) fail('finds no name');
+          found = "the member's name, which is hidden from now on";
+        } else {
+          if (!readOf(text).exec(words)?.groups?.confirmation) fail('finds no confirmation');
+          found = 'a confirmation';
+        }
         t.reads =
           i.what === 'name'
-            ? { ...t.reads, name: [...(t.reads.name ?? []).filter((n) => n !== i.text), i.text] }
-            : { ...t.reads, [i.what]: i.text };
-        await trail.step({ name: 'note read', action: `${i.what}: ${i.text}` }, null);
-        return { text: `Noted, citing ${latest.ref}.` };
+            ? { ...t.reads, name: [...(t.reads.name ?? []).filter((n) => n !== text), text] }
+            : { ...t.reads, [i.what]: text };
+        if (i.what === 'name') await learnName();
+        await trail.step(
+          { name: 'note read', action: `${i.what}: ${text}`, outcome: found! },
+          null,
+        );
+        return { text: `Noted, citing ${latest.ref}: ${text}\nThe crawler reads ${found!}.` };
       },
     },
     goal_reached: {
       description:
-        "Says the goal is reached on the screen now (the balance shows; the transfer's review; the account's activity). The Supervisor checks your route first: every screen from the start named, each with its own steps. For a transfer, `submit` is the control that would send it: named, never pressed.",
+        "Says the goal is reached on the screen now (the balance shows; the transfer's review; the account's activity). The Supervisor checks your route first: every screen from the start named, each with its own steps. For a transfer, `submit` is the control that would send it, by its id (c3, or i2 from your list_page) or its name: named, never pressed.",
       input: z.object({ submit: z.string().max(60).optional() }),
       async run(i: { submit?: string }) {
         if (!latest?.ref || !row) throw new ToolRefusal('name this page first');
         if (task.goal === 'transfer') {
-          if (!i.submit || !latest.controls.some((c) => c.name === i.submit))
-            throw new ToolRefusal('name the control on this page that would send the transfer');
-          t.submit = { press: i.submit, frame: latest.ref };
+          const s = i.submit?.trim() ?? '';
+          // By id or by name; a send button drawn as a picture has a place, and the crawler finds it
+          // there by sight.
+          const c = /^c\d{1,3}$/.test(s)
+            ? latest.controls[Number(s.slice(1)) - 1]
+            : latest.controls.find((x) => x.name === s);
+          const it = /^i\d{1,3}$/.test(s) ? inventory?.find((x) => x.id === s) : undefined;
+          const box = c?.box ?? it?.box;
+          if (!box)
+            throw new ToolRefusal(
+              `name the control on this page that would send the transfer, by its id or its name; the buttons here: ${
+                latest.controls
+                  .flatMap((x, k) => (x.role === 'button' ? [`c${k + 1} "${x.name}"`] : []))
+                  .join(', ') || 'none'
+              }`,
+            );
+          const kind = (await whatIsAt(page, centre(box))).kind;
+          const wide = { x: box.x - 40, y: box.y - 12, w: box.w + 80, h: box.h + 24 };
+          const item: Item = {
+            id: s,
+            kind,
+            label: c?.name ?? it?.label ?? '',
+            labelFrom: 'text',
+            box,
+          };
+          const at = await anchorOf(item, box).catch(() => anchorOf(item, wide));
+          t.submit = { press: c?.name || it?.label || 'Submit', frame: latest.ref, at };
         }
         fileVisit(row);
         // The Supervisor checks the route before the goal counts: every screen named, each with its
@@ -808,7 +1053,14 @@ export function scout(deps: ScoutDeps, task: Task) {
     current = entry;
     const refuse = async (why: string): Promise<never> => {
       entry.error = why;
-      await trail.step({ name: 'refused', action: name, outcome: why }, null);
+      await trail.step(
+        {
+          name: 'refused',
+          action: `${name} · input ${maskText(JSON.stringify(input), known).slice(0, 2000)}`,
+          outcome: why,
+        },
+        null,
+      );
       // A failure is judged at once, on the latest picture: the Scout never moves on unseen.
       if (latest && role === 'scout') {
         const j = await deps.judge({
@@ -817,6 +1069,7 @@ export function scout(deps: ScoutDeps, task: Task) {
           frame: latest.frame,
           ref: latest.ref,
           record: taken(),
+          route: t,
         });
         if (j.verdict === 'stop') stopped = true;
         waiting = j.verdict === 'wait';
@@ -832,7 +1085,11 @@ export function scout(deps: ScoutDeps, task: Task) {
       return refuse(`the input does not fit ${name}: ${z.prettifyError(parsed.error)}`);
     try {
       const r = await (tool.run as (i: unknown) => Promise<ToolResult>)(parsed.data);
-      entry.result = r.text.length > 600 ? `${r.text.slice(0, 599)}…` : r.text;
+      // What the Supervisor reads of a result: whole, or said to be cut, never cut unseen.
+      entry.result =
+        r.text.length > 4000
+          ? `${r.text.slice(0, 4000)} (cut by the factory: ${r.text.length - 4000} more characters)`
+          : r.text;
       return r;
     } catch (e) {
       if (e instanceof ToolRefusal) return refuse(e.message);
