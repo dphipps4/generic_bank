@@ -89,7 +89,7 @@ export async function whatIsAt(page: Page, p: Point): Promise<AtPoint> {
 
 /** Moves the mouse to a point and clicks there, as a person would. */
 export async function clickAt(page: Page, p: Point): Promise<void> {
-  await page.mouse.move(p.x, p.y, { steps: 8 });
+  await page.mouse.move(p.x, p.y, { steps: 1 });
   await page.mouse.click(p.x, p.y);
 }
 
@@ -98,7 +98,7 @@ export async function typeAt(page: Page, p: Point, text: string): Promise<void> 
   await clickAt(page, p);
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.press('Backspace');
-  await page.keyboard.type(text, { delay: 20 });
+  await page.keyboard.type(text, { delay: 2 });
 }
 
 /** The value a control at a point shows, as the browser's accessibility tree has it. */

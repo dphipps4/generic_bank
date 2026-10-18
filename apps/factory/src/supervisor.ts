@@ -168,7 +168,14 @@ export function supervisor(o: {
   const tools = toolsOf('supervisor', o.tools ?? []);
   let first = true;
 
+  let goal = o.goal;
+  let goalTold = false;
   return {
+    /** The goal now being worked toward, the one the clock times: told at the next judgment. */
+    goalNow(g: string) {
+      if (g !== goal) goalTold = false;
+      goal = g;
+    },
     /** The judgment of one action, before the next: what the Scout reads, and what code enforces. */
     async judge(j: Judging): Promise<Judgment> {
       const view = {
@@ -184,9 +191,9 @@ export function supervisor(o: {
         system: SYSTEM,
         conversation,
         say: [
+          ...(!goalTold ? [`The goal now, the one the clock times: ${goal}`] : []),
           ...(first
             ? [
-                `Goal: ${o.goal}`,
                 ...(o.scoutTools?.length
                   ? [
                       `The Scout's tools, as it is given them:\n${o.scoutTools.map((t) => `- ${t.name}: ${t.description}`).join('\n')}`,
@@ -213,6 +220,7 @@ export function supervisor(o: {
         maxTokens: 8000,
       });
       first = false;
+      goalTold = true;
       conversation = said.conversation;
       let text = said.text;
       // A judgment that spent its calls on tools (opening frames, asking memory) ends with no

@@ -465,7 +465,7 @@ const CHECK_BALANCE: Outcomes = {
     },
   ],
   hazards: [
-    { hazard: 'latency', does: 'Every response waits 1.8 seconds.', expected: ok },
+    { hazard: 'latency', does: 'Every response waits half a second.', expected: ok },
     {
       hazard: 'js-error-harmless',
       does: 'An uncaught script error; the page still works.',

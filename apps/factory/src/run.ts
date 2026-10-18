@@ -200,9 +200,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
       agent: agent('supervisor'),
       scoutTools,
       trail,
-      goal: Object.values(GOALS)
-        .map((g) => g(input))
-        .join(' Then: '),
+      goal: GOALS.balance(input),
       knowledge: [
         knowledge,
         ...(input.repair
@@ -261,6 +259,8 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
         task,
       );
       log(`${runId}: ${goal}`);
+      // The Supervisor times this goal, so it is told this goal.
+      sup.goalNow(GOALS[goal](input));
       const ask = (nudge?: string) =>
         turn(agent('scout'), {
           system: SCOUT,
