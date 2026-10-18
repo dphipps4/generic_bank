@@ -6,6 +6,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const [src = 'ACCESS.md', out = 'ACCESS.html'] = process.argv.slice(2);
 const md = readFileSync(src, 'utf8');
 
+/** One named tab per local app (by port): a second click goes to the tab already open. */
+const tab = (url) => `gb-${new URL(url).port || '80'}`;
+
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /** Bold, code and links, within one line; in a table, each code value gets a Copy button. */
@@ -21,7 +24,10 @@ function inline(text, copy = false) {
       return esc(p)
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
         .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-        .replace(/(^|[\s(])(https?:\/\/[^\s)<|]+)/g, '$1<a href="$2" target="_blank">$2</a>');
+        .replace(
+          /(^|[\s(])(https?:\/\/[^\s)<|]+)/g,
+          (_, pre, url) => `${pre}<a href="${url}" target="${tab(url)}">${url}</a>`,
+        );
     })
     .join('');
 }
