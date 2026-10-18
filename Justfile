@@ -38,7 +38,7 @@ factory := "factory"
 
 # A hash of everything that goes into the image. The image carries it as a label, so a stale
 # image is noticed and rebuilt instead of quietly running yesterday's code.
-source_stamp := `find apps packages infra/docker package.json package-lock.json tsconfig*.json -type f -not -path '*/node_modules/*' -not -path '*/dist/*' -not -name '*.tsbuildinfo' 2>/dev/null | LC_ALL=C sort | xargs shasum | shasum | cut -c1-16`
+source_stamp := `find apps packages infra/docker package.json package-lock.json tsconfig*.json -type f -not -path '*/node_modules/*' -not -path '*/dist/*' -not -name '*.tsbuildinfo' -print0 2>/dev/null | LC_ALL=C sort -z | xargs -0 shasum | shasum | cut -c1-16`
 
 # List every recipe
 [group('Start here')]
@@ -211,22 +211,6 @@ factory bank member from to: factory-up
     watchdog=$!
     disown "$watchdog"
     {{compose}} --profile factory-run run --rm --name "$name" factory-run {{bank}} {{member}} {{from}} {{to}}
-    status=$?
-    pkill -P "$watchdog" 2>/dev/null; kill "$watchdog" 2>/dev/null
-    exit "$status"
-
-# Measure the models' sight on bank 2's captured pages, before any live run (about $1), under a 5-minute hard limit
-[group('Factory')]
-measure: factory-up
-    #!/usr/bin/env bash
-    set -uo pipefail
-    limit=300
-    name="gb-measure-$$"
-    echo "  the measurement's hard limit: 5 minutes"
-    ( sleep "$limit"; docker stop -t 5 "$name" >/dev/null 2>&1 && echo "  ✗ stopped at the hard limit of 5 minutes" ) &
-    watchdog=$!
-    disown "$watchdog"
-    {{compose}} --profile factory-run run --rm --name "$name" --entrypoint node factory-run apps/factory/dist/measure-cli.js
     status=$?
     pkill -P "$watchdog" 2>/dev/null; kill "$watchdog" 2>/dev/null
     exit "$status"

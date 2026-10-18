@@ -156,14 +156,14 @@ async function step(s: Session, task: Task, screen: string, st: Step): Promise<s
     const secret = SECRETS.has(st.value);
     s.guard?.({ screen, verb: 'type', control: st.type, ...(secret ? { secret } : { typed: v }) });
     if (st.at) await typeAt(s.page, await pointOf(s.page, st.at), v);
-    else await type(s.page, st.type, v, s.table.pictures);
+    else await type(s.page, st.type, v);
     return `type ${st.value} into "${st.type}"`;
   }
   if ('choose' in st) {
     s.guard?.({ screen, verb: 'choose', control: st.choose });
     const v = await value(s, task, st.containing);
     if (st.at) await chooseAt(s.page, await pointOf(s.page, st.at), v);
-    else await choose(s.page, st.choose, v, s.table.pictures);
+    else await choose(s.page, st.choose, v);
     return `choose ${st.containing} in "${st.choose}"`;
   }
   const near = st.near && (await value(s, task, st.near));
