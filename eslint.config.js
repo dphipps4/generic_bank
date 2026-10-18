@@ -4,6 +4,8 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config(
   {
     ignores: [
+      // A crawler a factory run wrote, kept as evidence: not our code.
+      'packages/crawler/test/run19/**',
       '.dependency-cruiser.cjs',
       '**/dist/**',
       '**/node_modules/**',

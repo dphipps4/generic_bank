@@ -10,8 +10,12 @@ import {
   inHistory,
   isWritten,
   leaf,
+  leaves,
   lint,
   load,
+  nameBeside,
+  partsOf,
+  signInWritten,
   prepareTransfer,
   type Session,
   type Written,
@@ -46,6 +50,9 @@ import type { Trail } from './trail.js';
 /** The parts a crawler does, each tried on its own. */
 export const PARTS = ['balance', 'transfer', 'history'] as const;
 export type Part = (typeof PARTS)[number];
+/** What may be tried: each part, and sign-in on its own, as soon as it is written. */
+export const TRY_PARTS = ['signin', ...PARTS] as const;
+export type TryPart = (typeof TRY_PARTS)[number];
 
 /** What the crawler is for: the task's values, as a teller is given them. */
 export interface Task {
@@ -83,6 +90,8 @@ export interface Judging {
   crawler?: string;
   /** What each part's latest try of this version did. */
   tried?: string;
+  /** A try's last page, where it stopped: the Supervisor reads it before it diagnoses. */
+  tryFrame?: { ref: string | null; frame: Frame };
   /** At "crawler ready": the Supervisor checks the crawler against the evidence before it counts. */
   checking?: boolean;
 }
@@ -114,30 +123,33 @@ const wordsOf = (f: Frame) =>
 
 /** What the crawler must define, said once for the Scout and the Supervisor. */
 export const CONTRACT = `The crawler is plain JavaScript that defines:
+- async function signIn(site, task): from wherever the site starts, reach a signed-in page (optional; tried on its own as "signin");
 - async function balance(site, task): reach the member's balances and return { account, available, current }, as the page draws them, for the account task.from names;
 - async function transfer(site, task): fill in a transfer of task.amount from task.from to task.to with task.memo, and stop on its review page;
 - async function review(site, task): read the review page and return { from, to, amount, memo }, as drawn;
 - async function history(site, task): reach the activity of the account task.from names;
 - function name(lines, member): where the member's name shows, return it as drawn, or null; it is hidden from then on;
 - const send: the control on the review page that would send the transfer, by name or { x, y }. It is never pressed by the factory.
-Helper functions of your own are fine. task holds member, from, to, amount and memo; read values from it, never write them in.
-It acts only through site:
-- site.open(path?) opens the start page;
-- site.look() returns { lines, controls }: the page's text lines and its controls, each { role, name, box };
-- site.shows(words) is whether a line holds those words;
-- site.press(target), site.type(target, value), site.choose(target, 'from' | 'to');
-- site.wait(seconds);
+Write it in parts as you go: a crawler being written may lack parts; each try needs its own part, and the crawler is ready only with all of them. Helper functions of your own are fine. task holds member, from, to, amount and memo; read values from it, never write them in.
+It acts only through site, and every site call but stop returns a promise: always await it.
+- await site.open(path?) opens the start page;
+- const { lines, controls } = await site.look(): the page's text lines, every frame's, and its controls, each { role, name, box };
+- if (await site.shows('words')) …: whether a line holds those words;
+- await site.press(target), await site.type(target, value), await site.choose(target, 'from' | 'to');
+- await site.wait(seconds);
 - site.stop(code, why) ends with the site's own answer (no_such_member, insufficient_funds, ...).
 A target is a control's drawn name ("Find"), { name, near } when two share a name, { field: n } for the n-th visible field (from 0), or { x, y }.
 A value to type is named, never written: user_id, password, code, member, amount, memo.
-Start each part from site.open(): the page may be the sign-in, a page asking for a code, or one already signed in; read it and act on what it shows.`;
+Start each part from await site.open(): the page may be the sign-in, a page asking for a code, or one already signed in; read it and act on what it shows.`;
 
 export function scout(deps: ScoutDeps, task: Task) {
   const { page, trail } = deps;
   const known = trail.known;
   let source: string | null = deps.crawler?.source ?? null;
+  /** The member's name has been read beside their number, and is hidden from then on. */
+  let named = false;
   /** Each part's latest try of the crawler as written now. */
-  let tried: Partial<Record<Part, { ok: boolean; said: string }>> = {};
+  let tried: Partial<Record<TryPart, { ok: boolean; said: string }>> = {};
   let latest: { frame: Frame; ref: string | null; controls: Control[] } | null = null;
   let waiting = false;
   let stopped = false;
@@ -151,34 +163,56 @@ export function scout(deps: ScoutDeps, task: Task) {
     return r;
   };
   const triedText = () =>
-    PARTS.map(
+    TRY_PARTS.map(
       (p) =>
         `${p}: ${tried[p] ? `${tried[p]!.ok ? 'passed' : 'failed'}, ${tried[p]!.said}` : 'not tried'}`,
     ).join('\n');
 
   /** The crawler's own `name`, on a page's real lines: the member's name, hidden from then on. */
-  const learnName = async () => {
-    if (!source) return;
+  /** The member's name, read from the page now by the crawler's own name: true when it is new. */
+  const learnName = async (): Promise<boolean> => {
+    if (!source) return false;
     try {
-      const lines = (
-        await page
-          .locator('body')
-          .innerText()
-          .catch(() => '')
-      ).split('\n');
-      const n = load(source).name?.(lines, task.member);
-      if (typeof n === 'string' && n.trim().length >= 2 && !known.includes(n.trim())) {
-        known.push(n.trim());
+      // Every frame's lines, as the crawler reads them: a console in frames shows nothing at its top.
+      const lines = await leaves(page);
+      const n = nameBeside(
+        lines,
+        task.member,
+        load(source, { partial: true }).name?.(lines, task.member),
+      );
+      if (n && !known.includes(n)) {
+        named = true;
+        known.push(n);
         await trail.remask();
+        return true;
       }
     } catch {
       // A crawler whose name fails hides nothing new; its tries say why.
     }
+    return false;
   };
 
-  const mayAct = () => {
+  /**
+   * Before an action: stopped refuses it; after a "wait", the page is looked at first (kept, not
+   * judged again) and the action goes on, rather than being refused for want of a look.
+   */
+  const mayAct = async () => {
     if (stopped) throw new ToolRefusal('the Supervisor stopped this goal');
-    if (waiting) throw new ToolRefusal('the Supervisor said wait: look at the page first');
+    if (!waiting) return;
+    waiting = false;
+    const o = { known, limitMs: 15_000, everyMs: 150 };
+    let f = await see(page, o).catch(() => null);
+    if (!f) return;
+    if (await learnName()) f = await see(page, o);
+    const k = await trail.step(
+      { name: 'scout', action: 'looked first, as the Supervisor said wait' },
+      f,
+    );
+    latest = {
+      frame: f,
+      ref: k?.ref ?? null,
+      controls: f.controls.filter((c) => c.name || c.role !== 'link'),
+    };
   };
 
   /** After an action: the page once ready, a step in the trail, the Supervisor's judgment. */
@@ -189,8 +223,10 @@ export function scout(deps: ScoutDeps, task: Task) {
   ): Promise<ToolResult> {
     let f: Frame;
     try {
-      await learnName();
-      f = await see(page, { known, limitMs: 15_000, everyMs: 150 });
+      // The page once ready; then its member's name, and the page again if the name was new.
+      const o = { known, limitMs: 15_000, everyMs: 150 };
+      f = await see(page, o);
+      if (await learnName()) f = await see(page, o);
     } catch (e) {
       if (!(e instanceof NotReady)) throw e;
       await trail.step({ name: 'not ready', action, outcome: e.message }, null);
@@ -199,9 +235,7 @@ export function scout(deps: ScoutDeps, task: Task) {
     const asked = current ? ` · input ${maskText(JSON.stringify(current.input), known)}` : '';
     // A page showing the member's number before their name is hidden could show the name: its frame
     // is kept once the crawler's `name` has hidden it.
-    const unhidden =
-      !known.some((k) => k !== task.member && !/\d/.test(k)) &&
-      f.tree.includes(maskText(task.member, known));
+    const unhidden = !named && f.tree.includes(maskText(task.member, known));
     const seen = await trail.step(
       {
         name: 'scout',
@@ -279,17 +313,35 @@ export function scout(deps: ScoutDeps, task: Task) {
 
   /** One try of one part of the crawler, live, with no model, in a page of its own. */
   async function tryPart(
-    part: Part,
+    part: TryPart,
     cold: boolean,
-  ): Promise<{ ok: boolean; said: string; refs: string[] }> {
+  ): Promise<{
+    ok: boolean;
+    said: string;
+    refs: string[];
+    last: { ref: string | null; frame: Frame } | null;
+  }> {
     if (!source) throw new ToolRefusal('write the crawler first');
+    const has = partsOf(source);
+    const needs = {
+      signin: ['signIn'],
+      balance: ['balance'],
+      transfer: ['transfer', 'review'],
+      history: ['history'],
+    }[part];
+    const lacking = needs.filter((n) => !has.includes(n as never));
+    if (lacking.length)
+      throw new ToolRefusal(`the crawler has no ${lacking.join(' or ')} yet: write it first`);
     if (cold && !deps.browser) throw new ToolRefusal('a try from nothing is not available here');
     const tryPage = cold ? await newPage(deps.browser!) : await page.context().newPage();
     const refs: string[] = [];
+    let last: { ref: string | null; frame: Frame } | null = null;
+    let withheld = false;
     const s: Session = {
       page: tryPage,
       url: deps.start,
-      table: { kind: 'written', source },
+      table: { kind: 'written', source, partial: true },
+      named,
       known,
       limitMs: 20_000,
       guard: (a) => {
@@ -300,20 +352,44 @@ export function scout(deps: ScoutDeps, task: Task) {
         if (!v.allowed) throw new GuardError(v.layer, v.rule);
       },
       keep: async (seen, f) => {
-        const k = await trail.step({ name: `try ${part}`, action: seen.did }, f);
+        // As in the Scout's own view: a page showing the member's number is kept once their name is hidden.
+        const hold = !s.named && f.tree.includes(maskText(task.member, known));
+        withheld ||= hold;
+        const k = await trail.step(
+          {
+            name: `try ${part}`,
+            action: `${seen.did}${hold ? " · not kept until the crawler's name hides the member's name" : ''}`,
+          },
+          hold ? null : f,
+        );
         if (k?.ref) refs.push(k.ref);
+        last = { ref: k?.ref ?? null, frame: f };
       },
       credentials: async () => deps.credentials,
       code: deps.code,
     };
     const last4 = (a: string) => a.match(/\d{4}$/)?.[0] ?? a;
+    const unnamed = () =>
+      withheld && !s.named
+        ? " Its name found no name beside the member's number, so pages showing that number were not kept."
+        : '';
     try {
+      if (part === 'signin') {
+        const words = await signInWritten(s, { ...task });
+        return {
+          ok: true,
+          said: `it reached a page showing: ${words.slice(0, 16).join(' · ')}${unnamed()}`,
+          refs,
+          last,
+        };
+      }
       if (part === 'balance') {
         const b = await checkBalance(s, { member: task.member, account: task.from });
         return {
           ok: true,
-          said: `it read an amount of money for ${maskText(b.accountLabel, known)}`,
+          said: `it read an amount of money for ${maskText(b.accountLabel, known)}${unnamed()}`,
           refs,
+          last,
         };
       }
       if (part === 'transfer') {
@@ -333,25 +409,34 @@ export function scout(deps: ScoutDeps, task: Task) {
         return wrong.length
           ? {
               ok: false,
-              said: `the review it read doesn't match the task in ${wrong.join(', ')}: ${read}`,
+              said: `the review it read doesn't match the task in ${wrong.join(', ')}: ${read}${unnamed()}`,
               refs,
+              last,
             }
           : {
               ok: true,
-              said: `the review it read holds the task's accounts, amount and memo: ${read}`,
+              said: `the review it read holds the task's accounts, amount and memo: ${read}${unnamed()}`,
               refs,
+              last,
             };
       }
       const n = await inHistory(s, { ...task });
       return {
         ok: true,
-        said: `it reached the account's activity (${n} lines hold this run's memo)`,
+        said: `it reached the account's activity (${n} lines hold this run's memo)${unnamed()}`,
         refs,
+        last,
       };
     } catch (e) {
       // The try is over: what stopped it, a refusal of its own guard too, is what the Scout reads.
-      return { ok: false, said: maskText(e instanceof Error ? e.message : String(e), known), refs };
+      return {
+        ok: false,
+        said: `${maskText(e instanceof Error ? e.message : String(e), known)}${unnamed()}`,
+        refs,
+        last,
+      };
     } finally {
+      if (s.named) named = true;
       await tryPage.close().catch(() => undefined);
     }
   }
@@ -361,7 +446,7 @@ export function scout(deps: ScoutDeps, task: Task) {
       description: "Opens the site's start page, or a path on its own host. Nothing else opens.",
       input: z.object({ path: z.string().max(200).optional() }),
       async run(i: { path?: string }) {
-        mayAct();
+        await mayAct();
         const url = new URL(i.path ?? deps.start, deps.start);
         if (url.host !== new URL(deps.start).host)
           throw new ToolRefusal(`${url.host} is not the site being learned`);
@@ -391,7 +476,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         'Presses a button or a link, or text drawn like one, by its id or a position on the picture. `near` is words drawn close to it, when two share a name.',
       input: which.extend({ near: z.string().max(80).optional() }),
       async run(i: { id?: string; x?: number; y?: number; near?: string; why: string }) {
-        mayAct();
+        await mayAct();
         const c = chosen(i);
         const v = decideWritten('press', c.name);
         if (!v.allowed) throw new ToolRefusal(`"${c.name}": ${v.rule}`);
@@ -423,7 +508,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         value: string;
         why: string;
       }) {
-        mayAct();
+        await mayAct();
         const c = chosen(i);
         const text = await valueOf(i.value);
         if (i.value === 'code' && !known.includes(text)) known.push(text);
@@ -453,7 +538,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         account: 'from' | 'to';
         why: string;
       }) {
-        mayAct();
+        await mayAct();
         const c = chosen(i);
         const want = i.account === 'from' ? task.from : task.to;
         closeUp = c.box;
@@ -467,9 +552,10 @@ export function scout(deps: ScoutDeps, task: Task) {
       description: `Writes the crawler, the whole of it, replacing any earlier version. Code checks it can run safely; then the Supervisor reads it against the evidence. ${CONTRACT}`,
       input: z.object({ source: z.string().min(50).max(30_000), why: z.string().min(3).max(300) }),
       async run(i: { source: string; why: string }) {
-        const problems = lint(i.source, task);
+        const problems = lint(i.source, task, { partial: true });
         if (problems.length) throw new ToolRefusal(`the crawler can't run: ${problems.join('; ')}`);
         source = i.source;
+        const has = partsOf(source);
         tried = {};
         await trail.keep(
           `crawler-${String(++versions).padStart(2, '0')}.js`,
@@ -480,18 +566,22 @@ export function scout(deps: ScoutDeps, task: Task) {
           { name: 'crawler written', action: `version ${versions}: ${i.why}` },
           null,
         );
-        return look(`wrote version ${versions} of the crawler`, i.why, {
-          crawler: source,
-          tried: triedText(),
-        });
+        return look(
+          `wrote version ${versions} of the crawler, with ${has.join(', ') || 'no parts yet'}`,
+          i.why,
+          {
+            crawler: source,
+            tried: triedText(),
+          },
+        );
       },
     },
     try_crawler: {
       description:
-        'Runs one part of the crawler as written, live, with no model, in a page of its own, and says what it did: each step is kept as a frame. `cold` starts from a browser that has never signed in (a person may be asked for a code).',
-      input: z.object({ part: z.enum(PARTS), cold: z.boolean().optional() }),
-      async run(i: { part: Part; cold?: boolean }) {
-        mayAct();
+        'Runs one part of the crawler as written (signin, balance, transfer or history), live, with no model, in a page of its own, and says what it did: each step is kept as a frame. A failure says which line of the crawler threw and what the page showed. `cold` starts from a browser that has never signed in (a person may be asked for a code).',
+      input: z.object({ part: z.enum(TRY_PARTS), cold: z.boolean().optional() }),
+      async run(i: { part: TryPart; cold?: boolean }) {
+        await mayAct();
         const r = await tryPart(i.part, i.cold ?? false);
         tried[i.part] = { ok: r.ok, said: r.said };
         await trail.step(
@@ -509,6 +599,7 @@ export function scout(deps: ScoutDeps, task: Task) {
           {
             crawler: source!,
             tried: triedText(),
+            ...(r.last ? { tryFrame: r.last } : {}),
           },
         );
       },
@@ -519,6 +610,9 @@ export function scout(deps: ScoutDeps, task: Task) {
       input: z.object({ why: z.string().min(3).max(300) }),
       async run(i: { why: string }) {
         if (!source) throw new ToolRefusal('write the crawler first');
+        const problems = lint(source, task);
+        if (problems.length)
+          throw new ToolRefusal(`the crawler isn't whole yet: ${problems.join('; ')}`);
         const failing = PARTS.filter((p) => !tried[p]?.ok);
         if (failing.length)
           throw new ToolRefusal(
@@ -603,7 +697,9 @@ export function scout(deps: ScoutDeps, task: Task) {
         })),
     /** The crawler as written, once every part passed and the Supervisor agreed; else null. */
     crawler: (): Written | null =>
-      stopped && source && PARTS.every((p) => tried[p]?.ok) ? { kind: 'written', source } : null,
+      stopped && source && !lint(source, task).length && PARTS.every((p) => tried[p]?.ok)
+        ? { kind: 'written', source }
+        : null,
     /** The parts that passed their latest try. */
     passed: (): Part[] => PARTS.filter((p) => tried[p]?.ok),
     latest: () => latest,
