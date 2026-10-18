@@ -25,8 +25,7 @@ The Postgres login isn't in it; read that one with `just secrets-edit local`.
 | Bank 2, Example Credit Union | http://localhost:8082/ | the same |
 | Staff inbox (the bank staff's phone and email) | http://localhost:8089 | none |
 
-Bank 2 also serves pages from a second origin on 8092. You reach those through the bank's own
-pages, not directly. Supervisor `supervisor0901` signs in just like `teller0412`. A transfer over a
+Supervisor `supervisor0901` signs in just like `teller0412`. A transfer over a
 bank's manager threshold ($2,500 at bank 1) asks for a supervisor's code; the crawler doesn't
 handle that page, so the run stops and a person finishes it.
 

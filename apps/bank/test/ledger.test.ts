@@ -39,7 +39,7 @@ afterAll(() => db.close());
 
 describe('the ledger', () => {
   it('names a member only as an initial and a surname', async () => {
-    expect(maskedName((await findMember(db, MEMBERS.demo))!)).toBe('A. Sample');
+    expect(maskedName((await findMember(db, MEMBERS.demo))!)).toBe('J. Doe');
     expect(await findMember(db, MEMBERS.missing)).toBeNull();
   });
 

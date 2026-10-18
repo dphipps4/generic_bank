@@ -23,7 +23,7 @@ describe("the bank admin's code for an operator", () => {
     await b.db.query('INSERT INTO messages (mailbox, address, body, at) VALUES ($1, $2, $3, $4)', [
       'phone',
       phone,
-      'Generic Bank: your CoreLink sign-in code is 123456. It expires in 5 minutes.',
+      'Generic Bank: your CoreLink sign-in code is 123456. It expires in 7 minutes.',
       new Date(),
     ]);
     expect(await b.admin(path)).toEqual({ code: '123456' });

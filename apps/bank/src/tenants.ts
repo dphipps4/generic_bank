@@ -8,8 +8,6 @@ export type Theme = 'y2003' | 'teal';
 export type CodeChannel = 'text' | 'email';
 /** The console's shape: a nav frame on the left (bank 1), or a tab strip across the top (bank 2). */
 export type Layout = 'nav' | 'tabs';
-/** What a bank serves from its second origin (another port): bank 2's tab strip. */
-export type SecondOrigin = 'tabs';
 
 export interface Labels {
   operatorId: string;
@@ -42,7 +40,6 @@ export interface Tenant {
   branch: string;
   theme: Theme;
   layout: Layout;
-  secondOrigin?: SecondOrigin;
   labels: Labels;
   /** How an account is named on screen, from its full number. */
   accountWording: (number: string) => string;
@@ -109,7 +106,6 @@ export const TENANTS: Record<TenantId, Tenant> = {
     branch: 'Riverside Office',
     theme: 'teal',
     layout: 'tabs',
-    secondOrigin: 'tabs',
     labels: {
       operatorId: 'Username',
       password: 'Passcode',

@@ -25,7 +25,6 @@ export interface LiveBank {
   /** e.g. http://localhost:51234/corelink/ */
   url: string;
   origin: string;
-  secondOrigin?: string;
   forced(names: HazardName[]): Record<string, string>;
   /** The bank's admin API, its ground truth for tests: a GET, answered as JSON. */
   admin<T>(path: string): Promise<T>;
@@ -52,7 +51,7 @@ export async function liveBank(
     db,
     now,
     uiVersion: 1,
-    ports: { main: 0, second: undefined as number | undefined },
+    ports: { main: 0 },
     hazards: hazards({
       profile: o.profile ?? 'none',
       seed: 1,
@@ -64,12 +63,6 @@ export async function liveBank(
   const main = await buildServer(bank);
   await main.listen({ host: '127.0.0.1', port: 0 });
   bank.ports.main = (main.server.address() as AddressInfo).port;
-  let second: Awaited<ReturnType<typeof buildServer>> | undefined;
-  if (t.secondOrigin) {
-    second = await buildServer(bank);
-    await second.listen({ host: '127.0.0.1', port: 0 });
-    bank.ports.second = (second.server.address() as AddressInfo).port;
-  }
   const origin = `http://localhost:${bank.ports.main}`;
   const admin = await buildAdmin(bank, ADMIN_TOKEN);
   return {
@@ -77,7 +70,6 @@ export async function liveBank(
     db,
     url: `${origin}${t.basePath}`,
     origin,
-    secondOrigin: bank.ports.second ? `http://localhost:${bank.ports.second}` : undefined,
     forced: (names) => ({ 'x-hazards': signHazards(names, HMAC) }),
     admin: async <T>(path: string) => {
       const r = await admin.inject({
@@ -91,7 +83,6 @@ export async function liveBank(
     close: async () => {
       await admin.close();
       await main.close();
-      await second?.close();
       await db.close();
     },
   };

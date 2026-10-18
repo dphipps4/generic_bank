@@ -65,7 +65,7 @@ export function nest(c: Ctx, d: Dialect, inner: string): string {
     const outer = i === 1;
     const border =
       outer && c.t.theme === 'y2003' ? ' BORDER="2" STYLE="border-style:outset"' : ' BORDER="0"';
-    out = `<TABLE${border} CELLPADDING="${outer ? 6 : i % 2}" CELLSPACING="0" WIDTH="${outer ? 620 : '100%'}" BGCOLOR="${outer ? p.panel : ''}" CLASS="${d.cls(`n${i}`)}"><TR><TD VALIGN="top">${out}</TD></TR></TABLE>`;
+    out = `<TABLE${border} CELLPADDING="${outer ? 6 : i % 2}" CELLSPACING="0" WIDTH="${outer ? 760 : '100%'}" BGCOLOR="${outer ? p.panel : ''}" CLASS="${d.cls(`n${i}`)}"><TR><TD VALIGN="top">${out}</TD></TR></TABLE>`;
   }
   return out;
 }
@@ -200,6 +200,17 @@ function applyCase(html: string, upper: boolean): string {
     .join('');
 }
 
+/**
+ * Readable on a modern screen, still ugly: no type under 15 px, room around each row, and every
+ * box and list the same width. The legacy markup underneath stays as it is.
+ */
+const READABLE = `<STYLE>
+BODY, TD, TH, P, LI, A, FONT, B { font-size: 15px !important; line-height: 1.45; }
+INPUT, SELECT, BUTTON { font-size: 15px !important; padding: 4px 6px; }
+INPUT[type=text], INPUT[type=password], SELECT { width: 300px; box-sizing: border-box; }
+TD, TH { padding-top: 4px; padding-bottom: 4px; }
+</STYLE>`;
+
 export function doc(c: Ctx, d: Dialect, o: DocOptions): string {
   const p = palette(c.t);
   const scripts: string[] = [];
@@ -218,12 +229,20 @@ export function doc(c: Ctx, d: Dialect, o: DocOptions): string {
     o.footer === false
       ? ''
       : `<P>${font(c, `CoreLink Branch Console ${esc(c.t.version)} &copy; Acme Core Systems${c.t.theme === 'y2003' ? '<BR>Best viewed in Internet Explorer at 800x600.' : ''}`, ' SIZE="1" COLOR="#555555"')}</P>`;
+  // A page of its own (sign-in, the code, signed out) starts lower, with the bank's logo: room above
+  // it for a password manager's popup. Frames and the main frame keep their margins.
+  const standalone = !o.main && o.footer !== false;
+  const top = standalone ? `<P><IMG SRC="${c.base}img/logo.svg" ALT="${esc(c.t.brand)}"></P>` : '';
+  // Bank 1's main frame sits beside its nav: its pages start at the left, not centered.
+  const left = o.main && c.t.layout === 'nav';
+  const content = `${top}${instruction}${o.body}${footer}`;
   const html = `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <HTML><HEAD><TITLE>${esc(o.title)} - ${esc(c.t.brand)}</TITLE>
 <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=utf-8">
+${READABLE}
 <SCRIPT SRC="${c.base}js/corelink.js"></SCRIPT></HEAD>
-<BODY BGCOLOR="${p.body}" TEXT="#000000" LINK="#0000EE" VLINK="#551A8B" LEFTMARGIN="8" TOPMARGIN="8">
-<CENTER>${instruction}${o.body}${footer}</CENTER>
+<BODY BGCOLOR="${p.body}" TEXT="#000000" LINK="#0000EE" VLINK="#551A8B" LEFTMARGIN="8" TOPMARGIN="${standalone ? 56 : 8}">
+${left ? `<DIV STYLE="margin:8px 12px">${content}</DIV>` : `<CENTER>${content}</CENTER>`}
 ${scripts.length ? `<SCRIPT>${scripts.join('\n')}</SCRIPT>` : ''}
 </BODY></HTML>`;
   return applyCase(html, d.upper);
@@ -286,14 +305,14 @@ CL.money = function (c) {
 
 /** A bevelled grey button, drawn as an image, for pages whose dialect submits by image. */
 export function buttonSvg(label: string, theme: string): string {
-  const w = Math.max(64, label.length * 7 + 22);
+  const w = Math.max(88, label.length * 9 + 30);
   const fill = theme === 'teal' ? '#0F6E6E' : '#D4D0C8';
   const ink = theme === 'teal' ? '#FFFFFF' : '#000000';
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="22">
-<rect x="0" y="0" width="${w}" height="22" fill="${fill}"/>
-<path d="M0 22V0H${w}" stroke="#FFFFFF" fill="none" stroke-width="2"/>
-<path d="M${w} 0V22H0" stroke="#404040" fill="none" stroke-width="2"/>
-<text x="${w / 2}" y="15" text-anchor="middle" font-family="Verdana, Arial" font-size="11" fill="${ink}">${esc(label)}</text></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="32">
+<rect x="0" y="0" width="${w}" height="32" fill="${fill}"/>
+<path d="M0 32V0H${w}" stroke="#FFFFFF" fill="none" stroke-width="2"/>
+<path d="M${w} 0V32H0" stroke="#404040" fill="none" stroke-width="2"/>
+<text x="${w / 2}" y="21" text-anchor="middle" font-family="Verdana, Arial" font-size="15" fill="${ink}">${esc(label)}</text></svg>`;
 }
 
 /** "NEW!", blinking, the way it did in 2003. */
@@ -305,3 +324,20 @@ export const SPACER_GIF = Buffer.from(
   'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
   'base64',
 );
+
+/** Each bank's logo, as dated as the bank, and clearly no real bank's mark. */
+export function logoSvg(theme: string, brand: string): string {
+  if (theme === 'teal')
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="56">
+<circle cx="28" cy="28" r="24" fill="#0F6E6E"/><path d="M8 32 Q18 22 28 32 T48 32" stroke="#F3EEDF" stroke-width="4" fill="none"/>
+<path d="M8 40 Q18 30 28 40 T48 40" stroke="#9FD3C7" stroke-width="3" fill="none"/>
+<text x="62" y="26" font-family="Tahoma, sans-serif" font-size="20" font-weight="bold" fill="#0F6E6E">${esc(brand)}</text>
+<text x="62" y="46" font-family="Tahoma, sans-serif" font-size="12" fill="#5A7F7A">Members helping members since 1987</text></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="56">
+<defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#FFD700"/><stop offset="1" stop-color="#B8860B"/></linearGradient>
+<linearGradient id="w" x1="0" x2="1"><stop offset="0" stop-color="#000080"/><stop offset=".5" stop-color="#8000FF"/><stop offset="1" stop-color="#000080"/></linearGradient></defs>
+<path d="M28 4 L50 12 L50 30 Q50 46 28 54 Q6 46 6 30 L6 12 Z" fill="url(#g)" stroke="#000080" stroke-width="3"/>
+<text x="28" y="38" text-anchor="middle" font-family="Times New Roman, serif" font-size="22" font-weight="bold" fill="#000080">GB</text>
+<text x="64" y="34" font-family="Comic Sans MS, Verdana" font-size="24" font-weight="bold" fill="url(#w)" stroke="#FFFFFF" stroke-width=".6">${esc(brand)}</text>
+<text x="66" y="50" font-family="Verdana" font-size="11" font-style="italic" fill="#333">Your money. Our computers.</text></svg>`;
+}
