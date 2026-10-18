@@ -33,7 +33,7 @@ export async function transferHarness() {
   inboxPages(consoleApp, {
     sql: db,
     answerKey: ANSWER_KEY,
-    whoIs: () => ({ email: 'staff@test', role: 'approver' }),
+    whoIs: () => ({ email: 'staff@test', role: 'admin' }),
   });
   await consoleApp.ready();
 

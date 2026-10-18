@@ -12,6 +12,7 @@ datasource db {
 
 enum Role {
   viewer
+  /// No longer given: an admin approves (migration 0018).
   approver
   admin
 }

@@ -49,8 +49,8 @@ interface Row {
 
 const when = (d: Date) => new Date(d).toISOString().replace('T', ' ').slice(0, 19);
 
-/** Only approvers and admins decide; a viewer reads. */
-const mayAct = (v: Viewer) => v.role === 'approver' || v.role === 'admin';
+/** Only an admin decides; a viewer reads. */
+const mayAct = (v: Viewer) => v.role === 'admin';
 
 const ACTIONS = ['approve', 'reject'] as const;
 type Action = (typeof ACTIONS)[number];
@@ -116,7 +116,7 @@ async function card(sql: Sql, r: Row, who: Viewer): Promise<string> {
     r.status !== 'open'
       ? `<p><span class="pill ${r.status === 'approved' ? 'succeeded' : 'failed'}">${esc(r.status)}</span>${r.decidedBy ? ` by ${esc(r.decidedBy)} at ${when(r.decidedAt!)}: ${esc(r.reason)}` : ''}</p>`
       : !open
-        ? '<p class="soft">Approvers decide here.</p>'
+        ? '<p class="soft">An admin decides here.</p>'
         : `<form method="post" action="${at('approve')}" class="row">${reason}<button>Approve</button></form><details><summary>Reject the table</summary><form method="post" action="${at('reject')}" class="row">${reason}<button class="quiet">Reject</button></form></details>`;
   return `<section class="card"><h2>${esc(r.tenant)} · <a href="/runs/${esc(r.factoryRunId)}"><code>${esc(r.factoryRunId)}</code></a> · ${when(r.createdAt)}</h2>
 <p>The gate's runs:</p><ul>${check || '<li class="soft">none</li>'}</ul>
@@ -176,7 +176,7 @@ export function recommendationPages(app: FastifyInstance, deps: RecommendationDe
                 .send(problem(status, code, reason));
         const who = deps.whoIs(req);
         if (!who) return fail(401, 'not_signed_in', 'sign in first');
-        if (!mayAct(who)) return fail(403, 'insufficient_role', 'only approvers decide');
+        if (!mayAct(who)) return fail(403, 'insufficient_role', 'only an admin decides');
         const action = req.params.action as Action;
         if (!ACTIONS.includes(action)) return fail(404, 'not_found', 'there is no such action');
         const body = (req.body ?? {}) as { reason?: unknown };

@@ -33,13 +33,21 @@ const cfg = loadConfig(
     EVIDENCE_DIR: z.string().min(1).default('/data/evidence'),
     ANSWER_SEAL_KEY: secret(),
     HAZARDS_FORCEABLE: z.enum(['true', 'false']).default('false'),
+    // Signs a hazard for a bank's address in the lab; only on a stack whose banks obey them.
+    HAZARD_HMAC_KEY: secret().optional(),
     API_URL: z.url().default('http://api:8000'),
     // The host ports a browser reaches the Task API and the staff inbox on, for the Dashboard's links.
     API_PORT: port(8000),
     BANK_INBOX_PORT: port(8089),
   },
   process.env,
-  ['CONSOLE_SESSION_SECRET', 'CONSOLE_COOKIE_SECRET', 'API_TOKEN_HASH_KEY', 'ANSWER_SEAL_KEY'],
+  [
+    'CONSOLE_SESSION_SECRET',
+    'CONSOLE_COOKIE_SECRET',
+    'API_TOKEN_HASH_KEY',
+    'ANSWER_SEAL_KEY',
+    'HAZARD_HMAC_KEY',
+  ],
 );
 
 const client = db();
@@ -130,6 +138,7 @@ if (cfg.HAZARDS_FORCEABLE === 'true') {
     sql: control,
     whoIs,
     start: throughTheApi({ sql: control, tokens, apiUrl: cfg.API_URL }),
+    ...(cfg.HAZARD_HMAC_KEY ? { hazardKey: cfg.HAZARD_HMAC_KEY } : {}),
   });
 }
 freezePages(app, { sql: control, whoIs });

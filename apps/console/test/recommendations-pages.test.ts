@@ -10,12 +10,12 @@ import { runPages } from '../src/pages/runs.js';
 // The review card for a learned table: each page as a row with a Frames button for the frame it
 // cites, the reads, the bank's answers and the gate's runs; Approve and Reject, each with a written
 // reason that goes to the audit. Approving promotes the table for both tasks: the registry serves
-// it. Only approvers and admins decide.
+// it. Only an admin decides.
 
 const RUN = 'fr_card';
 let db: Awaited<ReturnType<typeof controlDb>>;
 let app: ReturnType<typeof Fastify>;
-let who: Viewer | null = { email: 'ada@generic-bank.local', role: 'approver' };
+let who: Viewer | null = { email: 'ada@generic-bank.local', role: 'admin' };
 const store = memoryStore();
 
 const TABLE = {
@@ -97,7 +97,7 @@ beforeEach(async () => {
     `INSERT INTO "Recommendation" (id, "factoryRunId", tenant, "table", "check") VALUES ($1, $2, 'bank2', $3, $4)`,
     [id, RUN, JSON.stringify(TABLE), JSON.stringify(CHECK)],
   );
-  who = { email: 'ada@generic-bank.local', role: 'approver' };
+  who = { email: 'ada@generic-bank.local', role: 'admin' };
 });
 
 const act = (action: string, body: unknown) =>
@@ -191,10 +191,10 @@ describe('the review card', () => {
     expect(await status()).toBe('rejected');
   });
 
-  it('lets no one but an approver or an admin decide', async () => {
+  it('lets no one but an admin decide', async () => {
     who = { email: 'vic@generic-bank.local', role: 'viewer' };
     const html = (await app.inject({ url: '/recommendations' })).body;
-    expect(html).toContain('Approvers decide here.');
+    expect(html).toContain('An admin decides here.');
     expect(html).not.toContain(`action="/recommendations/${id}/approve"`);
     expect((await act('approve', { reason: 'the frames show it all' })).statusCode).toBe(403);
     who = null;

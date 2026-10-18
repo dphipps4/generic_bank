@@ -18,6 +18,24 @@ export interface PagesDeps {
 
 const when = (d: Date | string | null) =>
   d ? new Date(d).toISOString().replace('T', ' ').slice(0, 19) : '';
+/** An object as a short list of its fields, one per line, escaped. */
+const list = (o: unknown) =>
+  o && typeof o === 'object'
+    ? `<dl class="kv">${Object.entries(o as Record<string, unknown>)
+        .map(
+          ([k, v]) =>
+            `<dt>${esc(k)}</dt><dd>${esc(typeof v === 'string' ? v : JSON.stringify(v))}</dd>`,
+        )
+        .join('')}</dl>`
+    : '—';
+
+/** What the API answered the caller: the result's data once it succeeded, else its message. */
+const told = (status: string, message: string, result: unknown) => {
+  const data = (result as { data?: unknown } | null)?.data;
+  if (status === 'succeeded' && data) return list(data);
+  return esc(message) || '—';
+};
+
 const pill = (s: string) => `<span class="pill ${esc(s)}">${esc(s.replace('_', ' '))}</span>`;
 
 export function runPages(app: FastifyInstance, deps: PagesDeps) {
@@ -76,11 +94,12 @@ export function runPages(app: FastifyInstance, deps: PagesDeps) {
         resultCode: string | null;
         retryable: boolean | null;
         inputsMasked: unknown;
+        result: unknown;
         startedAt: Date;
         settledAt: Date | null;
         clientId: string | null;
       }>(
-        'SELECT id, task, bank, status, "resultCode", retryable, "inputsMasked", "startedAt", "settledAt", "clientId" FROM "TaskRun" WHERE id = $1',
+        'SELECT id, task, bank, status, "resultCode", retryable, "inputsMasked", result, "startedAt", "settledAt", "clientId" FROM "TaskRun" WHERE id = $1',
         [req.params.id],
       )
     ).rows[0];
@@ -145,21 +164,21 @@ export function runPages(app: FastifyInstance, deps: PagesDeps) {
         'Result',
         `${pill(run.status)}${run.resultCode ? ` <code>${esc(run.resultCode)}</code>` : ''}`,
       ],
-      ['What the caller was told', esc(message) || '—'],
-      ['Inputs (masked)', `<code>${esc(JSON.stringify(run.inputsMasked))}</code>`],
+      ['What the caller was told', told(run.status, message, run.result)],
+      ['Inputs (masked)', list(run.inputsMasked)],
       ['Started (UTC)', when(run.startedAt)],
       ['Settled (UTC)', when(run.settledAt) || 'not yet'],
       ['API client', `<code>${esc(run.clientId ?? '')}</code>`],
     ]
       .map(
         ([k, v]) =>
-          `<div class="fact"><span>${k}</span>${k === 'Result' || k === 'Inputs (masked)' || k === 'API client' ? v : esc(v)}</div>`,
+          `<div class="fact${k === 'Inputs (masked)' || k === 'What the caller was told' ? ' wide' : ''}"><span>${k}</span>${k === 'Result' || k === 'Inputs (masked)' || k === 'API client' || k === 'What the caller was told' ? v : esc(v)}</div>`,
       )
       .join('');
     const stepRows = steps
       .map(
         (s) =>
-          `<tr><td>${s.seq}</td><td>${esc(s.name)}</td><td><code>${esc(s.screen ?? '')}</code></td><td>${esc(s.action ?? '')}</td><td>${esc(s.outcome ?? '')}</td><td>${s.ms ?? ''} ms</td></tr>`,
+          `<tr><td>${s.seq}</td><td>${esc(s.action ?? '')}</td><td>${esc(s.name)}</td><td><code>${esc(s.screen ?? '')}</code></td><td>${esc(s.outcome ?? '')}</td><td>${s.ms ?? ''} ms</td></tr>`,
       )
       .join('');
     const taskRows = tasks
@@ -181,7 +200,7 @@ export function runPages(app: FastifyInstance, deps: PagesDeps) {
       page(
         `Run ${run.id}`,
         `<h1>Run <code>${esc(run.id)}</code></h1><div class="facts">${facts}</div>
-<h2>Steps</h2>${stepRows ? `<table><tr><th>#</th><th>Step</th><th>Screen</th><th>Action</th><th>Outcome</th><th>Took</th></tr>${stepRows}</table>` : '<p class="empty">No steps yet.</p>'}
+<h2>Steps</h2>${stepRows ? `<table><tr><th>#</th><th>Did</th><th>Then the page</th><th>Screen</th><th>Outcome</th><th>Took</th></tr>${stepRows}</table>` : '<p class="empty">No steps yet.</p>'}
 <h2>People asked</h2>${taskRows ? `<table><tr><th>Task</th><th>Kind</th><th>Status</th><th>Opened</th><th>Answered</th></tr>${taskRows}</table>` : '<p class="empty">Nobody was asked anything.</p>'}
 <h2>Screens (masked)</h2>${frameList.length ? framesButton(run.id, frameList) + FRAMES_POPUP : '<p class="empty">No frames.</p>'}`,
         { active: '/runs', admin: who, waiting: await waitingTooLong(deps.sql) },

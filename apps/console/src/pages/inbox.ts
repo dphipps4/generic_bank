@@ -81,8 +81,14 @@ export function duration(ms: number): string {
   return `${Math.floor(min / 60)} h ${min % 60} min`;
 }
 
-/** Only approvers and admins change anything; a viewer reads. */
-const mayAct = (v: Viewer) => v.role === 'approver' || v.role === 'admin';
+/** Only an admin changes anything; a viewer reads. */
+const mayAct = (v: Viewer) => v.role === 'admin';
+
+/** The inbox looks again every five seconds, but never while someone is typing in it. */
+const REFRESH = `<script>setInterval(function () {
+  var busy = Array.prototype.some.call(document.querySelectorAll('input'), function (i) { return i.value || i === document.activeElement; });
+  if (!busy) location.reload();
+}, 5000);</script>`;
 
 export function inboxPages(app: FastifyInstance, deps: InboxDeps) {
   app.get<{ Querystring: { done?: string; error?: string } }>('/inbox', async (req, reply) => {
@@ -102,9 +108,12 @@ export function inboxPages(app: FastifyInstance, deps: InboxDeps) {
         deadline: Date;
         asks: number;
         lastAskedAt: Date | null;
+        codesBefore: number;
       }>(
         `SELECT h.id, h.kind, h."runId", r.task, r.bank, h."contextMasked", h.resolvable, h."openedAt",
-                h.deadline, h.asks, h."lastAskedAt"
+                h.deadline, h.asks, h."lastAskedAt",
+                (SELECT count(*)::int FROM "HumanTask" x WHERE x."runId" = h."runId" AND x.kind = h.kind
+                   AND x.kind IN ('staff_code', 'supervisor_code') AND x.status = 'answered') AS "codesBefore"
            FROM "HumanTask" h JOIN "TaskRun" r ON r.id = h."runId"
           WHERE h.status = 'open'
           ORDER BY h.deadline ASC, h."openedAt" ASC`,
@@ -112,7 +121,7 @@ export function inboxPages(app: FastifyInstance, deps: InboxDeps) {
     ).rows;
 
     const actions = (t: (typeof tasks)[number]) => {
-      if (!mayAct(who)) return '<span class="soft">Approvers answer here.</span>';
+      if (!mayAct(who)) return '<span class="soft">An admin answers here.</span>';
       const at = (a: HumanAction) => `/human-tasks/${encodeURIComponent(t.id)}/${a}`;
       const answer = ACTIONS[t.kind].includes('answer')
         ? `<form method="post" action="${at('answer')}" class="row"><input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4,8}" maxlength="8" required aria-label="Code" placeholder="Code"><button>Enter code</button></form>`
@@ -137,7 +146,7 @@ export function inboxPages(app: FastifyInstance, deps: InboxDeps) {
       .map((t) => {
         const left = new Date(t.deadline).getTime() - now;
         return `<tr><td><span class="pill ${t.kind === 'escalation' ? 'escalated' : 'needs_human'}">${KIND_LABEL[t.kind]}</span></td>
-<td>${esc(t.contextMasked?.prompt ?? '')}${review(t)}${t.resolvable ? '' : '<br><small>It cannot resume: the bank is frozen until it is cleared on <a href="/freezes">Freezes</a>.</small>'}<br><small><a href="/runs/${esc(t.runId)}">${esc(t.task)} on ${esc(t.bank)}</a></small></td>
+<td>${t.codesBefore ? '<p class="note bad">The bank turned down the last code: it was wrong, or had expired. Copy the newest one from the simulated inbox.</p>' : ''}${esc(t.contextMasked?.prompt ?? '')}${review(t)}${t.resolvable ? '' : '<br><small>It cannot resume: the bank is frozen until it is cleared on <a href="/freezes">Freezes</a>.</small>'}<br><small><a href="/runs/${esc(t.runId)}">${esc(t.task)} on ${esc(t.bank)}</a></small></td>
 <td>${duration(now - new Date(t.openedAt).getTime())}${t.asks ? `<br><small>asked ${t.asks} ${t.asks === 1 ? 'time' : 'times'}</small>` : ''}</td>
 <td>${left > 0 ? duration(left) : '<b>due now</b>'}</td>
 <td>${actions(t)}</td></tr>`;
@@ -161,7 +170,7 @@ export function inboxPages(app: FastifyInstance, deps: InboxDeps) {
             rows
               ? `<table><tr><th>Asked for</th><th>What</th><th>Agent waiting</th><th>Time left</th><th></th></tr>${rows}</table>`
               : '<p class="empty">Nothing is waiting for a person.</p>'
-          }`,
+          }${REFRESH}`,
           { active: '/inbox', admin: who.email, waiting: await waitingTooLong(deps.sql) },
         ),
       );
@@ -179,7 +188,7 @@ export function inboxPages(app: FastifyInstance, deps: InboxDeps) {
         );
         const who = deps.whoIs(req);
         if (!who) return fail(reply, fromForm, 401, 'sign in first');
-        if (!mayAct(who)) return fail(reply, fromForm, 403, 'only approvers can answer');
+        if (!mayAct(who)) return fail(reply, fromForm, 403, 'only an admin can answer');
         // The plan's paths spell it take-over; the contract, take_over.
         const action = HumanAction.safeParse(req.params.action.replace('-', '_'));
         if (!action.success) return fail(reply, fromForm, 404, 'there is no such action');
