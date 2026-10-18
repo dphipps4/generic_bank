@@ -26,9 +26,14 @@ export function findChrome(root = process.cwd()): string {
 /**
  * Chrome, headless, without the automation switches a bot screen looks for. `origins` are the
  * plain-HTTP addresses to treat as secure, so Chrome sends them the Sec-Fetch headers a real
- * browser sends over HTTPS (the local stack serves its banks over HTTP).
+ * browser sends over HTTPS (the local stack serves its banks over HTTP). Without them, the
+ * stack's own BANK_ORIGINS: every service that launches a browser gets them from config/app.env.
  */
-export function launch(o: { origins?: string[] } = {}): Promise<Browser> {
+export function launch(
+  o: { origins?: string[] } = {
+    origins: (process.env.BANK_ORIGINS ?? '').split(',').filter(Boolean),
+  },
+): Promise<Browser> {
   const args = [
     '--disable-blink-features=AutomationControlled',
     '--use-mock-keychain',
