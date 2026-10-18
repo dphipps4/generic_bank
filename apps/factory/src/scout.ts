@@ -500,13 +500,13 @@ export function scout(deps: ScoutDeps, task: Task) {
     },
     browser_type: {
       description:
-        "Types one of the task's values into the field you choose, by id or position, and the label beside it: its words, or, where the label is a picture of words, the words the picture shows. The sign-in and a person's code are typed by the server and never shown.",
+        "Types one of the task's values into the field you choose, by id or position, and the words of the label beside it, as text the page's words hold. A label drawn as a picture has no words to find: then list_page and type_item instead. The sign-in and a person's code are typed by the server and never shown.",
       input: which.extend({
         label: z
           .string()
           .min(1)
           .max(60)
-          .describe("The label's words, as drawn or as its picture shows them"),
+          .describe("The label's words, as text on the page; a pictured label has none"),
         value: z.enum(['user_id', 'password', 'code', 'member', 'amount', 'memo']),
       }),
       async run(i: {

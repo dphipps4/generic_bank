@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { compacted } from '../src/agent.js';
 import { aboutMasking } from '../src/memory.js';
 import { pointed } from '../src/scout.js';
+import { findJudgment } from '../src/supervisor.js';
 
 /** Bank 2's lines as the crawler reads them, unmasked (tenants.ts, console.ts, transfer.ts). */
 const SUMMARY = [
@@ -110,5 +111,22 @@ describe("a model's context", () => {
     expect(JSON.stringify(at40[0])).toContain('older result, shortened');
     // Thirty more results add only their first lines.
     expect(size(at40) - size(at10)).toBeLessThan(30 * 200);
+  });
+});
+
+describe("the Supervisor's verdict", () => {
+  it("is read from its thinking when its answer is prose, as run 14's was", () => {
+    const thinking =
+      '{ "verdict": "continue", "says": "f1 is the sign-in screen.", "extendSeconds": 0 } ``` Wait, but the Scout {was refused}.';
+    expect(findJudgment('Verdict: continue. f1 shows the sign-in', thinking)).toEqual({
+      verdict: 'continue',
+      says: 'f1 is the sign-in screen.',
+      extendSeconds: 0,
+    });
+  });
+  it('takes the last whole verdict, and still says why when there is none', () => {
+    const two = '{"verdict":"wait","says":"a"} then {"verdict":"continue","says":"b"}';
+    expect(findJudgment('prose', two)).toMatchObject({ verdict: 'continue', says: 'b' });
+    expect(findJudgment('prose', 'no verdict here')).toBe('the answer is not JSON');
   });
 });
