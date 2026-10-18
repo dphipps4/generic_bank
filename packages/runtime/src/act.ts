@@ -5,7 +5,7 @@
 // Playwright's, with the real mouse, and only once the target is visible, stable and on top.
 import type { Frame, Locator, Page } from 'playwright-core';
 import type { Box } from './mask.js';
-import { type KnownPicture, pictureNamed } from './picture.js';
+import { fingerprint, type KnownPicture, labels, matchPicture } from './picture.js';
 
 export class TargetError extends Error {}
 
@@ -42,8 +42,8 @@ async function beside(page: Page, lb: Box): Promise<{ target: Locator; box: Box;
 
 /**
  * The field a label names: the nearest box beside the label's words. Where the label is a picture
- * of words, with nothing a browser can read, it is found by sight: the one image whose fingerprint
- * is the known picture of that name, and the box beside it.
+ * of words, with nothing a browser can read, it is found by sight among the page's label pictures
+ * (images drawn beside a field), and the field is the one beside it.
  */
 export async function field(
   page: Page,
@@ -58,8 +58,7 @@ export async function field(
     }
   const known = pictures.find((p) => p.name === label);
   if (!found.length && known) {
-    const img = await pictureNamed(page, known);
-    const lb = img && (await boxOf(img));
+    const lb = await labelNamed(page, known);
     if (lb) found = await beside(page, lb);
   }
   found.sort((a, b) => a.d - b.d);
@@ -67,6 +66,35 @@ export async function field(
   if (found.length > 1 && found[1]!.d - found[0]!.d < 4)
     throw new TargetError(`two fields beside the label "${label}", about as near`);
   return { target: found[0]!.target, box: found[0]!.box };
+}
+
+/**
+ * Where the known label picture is drawn: only images beside a field are candidates (never a
+ * button, a logo or an icon), and the match must be clear among them (matchPicture).
+ */
+async function labelNamed(page: Page, known: KnownPicture): Promise<Box | null> {
+  const fieldBoxes: Box[] = [];
+  for (const f of page.frames())
+    for (const c of await visible(f.locator(FIELDS))) {
+      const b = await boxOf(c);
+      if (b) fieldBoxes.push(b);
+    }
+  const seen: { box: Box; print: string; ratio: number }[] = [];
+  for (const f of page.frames())
+    for (const img of await visible(f.locator('img'))) {
+      const b = await img.boundingBox().catch(() => null);
+      if (!b || b.width < 12 || b.height < 6) continue;
+      if (!fieldBoxes.some((fb) => labels(b, fb))) continue;
+      const shot = await img.screenshot().catch(() => null);
+      if (shot)
+        seen.push({
+          box: { x: b.x, y: b.y, w: b.width, h: b.height },
+          print: fingerprint(shot),
+          ratio: b.width / b.height,
+        });
+    }
+  const i = matchPicture(seen, known);
+  return i === null ? null : seen[i]!.box;
 }
 
 /** The one visible control with this drawn name, in any frame. */

@@ -8,6 +8,7 @@ import {
   field,
   fingerprint,
   knows,
+  labelPicture,
   launch,
   maskBoxes,
   NEAR,
@@ -102,12 +103,15 @@ describe('the runtime: see first, then click', () => {
     const uri = (b: Buffer) => `data:image/png;base64,${b.toString('base64')}`;
     const row = (b: Buffer, id: string, kind = 'text') =>
       `<tr><td><img alt="" src="${uri(b)}"></td><td><input id="${id}" type="${kind}"></td></tr>`;
-    const pictures = [
-      { name: 'USERNAME', print: fingerprint(user) },
-      { name: 'PASSCODE', print: fingerprint(pass) },
-    ];
     page = await newPage(browser);
     await page.setContent(`<table>${row(user, 'u')}${row(pass, 'p', 'password')}</table>`);
+    // As the Scout learns them: each label's picture as drawn, beside the field it chose.
+    const learn = async (name: string, id: string) => {
+      const b = (await page.locator(id).boundingBox())!;
+      const shot = await labelPicture(page, { x: b.x, y: b.y, w: b.width, h: b.height });
+      return { name, print: shot!.print, ratio: shot!.ratio };
+    };
+    const pictures = [await learn('USERNAME', '#u'), await learn('PASSCODE', '#p')];
     await type(page, 'PASSCODE', 'secret', pictures);
     await type(page, 'USERNAME', 'teller', pictures);
     expect([await page.locator('#u').inputValue(), await page.locator('#p').inputValue()]).toEqual([
@@ -123,6 +127,9 @@ describe('the runtime: see first, then click', () => {
     expect(await page.locator('#extra').inputValue()).toBe('');
     // Without its picture, a label drawn as an image finds nothing.
     await expect(field(page, 'USERNAME')).rejects.toBeInstanceOf(TargetError);
+    // Two labels alike: ambiguous, so no match, never a guess.
+    await page.setContent(`<table>${row(user, 'u')}${row(user, 'p', 'password')}</table>`);
+    await expect(field(page, 'USERNAME', pictures)).rejects.toBeInstanceOf(TargetError);
   });
 
   it('presses a "button" that is styled text, and a real submit, by their drawn names', async () => {
