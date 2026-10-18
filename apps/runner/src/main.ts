@@ -7,7 +7,6 @@ import { loadConfig, port, secret } from '@gb/config';
 import { sql } from '@gb/db';
 import { fileStore } from '@gb/evidence';
 import { WORKFLOW } from '@gb/runs';
-import { startRecorder } from './recorder.js';
 import { registerTaskWorkflow } from './workflow.js';
 
 const cfg = loadConfig(
@@ -24,12 +23,9 @@ const cfg = loadConfig(
     BANK_SUPERVISOR_ID: z.string().min(8),
     HAZARDS_FORCEABLE: z.enum(['true', 'false']).default('false'),
     HAZARD_HMAC_KEY: secret().optional(),
-    MEMORY_URL: z.url(),
-    MEMORY_TOKEN_RUNNER: secret(),
-    MEMORY_SIGNING_KEY: secret(),
   },
   process.env,
-  ['RUN_SEAL_KEY', 'ANSWER_SEAL_KEY', 'MEMORY_TOKEN_RUNNER', 'MEMORY_SIGNING_KEY'],
+  ['RUN_SEAL_KEY', 'ANSWER_SEAL_KEY'],
 );
 
 const store = fileStore(cfg.EVIDENCE_DIR);
@@ -64,12 +60,6 @@ await DBOS.launch();
 await DBOS.registerQueue(WORKFLOW.queue, { workerConcurrency: cfg.RUNNER_CONCURRENCY });
 
 const app = Fastify({ logger: true });
-// The recorder: settled runs' episodes, from the outbox to memory, whenever memory answers.
-startRecorder(
-  control,
-  { url: cfg.MEMORY_URL, token: cfg.MEMORY_TOKEN_RUNNER, signingKey: cfg.MEMORY_SIGNING_KEY },
-  { onError: (e) => app.log.warn(e, 'the recorder could not read the outbox') },
-);
 app.get('/healthz', async () => ({
   ok: true,
   service: 'runner',
