@@ -61,9 +61,9 @@ setup: requirements tools secrets-init build env
     @echo; echo "Ready. Next: just up, then open http://localhost:$CONSOLE_PORT"; echo "Console sign-in: $CONSOLE_ADMIN_EMAIL, password: just console-password"
     @{{scripts}}/model-mode.sh
 
-# To develop, in one go: Node 26, dependencies, Chromium, every CI check, then the API reference in Chrome
+# To develop, in one go: Node 26, dependencies, Chromium, every CI check
 [group('Start here')]
-dev: dev-setup ci api-docs
+dev: dev-setup ci
 
 # Once, to develop: Node dependencies, the Prisma client, Chromium for the tests
 [private]
@@ -233,11 +233,6 @@ try hazard task="" member="" account="" bank_id="":
 api-token:
     @{{compose}} exec -T api node -e "fetch('http://127.0.0.1:8000/oauth/token',{method:'POST',headers:{authorization:'Basic '+Buffer.from(process.env.API_LOCAL_CLIENT_ID+':'+process.env.API_LOCAL_CLIENT_SECRET).toString('base64')},body:new URLSearchParams({grant_type:'client_credentials'})}).then((r)=>r.json()).then((j)=>console.log(j.access_token))"
 
-# Write the API reference from the contracts, serve it and open it in Chrome
-[private]
-api-docs:
-    @npx tsc -b && node apps/api/dist/openapi-cli.js > docs/api/openapi.json && echo "  wrote docs/api/openapi.json"
-    @node infra/scripts/serve-docs.mjs docs/api $API_DOCS_PORT
 # The quick checks: typecheck, lint, tests, import boundaries, secrets
 [group('Quality')]
 check:

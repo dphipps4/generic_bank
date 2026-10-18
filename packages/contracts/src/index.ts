@@ -363,6 +363,11 @@ export const BankInfo = z.object({
   id: BankId,
   brand: z.string(),
   productVersion: z.string(),
+  stub: z
+    .boolean()
+    .describe(
+      'The institution exists, but no crawler has been built for it yet: it serves nothing.',
+    ),
   tasks: z.array(
     z.object({
       task: z.enum(['check-balance', 'transfer']),

@@ -338,11 +338,18 @@ export async function waitForResult(
   sql: Sql,
   runId: string,
   seconds: number,
+  /** Return as soon as a person is needed, rather than wait on them. */
+  o: { untilPerson?: boolean } = {},
 ): Promise<TaskResult | null> {
-  const until = Date.now() + Math.min(Math.max(seconds, 0), 30) * 1000;
+  const until = Date.now() + Math.min(Math.max(seconds, 0), 60) * 1000;
   for (;;) {
     const r = await resultOf(sql, runId);
-    if (!r || (r.status !== 'running' && r.status !== 'needs_human') || Date.now() >= until)
+    if (
+      !r ||
+      (r.status !== 'running' && r.status !== 'needs_human') ||
+      (o.untilPerson && r.status === 'needs_human') ||
+      Date.now() >= until
+    )
       return r;
     await new Promise((res) => setTimeout(res, 100));
   }

@@ -13,9 +13,10 @@ import {
   type TaskResult,
   type TransferInput,
 } from '@gb/contracts';
-import { createRun, DuplicateRun, newMemoToken, noteAsk, resultOf, waitForResult } from '@gb/runs';
+import { createRun, DuplicateRun, newMemoToken, noteAsk, waitForResult } from '@gb/runs';
 import { allows, type Caller, type OAuth, OAuthError, type Sql, type TaskScope } from '@gb/oauth';
 import { banks, openapi, TASK_SCOPE, tools } from './catalog.js';
+import { RESPONSES_HTML, SWAGGER_CSS } from './responses.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -74,6 +75,8 @@ export async function buildServer(opts: {
   enqueue: (runId: string) => Promise<void>;
   logger?: boolean;
   now?: () => number;
+  /** How long a task's POST waits for its result before answering 202; the API's main sets 60. */
+  answerWithin?: number;
 }): Promise<FastifyInstance> {
   const app = Fastify({ logger: opts.logger ?? false });
   await app.register(formbody);
@@ -83,8 +86,20 @@ export async function buildServer(opts: {
     routePrefix: '/docs',
     // A link to /docs#/tasks/check_balance opens that call; Authorize lasts across page loads,
     // so each link in the docs lands signed in (its token lasts 8 hours).
-    uiConfig: { deepLinking: true, persistAuthorization: true, tryItOutEnabled: true },
+    // Each section a one-line list of its calls, each call opening on a click; schemas collapsed.
+    uiConfig: {
+      deepLinking: true,
+      persistAuthorization: true,
+      tryItOutEnabled: true,
+      docExpansion: 'list',
+      defaultModelsExpandDepth: 0,
+    },
+    theme: { css: [{ filename: 'shorter.css', content: SWAGGER_CSS }] },
   });
+  // Every response a task call can give, linked from each call in Swagger UI.
+  app.get('/docs/responses', async (_req, reply) =>
+    reply.type('text/html; charset=utf-8').send(RESPONSES_HTML),
+  );
   const now = opts.now ?? Date.now;
   app.decorateRequest('caller', null);
 
@@ -290,7 +305,11 @@ export async function buildServer(opts: {
           ),
         );
     }
-    const result = await resultOf(opts.sql, runId);
+    // One call: the answer, once the run has it, within the wait. A run that needs a person (a
+    // transfer's approval, a code) answers 202 at once; GET /tasks/{runId} reads it later.
+    const result = await waitForResult(opts.sql, runId, opts.answerWithin ?? 0, {
+      untilPerson: true,
+    });
     return answer(reply, result!);
   });
 
