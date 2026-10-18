@@ -22,6 +22,19 @@ import {
   whatIsAt,
 } from '@gb/runtime';
 import { type At, type Goal, readOf, type Step, type Table } from './table.js';
+import {
+  Answered,
+  type Facts,
+  type Hands,
+  isWritten,
+  load,
+  type Module,
+  pressSend,
+  type Site,
+  siteFor,
+  type Supply,
+  type Written,
+} from './written.js';
 
 /**
  * Where a step learned by sight acts now: its anchor found in a fresh screenshot, plus its offset,
@@ -42,7 +55,8 @@ export interface Session {
   page: Page;
   /** Where the bank's console is. */
   url: string;
-  table: Table;
+  /** The bank's table, or a crawler the factory wrote. */
+  table: Table | Written;
   /**
    * Values never kept in evidence. The crawler adds the sign-in, the member's number, and the
    * member's name once the bank shows it, here, so whoever holds this list masks them too.
@@ -209,7 +223,7 @@ async function step(s: Session, task: Task, screen: string, st: Step): Promise<s
 async function learn(s: Session, task: Task): Promise<boolean> {
   const text = (await leaves(s.page)).join('\n');
   let learned = false;
-  for (const part of namesIn(text, s.table.reads.name, task.member))
+  for (const part of namesIn(text, tableOf(s).reads.name, task.member))
     if (!s.known.includes(part)) {
       s.known.push(part);
       learned = true;
@@ -253,7 +267,7 @@ export async function crawl(
   goal: Goal,
   o: { submitted?: boolean } = {},
 ): Promise<Frame> {
-  const t = s.table;
+  const t = tableOf(s);
   await knowTask(s, task);
   const pages = t.rows.map((r) => ({ name: r.page, shows: r.shows, never: r.never ?? [] }));
   const again = new Map<string, number>();
@@ -365,10 +379,15 @@ export const leaves = async (page: Page) =>
 const lastFour = (drawn: string) => drawn.match(/\d{4}(?!.*\d{4})/)?.[0] ?? '****';
 
 export async function checkBalance(s: Session, task: Task & { account: string }) {
+  if (isWritten(s.table)) return writtenBalance(s, task);
   await crawl(s, task, 'balance');
-  s.guard?.({ screen: screenOf(s.table, s.table.ends.balance), verb: 'read', control: 'Page' });
+  s.guard?.({
+    screen: screenOf(tableOf(s), tableOf(s).ends.balance),
+    verb: 'read',
+    control: 'Page',
+  });
   const text = (await leaves(s.page)).join('\n');
-  const tiles = accountsIn(text, s.table.reads.balance, task.member, task.account).matching;
+  const tiles = accountsIn(text, tableOf(s).reads.balance, task.member, task.account).matching;
   const names = new Set(tiles.map((g) => `${g.name}/${g.last4}`));
   if (names.size !== 1) return stop('no_such_account', `${names.size} accounts match`);
   const g = tiles[0]!;
@@ -389,14 +408,20 @@ export interface Review {
 
 /** Fills in the transfer and stops at the bank's review: what a person approves. */
 export async function prepareTransfer(s: Session, task: Task): Promise<Review> {
+  if (isWritten(s.table)) return writtenTransfer(s, task);
   await crawl(s, task, 'transfer');
   return readReview(s);
 }
 
 /** The review page's From, To, Amount and Memo, as the bank shows them. */
 export async function readReview(s: Session): Promise<Review> {
-  s.guard?.({ screen: screenOf(s.table, s.table.ends.transfer), verb: 'read', control: 'Page' });
-  const m = readOf(s.table.reads.review).exec((await leaves(s.page)).join('\n'));
+  if (isWritten(s.table)) return writtenReview(s, { member: '' });
+  s.guard?.({
+    screen: screenOf(tableOf(s), tableOf(s).ends.transfer),
+    verb: 'read',
+    control: 'Page',
+  });
+  const m = readOf(tableOf(s).reads.review).exec((await leaves(s.page)).join('\n'));
   if (!m?.groups) return stop('ambiguous_outcome', 'the review page could not be read');
   return {
     from: m.groups.from!,
@@ -419,7 +444,8 @@ export async function submitTransfer(
 ) {
   await knowTask(s, task);
   await approve(await readReview(s));
-  const t = s.table;
+  if (isWritten(s.table)) return writtenSubmit(s, task);
+  const t = tableOf(s);
   s.guard?.({ screen: screenOf(t, t.ends.transfer), verb: 'press', control: t.submit.press });
   // A send button with no words of its own (a picture) is found by sight, like any learned step.
   if (t.submit.at) await clickAt(s.page, await pointOf(s.page, t.submit.at));
@@ -461,9 +487,129 @@ export async function submitTransfer(
 
 /** How many rows of the from-account's activity hold the transfer's memo. Never presses Submit. */
 export async function inHistory(s: Session, task: Task & { memo: string }): Promise<number> {
+  if (isWritten(s.table)) {
+    await writtenRun(s, task, (m, site, f) => m.history(site, f));
+    return (await leaves(s.page)).filter((l) => l.includes(task.memo)).length;
+  }
   await crawl(s, task, 'history', { submitted: true });
-  s.guard?.({ screen: screenOf(s.table, s.table.ends.history), verb: 'read', control: 'Page' });
+  s.guard?.({
+    screen: screenOf(tableOf(s), tableOf(s).ends.history),
+    verb: 'read',
+    control: 'Page',
+  });
   // The memo begins with the run's token, which no other transfer carries: any bank's activity
   // shows it in one visible line per transfer.
   return (await leaves(s.page)).filter((l) => l.includes(task.memo)).length;
+}
+
+/** The table a session holds, when it is one: a written crawler has none. */
+function tableOf(s: Session): Table {
+  if (isWritten(s.table)) throw new Error('a written crawler has no table');
+  return s.table;
+}
+
+/** Runs one part of a written crawler; its errors become the crawler's own words for a person. */
+async function writtenRun<T>(
+  s: Session,
+  task: Task,
+  part: (m: Module, site: Site, facts: Facts) => Promise<T>,
+): Promise<T> {
+  await knowTask(s, task);
+  if (task.member && !s.known.includes(task.member)) s.known.push(task.member);
+  const m = load((s.table as Written).source);
+  const facts: Facts = {
+    member: task.member,
+    ...(task.from !== undefined && { from: task.from }),
+    ...(task.to !== undefined && { to: task.to }),
+    ...(task.amountCents !== undefined && { amount: (task.amountCents / 100).toFixed(2) }),
+    ...(task.memo !== undefined && { memo: task.memo }),
+  };
+  const site = siteFor(handsOf(s, task, m), supplyOf(s, task), () => leaves(s.page));
+  try {
+    return await part(m, site, facts);
+  } catch (e) {
+    if (e instanceof Answered) return stop(e.code, e.message);
+    if (e instanceof Stop || (e instanceof Error && e.name === 'GuardError')) throw e;
+    return stop('unknown_screen', `the crawler: ${(e as Error).message}`);
+  }
+}
+
+/** The hands a written crawler acts with: the session's page, guard, evidence and hidden values. */
+function handsOf(s: Session, task: Task, m: Module): Hands {
+  return {
+    page: s.page,
+    url: s.url,
+    known: s.known,
+    ...(s.limitMs !== undefined && { limitMs: s.limitMs }),
+    ...(s.guard && { guard: (a: Action) => s.guard!(a) }),
+    keep: async (did, f) => s.keep?.({ did, page: null, screen: 'written' }, f),
+    send: m.send,
+    // The crawler's own `name` says where the member's name shows; it is hidden from then on.
+    learn: (lines) => {
+      const n = m.name?.(lines, task.member);
+      if (typeof n === 'string' && n.trim().length >= 2 && !s.known.includes(n.trim()))
+        s.known.push(n.trim());
+    },
+  };
+}
+
+/** The task's values by name: a secret from the credentials or a person, never from the crawler. */
+function supplyOf(s: Session, task: Task): Supply {
+  return {
+    async value(v) {
+      if (v === 'user_id') return (await s.credentials()).operatorId;
+      if (v === 'password') return (await s.credentials()).password;
+      if (v === 'code') return (await s.code()).trim();
+      if (v === 'member') return task.member;
+      if (v === 'amount') return ((task.amountCents ?? 0) / 100).toFixed(2);
+      return task.memo ?? '';
+    },
+    account: (which) => (which === 'from' ? task.from : task.to) ?? '',
+  };
+}
+
+/** The balance a written crawler read, believed only when it is the task's account, in money. */
+async function writtenBalance(s: Session, task: Task & { account: string }) {
+  // The crawler is told the account as `from`, as every task names the account it starts from.
+  const r = await writtenRun(s, { ...task, from: task.account }, (m, site, f) =>
+    m.balance(site, f),
+  );
+  if (!r || !isAccount({ name: r.account, last4: r.account }, task.account))
+    return stop(
+      'no_such_account',
+      `the crawler read "${r?.account ?? ''}", not the task's account`,
+    );
+  const available = cents(r.available ?? '');
+  const current = cents(r.current ?? '');
+  if (Number.isNaN(available) || Number.isNaN(current))
+    return stop('ambiguous_outcome', 'the crawler read balances that are not amounts of money');
+  return {
+    accountLabel: `${r.account.replace(/\d(?=\d{4})/g, '*')}`,
+    availableCents: available,
+    currentCents: current,
+    asOf: new Date().toISOString(),
+  };
+}
+
+/** A transfer filled in to its review, then the review read back. */
+async function writtenTransfer(s: Session, task: Task): Promise<Review> {
+  await writtenRun(s, task, (m, site, f) => m.transfer(site, f));
+  return writtenReview(s, task);
+}
+
+async function writtenReview(s: Session, task: Task): Promise<Review> {
+  const r = await writtenRun(s, task, (m, site, f) => m.review(site, f));
+  if (!r?.from || !r.to) return stop('ambiguous_outcome', 'the crawler could not read the review');
+  return { from: r.from, to: r.to, amountCents: cents(r.amount ?? ''), memo: r.memo ?? '' };
+}
+
+/** The one press of the send control, under the grant, then the history, as a table's Submit. */
+async function writtenSubmit(s: Session, task: Task & { memo: string }) {
+  const m = load((s.table as Written).source);
+  await pressSend(handsOf(s, task, m), m.send);
+  await s.note?.('submit', 'pressed send, under the grant');
+  const rows = await inHistory(s, task);
+  if (rows !== 1)
+    return stop('ambiguous_outcome', `${rows} rows in the activity hold the transfer's memo`);
+  return { confirmation: undefined as string | undefined, seenInHistory: true as const };
 }
