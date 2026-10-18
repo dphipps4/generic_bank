@@ -10,4 +10,3 @@ package-lock.json
 packages/db/prisma/migrations
 apps/memory/prisma/migrations
 .run/
-packages/crawler/test/run19/

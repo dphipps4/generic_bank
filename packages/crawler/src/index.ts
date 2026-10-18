@@ -22,7 +22,6 @@ export {
   type Seen,
   type Session,
   Stop,
-  signInWritten,
   submitTransfer,
   type Task,
 } from './crawl.js';
@@ -36,15 +35,3 @@ export {
   type Table,
   type Trouble,
 } from './table.js';
-export {
-  isWritten,
-  lint,
-  load,
-  nameBeside,
-  partsOf,
-  type Site,
-  type Target,
-  VALUES,
-  whereIn,
-  type Written,
-} from './written.js';

@@ -75,14 +75,7 @@ export async function openTrail(o: {
     known: o.known,
     async step(s, frame) {
       stepSeq++;
-      // Every step's text is masked as it is kept, with every value known by then.
-      await addStep(sql, runId, stepSeq, {
-        ...s,
-        ...(s.action != null ? { action: maskText(s.action, o.known) } : {}),
-        ...(s.outcome != null ? { outcome: maskText(s.outcome, o.known) } : {}),
-        screen: null,
-        ms: Date.now() - since,
-      });
+      await addStep(sql, runId, stepSeq, { ...s, screen: null, ms: Date.now() - since });
       since = Date.now();
       if (!frame) return null;
       if (frameSeq >= MAX_FRAMES) return { ref: null };

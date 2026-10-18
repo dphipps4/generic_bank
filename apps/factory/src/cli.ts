@@ -5,7 +5,7 @@
 // the API would, and the codes the bank sends, through the Console's inbox. Banks with a table
 // written by hand are not the factory's: their author fixes them. The models are reached only
 // through the factory's gateway, which meters them and holds them to the caps.
-import { isWritten, TABLES, type Table, type Written } from '@gb/crawler';
+import { TABLES, type Table } from '@gb/crawler';
 import { loadConfig, secret } from '@gb/config';
 import { sql as connect } from '@gb/db';
 import { fileStore } from '@gb/evidence';
@@ -50,18 +50,13 @@ const cfg = loadConfig(
 // The gateway answers a turn once the model has finished; a turn may take as long as TURN_MS.
 setGlobalDispatcher(new Dispatcher({ headersTimeout: TURN_MS, bodyTimeout: TURN_MS }));
 
-const [bank, member, from, to, mode] = process.argv.slice(2);
-if (!bank || !member || !from || !to || (mode !== undefined && mode !== 'practice')) {
-  console.error('usage: cli.js <bank> <member> <from> <to> [practice]');
+const [bank, member, from, to] = process.argv.slice(2);
+if (!bank || !member || !from || !to) {
+  console.error('usage: cli.js <bank> <member> <from> <to>');
   process.exit(2);
 }
-// Practice: the factory learns a bank whose table is written by hand, from scratch, never shown that
-// table, and its crawler is checked but never recommended: the bank keeps its own.
-const practice = mode === 'practice';
-if (TABLES[bank] && !practice) {
-  console.error(
-    `${bank}'s table is written by hand: its author fixes it. Add "practice" to have the factory learn it from scratch, checked but never recommended.`,
-  );
+if (TABLES[bank]) {
+  console.error(`${bank}'s table is written by hand: its author fixes it, not the factory`);
   process.exit(2);
 }
 
@@ -74,9 +69,8 @@ const code = (runId: string) =>
 const log = (line: string) => console.log(line);
 const browser = await launch();
 
-/** What a repair starts from: the crawler that broke, and where its run stopped. */
-async function repairOf(): Promise<{ crawler: Written; diagnosis: string } | undefined> {
-  if (practice) return undefined;
+/** What a repair starts from: the table that broke, and where its run stopped. */
+async function repairOf(): Promise<{ table: Table; diagnosis: string } | undefined> {
   const c = await openRepairCase(sql, bank!, 'check-balance');
   if (!c?.runId) return undefined;
   const table =
@@ -87,11 +81,11 @@ async function repairOf(): Promise<{ crawler: Written; diagnosis: string } | und
         [bank],
       )
     ).rows[0]?.table;
-  if (!isWritten(table)) return undefined;
+  if (!table) return undefined;
   const frames = await framesOf(sql, store, c.runId);
   const last = frames.at(-1);
   return {
-    crawler: table,
+    table,
     diagnosis: `Run ${c.runId} stopped at its frame f${frames.length}${last ? `, which showed: ${last.texts.slice(0, 20).join(' · ')}` : ''}. open_frame with run ${c.runId} shows its frames.`,
   };
 }
@@ -113,14 +107,6 @@ async function report(runId: string) {
   const sup = steps.filter((s) => s.name === 'supervisor');
   log(`cost: $${Number(spend ?? 0).toFixed(2)}`);
   log(`actions: ${sup.length} judged, ${steps.filter((s) => s.name === 'refused').length} refused`);
-  const tries = steps.filter((s) => s.name === 'crawler tried');
-  log(
-    `crawler: ${steps.filter((s) => s.name === 'crawler written').length} versions written; ${tries.length} tries${
-      tries.length
-        ? ` (${tries.map((t) => `${t.action} ${(t.outcome ?? '').split(':')[0]}`).join(', ')})`
-        : ''
-    }`,
-  );
   log(
     `corrections citing a frame: ${sup.filter((s) => s.action !== 'continue' && /\bf\d+\b/.test(s.outcome ?? '')).length}`,
   );
@@ -129,7 +115,7 @@ async function report(runId: string) {
   const framed = (
     await sql.query<{ seq: number; framed: boolean }>(
       `SELECT s.seq, EXISTS (SELECT 1 FROM "TrailFrame" f WHERE f."runId" = s."runId" AND f."stepSeq" = s.seq) AS framed
-         FROM "Step" s WHERE s."runId" = $1 AND (s.name = 'scout' OR s.name LIKE 'try %')`,
+         FROM "Step" s WHERE s."runId" = $1 AND s.name IN ('balance', 'transfer', 'history')`,
       [runId],
     )
   ).rows;
@@ -198,11 +184,13 @@ try {
   );
   await report(run.runId);
   if (!run.table) {
-    log(
-      `the crawler is not ready (${run.reached.length} of 3 parts passed${run.reached.length ? `: ${run.reached.join(', ')}` : ''}): ${run.diagnosis ?? ''}`,
-    );
+    log(`no goal was reached: ${run.diagnosis ?? ''}`);
     process.exitCode = 1;
   } else {
+    if (run.reached.length < 3)
+      log(
+        `learned ${run.reached.join(', ')}; not reached: ${run.diagnosis ?? ''}. The table serves what it covers.`,
+      );
     const g = await gate(
       {
         sql,
@@ -220,19 +208,17 @@ try {
         member,
         from,
         to,
-        ...(practice ? { practice } : {}),
+        ...(run.session ? { session: run.session } : {}),
       },
     );
     for (const r of g.runs)
       log(`gate ${r.hazard ?? 'plain'}: ${r.ok ? 'passed' : 'failed'}: ${r.said}`);
     log(
-      practice
-        ? `Practice: ${g.runs.every((r) => r.ok) ? 'the crawler passed the gate' : 'the crawler failed the gate'}; never recommended.`
-        : g.recommendationId
-          ? `Approve or reject it in the Console: http://localhost:${cfg.CONSOLE_PORT}/recommendations`
-          : 'Not recommended. A crawler that broke under the hazard has a repair case: run this again to repair it.',
+      g.recommendationId
+        ? `Approve or reject it in the Console: http://localhost:${cfg.CONSOLE_PORT}/recommendations`
+        : 'Not recommended. A table that broke under the hazard has a repair case: run this again to repair it.',
     );
-    if (!g.runs.every((r) => r.ok)) process.exitCode = 1;
+    if (!g.recommendationId) process.exitCode = 1;
   }
   // The lessons last, after everything a person waits on.
   log("writing the run's lessons to memory…");
