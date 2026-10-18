@@ -62,6 +62,11 @@ export interface Session {
   note?(name: string, action: string): Promise<void> | void;
   /** How long a page may take to be ready. */
   limitMs?: number;
+  /**
+   * Keep a frame after every step, not only after the last step on a page: the gate's replay is
+   * evidence, step by step.
+   */
+  everyStep?: boolean;
 }
 
 export interface Task {
@@ -120,8 +125,28 @@ const stop = (code: ResultCode, note?: string, retryable?: boolean): never => {
   });
 };
 
-/** An account as a page draws it: a name as it is, last four digits as "ending in" them. */
-const account = (ref = '') => (/^\d{4}$/.test(ref) ? `ending in ${ref}` : ref);
+/**
+ * An account as an option holds it: its name, or its last four digits, whatever words a bank puts
+ * around them ("ending in 8176", "Share ****8176-S01"). Exactly one option must hold it.
+ */
+const account = (ref = '') => ref;
+
+/**
+ * Whether one account, read off a page, is the one asked for: its last four digits anywhere in its
+ * number as the page draws it, or its name, ignoring case. Exactly one account must match; the
+ * caller stops on any other count.
+ */
+export function isAccount(g: { name?: string; last4?: string }, asked: string): boolean {
+  const a = asked.trim().toLowerCase();
+  if (/^\d{4}$/.test(a)) return (g.last4 ?? '').includes(a);
+  return a.length > 0 && (g.name ?? '').toLowerCase().includes(a);
+}
+
+/** The accounts a balance read finds in a page's words, and the ones that are the account asked for. */
+export function accountsIn(words: string, read: string, member: string, asked: string) {
+  const all = [...words.matchAll(readOf(read, member))].map((m) => m.groups!);
+  return { all, matching: all.filter((g) => isAccount(g, asked)) };
+}
 
 async function value(s: Session, task: Task, v: string): Promise<string> {
   switch (v) {
@@ -184,16 +209,24 @@ async function step(s: Session, task: Task, screen: string, st: Step): Promise<s
 async function learn(s: Session, task: Task): Promise<boolean> {
   const text = (await leaves(s.page)).join('\n');
   let learned = false;
-  for (const p of s.table.reads.name) {
-    const name = readOf(p, task.member).exec(text)?.groups?.name;
+  for (const part of namesIn(text, s.table.reads.name, task.member))
+    if (!s.known.includes(part)) {
+      s.known.push(part);
+      learned = true;
+    }
+  return learned;
+}
+
+/** The member's name and each of its words, where a name read finds it in a page's words. */
+export function namesIn(words: string, reads: string[], member: string): string[] {
+  const out: string[] = [];
+  for (const p of reads) {
+    const name = readOf(p, member).exec(words)?.groups?.name;
     if (!name) continue;
     for (const part of [name, ...name.split(/[\s.,]+/)])
-      if (part.trim().length >= 2 && !s.known.includes(part)) {
-        s.known.push(part);
-        learned = true;
-      }
+      if (part.trim().length >= 2 && !out.includes(part)) out.push(part);
   }
-  return learned;
+  return out;
 }
 
 /** Sees the page, learning the member's name first if it shows. */
@@ -272,7 +305,15 @@ export async function crawl(
     const steps = row.do[goal] ?? row.do.any;
     if (!steps?.length) return stop('stuck', `nothing to do on the ${at} page`);
     try {
-      for (const st of steps) did = await step(s, task, screenOf(t, at), st);
+      for (const [i, st] of steps.entries()) {
+        did = await step(s, task, screenOf(t, at), st);
+        // The last step's frame is the next look's.
+        if (s.everyStep && i < steps.length - 1)
+          await s.keep?.(
+            { did, page: at, screen: screenOf(t, at) },
+            await see(s.page, { known: s.known, limitMs: s.limitMs ?? 60_000, everyMs: 150 }),
+          );
+      }
     } catch (e) {
       // A control that isn't there: look again, and the page that shows gets its row.
       if (!(e instanceof TargetError)) throw e;
@@ -303,7 +344,7 @@ export function leaf(line: string): string | null {
 }
 
 /** The visible words, one leaf per line, unmasked: for reading a value, never kept. */
-const leaves = async (page: Page) =>
+export const leaves = async (page: Page) =>
   (await read(page))
     .split('\n')
     .map(leaf)
@@ -316,9 +357,7 @@ export async function checkBalance(s: Session, task: Task & { account: string })
   await crawl(s, task, 'balance');
   s.guard?.({ screen: screenOf(s.table, s.table.ends.balance), verb: 'read', control: 'Page' });
   const text = (await leaves(s.page)).join('\n');
-  const tiles = [...text.matchAll(readOf(s.table.reads.balance, task.member))]
-    .map((m) => m.groups!)
-    .filter((g) => g.name === task.account || g.last4 === task.account);
+  const tiles = accountsIn(text, s.table.reads.balance, task.member, task.account).matching;
   const names = new Set(tiles.map((g) => `${g.name}/${g.last4}`));
   if (names.size !== 1) return stop('no_such_account', `${names.size} accounts match`);
   const g = tiles[0]!;
@@ -371,7 +410,9 @@ export async function submitTransfer(
   await approve(await readReview(s));
   const t = s.table;
   s.guard?.({ screen: screenOf(t, t.ends.transfer), verb: 'press', control: t.submit.press });
-  await press(s.page, t.submit.press);
+  // A send button with no words of its own (a picture) is found by sight, like any learned step.
+  if (t.submit.at) await clickAt(s.page, await pointOf(s.page, t.submit.at));
+  else await press(s.page, t.submit.press);
   await s.note?.('submit', 'pressed submit, under the grant');
   let confirmation: string | undefined;
   try {

@@ -61,6 +61,7 @@ async function checkRun(
     url: o.url,
     table: o.table,
     known: trail.known,
+    everyStep: true,
     credentials: async () => d.credentials,
     code: () => d.code(o.runId),
     keep: async (seen: { did: string; page: string | null }, f: Parameters<typeof trail.step>[1]) =>

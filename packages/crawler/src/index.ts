@@ -5,13 +5,17 @@ export { bank1 };
 /** Each bank's table, by its id: a bank with none has no crawler. */
 export const TABLES: Readonly<Record<string, Table>> = { generic: bank1 };
 export {
+  accountsIn,
   type Action,
   cents,
   checkBalance,
   crawl,
   type Ended,
   inHistory,
+  isAccount,
   leaf,
+  leaves,
+  namesIn,
   prepareTransfer,
   readReview,
   type Review,
