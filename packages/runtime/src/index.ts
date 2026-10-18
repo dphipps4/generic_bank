@@ -1,6 +1,8 @@
 // The runtime every crawler uses: see the page first, then click what is drawn.
 export { dialogsSince, findChrome, launch, newPage, type PageOptions } from './browser.js';
 export { choose, control, field, press, TargetError, type } from './act.js';
+export { type AtPoint, clickAt, type Point, typeAt, whatIsAt } from './hands.js';
+export { cropOf, findCrop, type Found, MATCH } from './match.js';
 export { type Box, maskAddress, maskBoxes, maskText, paint, spans } from './mask.js';
 export {
   distance,
