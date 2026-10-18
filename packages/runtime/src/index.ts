@@ -9,6 +9,7 @@ export {
   type Expected,
   type Frame,
   knows,
+  nameIn,
   NotReady,
   read,
   see,

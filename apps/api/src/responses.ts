@@ -14,7 +14,7 @@ const ROWS: [status: string, means: string, example: unknown][] = [
       task: 'check-balance',
       status: 'succeeded',
       data: {
-        accountLabel: 'Everyday Checking, ending in ****',
+        accountLabel: 'Everyday Checking, ending in 8176',
         availableCents: 3978241,
         currentCents: 3979777,
         asOf: '2026-10-18T02:28:58.000Z',

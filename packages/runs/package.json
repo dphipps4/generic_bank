@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "@gb/contracts": "*",
-    "@gb/guardrails": "*"
+    "@gb/guardrails": "*",
+    "@gb/runtime": "*"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.10"

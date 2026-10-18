@@ -11,7 +11,7 @@ const STORY = Object.fromEntries(Object.entries(MEMBERS).map(([k, v]) => [v, k])
 export interface Seeded {
   /** Looked for in every row, object and log line. */
   text: Needle[];
-  /** Also covered wherever a screen drew them: the last four digits of accounts, amounts of money. */
+  /** Also covered wherever a screen drew them: amounts of money. */
   drawn: Needle[];
 }
 
@@ -51,8 +51,9 @@ export async function seededOf(bank: LiveBank, lookedUp: string[]): Promise<Seed
   );
   for (const a of accounts.rows) {
     const whose = `${label.get(a.member)}'s ${a.type} account`;
+    // The full number is secret everywhere. Its last four digits are shown, as the bank shows them,
+    // so that every view of a page (the picture, the text, the crawler's read) agrees.
     text.push(digits(`${whose} number`, a.number));
-    drawn.push(digits(`the last four digits of ${whose}`, a.number.slice(-4)));
   }
 
   const staff = await bank.db.query<{

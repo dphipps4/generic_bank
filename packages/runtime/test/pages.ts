@@ -86,7 +86,11 @@ export const PAGES: Record<string, string> = {
   // Money and a name as loose text in a cell; a long number in a link.
   '/mask': doc(
     `<table><tr><td>Current balance: $41,231.65 for Alex Sample</td></tr></table>
-     <a href="/mask?token=abc123">Account 40017732</a>`,
+     <a href="/mask?token=abc123">Account 40017732</a>
+     <p id="share">Everyday Checking Share ****8176-S01</p>
+     <p id="member">Member 40017732 · J. Doe</p>
+     <select id="from"><option>Choose an account</option><option selected>Checking, Share ****8176-S01, available $1,000.00</option></select>
+     <form><input type="image" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" width="60" height="20"></form>`,
   ),
 };
 

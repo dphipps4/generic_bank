@@ -9,7 +9,7 @@
 | API auth | **OAuth2**: client credentials, a one-time code, rotating refresh tokens | Only hashes stored; a reused refresh token revokes its family |
 | Browser | **Playwright** with Chrome, presenting as Chrome on a Mac | Real input and frames; the bank runs its own JavaScript |
 | Perception | The masked **screenshot**, the visible **accessibility tree** per frame, controls by role and position | What a person sees, never the bank's source; no script of ours runs in the page |
-| Masking and pictures | **pngjs**, text positions from the browser's own layout | Personal values painted out before anything is kept |
+| Masking and pictures | **pngjs**, text positions from the browser's own layout | One rule for every view: money and names hidden whole, numbers keep their last four |
 | Crawler | A **table** per bank (data) and **one loop** for every bank | A bank is data; the loop is tested once |
 | Durable runs | **DBOS Transact** on Postgres | A library, not a server: durable waits for a person, idempotent runs |
 | Database | **PostgreSQL 16** with **pgvector**; **Prisma** migrations | One engine for runs, the registry, the factory and memory's lessons |

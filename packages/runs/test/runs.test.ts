@@ -58,10 +58,15 @@ describe('runs', () => {
     const row = JSON.stringify(
       (await db.query('SELECT * FROM "TaskRun" WHERE id = $1', [runId])).rows,
     );
+    // The one masking rule: the member number keeps its last four, and an account is its last four.
     expect(row).not.toContain('40017732');
-    expect(row).not.toContain('7890');
+    expect(row).not.toContain('4001');
     expect(await inputsOf(db, runId, KEY)).toEqual(input);
-    expect(maskInputs(input)).toEqual({ bank: 'generic', memberId: '********', account: '****' });
+    expect(maskInputs(input)).toEqual({ bank: 'generic', memberId: '████7732', account: '7890' });
+    expect(maskInputs({ amountCents: 12_500, idempotencyKey: 'key-1' })).toEqual({
+      amountCents: '█████',
+      idempotencyKey: '█████',
+    });
   });
 
   it('return the same run for the same idempotency key', async () => {

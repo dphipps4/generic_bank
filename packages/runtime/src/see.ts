@@ -50,6 +50,16 @@ const ROLES: [string, string][] = [
   ['clickable', '[onclick]:visible:not(a):not(button):not(input)'],
 ];
 
+/**
+ * A control's accessible name from its own snapshot's first line (`- button "Submit"`), or '' when
+ * it has none. A field's typed value follows the colon, outside the quotes: it is not its name.
+ */
+export function nameIn(snapshot: string): string {
+  const first = snapshot.split('\n')[0]?.trim() ?? '';
+  const m = first.match(/^- (?:'[a-z]+ "((?:[^"\\]|\\.)*)"[^']*'|[a-z]+ "((?:[^"\\]|\\.)*)")/);
+  return m ? (m[1] ?? m[2] ?? '').replace(/\\"/g, '"').replace(/''/g, "'") : '';
+}
+
 /** The page's visible words, in short: what a page that never became ready was showing. */
 async function shown(page: Page): Promise<string> {
   const words: string[] = [];
@@ -194,12 +204,12 @@ export async function see(
         const el = els.nth(i);
         const box = await el.boundingBox().catch(() => null);
         if (!box) continue;
-        const own =
-          (await el.getAttribute('aria-label')) ??
-          (await el.getAttribute('alt')) ??
-          (role === 'button' ? await el.getAttribute('value') : null);
+        // One name per control: the accessible name, as the tree shows it and as the runtime presses
+        // by it (an image button with no alt is "Submit" in all three). The drawn text, when there
+        // is no accessible name.
+        const own = nameIn(await el.ariaSnapshot({ timeout: 2_000 }).catch(() => ''));
         const text =
-          own ??
+          own ||
           (['textbox', 'password', 'select'].includes(role)
             ? ''
             : await el.innerText().catch(() => ''));

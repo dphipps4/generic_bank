@@ -225,11 +225,11 @@ afterAll(async () => {
 /** Every seeded value of a bank as plain text, for finding where a page drew one. */
 async function seededValues(b: LiveBank): Promise<string[]> {
   const q = async (sql: string) => (await b.db.query<{ v: string }>(sql)).rows.map((r) => r.v);
+  // Values hidden whole. Member and account numbers are identifiers: the masking rule itself hides
+  // every digit but their last four, and the text scan fails on any full number anywhere.
   return [
-    ...(await q('SELECT number AS v FROM members')),
     ...(await q(`SELECT first_name || ' ' || last_name AS v FROM members`)),
     ...(await q(`SELECT last_name || ', ' || first_name AS v FROM members`)),
-    ...(await q('SELECT number AS v FROM accounts')),
     ...(await q('SELECT operator_id AS v FROM operators')),
     ...(await q('SELECT display_name AS v FROM operators')),
     PASSWORDS.service,
@@ -306,7 +306,7 @@ describe('the PII suite', () => {
         if (open > 0.01)
           hits.push({
             where: `object ${k}, the box at ${Math.round(box.x)},${Math.round(box.y)} (${Math.round(open * 100)}% uncovered)`,
-            what: 'a seeded value, an account number or an amount the page drew',
+            what: 'a seeded value, the hidden digits of a number, or an amount the page drew',
           });
       }
     }
