@@ -2,19 +2,6 @@
 // the shapes the evidence showed, written small.
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { PNG } from 'pngjs';
-
-/** A small PNG of stripes, so two different ones have different fingerprints. */
-function stripes(vertical: boolean): string {
-  const img = new PNG({ width: 90, height: 20 });
-  for (let y = 0; y < 20; y++)
-    for (let x = 0; x < 90; x++) {
-      const on = vertical ? Math.floor(x / 6) % 2 === 0 : x < 45;
-      img.data.fill(on ? 0 : 255, (y * 90 + x) * 4, (y * 90 + x) * 4 + 3);
-      img.data[(y * 90 + x) * 4 + 3] = 255;
-    }
-  return `data:image/png;base64,${PNG.sync.write(img).toString('base64')}`;
-}
 
 const doc = (body: string, head = '') =>
   `<!doctype html><html><head><meta charset="utf-8">${head}</head><body style="font:14px Arial;margin:8px">${body}</body></html>`;
@@ -100,11 +87,6 @@ export const PAGES: Record<string, string> = {
   '/mask': doc(
     `<table><tr><td>Current balance: $41,231.65 for Alex Sample</td></tr></table>
      <a href="/mask?token=abc123">Account 40017732</a>`,
-  ),
-
-  // Two pictures of text.
-  '/pictures': doc(
-    `<img src="${stripes(true)}"><br><img src="${stripes(false)}"><br><a href="/pictures">Again</a>`,
   ),
 };
 

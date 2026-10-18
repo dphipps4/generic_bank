@@ -77,11 +77,6 @@ export interface Table {
   rows: Row[];
   /** The bank's own names for controls the allowlists name ("Open" for "Matching member"). */
   names?: Record<string, string[]>;
-  /**
-   * Labels drawn as pictures of words, each known by its fingerprint: a field is found beside the
-   * picture named as its label, by sight, where no words are drawn.
-   */
-  pictures?: { name: string; print: string; ratio?: number }[];
   /** Where each goal ends. */
   ends: Record<Goal, string>;
   answers: Answer[];

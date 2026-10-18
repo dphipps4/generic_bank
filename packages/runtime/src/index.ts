@@ -5,15 +5,6 @@ export { type AtPoint, chooseAt, clickAt, type Point, typeAt, valueAt, whatIsAt 
 export { cropOf, findCrop, type Found, MATCH } from './match.js';
 export { type Box, maskAddress, maskBoxes, maskText, paint, spans } from './mask.js';
 export {
-  distance,
-  fingerprint,
-  type KnownPicture,
-  labelPicture,
-  labels,
-  matchPicture,
-  NEAR,
-} from './picture.js';
-export {
   type Control,
   type Expected,
   type Frame,

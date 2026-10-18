@@ -21,7 +21,6 @@ import {
   findCrop,
   type Frame,
   knows,
-  labelPicture,
   NotReady,
   type Page,
   press,
@@ -242,8 +241,6 @@ export function scout(deps: ScoutDeps, task: Task) {
     record = [];
     return r;
   };
-  /** Sign-ins typed this run: a third means the first two were refused. */
-  let signIns = 0;
   /** An item of the Scout's list, of a kind it may be acted on as, confirmed by the browser. */
   const itemOf = (id: string, kinds: string[]): Item => {
     if (!inventory) throw new ToolRefusal('list_page first: nothing is listed for this page');
@@ -391,28 +388,13 @@ export function scout(deps: ScoutDeps, task: Task) {
         mayAct();
         const c = chosen(i);
         const label = i.label;
-        // Words beside the field first. Where there are none, the label is a picture of words: it
-        // is known from now on by its fingerprint, under the words the Scout read off it.
-        const f = await field(page, label, t.pictures).catch(async (e: Error) => {
-          const pic = await labelPicture(page, c.box);
-          if (!pic)
-            throw new ToolRefusal(
-              `no words "${label}" beside a field, and no label picture beside the field you chose (${c.role} at ${Math.round(c.box.x)},${Math.round(c.box.y)}): ${e.message}`,
-            );
-          t.pictures = [
-            ...(t.pictures ?? []).filter((p) => p.name !== label),
-            { name: label, print: pic.print, ratio: pic.ratio },
-          ];
-          return field(page, label, t.pictures).catch((e2: Error) => {
-            throw new ToolRefusal(
-              `learned the label picture beside the field you chose as "${label}", but could not find it again: ${e2.message}`,
-            );
-          });
+        // Words only: a label drawn as a picture is found by sight instead (list_page, type_item).
+        const f = await field(page, label).catch((e: Error) => {
+          throw new ToolRefusal(
+            `no words "${label}" beside a field (${e.message}); if its label is a picture, list_page and type_item`,
+          );
         });
         same(f.box, c, `the field by "${label}"`);
-        // A password typed a third time means the first two sign-ins were refused.
-        if (i.value === 'password' && ++signIns > 2)
-          throw new Error('two sign-ins did not get past the sign-in page: stopping for a person');
         const text =
           i.value === 'user_id'
             ? deps.credentials.operatorId
@@ -426,7 +408,7 @@ export function scout(deps: ScoutDeps, task: Task) {
                     ? ((task.amountCents ?? 0) / 100).toFixed(2)
                     : (task.memo ?? '');
         if (i.value === 'code' && !known.includes(text)) known.push(text);
-        await type(page, label, text, t.pictures);
+        await type(page, label, text);
         // The sign-in and the code go into fields the allowlists know by their own names: the bank's
         // name for each is kept, so the guard knows them when the table runs.
         const listed = { user_id: 'Operator ID', password: 'Password', code: 'Code' }[
@@ -525,8 +507,6 @@ export function scout(deps: ScoutDeps, task: Task) {
             `${it.id} has no label box: list the page again with its label's box`,
           );
         const at = await anchorOf(it, it.labelBox);
-        if (i.value === 'password' && ++signIns > 2)
-          throw new Error('two sign-ins did not get past the sign-in page: stopping for a person');
         const text =
           i.value === 'user_id'
             ? deps.credentials.operatorId

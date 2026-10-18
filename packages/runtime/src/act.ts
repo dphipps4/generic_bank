@@ -5,7 +5,6 @@
 // Playwright's, with the real mouse, and only once the target is visible, stable and on top.
 import type { Frame, Locator, Page } from 'playwright-core';
 import type { Box } from './mask.js';
-import { fingerprint, type KnownPicture, labels, matchPicture } from './picture.js';
 
 export class TargetError extends Error {}
 
@@ -40,61 +39,19 @@ async function beside(page: Page, lb: Box): Promise<{ target: Locator; box: Box;
   return found;
 }
 
-/**
- * The field a label names: the nearest box beside the label's words. Where the label is a picture
- * of words, with nothing a browser can read, it is found by sight among the page's label pictures
- * (images drawn beside a field), and the field is the one beside it.
- */
-export async function field(
-  page: Page,
-  label: string,
-  pictures: readonly KnownPicture[] = [],
-): Promise<{ target: Locator; box: Box }> {
-  let found: { target: Locator; box: Box; d: number }[] = [];
+/** The field a label names: the nearest box beside the label's words. */
+export async function field(page: Page, label: string): Promise<{ target: Locator; box: Box }> {
+  const found: { target: Locator; box: Box; d: number }[] = [];
   for (const f of page.frames())
     for (const l of await visible(f.getByText(new RegExp(`^\\s*${escape(label)}\\s*:?\\s*$`)))) {
       const lb = await boxOf(l);
       if (lb) found.push(...(await beside(page, lb)));
     }
-  const known = pictures.find((p) => p.name === label);
-  if (!found.length && known) {
-    const lb = await labelNamed(page, known);
-    if (lb) found = await beside(page, lb);
-  }
   found.sort((a, b) => a.d - b.d);
   if (!found.length) throw new TargetError(`no field beside the label "${label}"`);
   if (found.length > 1 && found[1]!.d - found[0]!.d < 4)
     throw new TargetError(`two fields beside the label "${label}", about as near`);
   return { target: found[0]!.target, box: found[0]!.box };
-}
-
-/**
- * Where the known label picture is drawn: only images beside a field are candidates (never a
- * button, a logo or an icon), and the match must be clear among them (matchPicture).
- */
-async function labelNamed(page: Page, known: KnownPicture): Promise<Box | null> {
-  const fieldBoxes: Box[] = [];
-  for (const f of page.frames())
-    for (const c of await visible(f.locator(FIELDS))) {
-      const b = await boxOf(c);
-      if (b) fieldBoxes.push(b);
-    }
-  const seen: { box: Box; print: string; ratio: number }[] = [];
-  for (const f of page.frames())
-    for (const img of await visible(f.locator('img'))) {
-      const b = await img.boundingBox().catch(() => null);
-      if (!b || b.width < 12 || b.height < 6) continue;
-      if (!fieldBoxes.some((fb) => labels(b, fb))) continue;
-      const shot = await img.screenshot().catch(() => null);
-      if (shot)
-        seen.push({
-          box: { x: b.x, y: b.y, w: b.width, h: b.height },
-          print: fingerprint(shot),
-          ratio: b.width / b.height,
-        });
-    }
-  const i = matchPicture(seen, known);
-  return i === null ? null : seen[i]!.box;
 }
 
 /** The one visible control with this drawn name, in any frame. */
@@ -152,13 +109,8 @@ export async function press(
 }
 
 /** Types into the field a label names, key by key, replacing what it holds. */
-export async function type(
-  page: Page,
-  label: string,
-  text: string,
-  pictures: readonly KnownPicture[] = [],
-): Promise<Box> {
-  const f = await field(page, label, pictures);
+export async function type(page: Page, label: string, text: string): Promise<Box> {
+  const f = await field(page, label);
   await f.target.click();
   await f.target.fill('');
   await page.keyboard.type(text, { delay: 20 });
@@ -166,13 +118,8 @@ export async function type(
 }
 
 /** Chooses, in the list a label names, the one option whose visible text contains these words. */
-export async function choose(
-  page: Page,
-  label: string,
-  containing: string,
-  pictures: readonly KnownPicture[] = [],
-): Promise<Box> {
-  const f = await field(page, label, pictures);
+export async function choose(page: Page, label: string, containing: string): Promise<Box> {
+  const f = await field(page, label);
   const options = await f.target.locator('option').allInnerTexts();
   const hits = options.filter((o) => o.includes(containing));
   if (hits.length !== 1)
