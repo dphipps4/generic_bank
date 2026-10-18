@@ -148,15 +148,16 @@ describe('the review card', () => {
     );
   });
 
-  it('promotes the table for both tasks once approved, and audits it', async () => {
+  it('promotes the table for the tasks it covers once approved, and audits it', async () => {
     expect(await served('check-balance')).toBeUndefined();
     expect((await act('approve', { reason: 'every row matches its frame' })).json()).toEqual({
       ok: true,
       status: 'approved',
     });
     expect(await status()).toBe('approved');
+    // It reached the balance goal only: it serves check-balance, and not transfer.
     expect(await served('check-balance')).toEqual(TABLE);
-    expect(await served('transfer')).toEqual(TABLE);
+    expect(await served('transfer')).toBeUndefined();
     expect(await audit()).toEqual([
       {
         actor: 'ada@generic-bank.local',

@@ -159,9 +159,13 @@ try {
   );
   await report(run.runId);
   if (!run.table) {
-    log(`not every goal was reached (${run.reached.join(', ') || 'none'}): ${run.diagnosis ?? ''}`);
+    log(`no goal was reached: ${run.diagnosis ?? ''}`);
     process.exitCode = 1;
   } else {
+    if (run.reached.length < 3)
+      log(
+        `learned ${run.reached.join(', ')}; not reached: ${run.diagnosis ?? ''}. The table serves what it covers.`,
+      );
     const g = await gate(
       {
         sql,

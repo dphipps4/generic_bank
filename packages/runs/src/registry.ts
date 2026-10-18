@@ -99,7 +99,7 @@ export async function closeRepairCase(sql: Sql, tenant: string, task: string) {
 const TASKS = ['check-balance', 'transfer'] as const;
 
 /**
- * A learned table, approved by a person, serves its bank: for each task, a new version holding the
+ * A learned table, approved by a person, serves its bank: for each task it covers, a new version holding the
  * table becomes the active one, the one it replaces becomes the version a fault falls back to, and
  * the task's repair case closes. Nothing promotes a table but this, and nothing calls this but a
  * person's approval in the Console.
@@ -110,7 +110,12 @@ export async function promoteTable(
 ): Promise<string[]> {
   const sha = createHash('sha256').update(JSON.stringify(o.table)).digest('hex');
   const versions: string[] = [];
-  for (const task of TASKS) {
+  // The tasks the table covers, from the goals it reached (its ends): a balance alone serves
+  // check-balance; a transfer also needs the history it is checked against.
+  const ends = (o.table as { ends?: Partial<Record<string, string>> }).ends ?? {};
+  const covers = (task: string) =>
+    task === 'check-balance' ? !!ends.balance : !!ends.transfer && !!ends.history;
+  for (const task of TASKS.filter(covers)) {
     const d = (
       await sql.query<{ id: string; active: string | null; state: string }>(
         `INSERT INTO "Driver" (id, tenant, task, state) VALUES ($1, $2, $3, 'draft')

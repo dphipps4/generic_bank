@@ -335,7 +335,8 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
     .catch(() => undefined);
   return {
     runId,
-    table: reached.length === 3 && table ? { ...table, bank: input.bank } : null,
+    // A table that reached the balance can serve check-balance; approval promotes what it covers.
+    table: reached.includes('balance') && table ? { ...table, bank: input.bank } : null,
     reached,
     diagnosis,
     finish,
