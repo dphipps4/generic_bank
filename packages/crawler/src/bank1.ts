@@ -10,6 +10,7 @@ export const bank1: Table = {
       page: 'sign-in',
       screen: 'sign_in',
       shows: ['Operator ID:', 'Password:'],
+      never: ['Welcome back'],
       do: {
         any: [
           { type: 'Operator ID', value: '$operator' },
@@ -18,6 +19,16 @@ export const bank1: Table = {
         ],
       },
       frame: 'happy/01',
+    },
+    {
+      // A workstation the bank remembers: the operator is known, and no code is asked for.
+      page: 'welcome back',
+      screen: 'sign_in',
+      shows: ['Welcome back', 'Password:'],
+      do: {
+        any: [{ type: 'Password', value: '$password' }, { press: 'Sign In' }],
+      },
+      frame: 'trusted/09',
     },
     {
       page: 'code chooser',

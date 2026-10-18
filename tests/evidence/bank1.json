@@ -1277,5 +1277,46 @@
         "near": "Everyday Checking"
       }
     ]
+  },
+  "trusted": {
+    "steps": [
+      {
+        "open": "./"
+      },
+      {
+        "type": "Operator ID",
+        "value": "$operator"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      },
+      {
+        "press": "Send code"
+      },
+      {
+        "type": "Code",
+        "value": "$code"
+      },
+      {
+        "press": "Verify"
+      },
+      {
+        "press": "Sign Out"
+      },
+      {
+        "open": "./"
+      },
+      {
+        "type": "Password",
+        "value": "$password"
+      },
+      {
+        "press": "Sign In"
+      }
+    ]
   }
 }

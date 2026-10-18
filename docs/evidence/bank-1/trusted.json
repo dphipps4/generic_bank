@@ -1,0 +1,205 @@
+{
+ "walk": "trusted",
+ "frames": [
+  {
+   "frame": "01",
+   "did": "open ./",
+   "same": "happy/01"
+  },
+  {
+   "frame": "02",
+   "did": "type $operator into \"Operator ID\"",
+   "same": "happy/02"
+  },
+  {
+   "frame": "03",
+   "did": "type $password into \"Password\"",
+   "same": "happy/03"
+  },
+  {
+   "frame": "04",
+   "did": "press \"Sign In\"",
+   "same": "happy/04"
+  },
+  {
+   "frame": "05",
+   "did": "press \"Send code\"",
+   "same": "happy/05"
+  },
+  {
+   "frame": "06",
+   "did": "type $code into \"Code\"",
+   "same": "happy/06"
+  },
+  {
+   "frame": "07",
+   "did": "press \"Verify\"",
+   "same": "happy/07"
+  },
+  {
+   "frame": "08",
+   "picture": "trusted/08.png",
+   "did": "press \"Sign Out\"",
+   "at": "2026-10-18T03:17:16.956Z",
+   "address": "http://localhost:58875/corelink/signout",
+   "tree": "- paragraph:\n  - img \"Generic Bank\"\n- table:\n  - rowgroup:\n    - row \"You have signed out. Sign In again\":\n      - cell \"You have signed out. Sign In again\":\n        - table:\n          - rowgroup:\n            - row \"You have signed out. Sign In again\":\n              - cell \"You have signed out. Sign In again\":\n                - table:\n                  - rowgroup:\n                    - row \"You have signed out. Sign In again\":\n                      - cell \"You have signed out. Sign In again\":\n                        - table:\n                          - rowgroup:\n                            - row \"You have signed out. Sign In again\":\n                              - cell \"You have signed out. Sign In again\":\n                                - table:\n                                  - rowgroup:\n                                    - row \"You have signed out.\":\n                                      - cell \"You have signed out.\"\n                                - paragraph:\n                                  - link \"Sign In again\":\n                                    - /url: /corelink/signin\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "link",
+     "name": "Sign In again",
+     "box": {
+      "x": 270,
+      "y": 193.75,
+      "w": 100.546875,
+      "h": 17
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": []
+  },
+  {
+   "frame": "09",
+   "picture": "trusted/09.png",
+   "did": "open ./",
+   "at": "2026-10-18T03:17:18.791Z",
+   "address": "http://localhost:58875/corelink/signin",
+   "tree": "- paragraph:\n  - img \"Generic Bank\"\n- table:\n  - rowgroup:\n    - 'row \"Welcome back, ******** Password: Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n      - 'cell \"Welcome back, ******** Password: Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n        - table:\n          - rowgroup:\n            - 'row \"Welcome back, ******** Password: Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n              - 'cell \"Welcome back, ******** Password: Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Welcome back, ******** Password: Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n                      - 'cell \"Welcome back, ******** Password: Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Welcome back, ******** Password: Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n                              - 'cell \"Welcome back, ******** Password: Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n                                - table:\n                                  - rowgroup:\n                                    - row \"Welcome back, ********\":\n                                      - cell \"Welcome back, ********\"\n                                - table:\n                                  - rowgroup:\n                                    - row \"Password:\":\n                                      - cell \"Password:\"\n                                      - cell:\n                                        - textbox\n                                    - 'row \"Operator ID: ********\"':\n                                      - cell \"Operator\"\n                                      - cell \"ID:\"\n                                      - cell \"********\"\n                                    - row \"Sign In\":\n                                      - cell\n                                      - cell \"Sign In\":\n                                        - button \"Sign In\"\n                                - paragraph:\n                                  - link \"Not ********? Sign in as someone else\":\n                                    - /url: /corelink/signin?other=1\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "link",
+     "name": "Not ********? Sign in as someone else",
+     "box": {
+      "x": 270,
+      "y": 302.25,
+      "w": 304.046875,
+      "h": 17
+     }
+    },
+    {
+     "role": "button",
+     "name": "Sign In",
+     "box": {
+      "x": 376.34375,
+      "y": 246.5,
+      "w": 70.296875,
+      "h": 33.75
+     }
+    },
+    {
+     "role": "password",
+     "name": "",
+     "box": {
+      "x": 376.34375,
+      "y": 179.75,
+      "w": 300,
+      "h": 29
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": []
+  },
+  {
+   "frame": "10",
+   "picture": "trusted/10.png",
+   "did": "type $password into \"Password\"",
+   "at": "2026-10-18T03:17:20.419Z",
+   "address": "http://localhost:58875/corelink/signin",
+   "tree": "- paragraph:\n  - img \"Generic Bank\"\n- table:\n  - rowgroup:\n    - 'row \"Welcome back, ******** Password: ******** Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n      - 'cell \"Welcome back, ******** Password: ******** Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n        - table:\n          - rowgroup:\n            - 'row \"Welcome back, ******** Password: ******** Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n              - 'cell \"Welcome back, ******** Password: ******** Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Welcome back, ******** Password: ******** Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n                      - 'cell \"Welcome back, ******** Password: ******** Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Welcome back, ******** Password: ******** Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n                              - 'cell \"Welcome back, ******** Password: ******** Operator ID: ******** Sign In Not ********? Sign in as someone else\"':\n                                - table:\n                                  - rowgroup:\n                                    - row \"Welcome back, ********\":\n                                      - cell \"Welcome back, ********\"\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Password: ********\"':\n                                      - cell \"Password:\"\n                                      - cell \"********\":\n                                        - textbox: ********\n                                    - 'row \"Operator ID: ********\"':\n                                      - cell \"Operator\"\n                                      - cell \"ID:\"\n                                      - cell \"********\"\n                                    - row \"Sign In\":\n                                      - cell\n                                      - cell \"Sign In\":\n                                        - button \"Sign In\"\n                                - paragraph:\n                                  - link \"Not ********? Sign in as someone else\":\n                                    - /url: /corelink/signin?other=1\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "link",
+     "name": "Not ********? Sign in as someone else",
+     "box": {
+      "x": 270,
+      "y": 302.25,
+      "w": 304.046875,
+      "h": 17
+     }
+    },
+    {
+     "role": "button",
+     "name": "Sign In",
+     "box": {
+      "x": 376.34375,
+      "y": 246.5,
+      "w": 70.296875,
+      "h": 33.75
+     }
+    },
+    {
+     "role": "password",
+     "name": "",
+     "box": {
+      "x": 376.34375,
+      "y": 179.75,
+      "w": 300,
+      "h": 29
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": []
+  },
+  {
+   "frame": "11",
+   "picture": "trusted/11.png",
+   "did": "press \"Sign In\"",
+   "at": "2026-10-18T03:17:24.036Z",
+   "address": "http://localhost:58875/corelink/console",
+   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good morning, ********\":\n      - cell\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good morning, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"CoreLink Branch Console Use Member Search to begin.\":\n      - cell \"CoreLink Branch Console Use Member Search to begin.\":\n        - table:\n          - rowgroup:\n            - row \"CoreLink Branch Console Use Member Search to begin.\":\n              - cell \"CoreLink Branch Console Use Member Search to begin.\":\n                - table:\n                  - rowgroup:\n                    - row \"CoreLink Branch Console Use Member Search to begin.\":\n                      - cell \"CoreLink Branch Console Use Member Search to begin.\":\n                        - table:\n                          - rowgroup:\n                            - row \"CoreLink Branch Console Use Member Search to begin.\":\n                              - cell \"CoreLink Branch Console Use Member Search to begin.\":\n                                - table:\n                                  - rowgroup:\n                                    - row \"CoreLink Branch Console Use Member Search to begin.\":\n                                      - cell \"CoreLink Branch Console Use Member Search to begin.\":\n                                        - table:\n                                          - rowgroup:\n                                            - row \"CoreLink Branch Console\":\n                                              - cell \"CoreLink Branch Console\"\n                                        - paragraph: Use Member Search to begin.\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "link",
+     "name": "Member Search",
+     "box": {
+      "x": 11,
+      "y": 100,
+      "w": 118.03125,
+      "h": 17
+     }
+    },
+    {
+     "role": "link",
+     "name": "Transfer Funds",
+     "box": {
+      "x": 11,
+      "y": 129.75,
+      "w": 110.890625,
+      "h": 17
+     }
+    },
+    {
+     "role": "link",
+     "name": "Statements",
+     "box": {
+      "x": 11,
+      "y": 159.5,
+      "w": 86.765625,
+      "h": 17
+     }
+    },
+    {
+     "role": "link",
+     "name": "Sign Out",
+     "box": {
+      "x": 11,
+      "y": 210.25,
+      "w": 65.703125,
+      "h": 17
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": [
+    {
+     "x": 100,
+     "y": 157,
+     "w": 38,
+     "h": 18
+    }
+   ]
+  }
+ ]
+}
