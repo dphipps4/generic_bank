@@ -2,8 +2,8 @@
 // text, field and list values, the address, and anything else that shows a page's words.
 //
 //   1. A number of five or more digits (digits joined by spaces, dashes or dots in groups of three or
-//      more count as one) is an identifier: every digit but its last four is hidden. "40017732" is
-//      "████7732".
+//      more count as one) is an identifier: every digit but its last four is hidden. "12345678" is
+//      "████5678".
 //   2. Money is hidden whole: "$1,000.00" is "█████████", and so is a plain "1,000.00".
 //   3. A name or a secret the run knows (the member's name, a staff name, the sign-in, a code) is
 //      hidden whole, in any case.

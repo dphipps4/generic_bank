@@ -54,7 +54,7 @@ A table must work before a person sees it. Code runs it live through the crawler
 
 ## Changing an agent
 
-A change to the Scout's or the Supervisor's instructions, tools or view is tested first on the frame where the old behavior failed: `just frame <run> <frame> <scout|supervisor> [samples] [variant.json]` gives that one kept frame to the real agent, through the factory's own code, a few cents and seconds a sample. A change merges when it beats the old behavior over five samples or more. A full run comes after, with a written hypothesis and a person's go, never as the experiment.
+A change to the Scout's or the Supervisor's instructions, tools or view is tested first on the frame where the old behavior failed: `just frame <run> <frame> <scout|supervisor> <samples> <variant.json>` gives that one kept frame to the real agent, through the factory's own code, a few cents and seconds a sample. A change merges when it beats the old behavior over five samples or more. A full run comes after, with a written hypothesis and a person's go, never as the experiment.
 
 The Supervisor thinks briefly. It runs at low effort, and its whole output per judgment, thinking included, is capped as a backstop; one that runs past the cap is asked once more for its verdict alone. It says what is wrong and what to do next, never a tool's exact inputs: the Scout chooses those, and the tool checks them. Every judgment's packet and every view the Scout read are kept beside the run's frames, so any of them can be replayed; a judgment over 30 seconds is listed in the run's report.
 

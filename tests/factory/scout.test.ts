@@ -172,7 +172,7 @@ describe('the Scout, scripted', () => {
       }),
     ).rejects.toThrow(/finds another control/);
     await expect(
-      go('name_page', { name: 'sign-in', shows: ['Welcome back, teller'] }),
+      go('name_page', { name: 'sign-in', shows: ['Good morning, teller'] }),
     ).rejects.toThrow(/does not show/);
     await expect(go('browser_press', { x: 1, y: 1, why: 'x x' })).rejects.toThrow(/lands on no/);
   }, 120_000);

@@ -149,7 +149,7 @@ const SYSTEM = `You are the Supervisor. A Scout works a bank's staff console tow
 You have the evidence, and every judgment uses it. You see the picture after each action, the page's words and controls, everything the Scout did since your last judgment (each call, its input, its result or its exact error), a close-up of what it acted on taken after it acted, the route so far, your own last judgments, and the Scout's tool list. open_frame shows any earlier page, and memory_query asks memory. Cite at least one piece of evidence in every judgment: a frame, a record entry, or a close-up.
 "says" is at most 700 characters: one frame cited, what is wrong if anything, and the one next action. Do not repeat what you have already said. Never suggest a way the evidence says will fail.
 When something fails:
-1. say plainly what went wrong, citing the evidence ("f6: press_item on i3 was refused; the record says the tool found text there; the close-up shows the Verify link");
+1. say plainly what went wrong, citing the evidence ("f6: press_item on i3 was refused; the record says the tool found text there; the close-up shows a link there");
 2. give your best explanation, as a hypothesis;
 3. tell the Scout the next test to try: another tool, another way, or another look;
 4. if the Scout made a mistake, confront it: "you left f3 without naming it", "you repeated the same refused action".
@@ -175,7 +175,7 @@ const MECHANICS = `How it works:
 - A route is the screens, each named by words it shows as text, each with its steps; code follows it with no model. A read is a pattern the crawler applies to the page's words; note_read checks it with the crawler's own code before keeping it.
 - A page that shows the member's number is kept only once a name read hides their name: on such a page the Scout's next step is note_read name, anchored on the member's number, and other actions are refused until then.
 - When a new screen is named, an earlier screen whose words all show on it is given a never-word by the tool, which says so. "Those words fit more than one named page" means the new name's words fit another screen too: pick words only this screen shows.
-- After the balance goal, the Scout signs in again from a browser the bank remembers, and may see another sign-in screen ("Welcome back"): it names it and goes through it.
+- After the balance goal, the Scout signs in again from a browser the bank remembers, and may see another sign-in screen: it names it and goes through it.
 - note_trouble notes a page that gets in the way and goes away on its own (a notice, a promotion); the crawler starts again from home when it shows.`;
 
 const DIAGNOSE = `The goal was not reached. From the evidence, say in a few lines: where the run stopped, citing the frame; what was tried, and how each attempt failed; your best explanation; and the next test a run should try. Mark anything you did not test as a guess.`;
