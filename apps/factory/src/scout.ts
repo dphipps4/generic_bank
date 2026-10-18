@@ -76,7 +76,7 @@ export interface Entry {
 }
 
 export interface Judgment {
-  verdict: 'continue' | 'wait' | 'stop';
+  verdict: 'continue' | 'wait' | 'stop' | 'end';
   /** What the Supervisor sees, citing a frame; the Scout reads it. */
   says: string;
 }
@@ -148,7 +148,8 @@ export function scout(deps: ScoutDeps, task: Task) {
   async function look(action: string, why: string): Promise<ToolResult> {
     let f: Frame;
     try {
-      f = await see(page, { known, limitMs: 60_000 });
+      // No long waits: a page that will not settle is given up on in seconds.
+      f = await see(page, { known, limitMs: 15_000 });
     } catch (e) {
       if (!(e instanceof NotReady)) throw e;
       await trail.step({ name: 'not ready', action, outcome: e.message }, null);
