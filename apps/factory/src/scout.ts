@@ -61,6 +61,18 @@ export interface Judging {
   why: string;
   frame: Frame;
   ref: string | null;
+  /** Every call the Scout made since the last judgment, in order, failures included. */
+  record: Entry[];
+}
+
+/** One call of the Scout's, as the Supervisor sees it: what it asked, and what came back. */
+export interface Entry {
+  tool: string;
+  input: unknown;
+  /** What the tool answered; absent while the call is the one being judged. */
+  result?: string;
+  /** Why the call was refused, in the runtime's or the guard's own words. */
+  error?: string;
 }
 
 export interface Judgment {
@@ -151,7 +163,10 @@ export function scout(deps: ScoutDeps, task: Task) {
     const before = previous;
     previous = f.picture;
     latest = { frame: f, ref, controls };
-    const j = action === 'looked' ? null : await deps.judge({ action, why, frame: f, ref });
+    const j =
+      action === 'looked'
+        ? null
+        : await deps.judge({ action, why, frame: f, ref, record: taken() });
     if (j?.verdict === 'stop') stopped = true;
     waiting = j?.verdict === 'wait';
     const view = {
@@ -192,6 +207,13 @@ export function scout(deps: ScoutDeps, task: Task) {
       throw new ToolRefusal(
         `${what} finds another control than the one you chose; name it by words drawn nearer to it`,
       );
+  };
+  /** The calls since the Supervisor last judged; each judgment takes them all. */
+  let record: Entry[] = [];
+  const taken = () => {
+    const r = record;
+    record = [];
+    return r;
   };
   /** Sign-ins typed this run: a third means the first two were refused. */
   let signIns = 0;
@@ -515,8 +537,24 @@ export function scout(deps: ScoutDeps, task: Task) {
 
   /** Every call: the role's list, then the input, then the tool. A refusal is recorded. */
   async function call(role: Role, name: string, input: unknown): Promise<ToolResult> {
+    const entry: Entry = { tool: name, input };
+    record.push(entry);
     const refuse = async (why: string): Promise<never> => {
+      entry.error = why;
       await trail.step({ name: 'refused', action: name, outcome: why }, null);
+      // A failure is judged at once, on the latest picture: the Scout never moves on unseen.
+      if (latest && role === 'scout') {
+        const j = await deps.judge({
+          action: `${name} was refused`,
+          why: String((input as { why?: unknown } | null)?.why ?? ''),
+          frame: latest.frame,
+          ref: latest.ref,
+          record: taken(),
+        });
+        if (j.verdict === 'stop') stopped = true;
+        waiting = j.verdict === 'wait';
+        throw new ToolRefusal(`${why}. The Supervisor: ${j.says}`);
+      }
       throw new ToolRefusal(why);
     };
     const no = refusal(role, name) ?? (isTool(name) ? null : `there is no tool ${name}`);
@@ -526,7 +564,9 @@ export function scout(deps: ScoutDeps, task: Task) {
     if (!parsed.success)
       return refuse(`the input does not fit ${name}: ${z.prettifyError(parsed.error)}`);
     try {
-      return await (tool.run as (i: unknown) => Promise<ToolResult>)(parsed.data);
+      const r = await (tool.run as (i: unknown) => Promise<ToolResult>)(parsed.data);
+      entry.result = r.text.length > 600 ? `${r.text.slice(0, 599)}…` : r.text;
+      return r;
     } catch (e) {
       if (e instanceof ToolRefusal) return refuse(e.message);
       if (e instanceof TargetError) return refuse(e.message);

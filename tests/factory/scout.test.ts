@@ -62,6 +62,36 @@ async function aScout(judged: Judging[] = []) {
 }
 
 describe('the Scout, scripted', () => {
+  it('shows the Supervisor every call the Scout makes, exactly once, failures included', async () => {
+    const judged: Judging[] = [];
+    const { id, go } = await aScout(judged);
+    const made: string[] = [];
+    const call = async (tool: string, input: Record<string, unknown> = {}) => {
+      made.push(tool);
+      return go(tool, input).catch((e: Error) => e);
+    };
+    await call('browser_open');
+    await call('browser_look');
+    // Refused: no control at that point. The Supervisor judges it at once, error and all.
+    const before = judged.length;
+    const refused = await call('browser_press', { x: 1, y: 1, why: 'a test' });
+    expect(judged.length).toBe(before + 1);
+    expect(String(refused)).toMatch(/The Supervisor: Fine/);
+    const last = judged.at(-1)!;
+    expect(last.record.at(-1)).toMatchObject({
+      tool: 'browser_press',
+      error: expect.stringMatching(/lands on no/),
+    });
+    await call('browser_type', {
+      id: id('textbox'),
+      label: 'Operator ID',
+      value: 'user_id',
+      why: 'sign in',
+    });
+    // Every call, in order, in exactly one judgment's record.
+    expect(judged.flatMap((j) => j.record.map((e) => e.tool))).toEqual(made);
+  }, 120_000);
+
   it("writes a table as it goes that reads the ledger's balance", async () => {
     const judged: Judging[] = [];
     const { s, id, go } = await aScout(judged);

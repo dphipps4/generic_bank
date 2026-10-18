@@ -85,8 +85,20 @@ describe('the Supervisor', () => {
       why: 'to find the member',
       frame: f,
       ref,
+      record: [
+        {
+          tool: 'browser_press',
+          input: { x: 1, y: 1 },
+          error: 'that point lands on no visible control',
+        },
+        { tool: 'browser_press', input: { id: 'c3' } },
+      ],
     });
     expect(j).toEqual({ verdict: 'continue', says: 'f1 shows the search form.' });
+    // The Scout's whole record went with it, the refusal and its exact words included.
+    expect(JSON.stringify(sent.at(-1))).toContain(
+      'REFUSED: that point lands on no visible control',
+    );
     // The picture went to the model with the turn.
     const base64 = f.picture.toString('base64');
     expect(JSON.stringify(sent.at(-1))).toContain(base64);
@@ -96,7 +108,7 @@ describe('the Supervisor', () => {
     const trail = await trailOf();
     const f = frame(120, 'Loading');
     const sup = supervisor({ agent: agent(), trail, goal: 'Reach the balances.' });
-    const j = () => sup.judge({ action: 'looked', why: 'x', frame: f, ref: null });
+    const j = () => sup.judge({ action: 'looked', why: 'x', frame: f, ref: null, record: [] });
     replies.push({ text: 'not json' }, { text: '{"verdict":"maybe"}' }, { text: '' });
     expect((await j()).verdict).toBe('wait');
     expect((await j()).verdict).toBe('wait');

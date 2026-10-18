@@ -9,7 +9,7 @@ import type { FrameStore } from '@gb/evidence';
 import type { Sql } from '@gb/runs';
 import { z } from 'zod';
 import { type Agent, type Conversation, turn } from './agent.js';
-import type { Judging, Judgment } from './scout.js';
+import type { Entry, Judging, Judgment } from './scout.js';
 import { type Tool, ToolRefusal, toolsOf } from './tools.js';
 import { frameAt, type Trail } from './trail.js';
 
@@ -53,6 +53,22 @@ export function answerable(conversation: Conversation): Conversation {
     c.pop();
   }
   return c as Conversation;
+}
+
+/** The Scout's calls as lines: each tool, its input, and what came back or why it was refused. */
+export function recordText(record: readonly Entry[]): string {
+  return record
+    .map((e, i) => {
+      const input = JSON.stringify(e.input);
+      const out =
+        e.error !== undefined
+          ? `REFUSED: ${e.error}`
+          : e.result !== undefined
+            ? `→ ${e.result}`
+            : '(the action being judged)';
+      return `${i + 1}. ${e.tool} ${input} ${out}`;
+    })
+    .join('\n');
 }
 
 /** The verdict, or why it cannot be read. */
@@ -132,6 +148,11 @@ export function supervisor(o: {
         say: [
           ...(first
             ? [`Goal: ${o.goal}`, ...(o.knowledge ? [`What memory knows:\n${o.knowledge}`] : [])]
+            : []),
+          ...(j.record.length
+            ? [
+                `Everything the Scout did since your last judgment, in order:\n${recordText(j.record)}`,
+              ]
             : []),
           `The Scout: ${j.action}. Its reason: ${j.why}.`,
           `The page now, ${j.ref ?? 'not kept'}:\n${JSON.stringify(view)}`,
