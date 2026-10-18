@@ -8,8 +8,8 @@
 //
 // A variant may set: instructions (added to the agent's own), effort, picture (another PNG for the
 // frame), action and why (what the Scout just did), said (the Supervisor's words the Scout read),
-// record (the Scout's calls since the last judgment), clock, goal (balance, transfer, history, or
-// signin for signing in again: the goal the run was on at that frame). It must set the run's task:
+// record (the Scout's calls since the last judgment), clock, goal (balance, transfer or history:
+// the goal the run was on at that frame). It must set the run's task:
 // member, from and to. The bank comes from the run's own record. Three samples run at a time.
 import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
@@ -23,7 +23,7 @@ import { z } from 'zod';
 import { TURN_MS, turn } from './agent.js';
 import { memoryClient, memoryQueryTool, servedBy, vendorOf } from './memory.js';
 import { ROLE_SETTINGS, rolesOf } from './models.js';
-import { GOALS, SCOUT, SIGNIN } from './run.js';
+import { GOALS, SCOUT } from './run.js';
 import { type Entry, scout } from './scout.js';
 import { supervisor } from './supervisor.js';
 import type { Trail } from './trail.js';
@@ -56,7 +56,7 @@ const Variant = z
       .array(z.object({ tool: z.string(), input: z.unknown(), error: z.string().optional() }))
       .optional(),
     clock: z.string().optional(),
-    goal: z.enum(['balance', 'transfer', 'history', 'signin']).optional(),
+    goal: z.enum(['balance', 'transfer', 'history']).optional(),
     // The run's task: the member and the accounts it was given.
     member: z.string().min(1),
     from: z.string().min(1),
@@ -106,7 +106,7 @@ const agentFor = (r: 'scout' | 'supervisor') => ({
 });
 const input = { bank, member: variant.member, from: variant.from, to: variant.to };
 const goal = variant.goal ?? 'balance';
-const goalText = (i: typeof input) => (goal === 'signin' ? SIGNIN : GOALS[goal](i));
+const goalText = (i: typeof input) => GOALS[goal](i);
 const task = {
   goal,
   member: input.member,

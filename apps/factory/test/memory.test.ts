@@ -31,9 +31,9 @@ const RUN = 'build-example-0a1b2c3d';
 const FRAMES: Record<string, Shown> = {
   f1: {
     page: 'bank/signin',
-    title: 'Log In',
-    controls: ['Log In'],
-    texts: ['Example Credit Union: CoreLink Branch Console'],
+    title: 'Sign In',
+    controls: ['Sign In'],
+    texts: ['Generic Bank: CoreLink Branch Console'],
   },
   f2: {
     page: 'bank/code/enter',
@@ -157,7 +157,7 @@ describe('a run’s lessons', () => {
     ).toBe(201);
     for (const text of [
       'Statements here list the newest first.',
-      'The transfer form offers only shares the member owns.',
+      'The transfer form offers only accounts the member owns.',
     ])
       await m.write('lessons/proposals', {
         runId: earlier.id,
@@ -173,7 +173,7 @@ describe('a run’s lessons', () => {
     const served = servedBy(pack);
     const idOf = (start: string) => [...served].find(([, text]) => text.startsWith(start))![0];
     const newestFirst = idOf('Statements here');
-    const sharesOnly = idOf('The transfer form');
+    const accountsOnly = idOf('The transfer form');
     expect(served.size).toBe(2);
 
     const { trail, steps } = trailOf();
@@ -198,7 +198,11 @@ describe('a run’s lessons', () => {
         text: JSON.stringify({
           reliedOn: [newestFirst, 'a-lesson-memory-never-served'],
           contradicted: [
-            { lesson: sharesOnly, reason: 'it offered a share of another member', frames: ['f2'] },
+            {
+              lesson: accountsOnly,
+              reason: 'it offered an account of another member',
+              frames: ['f2'],
+            },
             { lesson: newestFirst, reason: 'cited nothing of this run', frames: ['f8'] },
           ],
         }),
@@ -214,7 +218,7 @@ describe('a run’s lessons', () => {
     });
     expect(learned.lessons).toHaveLength(2);
     expect(learned.reliedOn).toEqual([newestFirst]);
-    expect(learned.contradicted.map((c) => c.lesson)).toEqual([sharesOnly]);
+    expect(learned.contradicted.map((c) => c.lesson)).toEqual([accountsOnly]);
     expect(steps.find((s) => s.action === 'dropped')?.outcome).toBe(
       'a-lesson-memory-never-served: memory did not serve it; ' +
         `${newestFirst}: f8 is not a frame of this run`,
@@ -262,10 +266,10 @@ describe('a run’s lessons', () => {
     const disputed = await memory.db.query(
       `SELECT v.state::text AS state, v.reason FROM "Lesson" l
          JOIN "LessonVersion" v ON v."lessonId" = l.id AND v.version = l.current WHERE l.id = $1`,
-      [sharesOnly],
+      [accountsOnly],
     );
     expect(disputed.rows).toEqual([
-      { state: 'disputed', reason: 'it offered a share of another member' },
+      { state: 'disputed', reason: 'it offered an account of another member' },
     ]);
   });
 });

@@ -101,11 +101,11 @@ describe('the allowlist', () => {
   });
 
   it('knows a bank’s own names for the listed controls, but never for a trap', () => {
-    const names = { 'Sign In': ['Log In'], Menu: [/\s▾$/], 'Transfer Funds': ['Pay now'] };
-    expect(decide('check-balance', 'sign_in', 'press', 'Log In', { names })).toEqual({
+    const names = { 'Sign In': ['Enter'], Menu: [/\s▾$/], 'Transfer Funds': ['Pay now'] };
+    expect(decide('check-balance', 'sign_in', 'press', 'Enter', { names })).toEqual({
       allowed: true,
     });
-    expect(decide('check-balance', 'sign_in', 'press', 'Log In')).toMatchObject({
+    expect(decide('check-balance', 'sign_in', 'press', 'Enter')).toMatchObject({
       allowed: false,
     });
     expect(decide('check-balance', 'home', 'press', 'Members ▾', { names })).toEqual({

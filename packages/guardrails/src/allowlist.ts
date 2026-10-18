@@ -26,7 +26,7 @@ export type Layer = 'task allowlist' | 'element' | 'approval grant' | 'secret ty
 export type Verdict = { allowed: true } | { allowed: false; rule: string; layer: Layer };
 
 /**
- * A bank's own names for the controls the lists name: "Sign In" may be drawn "Log In". The list's
+ * A bank's own names for the controls the lists name: "Sign In" may be drawn "Enter". The list's
  * name always counts too. A pattern is for a control the product draws with names of its own (a
  * drop-down menu's title).
  */
