@@ -15,7 +15,7 @@ just up                         # both banks, the API, the Console, the runner, 
 just show                       # Swagger UI, the Console, both banks and the simulated inbox
 ```
 
-`just up` writes ACCESS.md, the one place with every page, login and member number. [The demo](docs/demo.md) walks both tasks, three hazards and bank 2 in about fifteen minutes. The factory needs one key you bring: `just secret-set factory OPENROUTER_API_KEY`.
+`just up` writes ACCESS.md, the one place with every page, login and member number. Then follow the two demos: [Demo 1](docs/demo-1.md) runs both tasks on bank 1, whose crawler AI wrote ahead of time, and [Demo 2](docs/demo-2.md) has the factory write bank 2's. The factory needs one key you bring: `just secret-set factory OPENROUTER_API_KEY`.
 
 ---
 
