@@ -7,8 +7,9 @@ export {
   fingerprint,
   type KnownPicture,
   labelPicture,
+  labels,
+  matchPicture,
   NEAR,
-  pictureNamed,
 } from './picture.js';
 export {
   type Control,

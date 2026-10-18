@@ -15,7 +15,6 @@ import {
   control,
   type Control,
   field,
-  fingerprint,
   type Frame,
   knows,
   labelPicture,
@@ -292,23 +291,29 @@ export function scout(deps: ScoutDeps, task: Task) {
       }) {
         mayAct();
         const c = chosen(i);
-        if (i.value === 'password' && ++signIns > 2)
-          throw new Error('two sign-ins did not get past the sign-in page: stopping for a person');
         const label = i.label;
         // Words beside the field first. Where there are none, the label is a picture of words: it
         // is known from now on by its fingerprint, under the words the Scout read off it.
         const f = await field(page, label, t.pictures).catch(async (e: Error) => {
           const pic = await labelPicture(page, c.box);
-          if (!pic) throw new ToolRefusal(`the runtime finds no field by "${label}": ${e.message}`);
+          if (!pic)
+            throw new ToolRefusal(
+              `no words "${label}" beside a field, and no label picture beside the field you chose (${c.role} at ${Math.round(c.box.x)},${Math.round(c.box.y)}): ${e.message}`,
+            );
           t.pictures = [
             ...(t.pictures ?? []).filter((p) => p.name !== label),
-            { name: label, print: fingerprint(pic) },
+            { name: label, print: pic.print, ratio: pic.ratio },
           ];
           return field(page, label, t.pictures).catch((e2: Error) => {
-            throw new ToolRefusal(`the runtime finds no field by "${label}": ${e2.message}`);
+            throw new ToolRefusal(
+              `learned the label picture beside the field you chose as "${label}", but could not find it again: ${e2.message}`,
+            );
           });
         });
         same(f.box, c, `the field by "${label}"`);
+        // A password typed a third time means the first two sign-ins were refused.
+        if (i.value === 'password' && ++signIns > 2)
+          throw new Error('two sign-ins did not get past the sign-in page: stopping for a person');
         const text =
           i.value === 'user_id'
             ? deps.credentials.operatorId
