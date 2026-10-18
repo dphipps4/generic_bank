@@ -24,7 +24,6 @@ As it goes, the Scout writes the table:
 
 Every call is evidence: its input (masked), its result or its refusal, a close-up taken after it acted, and the Scout's own reasoning.
 
-After the balance goal, the Scout signs in once more from the session the run saved, as every later run on that workstation will. A bank may greet a browser it remembers with another sign-in page; bank 2 shows "Welcome back" with only a passcode. The Scout names that page and goes through it, and its steps serve every goal.
 
 **Decision:** the Scout writes the table from actions it actually took, each checked in code. **Not chosen:** having a model draft a profile at the end from its memory of the run. That's what the first factory did, and its claims could be guesses that no action had proved.
 

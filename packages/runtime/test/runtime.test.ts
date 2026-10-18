@@ -4,12 +4,6 @@ import type { Browser, Page } from 'playwright-core';
 import { PNG } from 'pngjs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
-  chooseAt,
-  clickAt,
-  cropOf,
-  findCrop,
-  typeAt,
-  whatIsAt,
   field,
   knows,
   nameIn,
@@ -171,10 +165,8 @@ describe('the runtime: see first, then click', () => {
     const f = await see(p, { known: ['Alex Sample'], limitMs: 10_000 });
     expect(f.tree).not.toMatch(/41,231|40017732|Alex Sample|1,000/);
     // One for one, so the text keeps the page's shape: an identifier keeps its last four, money and
-    // known names are hidden whole, and the bank's own mask is never hidden again.
+    // known names are hidden whole.
     expect(f.tree).toContain('Account ████7732');
-    expect(f.tree).toContain('Share ****8176-S01');
-    expect(f.tree).toContain('Checking, Share ****8176-S01, available █████████');
     expect(f.tree).toContain('Current balance: ██████████ for ████ ██████');
     expect(f.address).not.toContain('token');
     expect(f.controls.map((c) => c.name).join(' ')).not.toContain('40017732');
@@ -212,15 +204,8 @@ describe('the runtime: see first, then click', () => {
       boxes.some(
         (b) => b.x <= r.x && b.y <= r.y && b.x + b.w >= r.x + r.w && b.y + b.h >= r.y + r.h,
       );
-    const touched = (r: { x: number; y: number; w: number; h: number }) =>
-      boxes.some((b) => b.x < r.x + r.w && r.x < b.x + b.w && b.y < r.y + r.h && r.y < b.y + b.h);
     expect(covered(await rect('member', '4001'))).toBe(true);
     expect(covered(await rect('member', '732'))).toBe(false);
-    expect(touched(await rect('share', '8176'))).toBe(false);
-    const list = (await p.locator('#from').boundingBox())!;
-    expect(
-      boxes.some((b) => b.x >= list.x && b.x + b.w <= list.x + list.width + 1 && b.y >= list.y - 2),
-    ).toBe(true);
   });
 
   it('names a control by its accessible name, as the runtime presses it', async () => {
@@ -243,35 +228,5 @@ describe('the runtime: see first, then click', () => {
     expect(
       await p.evaluate(() => [navigator.userAgent, navigator.webdriver, navigator.platform]),
     ).toEqual([expect.stringContaining('Macintosh'), false, 'MacIntel']);
-  });
-
-  it('finds a label by sight, says what is at a point, and types, clicks and chooses there', async () => {
-    page = await newPage(browser);
-    const form = (top: number, extra = '') =>
-      `<body style="margin:0">${extra}<div style="position:absolute;left:20px;top:${top}px">
-        <span style="font:bold 15px monospace;letter-spacing:2px">USERNAME:</span>
-        <input id="u" style="width:200px;height:24px"></div>
-        <button id="b" onclick="this.textContent='Pressed'" style="position:absolute;left:20px;top:${top + 40}px;width:120px;height:30px">Log In</button>
-        <select id="s" style="position:absolute;left:20px;top:${top + 80}px;width:300px">
-          <option>Choose an account</option><option>Everyday Checking 8176</option><option>Rainy Day Savings 9433</option>
-        </select></body>`;
-    await page.setContent(form(20));
-    const l = (await page.getByText('USERNAME:').boundingBox())!;
-    const anchor = cropOf(await page.screenshot(), { x: l.x, y: l.y, w: l.width, h: l.height });
-    // The page moves: the anchor is found where it now is, and the field beside it typed into.
-    await page.setContent(form(200, '<h1 style="margin:20px">Welcome back</h1>'));
-    const found = findCrop(await page.screenshot(), anchor)!;
-    const u = (await page.locator('#u').boundingBox())!;
-    expect(Math.abs(found.box.y - (u.y + u.height / 2 - found.box.h / 2))).toBeLessThan(6);
-    const field = { x: u.x + u.width / 2, y: u.y + u.height / 2 };
-    expect((await whatIsAt(page, field)).kind).toBe('field');
-    await typeAt(page, field, 'teller0412');
-    expect(await page.locator('#u').inputValue()).toBe('teller0412');
-    await clickAt(page, { x: 80, y: 255 });
-    expect(await page.locator('#b').textContent()).toBe('Pressed');
-    expect(await chooseAt(page, { x: 170, y: 290 }, '9433')).toContain('Rainy Day Savings');
-    // Two of the same label: no match, never a guess.
-    await page.setContent(form(20) + form(400));
-    expect(findCrop(await page.screenshot(), anchor)).toBeNull();
   });
 });

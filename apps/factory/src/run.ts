@@ -119,11 +119,6 @@ const packText = (p: Pack) =>
     ),
   );
 
-/** Signing in again from the saved session, after the balance goal: what every later run meets. */
-export const SIGNIN =
-  'Sign in again. This browser is now remembered by the bank, so its sign-in may look different from the first time. Name the screen you see, act on it as a person at the desk would, and call goal_reached as soon as you reach a screen your route already names.';
-const SIGNIN_MS = 2.5 * 60_000;
-
 /**
  * The run's hard limit (the Justfile stops its container then), less what the gate and the lessons
  * need after the goals: every goal's clock, extensions too, ends before this.
@@ -256,86 +251,6 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
       clock: { text: () => clock?.text() ?? 'no clock running' },
     });
     let conversation: Conversation = [];
-    /**
-     * Signs in again from the session the run saved, as every later run on this workstation will: the
-     * bank may show another sign-in. The Scout names it and acts on it, its
-     * steps filed for every goal, until it reaches a screen the route holds. Short, inside the run's
-     * time; a failure here is logged and the run goes on.
-     */
-    const signInAgain = async () => {
-      if (!session || !table) return;
-      const ms = Math.min(SIGNIN_MS, startedAt.getTime() + RUN_MS - AFTER_GOALS_MS - Date.now());
-      if (ms < 30_000) return;
-      const again = await newPage(deps.browser, { session });
-      await again.goto(bank.url).catch(() => undefined);
-      const ctrl = new AbortController();
-      const end = (why: string) => {
-        if (ctrl.signal.aborted) return;
-        ctrl.abort(why);
-        void again
-          .context()
-          .close()
-          .catch(() => undefined);
-      };
-      clock = goalClock(ms, () => end('out of time: signing in again'));
-      const s = scout(
-        {
-          page: again,
-          start: bank.url,
-          trail,
-          credentials: deps.credentials,
-          code: async () => {
-            clock?.pause();
-            try {
-              return await deps.code(runId);
-            } finally {
-              clock?.resume();
-            }
-          },
-          judge: async (j) => {
-            const v = await sup.judge(j);
-            if (v.verdict === 'end') end(`the Supervisor ended the Scout: ${v.says}`);
-            return v;
-          },
-          table,
-        },
-        {
-          goal: 'signin',
-          member: input.member,
-          from: input.from,
-          to: input.to,
-          amountCents: 100,
-          memo,
-        },
-      );
-      log(`${runId}: signing in again`);
-      sup.goalNow(SIGNIN);
-      const first = await s.call('scout', 'browser_look', {}).catch(() => null);
-      try {
-        await turn(agent('scout'), {
-          system: SCOUT,
-          say: [
-            `Goal: ${SIGNIN}`,
-            `The pages named so far: ${table.rows.map((r) => `"${r.page}" (${r.shows.join('; ')})`).join(', ')}`,
-            first ? `The page now:\n${first.text}` : 'Begin by looking at the page.',
-          ].join('\n\n'),
-          ...(first?.image ? { image: first.image } : {}),
-          tools: s.tools('scout'),
-          calls: 20,
-          maxTokens: 8000,
-          signal: ctrl.signal,
-          keep: 4,
-        });
-      } catch (e) {
-        log(`${runId}: signing in again stopped: ${(e as Error).message}`);
-      }
-      clock.stop();
-      table = s.table();
-      await again
-        .context()
-        .close()
-        .catch(() => undefined);
-    };
     for (const goal of ['balance', 'transfer', 'history'] as Goal[]) {
       const task: Task = {
         goal,
@@ -484,7 +399,6 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
         .context()
         .storageState({ path: session })
         .catch(() => (session = undefined));
-      if (goal === 'balance') await signInAgain();
     }
     if (reached.length === 3) outcome = 'every goal reached';
   } catch (e) {

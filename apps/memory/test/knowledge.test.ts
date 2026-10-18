@@ -138,7 +138,7 @@ beforeAll(async () => {
     vendor: 'corelink',
   });
   await curate('T-1', {
-    text: 'Example labels its sign-in button Log In.',
+    text: 'This bank shows a branch notice above its menu.',
     scope: 'tenant',
     bank: 'example',
   });
@@ -159,11 +159,7 @@ beforeAll(async () => {
     'Unconfirmed patterns stay unserved until confirmed.',
     'pattern',
   );
-  ids.seen = await propose(
-    'ex-1',
-    'The Find Member page pages its results ten at a time.',
-    'tenant',
-  );
+  ids.seen = await propose('ex-1', 'The member search pages its results ten at a time.', 'tenant');
   ids.guess = await propose(
     'gen-1',
     'Statements older than a year sit behind an archive tab.',

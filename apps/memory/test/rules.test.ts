@@ -137,7 +137,7 @@ describe('a promotion', () => {
     ids.seen = await propose('build-ex', 'Example lists statements newest first, twelve per page.');
     ids.guess = await propose(
       'build-ex',
-      'Example may hide closed shares behind a toggle.',
+      'Example may hide closed accounts behind a toggle.',
       'tenant',
       false,
     );
@@ -263,7 +263,7 @@ describe('contradictions', () => {
     ids.tenant = await propose('c-ex', 'Example puts the balance in the third column.');
     ids.vendor = await propose(
       'c-gen',
-      'CoreLink shows the member name above the shares.',
+      'CoreLink shows the member name above the accounts.',
       'vendor',
     );
   });

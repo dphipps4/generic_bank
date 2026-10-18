@@ -40,8 +40,7 @@ import type { Trail } from './trail.js';
 
 /** What a run is for, and the values a teller is given for it. */
 export interface Task {
-  /** A goal, or signing in again from a remembered workstation, whose steps serve every goal. */
-  goal: Goal | 'signin';
+  goal: Goal;
   member: string;
   /** Accounts by name or last four; for a transfer, and for its history. */
   from?: string;
@@ -301,7 +300,7 @@ export function scout(deps: ScoutDeps, task: Task) {
    * page that got somewhere wins. Steps on a page not yet named are kept until it is.
    */
   const fileVisit = (on: Row | null) => {
-    if (on && visit.length) on.do[task.goal === 'signin' ? 'any' : task.goal] = visit;
+    if (on && visit.length) on.do[task.goal] = visit;
     visit = [];
   };
 
@@ -1185,16 +1184,6 @@ export function scout(deps: ScoutDeps, task: Task) {
       input: z.object({ submit: z.string().max(60).optional() }),
       async run(i: { submit?: string }) {
         if (!latest?.ref || !row) throw new ToolRefusal('name this page first');
-        // Signing in again ends on a screen the route already holds: its steps are filed, nothing more.
-        if (task.goal === 'signin') {
-          fileVisit(row);
-          stopped = true;
-          await trail.step(
-            { name: 'goal reached', action: `signed in again, on ${row.page}` },
-            null,
-          );
-          return { text: `Signed in again, on "${row.page}". Stop now.` };
-        }
         if (task.goal === 'transfer') {
           const s = i.submit?.trim() ?? '';
           // By id or by name; a send button drawn as a picture has a place, and the crawler finds it
