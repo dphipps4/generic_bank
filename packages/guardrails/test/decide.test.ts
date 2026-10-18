@@ -5,7 +5,6 @@ import {
   consumeGrant,
   type Context,
   decide,
-  decideWritten,
   type GrantCheck,
   JOBS,
   VERBS,
@@ -240,45 +239,5 @@ describe('injected instructions', () => {
           expect(decide(a.job, a.screen, a.verb, a.control, withText)).toEqual(plain);
         }
       }
-  });
-});
-
-describe('a written crawler', () => {
-  it('may open and press what moves it along, never a send without a grant', () => {
-    for (const ok of [
-      'Transfer Funds',
-      'Move Money',
-      'Next',
-      'Continue',
-      'Find',
-      'Sign In',
-      'Send code',
-      'Send a new code',
-    ])
-      expect(decideWritten('press', ok)).toEqual({ allowed: true });
-    for (const send of [
-      'Submit transfer',
-      'Confirm',
-      'Send',
-      'Pay now',
-      'Submit (the crawler\'s send control, {"x":1,"y":2})',
-    ])
-      expect(decideWritten('press', send)).toMatchObject({ allowed: false });
-    expect(decideWritten('press', 'Close account')).toMatchObject({
-      allowed: false,
-      layer: 'element',
-    });
-  });
-
-  it('never types a stored secret as plain text', () => {
-    expect(
-      decideWritten('type', 'Memo', { typed: 'hunter22', secrets: ['hunter22'] }),
-    ).toMatchObject({
-      allowed: false,
-      layer: 'secret typing',
-    });
-    expect(decideWritten('type', 'Memo', { typed: 'GBX 1A2B', secrets: ['hunter22'] })).toEqual({
-      allowed: true,
-    });
   });
 });

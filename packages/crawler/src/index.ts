@@ -35,4 +35,3 @@ export {
   type Table,
   type Trouble,
 } from './table.js';
-export { isWritten, lint, load, type Site, type Target, VALUES, type Written } from './written.js';

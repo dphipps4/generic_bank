@@ -6,12 +6,10 @@ import { join } from 'node:path';
 import {
   type Action,
   checkBalance,
-  isWritten,
   type Seen,
   type Session,
   Stop,
   type Table,
-  type Written,
   TABLES,
 } from '@gb/crawler';
 import type { FrameStore } from '@gb/evidence';
@@ -78,8 +76,7 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
   const served = await serving(deps.sql, run.bank, run.task);
   // A learned table, if the version serving holds one; else the bank's own, written by hand.
   const table =
-    ((served && (await tableOf(deps.sql, served.versionId))) as Table | Written | null) ??
-    TABLES[run.bank];
+    ((served && (await tableOf(deps.sql, served.versionId))) as Table | null) ?? TABLES[run.bank];
   if (!bank || !served || !table || !TASKS.has(run.task)) {
     const e: Ending = { status: 'failed', code: 'no_driver', retryable: false };
     await settleRun(deps.sql, runId, e);
@@ -99,7 +96,7 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
     .concat(creds.operatorId);
   const guarded = runGuard({
     job: run.task as (typeof JOBS)[number],
-    ...(isWritten(table) ? { written: true } : table.names ? { names: table.names } : {}),
+    ...(table.names ? { names: table.names } : {}),
     // Only the password. A username is not a secret: the bank prints it on every page.
     secrets: [creds.password],
   });
