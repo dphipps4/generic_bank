@@ -135,10 +135,12 @@ const grow = (a: Box, b: Box): Box => {
 /** Waits until the page is ready, then keeps it: the masked picture, page and address. */
 export async function see(
   page: Page,
-  o: { known?: string[]; limitMs?: number } = {},
+  o: { known?: string[]; limitMs?: number; everyMs?: number } = {},
 ): Promise<Frame> {
   const known = o.known ?? [];
   const until = Date.now() + (o.limitMs ?? 60_000);
+  // How long between two looks: still twice running means ready.
+  const every = o.everyMs ?? 350;
   let before: PNG | null = null;
   let lastChange: Box | null = null;
   const animated: Box[] = [];
@@ -151,7 +153,7 @@ export async function see(
       before = null;
       lastChange = null;
       still = 0;
-      await page.waitForTimeout(700);
+      await page.waitForTimeout(every);
       continue;
     }
     const shot = PNG.sync.read(raw);
@@ -172,7 +174,7 @@ export async function see(
       );
     lastChange = change || null;
     before = shot;
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(every);
   }
   const picture = paint(await page.screenshot(), await maskBoxes(page, known));
   const parts: string[] = [];

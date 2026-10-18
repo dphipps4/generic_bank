@@ -113,7 +113,7 @@ export async function type(page: Page, label: string, text: string): Promise<Box
   const f = await field(page, label);
   await f.target.click();
   await f.target.fill('');
-  await page.keyboard.type(text, { delay: 20 });
+  await page.keyboard.type(text, { delay: 10 });
   return f.box;
 }
 

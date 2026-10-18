@@ -169,7 +169,7 @@ export function scout(deps: ScoutDeps, task: Task) {
     let f: Frame;
     try {
       // No long waits: a page that will not settle is given up on in seconds.
-      f = await see(page, { known, limitMs: 15_000 });
+      f = await see(page, { known, limitMs: 15_000, everyMs: 150 });
     } catch (e) {
       if (!(e instanceof NotReady)) throw e;
       await trail.step({ name: 'not ready', action, outcome: e.message }, null);
@@ -183,8 +183,14 @@ export function scout(deps: ScoutDeps, task: Task) {
     const controls = f.controls.filter((c) => c.name || c.role !== 'link');
     const before = previous;
     previous = f.picture;
+    // The Scout's list holds while the page's controls stay where they were: typing into a field
+    // keeps it; a new page clears it.
+    const layout = JSON.stringify(
+      controls.map((c) => [c.role, Math.round(c.box.x), Math.round(c.box.y)]),
+    );
+    if (layout !== lastLayout) inventory = null;
+    lastLayout = layout;
     latest = { frame: f, ref, controls };
-    inventory = null;
     const j =
       action === 'looked'
         ? null
@@ -236,6 +242,8 @@ export function scout(deps: ScoutDeps, task: Task) {
   let current: Entry | null = null;
   /** What the Scout listed on the latest page, checked by the browser; reset on every new page. */
   let inventory: Item[] | null = null;
+  /** Where the latest page's controls were: the list holds while they stay put. */
+  let lastLayout = '';
   const taken = () => {
     const r = record;
     record = [];
@@ -333,7 +341,7 @@ export function scout(deps: ScoutDeps, task: Task) {
     },
     browser_wait: {
       description: 'Waits the given seconds, then shows the page.',
-      input: z.object({ seconds: z.number().int().min(1).max(30) }),
+      input: z.object({ seconds: z.number().int().min(1).max(3) }),
       async run(i: { seconds: number }) {
         await new Promise((r) => setTimeout(r, i.seconds * 1000));
         waiting = false;

@@ -119,7 +119,7 @@ export function hazards(opts: HazardOptions) {
             if (hit) opts.log(n, path, true);
             return hit;
           },
-          latencyMs: () => (set.has('latency') ? 1000 : 0),
+          latencyMs: () => (set.has('latency') ? 500 : 0),
         };
       }
       const r = rng(hash32(seed, ++counter));

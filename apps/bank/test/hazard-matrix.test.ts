@@ -37,7 +37,7 @@ const EFFECTS: Record<HazardName, () => Promise<void>> = {
   latency: async () => {
     const t = Date.now();
     await forced('latency', () => c.get('home'));
-    expect(Date.now() - t).toBeGreaterThanOrEqual(900);
+    expect(Date.now() - t).toBeGreaterThanOrEqual(450);
   },
   'js-error-harmless': async () =>
     expect(await forced('js-error-harmless', () => page('home'))).toContain('w.redraw()'),
