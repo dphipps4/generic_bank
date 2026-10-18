@@ -46,10 +46,5 @@
       "h": 18
     }
   ],
-  "pictureWords": [
-    "Username:",
-    "Passcode:",
-    "Member number:",
-    "Amount:"
-  ]
+  "pictureWords": ["Username:", "Passcode:", "Member number:", "Amount:"]
 }

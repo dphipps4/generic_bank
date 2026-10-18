@@ -123,10 +123,5 @@
     }
   ],
   "labelPictures": [],
-  "pictureWords": [
-    "Username:",
-    "Passcode:",
-    "Member number:",
-    "Amount:"
-  ]
+  "pictureWords": ["Username:", "Passcode:", "Member number:", "Amount:"]
 }
