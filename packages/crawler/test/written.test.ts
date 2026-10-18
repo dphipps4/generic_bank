@@ -1,9 +1,7 @@
 // A written crawler is refused before it runs when it reaches past `site`, holds the task's own
 // values, or lacks a part; one that passes loads into a context that holds only the language.
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { lint, load, nameBeside, partsOf, whereIn } from '../src/written.js';
+import { lint, load } from '../src/written.js';
 
 const OK = `
 async function signIn(site) {
@@ -60,77 +58,5 @@ describe('a written crawler', () => {
 
   it('is never loaded when the lint refuses it', () => {
     expect(() => load(`${OK}\nprocess.exit();`)).toThrow(/the crawler is refused/);
-  });
-});
-
-describe("run 19's crawlers, as the factory's Scout wrote them on bank 1", () => {
-  const version = (v: string) =>
-    readFileSync(join(import.meta.dirname, `run19/crawler-${v}.js`), 'utf8');
-
-  it('are refused for a site call with no await, by its line, and pass with it', () => {
-    for (const v of ['01', '02', '03']) {
-      const problems = lint(version(v));
-      expect(problems.join(' ')).toMatch(/line \d+: site\.shows\(…\) is not awaited/);
-      expect(lint(version(v).replace(/(?<!await )site\.shows\(/g, 'await site.shows('))).toEqual(
-        [],
-      );
-    }
-  });
-
-  it('say which of their lines threw', async () => {
-    const fixed = version('03').replace(/(?<!await )site\.shows\(/g, 'await site.shows(');
-    const m = load(fixed);
-    const err = await m
-      .transfer(
-        {
-          open: async () => undefined,
-          look: async () => ({ lines: [], controls: [] }),
-          shows: async () => false,
-          wait: async () => undefined,
-          press: async (t: unknown) => {
-            throw new Error(`press ${JSON.stringify(t)}: 0 visible`);
-          },
-          type: async () => undefined,
-          choose: async () => undefined,
-          stop: () => {
-            throw new Error('stop');
-          },
-        } as never,
-        { member: '' },
-      )
-      .catch((e: unknown) => e);
-    const at = whereIn(fixed, err);
-    expect(at?.code).toMatch(/site\.press\(/);
-    expect(fixed.split('\n')[at!.line - 1]!.trim()).toBe(at!.code);
-  });
-});
-
-describe('a crawler being written', () => {
-  it('may lack parts, and is whole only with all of them', () => {
-    const signInOnly = `async function signIn(site) { await site.open(); }\nfunction name(lines) { return null; }`;
-    expect(lint(signInOnly, undefined, { partial: true })).toEqual([]);
-    expect(lint(signInOnly).join(' ')).toMatch(/does not define balance/);
-    expect(partsOf(signInOnly)).toEqual(['signIn', 'name']);
-    expect(load(signInOnly, { partial: true }).balance).toBeUndefined();
-  });
-});
-
-describe("the member's name a crawler reads", () => {
-  // Bank 1's summary lines, as leaves reads them across its frames; the name is a test value.
-  const lines = [
-    'Generic Bank · Main Street Branch',
-    'Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security',
-    'Member 40017732 · A. Sample',
-    'Member Summary',
-  ];
-  it('is believed only beside the member number', () => {
-    const v3 = readFileSync(join(import.meta.dirname, 'run19/crawler-03.js'), 'utf8').replace(
-      /(?<!await )site\.shows\(/g,
-      'await site.shows(',
-    );
-    // Run 19's own name picks the banner: not beside the number, so nothing is believed.
-    expect(load(v3).name!(lines, '40017732')).toBe('Report suspicious calls to Security');
-    expect(nameBeside(lines, '40017732', load(v3).name!(lines, '40017732'))).toBeNull();
-    expect(nameBeside(lines, '40017732', 'A. Sample')).toBe('A. Sample');
   });
 });

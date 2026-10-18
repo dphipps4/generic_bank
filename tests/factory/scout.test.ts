@@ -4,7 +4,7 @@
 // 1's own, with the balance the ledger holds.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { openTrail } from '../../apps/factory/src/trail.js';
-import { type Judging, scout } from '../../apps/factory/src/scout.js';
+import { scout, type Judging } from '../../apps/factory/src/scout.js';
 import { BANK1 } from '../support/bank1-crawler.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
 import { memoryStore } from '../../packages/evidence/src/index.js';

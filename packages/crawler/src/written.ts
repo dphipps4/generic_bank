@@ -23,8 +23,6 @@ import {
 export interface Written {
   kind: 'written';
   source: string;
-  /** Still being written: missing parts are allowed, and a try needs only its own. */
-  partial?: boolean;
 }
 
 export const isWritten = (t: unknown): t is Written =>
@@ -42,14 +40,9 @@ export interface Module {
     task: Facts,
   ): Promise<{ from: string; to: string; amount: string; memo: string }>;
   history(site: Site, task: Facts): Promise<void>;
-  /** Reaches a signed-in page from wherever the site starts: optional, and tried on its own. */
-  signIn?(site: Site, task: Facts): Promise<void>;
   name?(lines: string[], member: string): string | null | undefined;
   send: Target;
 }
-
-/** A crawler being written: any of its parts may be missing until it is ready. */
-export type Partial = { [K in keyof Module]?: Module[K] };
 
 /** What the crawler is told of its task: never a secret. */
 export interface Facts {
@@ -86,52 +79,28 @@ const FORBIDDEN =
 const NEEDS = ['balance', 'transfer', 'review', 'history', 'send'] as const;
 
 /** Strings and comments out, so a word in a string is not taken for code. */
-const codeOnly = (src: string) => {
-  // Each one blanked to its own line breaks, so a line of code keeps its number.
-  const blank = (m: string) => m.replace(/[^\n]/g, ' ');
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, blank)
-    .replace(/\/\/[^\n]*/g, blank)
-    .replace(
-      /`(?:\\[\s\S]|[^`\\])*`|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g,
-      (m) => `""${blank(m.slice(2))}`,
-    );
-};
+const codeOnly = (src: string) =>
+  src
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/\/\/[^\n]*/g, ' ')
+    .replace(/`(?:\\[\s\S]|[^`\\])*`|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g, '""');
 
 /**
  * What is wrong with a crawler's source, before it ever runs: empty when nothing is. It may not reach
  * past `site`, may not hold the task's own values (they come in `task`), and must define every part.
  */
-/** The site calls that return a promise: each must be awaited, or its answer is a promise. */
-const ASYNC = /\bsite\.(open|look|shows|wait|press|type|choose)\s*\(/g;
-
-/**
- * What is wrong with a crawler's source, before it ever runs: empty when nothing is. It may not reach
- * past `site`, may not hold the task's own values (they come in `task`), must await every site call
- * that returns a promise, and, unless it is still being written, must define every part.
- */
 export function lint(
   source: string,
   task?: { member?: string; from?: string; to?: string },
-  o: { partial?: boolean } = {},
 ): string[] {
   const out: string[] = [];
   if (source.length > 30_000) out.push('it is over 30,000 characters');
   const code = codeOnly(source);
   const bad = code.match(new RegExp(FORBIDDEN, 'g'));
   if (bad) out.push(`it uses ${[...new Set(bad)].join(', ')}: a crawler acts only through site`);
-  if (!o.partial)
-    for (const n of NEEDS)
-      if (!new RegExp(`\\b(async\\s+function\\s+${n}\\b|(const|let|var)\\s+${n}\\b)`).test(code))
-        out.push(`it does not define ${n}`);
-  // Line by line, so the Scout is told where: a site call with no await is a promise, always true.
-  code.split('\n').forEach((line, k) => {
-    for (const m of line.matchAll(ASYNC))
-      if (!/\bawait\s*$/.test(line.slice(0, m.index)))
-        out.push(
-          `line ${k + 1}: site.${m[1]}(…) is not awaited, so it is a promise, never its answer: write await site.${m[1]}(…)`,
-        );
-  });
+  for (const n of NEEDS)
+    if (!new RegExp(`\\b(async\\s+function\\s+${n}\\b|(const|let|var)\\s+${n}\\b)`).test(code))
+      out.push(`it does not define ${n}`);
   for (const v of [task?.member, task?.from, task?.to])
     if (v && source.includes(v)) out.push(`it holds the task's own value ${v}: read it from task`);
   if (/\d{5,}/.test(code))
@@ -144,57 +113,16 @@ export function lint(
   return out;
 }
 
-/** The parts a crawler being written defines so far. */
-export function partsOf(source: string): (keyof Module)[] {
-  const code = codeOnly(source);
-  return (['signIn', 'balance', 'transfer', 'review', 'history', 'name', 'send'] as const).filter(
-    (n) => new RegExp(`\\b((async\\s+)?function\\s+${n}\\b|(const|let|var)\\s+${n}\\b)`).test(code),
-  );
-}
-
-/** The file name a crawler runs under, so an error says which of its lines threw. */
-const FILE = 'crawler.js';
-
-/**
- * The crawler's parts, from its source, in a context that holds nothing but the language itself. Its
- * lines keep their numbers, so an error points at the crawler's own line.
- */
-export function load(source: string, o: { partial?: boolean } = {}): Module {
-  const problems = lint(source, undefined, o);
+/** The crawler's parts, from its source, in a context that holds nothing but the language itself. */
+export function load(source: string): Module {
+  const problems = lint(source);
   if (problems.length) throw new Error(`the crawler is refused: ${problems.join('; ')}`);
-  const has = (n: string) => `typeof ${n} === 'undefined' ? undefined : ${n}`;
   const body = `${source}
-;({ ${['balance', 'transfer', 'review', 'history', 'signIn', 'name', 'send'].map((n) => `${n}: ${has(n)}`).join(', ')} })`;
+;({ balance, transfer, review, history, send,
+    name: typeof name === 'function' ? name : undefined })`;
   return runInNewContext(`"use strict";\n${body}`, Object.create(null), {
     timeout: 1000,
-    filename: FILE,
-    lineOffset: -1,
   }) as Module;
-}
-
-/**
- * The name a crawler's `name` returned, when it sits beside the member's number: on that line, or
- * the line after it (a results row). Anything else (a banner above, a heading) is not their name.
- */
-export function nameBeside(lines: string[], member: string, n: unknown): string | null {
-  if (typeof n !== 'string' || n.trim().length < 2) return null;
-  const name = n.trim();
-  return lines.some(
-    (l, k) =>
-      l.includes(member) &&
-      [l.replace(member, ''), lines[k + 1]].some((x) => x !== undefined && x.includes(name)),
-  )
-    ? name
-    : null;
-}
-
-/** Where in its source a crawler's error was thrown: the line number and the line itself. */
-export function whereIn(source: string, e: unknown): { line: number; code: string } | null {
-  const stack = e instanceof Error ? (e.stack ?? '') : '';
-  const m = new RegExp(`${FILE.replace('.', '\\.')}:(\\d+):\\d+`).exec(stack);
-  if (!m) return null;
-  const line = Number(m[1]);
-  return { line, code: (source.split('\n')[line - 1] ?? '').trim() };
 }
 
 /** Thrown by a crawler's `site.stop`: the bank's own answer, with the code it means. */
@@ -230,8 +158,8 @@ export interface Hands {
   }): void;
   /** Each page after an action, already masked. */
   keep?(did: string, f: Frame): Promise<void> | void;
-  /** Learns names to hide from what a page shows (the crawler's own `name`); true when it learned one. */
-  learn?(lines: string[]): boolean;
+  /** Learns names to hide from what a page shows (the crawler's own `name`). */
+  learn?(lines: string[]): void;
   /** The crawler's own send control: pressing it is judged as a send, whatever it is called. */
   send?: Target;
 }
@@ -247,14 +175,9 @@ export function siteFor(
   lines: () => Promise<string[]>,
 ): Site & { latest(): Frame | null } {
   let latest: Frame | null = null;
-  /** The page once it is ready, its member's name learned from it first and hidden in what is kept. */
-  const ready = async () => {
-    const o = { known: h.known, limitMs: h.limitMs ?? 30_000 };
-    const f = await see(h.page, o);
-    return h.learn?.(await lines()) ? see(h.page, o) : f;
-  };
   const after = async (did: string) => {
-    latest = await ready();
+    h.learn?.(await lines());
+    latest = await see(h.page, { known: h.known, limitMs: h.limitMs ?? 30_000 });
     await h.keep?.(did, latest);
   };
   const fields = async () => {
@@ -284,7 +207,8 @@ export function siteFor(
       await after(`opened ${url.pathname}`);
     },
     async look() {
-      latest = await ready();
+      h.learn?.(await lines());
+      latest = await see(h.page, { known: h.known, limitMs: h.limitMs ?? 30_000 });
       return { lines: await lines(), controls: latest.controls };
     },
     async shows(words) {

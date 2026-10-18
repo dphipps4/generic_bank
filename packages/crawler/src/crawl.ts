@@ -13,7 +13,6 @@ import {
   NotReady,
   type Page,
   press,
-  maskText,
   read,
   see,
   TargetError,
@@ -34,9 +33,7 @@ import {
   type Site,
   siteFor,
   type Supply,
-  nameBeside,
   type Written,
-  whereIn,
 } from './written.js';
 
 /**
@@ -79,8 +76,6 @@ export interface Session {
   note?(name: string, action: string): Promise<void> | void;
   /** How long a page may take to be ready. */
   limitMs?: number;
-  /** The member's name has been read beside their number, and is hidden from then on. */
-  named?: boolean;
   /**
    * Keep a frame after every step, not only after the last step on a page: the gate's replay is
    * evidence, step by step.
@@ -521,8 +516,7 @@ async function writtenRun<T>(
 ): Promise<T> {
   await knowTask(s, task);
   if (task.member && !s.known.includes(task.member)) s.known.push(task.member);
-  const w = s.table as Written;
-  const m = load(w.source, { partial: !!w.partial });
+  const m = load((s.table as Written).source);
   const facts: Facts = {
     member: task.member,
     ...(task.from !== undefined && { from: task.from }),
@@ -536,37 +530,8 @@ async function writtenRun<T>(
   } catch (e) {
     if (e instanceof Answered) return stop(e.code, e.message);
     if (e instanceof Stop || (e instanceof Error && e.name === 'GuardError')) throw e;
-    // Where: the crawler's own line that threw, and what the page showed then, hidden values hidden
-    // (the member's name too, read from this page by the crawler's own name first).
-    const at = whereIn(w.source, e);
-    const lines = await leaves(s.page).catch(() => [] as string[]);
-    try {
-      handsOf(s, task, m).learn?.(lines);
-    } catch {
-      // A name that fails hides nothing more.
-    }
-    // Until the member's name is known, the lines beside their number are left out: one is the name.
-    const near = (k: number) =>
-      [lines[k - 1], lines[k], lines[k + 1]].some((x) => x?.includes(task.member));
-    const shown = lines
-      .filter((_, k) => s.named || !near(k))
-      .slice(0, 16)
-      .map((l) => maskText(l, s.known))
-      .join(' · ');
-    return stop(
-      'unknown_screen',
-      `the crawler${at ? `, at its line ${at.line} (${maskText(at.code, s.known)})` : ''}: ${(e as Error).message}. The page showed: ${shown || 'nothing readable'}`,
-    );
+    return stop('unknown_screen', `the crawler: ${(e as Error).message}`);
   }
-}
-
-/** A written crawler's own sign-in, tried alone: the words of the page it reached. */
-export async function signInWritten(s: Session, task: Task): Promise<string[]> {
-  await writtenRun(s, task, async (m, site, f) => {
-    if (!m.signIn) throw new Error('the crawler has no signIn');
-    await m.signIn(site, f);
-  });
-  return (await leaves(s.page)).map((l) => maskText(l, s.known));
 }
 
 /** The hands a written crawler acts with: the session's page, guard, evidence and hidden values. */
@@ -581,11 +546,9 @@ function handsOf(s: Session, task: Task, m: Module): Hands {
     send: m.send,
     // The crawler's own `name` says where the member's name shows; it is hidden from then on.
     learn: (lines) => {
-      const n = nameBeside(lines, task.member, m.name?.(lines, task.member));
-      if (!n || s.known.includes(n)) return false;
-      s.known.push(n);
-      s.named = true;
-      return true;
+      const n = m.name?.(lines, task.member);
+      if (typeof n === 'string' && n.trim().length >= 2 && !s.known.includes(n.trim()))
+        s.known.push(n.trim());
     },
   };
 }
