@@ -9,7 +9,8 @@ export type Goal = 'balance' | 'transfer' | 'history';
 
 /**
  * A teller's step. Values are the task's: `$operator`, `$password`, `$code` (a person gives it),
- * `$member`, `$from`, `$to` (an account's name, or "ending in" its last four), `$amount`, `$memo`.
+ * `$member`, `$from`, `$to` (an account's name, or its last four digits, however a bank words them),
+ * `$amount`, `$memo`.
  */
 /**
  * Where a step acts, when it was learned by sight: the anchor (a small crop of the screen, a
@@ -82,7 +83,7 @@ export interface Table {
   answers: Answer[];
   trouble: Trouble[];
   /** The one press that moves money: never in a row, pressed once under a person's approval. */
-  submit: { press: string; frame: string };
+  submit: { press: string; frame: string; at?: At };
   /**
    * Reading values off a page. Each read is visible text, one line per `\n`, with `{placeholders}`
    * for the values and `$member` for the member's number; see `readOf`.
