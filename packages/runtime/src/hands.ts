@@ -47,9 +47,29 @@ function kindOf(tag: string, attrs: Record<string, string>): string {
  */
 export async function whatIsAt(page: Page, p: Point): Promise<AtPoint> {
   const cdp = await page.context().newCDPSession(page);
-  type Node = { nodeName: string; nodeType: number; attributes?: string[]; parentId?: number };
+  type Node = {
+    backendNodeId: number;
+    nodeName: string;
+    nodeType: number;
+    attributes?: string[];
+    children?: Node[];
+    contentDocument?: Node;
+  };
   try {
-    await cdp.send('DOM.getDocument', { depth: 0 });
+    // The whole tree once, frames included, so the climb from what is hit can find its parents.
+    const { root } = (await cdp.send('DOM.getDocument', { depth: -1, pierce: true })) as {
+      root: Node;
+    };
+    const parent = new Map<number, Node>();
+    const byId = new Map<number, Node>();
+    const walk = (n: Node) => {
+      byId.set(n.backendNodeId, n);
+      for (const c of [...(n.children ?? []), ...(n.contentDocument ? [n.contentDocument] : [])]) {
+        parent.set(c.backendNodeId, n);
+        walk(c);
+      }
+    };
+    walk(root);
     const hit = (await cdp
       .send('DOM.getNodeForLocation', {
         x: Math.round(p.x),
@@ -58,17 +78,11 @@ export async function whatIsAt(page: Page, p: Point): Promise<AtPoint> {
         ignorePointerEventsNone: true,
       })
       .catch(() => null)) as { backendNodeId: number } | null;
-    if (!hit) return { kind: 'nothing', element: 'nothing' };
-    const { nodeIds } = (await cdp.send('DOM.pushNodesByBackendIdsToFrontend', {
-      backendNodeIds: [hit.backendNodeId],
-    })) as { nodeIds: number[] };
-    let nodeId: number | undefined = nodeIds[0];
+    let node = hit ? byId.get(hit.backendNodeId) : undefined;
     let first: AtPoint | null = null;
-    // Up a few levels, so text inside a link or a button reports the link or the button.
-    for (let up = 0; up < 4 && nodeId; up++) {
-      const { node } = (await cdp.send('DOM.describeNode', { nodeId, depth: 0 })) as {
-        node: Node;
-      };
+    // Up until an element a person acts on, however deeply its words are wrapped; the page's body
+    // stops the climb.
+    while (node) {
       const tag = node.nodeName.toLowerCase();
       const attrs: Record<string, string> = {};
       for (let i = 0; i + 1 < (node.attributes?.length ?? 0); i += 2)
@@ -79,7 +93,8 @@ export async function whatIsAt(page: Page, p: Point): Promise<AtPoint> {
       };
       first ??= at;
       if (at.kind !== 'text') return at;
-      nodeId = node.parentId;
+      if (tag === 'body' || tag === 'frameset' || tag === 'html') break;
+      node = parent.get(node.backendNodeId);
     }
     return first ?? { kind: 'nothing', element: 'nothing' };
   } finally {
