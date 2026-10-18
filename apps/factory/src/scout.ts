@@ -145,7 +145,11 @@ export function pointed(
     if (b <= a) throw new ToolRefusal(`{${ph}} points at nothing`);
     spans.set(line, [...(spans.get(line) ?? []), [a, b, ph]]);
   };
-  for (const p of parts) {
+  // A name read is the name alone: the tool anchors it on the member's number, however the Scout
+  // pointed at that number (run 17: its last four made "4001{member}", which never matches).
+  const pointedAt = what === 'name' ? parts.filter((p) => p.placeholder === 'name') : parts;
+  if (!pointedAt.length) throw new ToolRefusal('point at the name: {name}, by the words you see');
+  for (const p of pointedAt) {
     if (p.is) {
       const line = shown.findIndex((l) => l.includes(p.is!));
       if (line < 0) throw new ToolRefusal(`no line shows "${p.is}"`);
@@ -251,8 +255,9 @@ export function scout(deps: ScoutDeps, task: Task) {
   for (const v of [deps.credentials.operatorId, deps.credentials.password])
     if (!known.includes(v)) known.push(v);
   /** Learns the member's name where a noted name read finds it, as the crawler does. */
-  const learnName = async () => {
-    if (!t.reads.name?.length) return;
+  /** The member's name, read from the page now by the name reads: true when it is new. */
+  const learnName = async (): Promise<boolean> => {
+    if (!t.reads.name?.length) return false;
     const words = (await leaves(page)).join('\n');
     let learned = false;
     for (const part of namesIn(words, t.reads.name, task.member))
@@ -262,6 +267,7 @@ export function scout(deps: ScoutDeps, task: Task) {
       }
     // What was written before the name was known (a judgment quoting it) is masked again now.
     if (learned) await trail.remask();
+    return learned;
   };
 
   // The table as the Scout writes it; a repair starts from the broken one.
@@ -308,9 +314,11 @@ export function scout(deps: ScoutDeps, task: Task) {
   async function look(action: string, why: string): Promise<ToolResult> {
     let f: Frame;
     try {
-      await learnName();
-      // No long waits: a page that will not settle is given up on in seconds.
-      f = await see(page, { known, limitMs: 15_000, everyMs: 150 });
+      // No long waits: a page that will not settle is given up on in seconds. The page once ready,
+      // then the member's name read from it, then the page again if the name was new.
+      const o = { known, limitMs: 15_000, everyMs: 150 };
+      f = await see(page, o);
+      if (await learnName()) f = await see(page, o);
     } catch (e) {
       if (!(e instanceof NotReady)) throw e;
       await trail.step({ name: 'not ready', action, outcome: e.message }, null);
@@ -496,9 +504,16 @@ export function scout(deps: ScoutDeps, task: Task) {
       kind: it.kind,
     };
   };
-  const mayAct = () => {
+  /**
+   * Before an action: stop refuses it; after a "wait", the page is looked at first (kept, not judged
+   * again) and the action goes on, rather than being refused for want of a look.
+   */
+  const mayAct = async () => {
     if (stopped) throw new ToolRefusal('the Supervisor said stop');
-    if (waiting) throw new ToolRefusal('the Supervisor said wait: wait or look first');
+    if (waiting) {
+      waiting = false;
+      await look('looked', 'the Supervisor said wait: looked first');
+    }
     if (nameFirst)
       throw new ToolRefusal(
         "this page shows the member's number: note_read name first, pointing at where their name shows",
@@ -532,7 +547,7 @@ export function scout(deps: ScoutDeps, task: Task) {
       description: "Opens the site's start page, or a path on its own host. Nothing else opens.",
       input: z.object({ path: z.string().max(200).optional() }),
       async run(i: { path?: string }) {
-        mayAct();
+        await mayAct();
         const url = new URL(i.path ?? deps.start, deps.start);
         if (url.host !== new URL(deps.start).host)
           throw new ToolRefusal(`${url.host} is not the site being learned`);
@@ -563,7 +578,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         'Presses a button or a link, or text drawn like one. `near` is words drawn close to it, when two share a name.',
       input: which.extend({ near: z.string().max(80).optional() }),
       async run(i: { id?: string; x?: number; y?: number; near?: string; why: string }) {
-        mayAct();
+        await mayAct();
         const c = chosen(i);
         if (MONEY.test(c.name))
           throw new ToolRefusal(`"${c.name}" could move money or change an account: never pressed`);
@@ -620,7 +635,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         value: 'user_id' | 'password' | 'code' | 'member' | 'amount' | 'memo';
         why: string;
       }) {
-        mayAct();
+        await mayAct();
         const c = chosen(i);
         const label = i.label;
         const text =
@@ -750,7 +765,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         value: 'user_id' | 'password' | 'code' | 'member' | 'amount' | 'memo';
         why: string;
       }) {
-        mayAct();
+        await mayAct();
         const it = itemOf(i.item, ['field', 'password field']);
         if (!it.labelBox)
           throw new ToolRefusal(
@@ -803,7 +818,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         why: z.string().min(3).max(200),
       }),
       async run(i: { item: string; why: string }) {
-        mayAct();
+        await mayAct();
         const it = itemOf(i.item, ['button', 'link', 'checkbox']);
         if (MONEY.test(it.label))
           throw new ToolRefusal(
@@ -828,7 +843,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         why: z.string().min(3).max(200),
       }),
       async run(i: { item: string; account: 'from' | 'to'; why: string }) {
-        mayAct();
+        await mayAct();
         const it = itemOf(i.item, ['list']);
         if (!it.labelBox)
           throw new ToolRefusal(
@@ -868,7 +883,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         account: 'from' | 'to';
         why: string;
       }) {
-        mayAct();
+        await mayAct();
         const c = chosen(i);
         const want = account(i.account === 'from' ? task.from : task.to);
         const refuse = (e: Error) => {
@@ -1087,7 +1102,8 @@ export function scout(deps: ScoutDeps, task: Task) {
         };
         if (i.text && i.parts)
           throw new ToolRefusal('give the read as parts or as text, not both: parts are best');
-        let text = i.text;
+        // A name read written by hand anchors on the member's number however it names it.
+        let text = i.what === 'name' ? i.text?.replace(/\{member\}/g, '$member') : i.text;
         if (!text && i.parts) text = pointed(i.what, i.parts, real, shown, task);
         if (!text) throw new ToolRefusal('give the read as parts, or as text');
         if (text.includes('█'))
@@ -1146,7 +1162,7 @@ export function scout(deps: ScoutDeps, task: Task) {
           // A name read is anchored on the member's own number: it can never take another line.
           if (!text.includes('$member'))
             fail(
-              "is not anchored on the member's number: point at the name on a line next to the member's number",
+              "is not anchored on the member's number: the name must be on the member's number's line or the line after it; point at the name alone, by the words you see (parts: [{ placeholder: 'name', is: … }])",
             );
           if (!readOf(text, task.member).exec(words)?.groups?.name) fail('finds no name');
           found = "the member's name, which is hidden from now on";
