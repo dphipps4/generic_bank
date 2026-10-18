@@ -515,7 +515,7 @@ const CHECK_BALANCE: Outcomes = {
     {
       hazard: 'js-error-widget',
       does: 'One widget fails to draw: the balance shows "--".',
-      expected: end('escalated', 'unknown_screen'),
+      expected: end('failed', 'app_error'),
     },
     {
       hazard: 'js-error-fatal',
