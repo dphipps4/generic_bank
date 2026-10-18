@@ -7,14 +7,18 @@
 // answers and where a value is read, each checked against the page. The Supervisor judges every
 // action before the next one. The server types the sign-in and a person's code; the model never
 // sees either. It never presses a control that could move money.
-import type { Answer, Goal, Row, Step, Table } from '@gb/crawler';
+import type { Answer, At, Goal, Row, Step, Table } from '@gb/crawler';
 import { leaf, readOf } from '@gb/crawler';
 import {
   type Box,
   choose,
   control,
   type Control,
+  chooseAt,
+  clickAt,
+  cropOf,
   field,
+  findCrop,
   type Frame,
   knows,
   labelPicture,
@@ -24,7 +28,9 @@ import {
   see,
   TargetError,
   type,
+  typeAt,
   UnknownPage,
+  whatIsAt,
 } from '@gb/runtime';
 import { z } from 'zod';
 import type { Role } from './models.js';
@@ -61,10 +67,37 @@ export interface Judging {
   why: string;
   frame: Frame;
   ref: string | null;
+  /** Every call the Scout made since the last judgment, in order, failures included. */
+  record: Entry[];
+}
+
+/** One call of the Scout's, as the Supervisor sees it: what it asked, and what came back. */
+export interface Entry {
+  tool: string;
+  input: unknown;
+  /** What the tool answered; absent while the call is the one being judged. */
+  result?: string;
+  /** Why the call was refused, in the runtime's or the guard's own words. */
+  error?: string;
+  /** A close-up the Scout read from, for the Supervisor to see with its own eyes. */
+  image?: Buffer;
+}
+
+/** One thing the Scout sees on a page, as it lists it: its kind, its label as read, and where. */
+export interface Item {
+  id: string;
+  kind: string;
+  label: string;
+  labelFrom: 'text' | 'image' | 'none';
+  box: Box;
+  labelBox?: Box;
+  state?: string;
+  /** What the browser has at the middle of the box, as a fact. */
+  found?: string;
 }
 
 export interface Judgment {
-  verdict: 'continue' | 'wait' | 'stop';
+  verdict: 'continue' | 'wait' | 'stop' | 'end';
   /** What the Supervisor sees, citing a frame; the Scout reads it. */
   says: string;
 }
@@ -136,7 +169,8 @@ export function scout(deps: ScoutDeps, task: Task) {
   async function look(action: string, why: string): Promise<ToolResult> {
     let f: Frame;
     try {
-      f = await see(page, { known, limitMs: 60_000 });
+      // No long waits: a page that will not settle is given up on in seconds.
+      f = await see(page, { known, limitMs: 15_000 });
     } catch (e) {
       if (!(e instanceof NotReady)) throw e;
       await trail.step({ name: 'not ready', action, outcome: e.message }, null);
@@ -151,7 +185,11 @@ export function scout(deps: ScoutDeps, task: Task) {
     const before = previous;
     previous = f.picture;
     latest = { frame: f, ref, controls };
-    const j = action === 'looked' ? null : await deps.judge({ action, why, frame: f, ref });
+    inventory = null;
+    const j =
+      action === 'looked'
+        ? null
+        : await deps.judge({ action, why, frame: f, ref, record: taken() });
     if (j?.verdict === 'stop') stopped = true;
     waiting = j?.verdict === 'wait';
     const view = {
@@ -193,13 +231,74 @@ export function scout(deps: ScoutDeps, task: Task) {
         `${what} finds another control than the one you chose; name it by words drawn nearer to it`,
       );
   };
+  /** The calls since the Supervisor last judged; each judgment takes them all. */
+  let record: Entry[] = [];
+  /** The call in progress, so a tool can attach a close-up to it. */
+  let current: Entry | null = null;
+  /** What the Scout listed on the latest page, checked by the browser; reset on every new page. */
+  let inventory: Item[] | null = null;
+  const taken = () => {
+    const r = record;
+    record = [];
+    return r;
+  };
   /** Sign-ins typed this run: a third means the first two were refused. */
   let signIns = 0;
+  /** An item of the Scout's list, of a kind it may be acted on as, confirmed by the browser. */
+  const itemOf = (id: string, kinds: string[]): Item => {
+    if (!inventory) throw new ToolRefusal('list_page first: nothing is listed for this page');
+    const it = inventory.find((x) => x.id === id);
+    if (!it) throw new ToolRefusal(`there is no ${id} in your list of this page`);
+    if (!kinds.includes(it.kind))
+      throw new ToolRefusal(`${id} is a ${it.kind}, not a ${kinds.join(' or ')}`);
+    if (it.found !== it.kind)
+      throw new ToolRefusal(
+        `${id}: the browser has ${it.found ?? 'nothing'} at the middle of its box, not a ${it.kind}: look at the picture again, and list its box where it is drawn`,
+      );
+    return it;
+  };
+  /**
+   * The step's anchor, for the crawler to find this place again with no model: a crop of the
+   * label (or of the control itself) from the masked picture, and the offset from its middle to
+   * the control's. The anchor must be clearly found, once, where it was cut from.
+   */
+  const anchorOf = async (it: Item, from: Box): Promise<At> => {
+    const pad = 2;
+    const box = { x: from.x - pad, y: from.y - pad, w: from.w + 2 * pad, h: from.h + 2 * pad };
+    const crop = cropOf(latest!.frame.picture, box);
+    const found = findCrop(latest!.frame.picture, crop);
+    if (!found || Math.abs(found.box.x - box.x) > 3 || Math.abs(found.box.y - box.y) > 3)
+      throw new ToolRefusal(
+        `the label of ${it.id} is not unique on the page, so it cannot be found again: give a box that holds more of it`,
+      );
+    // What the Supervisor sees: the label and the control together, close up.
+    const near = {
+      x: Math.min(box.x, it.box.x) - 6,
+      y: Math.min(box.y, it.box.y) - 6,
+      w: Math.max(box.x + box.w, it.box.x + it.box.w) - Math.min(box.x, it.box.x) + 12,
+      h: Math.max(box.y + box.h, it.box.y + it.box.h) - Math.min(box.y, it.box.y) + 12,
+    };
+    if (current) current.image = cropOf(latest!.frame.picture, near);
+    const a = centre(box);
+    const c = centre(it.box);
+    return {
+      anchor: crop.toString('base64'),
+      dx: Math.round(c.x - a.x),
+      dy: Math.round(c.y - a.y),
+      kind: it.kind,
+    };
+  };
   const mayAct = () => {
     if (stopped) throw new ToolRefusal('the Supervisor said stop');
     if (waiting) throw new ToolRefusal('the Supervisor said wait: wait or look first');
   };
 
+  const BOX = z.object({
+    x: z.number(),
+    y: z.number(),
+    w: z.number().positive(),
+    h: z.number().positive(),
+  });
   const which = z
     .object({
       id: z
@@ -347,6 +446,180 @@ export function scout(deps: ScoutDeps, task: Task) {
         }[i.value];
         visit.push({ type: label, value: token });
         return look(`typed the ${i.value.replace('_', ' ')} into "${label}"`, i.why);
+      },
+    },
+    list_page: {
+      description:
+        "Lists everything you can see on the latest page's picture: each field, button, link, checkbox, list, message and heading, with its label as you read it (words drawn as text, or a picture of words), and its box in the picture's pixels. For a field, also give the box of its label. The browser checks what it has at the middle of each box. Use it when a tool cannot find what you are looking for by its words; then act on an item with type_item or press_item.",
+      input: z.object({
+        items: z
+          .array(
+            z.object({
+              id: z.string().regex(/^i\d{1,3}$/),
+              kind: z.enum([
+                'field',
+                'password field',
+                'button',
+                'link',
+                'checkbox',
+                'list',
+                'message',
+                'heading',
+                'text',
+                'image',
+              ]),
+              label: z.string().max(120),
+              labelFrom: z.enum(['text', 'image', 'none']),
+              box: BOX,
+              labelBox: BOX.optional(),
+              state: z.string().max(60).optional(),
+            }),
+          )
+          .min(1)
+          .max(80),
+      }),
+      async run(i: { items: Item[] }) {
+        if (!latest) throw new ToolRefusal('look at the page first');
+        const checked: Item[] = [];
+        for (const it of i.items) {
+          const acts = ['field', 'password field', 'button', 'link', 'checkbox', 'list'];
+          const found = acts.includes(it.kind)
+            ? (await whatIsAt(page, centre(it.box))).kind
+            : undefined;
+          checked.push({ ...it, ...(found ? { found } : {}) });
+        }
+        inventory = checked;
+        await trail.step(
+          { name: 'inventory', action: JSON.stringify(checked).slice(0, 4000) },
+          null,
+        );
+        const line = (it: Item) =>
+          `${it.id} ${it.kind} "${it.label}" (${it.labelFrom}) at ${Math.round(it.box.x)},${Math.round(it.box.y)} ${Math.round(it.box.w)}x${Math.round(it.box.h)}` +
+          (it.found === undefined
+            ? ''
+            : it.found === it.kind
+              ? `: the browser has a ${it.found} there`
+              : `: NOT CONFIRMED, the browser has ${it.found === 'nothing' ? 'nothing' : `a ${it.found}`} there`);
+        return {
+          text: `The page as you listed it, checked by the browser:\n${checked.map(line).join('\n')}`,
+        };
+      },
+    },
+    type_item: {
+      description:
+        "Types one of the task's values into a field from your list_page, by its position: the mouse clicks the middle of its box, the keyboard clears it and types. The sign-in and a person's code are typed by the server and never shown.",
+      input: z.object({
+        item: z.string().regex(/^i\d{1,3}$/),
+        value: z.enum(['user_id', 'password', 'code', 'member', 'amount', 'memo']),
+        why: z.string().min(3).max(200),
+      }),
+      async run(i: {
+        item: string;
+        value: 'user_id' | 'password' | 'code' | 'member' | 'amount' | 'memo';
+        why: string;
+      }) {
+        mayAct();
+        const it = itemOf(i.item, ['field', 'password field']);
+        if (!it.labelBox)
+          throw new ToolRefusal(
+            `${it.id} has no label box: list the page again with its label's box`,
+          );
+        const at = await anchorOf(it, it.labelBox);
+        if (i.value === 'password' && ++signIns > 2)
+          throw new Error('two sign-ins did not get past the sign-in page: stopping for a person');
+        const text =
+          i.value === 'user_id'
+            ? deps.credentials.operatorId
+            : i.value === 'password'
+              ? deps.credentials.password
+              : i.value === 'code'
+                ? (await deps.code()).trim()
+                : i.value === 'member'
+                  ? task.member
+                  : i.value === 'amount'
+                    ? ((task.amountCents ?? 0) / 100).toFixed(2)
+                    : (task.memo ?? '');
+        if (i.value === 'code' && !known.includes(text)) known.push(text);
+        const p = centre(it.box);
+        await typeAt(page, p, text);
+        const listed = { user_id: 'Operator ID', password: 'Password', code: 'Code' }[
+          i.value as 'user_id' | 'password' | 'code'
+        ];
+        if (listed && listed !== it.label) {
+          t.names ??= {};
+          t.names[listed] = [...new Set([...(t.names[listed] ?? []), it.label])];
+        }
+        const token = {
+          user_id: '$operator',
+          password: '$password',
+          code: '$code',
+          member: '$member',
+          amount: '$amount',
+          memo: '$memo',
+        }[i.value];
+        visit.push({ type: it.label, value: token, at });
+        return look(
+          `typed the ${i.value.replace('_', ' ')} into ${it.id}, the ${it.kind} labeled "${it.label}" (${it.labelFrom}), by clicking ${Math.round(p.x)},${Math.round(p.y)}`,
+          i.why,
+        );
+      },
+    },
+    press_item: {
+      description:
+        'Presses a button, link or checkbox from your list_page, by its position: the mouse moves to the middle of its box and clicks.',
+      input: z.object({
+        item: z.string().regex(/^i\d{1,3}$/),
+        why: z.string().min(3).max(200),
+      }),
+      async run(i: { item: string; why: string }) {
+        mayAct();
+        const it = itemOf(i.item, ['button', 'link', 'checkbox']);
+        if (MONEY.test(it.label))
+          throw new ToolRefusal(
+            `"${it.label}" could move money or change an account: never pressed`,
+          );
+        const at = await anchorOf(it, it.labelBox ?? it.box);
+        const p = centre(it.box);
+        await clickAt(page, p);
+        visit.push({ press: it.label, at });
+        return look(
+          `pressed ${it.id}, the ${it.kind} "${it.label}" (${it.labelFrom}), by clicking ${Math.round(p.x)},${Math.round(p.y)}`,
+          i.why,
+        );
+      },
+    },
+    choose_item: {
+      description:
+        "Chooses the task's from or to account in a list from your list_page, by its position: the browser reads the list's options, the mouse clicks the list, and the keyboard types the option holding the account.",
+      input: z.object({
+        item: z.string().regex(/^i\d{1,3}$/),
+        account: z.enum(['from', 'to']),
+        why: z.string().min(3).max(200),
+      }),
+      async run(i: { item: string; account: 'from' | 'to'; why: string }) {
+        mayAct();
+        const it = itemOf(i.item, ['list']);
+        if (!it.labelBox)
+          throw new ToolRefusal(
+            `${it.id} has no label box: list the page again with its label's box`,
+          );
+        const at = await anchorOf(it, it.labelBox);
+        const p = centre(it.box);
+        await chooseAt(page, p, account(i.account === 'from' ? task.from : task.to)).catch(
+          (e: Error) => {
+            if (e instanceof TargetError) throw new ToolRefusal(e.message);
+            throw e;
+          },
+        );
+        visit.push({
+          choose: it.label,
+          containing: i.account === 'from' ? '$from' : '$to',
+          at,
+        });
+        return look(
+          `chose the ${i.account} account in ${it.id}, the list labeled "${it.label}" (${it.labelFrom}), at ${Math.round(p.x)},${Math.round(p.y)}`,
+          i.why,
+        );
       },
     },
     browser_choose: {
@@ -515,8 +788,25 @@ export function scout(deps: ScoutDeps, task: Task) {
 
   /** Every call: the role's list, then the input, then the tool. A refusal is recorded. */
   async function call(role: Role, name: string, input: unknown): Promise<ToolResult> {
+    const entry: Entry = { tool: name, input };
+    record.push(entry);
+    current = entry;
     const refuse = async (why: string): Promise<never> => {
+      entry.error = why;
       await trail.step({ name: 'refused', action: name, outcome: why }, null);
+      // A failure is judged at once, on the latest picture: the Scout never moves on unseen.
+      if (latest && role === 'scout') {
+        const j = await deps.judge({
+          action: `${name} was refused`,
+          why: String((input as { why?: unknown } | null)?.why ?? ''),
+          frame: latest.frame,
+          ref: latest.ref,
+          record: taken(),
+        });
+        if (j.verdict === 'stop') stopped = true;
+        waiting = j.verdict === 'wait';
+        throw new ToolRefusal(`${why}. The Supervisor: ${j.says}`);
+      }
       throw new ToolRefusal(why);
     };
     const no = refusal(role, name) ?? (isTool(name) ? null : `there is no tool ${name}`);
@@ -526,7 +816,9 @@ export function scout(deps: ScoutDeps, task: Task) {
     if (!parsed.success)
       return refuse(`the input does not fit ${name}: ${z.prettifyError(parsed.error)}`);
     try {
-      return await (tool.run as (i: unknown) => Promise<ToolResult>)(parsed.data);
+      const r = await (tool.run as (i: unknown) => Promise<ToolResult>)(parsed.data);
+      entry.result = r.text.length > 600 ? `${r.text.slice(0, 599)}…` : r.text;
+      return r;
     } catch (e) {
       if (e instanceof ToolRefusal) return refuse(e.message);
       if (e instanceof TargetError) return refuse(e.message);

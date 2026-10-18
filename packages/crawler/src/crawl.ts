@@ -5,6 +5,9 @@
 import { CODES, type ResultCode } from '@gb/contracts';
 import {
   choose,
+  chooseAt,
+  clickAt,
+  findCrop,
   type Frame,
   knows,
   NotReady,
@@ -14,9 +17,26 @@ import {
   see,
   TargetError,
   type,
+  typeAt,
   UnknownPage,
+  whatIsAt,
 } from '@gb/runtime';
-import { type Goal, readOf, type Step, type Table } from './table.js';
+import { type At, type Goal, readOf, type Step, type Table } from './table.js';
+
+/**
+ * Where a step learned by sight acts now: its anchor found in a fresh screenshot, plus its offset,
+ * and the browser's own word that the right kind of control is there. Anything else is a target
+ * not found, and the loop looks again.
+ */
+async function pointOf(page: Page, at: At): Promise<{ x: number; y: number }> {
+  const found = findCrop(await page.screenshot(), Buffer.from(at.anchor, 'base64'));
+  if (!found) throw new TargetError('its anchor is not clearly on the screen');
+  const p = { x: found.box.x + found.box.w / 2 + at.dx, y: found.box.y + found.box.h / 2 + at.dy };
+  const there = await whatIsAt(page, p);
+  if (there.kind !== at.kind)
+    throw new TargetError(`a ${there.kind} where its ${at.kind} should be`);
+  return p;
+}
 
 export interface Session {
   page: Page;
@@ -135,17 +155,21 @@ async function step(s: Session, task: Task, screen: string, st: Step): Promise<s
     const v = await value(s, task, st.value);
     const secret = SECRETS.has(st.value);
     s.guard?.({ screen, verb: 'type', control: st.type, ...(secret ? { secret } : { typed: v }) });
-    await type(s.page, st.type, v, s.table.pictures);
+    if (st.at) await typeAt(s.page, await pointOf(s.page, st.at), v);
+    else await type(s.page, st.type, v, s.table.pictures);
     return `type ${st.value} into "${st.type}"`;
   }
   if ('choose' in st) {
     s.guard?.({ screen, verb: 'choose', control: st.choose });
-    await choose(s.page, st.choose, await value(s, task, st.containing), s.table.pictures);
+    const v = await value(s, task, st.containing);
+    if (st.at) await chooseAt(s.page, await pointOf(s.page, st.at), v);
+    else await choose(s.page, st.choose, v, s.table.pictures);
     return `choose ${st.containing} in "${st.choose}"`;
   }
   const near = st.near && (await value(s, task, st.near));
   s.guard?.({ screen, verb: 'press', control: st.press });
-  await press(s.page, st.press, near ? { near } : {});
+  if (st.at) await clickAt(s.page, await pointOf(s.page, st.at));
+  else await press(s.page, st.press, near ? { near } : {});
   return `press "${st.press}"`;
 }
 

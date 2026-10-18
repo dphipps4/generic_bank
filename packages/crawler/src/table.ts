@@ -11,10 +11,22 @@ export type Goal = 'balance' | 'transfer' | 'history';
  * A teller's step. Values are the task's: `$operator`, `$password`, `$code` (a person gives it),
  * `$member`, `$from`, `$to` (an account's name, or "ending in" its last four), `$amount`, `$memo`.
  */
+/**
+ * Where a step acts, when it was learned by sight: the anchor (a small crop of the screen, a
+ * label drawn as text or as a picture, as a base64 PNG), the offset from the anchor's middle to
+ * the point to act on, and the kind of control the browser must have there.
+ */
+export interface At {
+  anchor: string;
+  dx: number;
+  dy: number;
+  kind: string;
+}
+
 export type Step =
-  | { type: string; value: string }
-  | { press: string; near?: string }
-  | { choose: string; containing: string };
+  | { type: string; value: string; at?: At }
+  | { press: string; near?: string; at?: At }
+  | { choose: string; containing: string; at?: At };
 
 export interface Row {
   page: string;

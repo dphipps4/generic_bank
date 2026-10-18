@@ -23,6 +23,7 @@ export {
 } from './crawl.js';
 export {
   type Answer,
+  type At,
   type Goal,
   readOf,
   type Row,

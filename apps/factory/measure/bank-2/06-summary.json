@@ -1,0 +1,127 @@
+{
+  "page": "summary",
+  "controls": [
+    {
+      "kind": "link",
+      "name": "Find Member",
+      "box": {
+        "x": 432.453125,
+        "y": 104,
+        "w": 86.25,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Move Money",
+      "box": {
+        "x": 555.703125,
+        "y": 104,
+        "w": 82.984375,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Statements",
+      "box": {
+        "x": 675.6875,
+        "y": 104,
+        "w": 74.734375,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Sign Out",
+      "box": {
+        "x": 787.421875,
+        "y": 104,
+        "w": 57.125,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Move Money",
+      "box": {
+        "x": 267,
+        "y": 237.5,
+        "w": 82.984375,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Activity",
+      "box": {
+        "x": 281,
+        "y": 436.5,
+        "w": 55.8125,
+        "h": 18
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Statements",
+      "box": {
+        "x": 352.640625,
+        "y": 436.5,
+        "w": 86.765625,
+        "h": 18
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Activity",
+      "box": {
+        "x": 527.65625,
+        "y": 436.5,
+        "w": 55.8125,
+        "h": 18
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Statements",
+      "box": {
+        "x": 599.296875,
+        "y": 436.5,
+        "w": 86.765625,
+        "h": 18
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Activity",
+      "box": {
+        "x": 774.3125,
+        "y": 436.5,
+        "w": 55.8125,
+        "h": 18
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Statements",
+      "box": {
+        "x": 845.953125,
+        "y": 436.5,
+        "w": 86.765625,
+        "h": 18
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Close account",
+      "box": {
+        "x": 267,
+        "y": 485.25,
+        "w": 91.421875,
+        "h": 18
+      }
+    }
+  ],
+  "labelPictures": [],
+  "pictureWords": ["Username:", "Passcode:", "Member number:", "Amount:"]
+}

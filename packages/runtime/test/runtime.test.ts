@@ -20,6 +20,8 @@ import {
   type,
   UnknownPage,
 } from '../src/index.js';
+import { cropOf, findCrop } from '../src/match.js';
+import { chooseAt, clickAt, typeAt, whatIsAt } from '../src/hands.js';
 import { serve } from './pages.js';
 
 let browser: Browser;
@@ -247,5 +249,72 @@ describe('the runtime: see first, then click', () => {
     expect(
       await p.evaluate(() => [navigator.userAgent, navigator.webdriver, navigator.platform]),
     ).toEqual([expect.stringContaining('Macintosh'), false, 'MacIntel']);
+  });
+
+  it('finds a label in a screenshot by sight, wherever it moves, and never guesses between two', async () => {
+    const label = (text: string) =>
+      `<span style="font:bold 15px monospace;letter-spacing:2px;background:#eee;padding:2px">${text}</span>`;
+    const form = (top: number, extra = '') =>
+      `<body style="margin:0;background:#fdfbf4">${extra}<div style="position:absolute;left:${120 + top}px;top:${top}px">
+        <div>${label('USERNAME:')} <input style="width:220px"></div>
+        <div style="margin-top:8px">${label('PASSCODE:')} <input type="password" style="width:220px"></div></div></body>`;
+    page = await newPage(browser);
+    await page.setContent(form(60));
+    const first = await page.screenshot();
+    const u = (await page.getByText('USERNAME:').boundingBox())!;
+    const anchor = cropOf(first, { x: u.x, y: u.y, w: u.width, h: u.height });
+    // Moved, with more on the page: found where it now is.
+    await page.setContent(
+      form(200, '<h1 style="margin:20px">Welcome back</h1><p>Some other words</p>'),
+    );
+    const started = Date.now();
+    const found = findCrop(await page.screenshot(), anchor);
+    const ms = Date.now() - started;
+    const now = (await page.getByText('USERNAME:').boundingBox())!;
+    expect(found).not.toBeNull();
+    expect(Math.abs(found!.box.x - now.x)).toBeLessThanOrEqual(2);
+    expect(Math.abs(found!.box.y - now.y)).toBeLessThanOrEqual(2);
+    expect(found!.score).toBeGreaterThan(0.9);
+    expect(ms).toBeLessThan(3000);
+    // Two of the same label: ambiguous, so no match.
+    await page.setContent(form(60) + form(300));
+    expect(findCrop(await page.screenshot(), anchor)).toBeNull();
+  });
+
+  it('says what is at a point, frames included, and types and clicks there with no selector', async () => {
+    page = await newPage(browser);
+    await page.setContent(`<body style="margin:0">
+      <input id="u" style="position:absolute;left:20px;top:20px;width:200px;height:24px">
+      <input id="p" type="password" style="position:absolute;left:20px;top:60px;width:200px;height:24px">
+      <button id="b" onclick="this.textContent='Pressed'" style="position:absolute;left:20px;top:100px;width:120px;height:30px">Log In</button>
+      <a href="#x" style="position:absolute;left:20px;top:150px">Member Search</a>
+      <iframe srcdoc="<input id=f style='width:150px;height:24px'>" style="position:absolute;left:300px;top:20px;width:220px;height:80px;border:0"></iframe>
+    </body>`);
+    const kind = async (x: number, y: number) => (await whatIsAt(page, { x, y })).kind;
+    expect(await kind(120, 32)).toBe('field');
+    expect(await kind(120, 72)).toBe('password field');
+    expect(await kind(80, 115)).toBe('button');
+    expect(await kind(40, 158)).toBe('link');
+    expect(await kind(340, 40)).toBe('field');
+    expect(await kind(700, 500)).not.toMatch(/field|button|link/);
+    await typeAt(page, { x: 120, y: 32 }, 'teller0412');
+    expect(await page.locator('#u').inputValue()).toBe('teller0412');
+    await typeAt(page, { x: 120, y: 32 }, 'again');
+    expect(await page.locator('#u').inputValue()).toBe('again');
+    await clickAt(page, { x: 80, y: 115 });
+    expect(await page.locator('#b').textContent()).toBe('Pressed');
+  });
+
+  it('chooses from a list by position and keyboard, reading what it shows', async () => {
+    page = await newPage(browser);
+    await page.setContent(`<body style="margin:0"><select id="s" style="position:absolute;left:20px;top:20px;width:360px">
+      <option>Choose an account</option>
+      <option>Everyday Checking, Account ending in 8176, available $4,800.00</option>
+      <option>Rainy Day Savings, Account ending in 9433, available $12,000.00</option>
+    </select></body>`);
+    const shown = await chooseAt(page, { x: 200, y: 30 }, '9433');
+    expect(shown).toContain('Rainy Day Savings');
+    expect(await page.locator('#s').inputValue()).toContain('9433');
+    await expect(chooseAt(page, { x: 200, y: 30 }, '0000')).rejects.toBeInstanceOf(TargetError);
   });
 });

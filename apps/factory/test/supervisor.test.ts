@@ -3,7 +3,7 @@
 // run or an earlier one opens, picture and all.
 import type { AddressInfo } from 'node:net';
 import { PNG } from 'pngjs';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { memoryStore } from '../../../packages/evidence/src/index.js';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import type { Frame } from '../../../packages/runtime/src/index.js';
@@ -12,7 +12,7 @@ import { gateway } from '../src/gateway.js';
 import { sqlLedger } from '../src/ledger.js';
 import { PRICES } from '../src/models.js';
 import { buildServer } from '../src/server.js';
-import { openFrameTool, supervisor } from '../src/supervisor.js';
+import { goalClock, openFrameTool, supervisor } from '../src/supervisor.js';
 import { openTrail, type Trail } from '../src/trail.js';
 import { live } from '../src/upstream.js';
 import { DEFAULT_ROLES, fakeModels, type Reply } from './fakes.js';
@@ -85,8 +85,20 @@ describe('the Supervisor', () => {
       why: 'to find the member',
       frame: f,
       ref,
+      record: [
+        {
+          tool: 'browser_press',
+          input: { x: 1, y: 1 },
+          error: 'that point lands on no visible control',
+        },
+        { tool: 'browser_press', input: { id: 'c3' } },
+      ],
     });
     expect(j).toEqual({ verdict: 'continue', says: 'f1 shows the search form.' });
+    // The Scout's whole record went with it, the refusal and its exact words included.
+    expect(JSON.stringify(sent.at(-1))).toContain(
+      'REFUSED: that point lands on no visible control',
+    );
     // The picture went to the model with the turn.
     const base64 = f.picture.toString('base64');
     expect(JSON.stringify(sent.at(-1))).toContain(base64);
@@ -96,7 +108,7 @@ describe('the Supervisor', () => {
     const trail = await trailOf();
     const f = frame(120, 'Loading');
     const sup = supervisor({ agent: agent(), trail, goal: 'Reach the balances.' });
-    const j = () => sup.judge({ action: 'looked', why: 'x', frame: f, ref: null });
+    const j = () => sup.judge({ action: 'looked', why: 'x', frame: f, ref: null, record: [] });
     replies.push({ text: 'not json' }, { text: '{"verdict":"maybe"}' }, { text: '' });
     expect((await j()).verdict).toBe('wait');
     expect((await j()).verdict).toBe('wait');
@@ -115,5 +127,29 @@ describe('the Supervisor', () => {
     const then = await open.run({ frame: 'f1', run: 'earlier-run' });
     expect(then.text).toContain('Member Summary');
     await expect(open.run({ frame: 'f9' })).rejects.toThrow(/no frame f9/);
+  });
+});
+
+describe("the Supervisor's goal clock", () => {
+  it('ends the goal at its limit, never counts a person, and never fires once stopped', () => {
+    vi.useFakeTimers();
+    try {
+      let out = 0;
+      const c = goalClock(180_000, () => out++);
+      vi.advanceTimersByTime(100_000);
+      c.pause(); // a person is asked for a code
+      vi.advanceTimersByTime(120_000);
+      expect(out).toBe(0);
+      c.resume();
+      expect(c.text()).toBe('100 s used of 180 s, 80 s left');
+      vi.advanceTimersByTime(80_000);
+      expect(out).toBe(1);
+      const d = goalClock(1_000, () => out++);
+      d.stop();
+      vi.advanceTimersByTime(5_000);
+      expect(out).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

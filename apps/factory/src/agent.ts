@@ -33,8 +33,8 @@ export type Conversation = readonly unknown[];
 /** A turn whose model spent its whole allowance thinking and gave no answer. */
 export class ThoughtTooLong extends Error {}
 
-/** The run's clock ran out during a turn. */
-export class OutOfTime extends Error {}
+/** The Supervisor ended the turn: its clock ran out, or it judged the Scout should go. */
+export class Ended extends Error {}
 
 export interface TurnInput {
   system: string;
@@ -42,14 +42,16 @@ export interface TurnInput {
   /** What the role is told now, with a picture when there is one. */
   say: string;
   image?: Buffer | null;
+  /** More pictures with it: close-ups the Scout read from. */
+  images?: Buffer[];
   tools?: Tool[];
   /** At most this many model calls in the turn. */
   calls?: number;
   /** A JSON schema the answer must follow. */
   answer?: Record<string, unknown>;
   maxTokens: number;
-  /** The run's clock: no model call starts after this time (ms since the epoch). */
-  until?: number;
+  /** Aborting it ends the turn at once: the model call in flight, and any tool. */
+  signal?: AbortSignal;
 }
 
 export interface TurnOutput {
@@ -193,20 +195,25 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
         timeoutMs: TURN_MS,
         ...(i.answer ? { onPayload: withAnswer(api, i.answer) } : {}),
       }),
-    finishTurn: () =>
-      (i.calls !== undefined && ++calls >= i.calls) ||
-      (i.until !== undefined && Date.now() >= i.until)
-        ? { action: 'end' }
-        : undefined,
+    finishTurn: () => (i.calls !== undefined && ++calls >= i.calls ? { action: 'end' } : undefined),
   });
+  if (i.signal?.aborted) throw new Ended(String(i.signal.reason ?? 'ended'));
+  i.signal?.addEventListener('abort', () => session.abort(), { once: true });
   const before = session.state.messages.length;
   await session.prompt({
     role: 'user',
-    content: i.image ? [png(i.image), { type: 'text', text: i.say }] : i.say,
+    content:
+      i.image || i.images?.length
+        ? [
+            ...(i.image ? [png(i.image)] : []),
+            ...(i.images ?? []).map(png),
+            { type: 'text', text: i.say },
+          ]
+        : i.say,
     timestamp: Date.now(),
   });
+  if (i.signal?.aborted) throw new Ended(String(i.signal.reason ?? 'ended'));
   if (failure !== undefined) throw failure;
-  if (i.until !== undefined && Date.now() >= i.until) throw new OutOfTime('the run is out of time');
   const messages = session.state.messages;
   const added = messages.slice(before);
   const replies = added.filter((m): m is AssistantMessage => m.role === 'assistant');

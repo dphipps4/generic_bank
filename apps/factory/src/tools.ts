@@ -11,6 +11,11 @@ export const TOOLS: Readonly<Record<Role, readonly string[]>> = {
     'browser_press',
     'browser_type',
     'browser_choose',
+    // When words find nothing: what the Scout sees, and acting on it by position.
+    'list_page',
+    'type_item',
+    'press_item',
+    'choose_item',
     'name_page',
     'note_answer',
     'note_read',

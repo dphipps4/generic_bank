@@ -1,0 +1,84 @@
+{
+  "page": "member search",
+  "controls": [
+    {
+      "kind": "link",
+      "name": "Find Member",
+      "box": {
+        "x": 432.453125,
+        "y": 104,
+        "w": 86.25,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Move Money",
+      "box": {
+        "x": 555.703125,
+        "y": 104,
+        "w": 82.984375,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Statements",
+      "box": {
+        "x": 675.6875,
+        "y": 104,
+        "w": 74.734375,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "Sign Out",
+      "box": {
+        "x": 787.421875,
+        "y": 104,
+        "w": 57.125,
+        "h": 17
+      }
+    },
+    {
+      "kind": "link",
+      "name": "List members",
+      "box": {
+        "x": 269,
+        "y": 294.5,
+        "w": 88.671875,
+        "h": 17
+      }
+    },
+    {
+      "kind": "field",
+      "name": "",
+      "box": {
+        "x": 450,
+        "y": 205.75,
+        "w": 300,
+        "h": 29
+      }
+    },
+    {
+      "kind": "button",
+      "name": "Find",
+      "box": {
+        "x": 450,
+        "y": 242.75,
+        "w": 51.90625,
+        "h": 29.75
+      }
+    }
+  ],
+  "labelPictures": [
+    {
+      "x": 272,
+      "y": 211.25,
+      "w": 172,
+      "h": 18
+    }
+  ],
+  "pictureWords": ["Username:", "Passcode:", "Member number:", "Amount:"]
+}

@@ -9,7 +9,7 @@ import type { Goal, Table } from '@gb/crawler';
 import type { FrameStore } from '@gb/evidence';
 import type { Sql } from '@gb/runs';
 import { newPage, type Browser } from '@gb/runtime';
-import { type Agent, type Conversation, OutOfTime, ThoughtTooLong, turn } from './agent.js';
+import { type Agent, type Conversation, Ended, ThoughtTooLong, turn } from './agent.js';
 import {
   type Memory,
   memoryQueryTool,
@@ -21,7 +21,7 @@ import {
 } from './memory.js';
 import type { Role, Roles } from './models.js';
 import { scout, type Task } from './scout.js';
-import { openFrameTool, supervisor } from './supervisor.js';
+import { goalClock, openFrameTool, supervisor } from './supervisor.js';
 import { toolsOf } from './tools.js';
 import { openTrail } from './trail.js';
 
@@ -73,6 +73,7 @@ export const GOALS: Record<Goal, (i: RunInput) => string> = {
 
 const SCOUT = `You are the Scout. You work a bank's staff console in a browser toward one goal, as a person at the desk would, and you write down how, so that code can do it again.
 Each tool shows you the page once it is ready: its picture, its controls with an id and a box each, and its words. Look at the picture. Act on one control at a time, by its id or by a position on the picture, with a one-line reason. If a page is not what you expected, look again.
+When a tool cannot find what you are looking for by its words (a label drawn as a picture, a box with no name), do not guess and do not give up: look at the picture and list_page everything you can see on it, with each item's box and its label as you read it. Then act on an item by its position, with type_item or press_item. After every action, say in your reason what changed on the page.
 As you go:
 - name_page each new page by a few words it shows that no other page does;
 - note_answer when the bank refuses something in its own words;
@@ -86,7 +87,7 @@ memory_query asks what the factory has learned about this console and ones like 
 const SCOUT_CALLS = 60;
 
 /** Each goal's clock: a demo learns a bank in minutes, or stops and says why. */
-const GOAL_MS = Number(process.env.FACTORY_GOAL_MINUTES ?? 2) * 60_000;
+const GOAL_MS = Number(process.env.FACTORY_GOAL_MINUTES ?? 3) * 60_000;
 
 const packText = (p: Pack) =>
   JSON.stringify(Object.fromEntries(Object.entries(p.tiers).filter(([, items]) => items.length)));
@@ -115,7 +116,8 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
   const knowledge = packText(pack);
   const runId = `${mode}-${input.bank}-${randomBytes(4).toString('hex')}`;
   const startedAt = new Date();
-  let until = 0;
+  /** The current goal's clock, which the Supervisor keeps. */
+  let clock: ReturnType<typeof goalClock> | null = null;
   await sql.query(
     `INSERT INTO "FactoryRun" (id, tenant, task, mode, phase, status) VALUES ($1, $2, 'check-balance', $3, 'SCOUT', 'running')`,
     [runId, input.bank, mode],
@@ -178,8 +180,25 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
     );
   };
   try {
+    // The Scout's tools exactly as the Scout is given them, for the Supervisor to know what the
+    // Scout can do. Read from the same definitions, so the two never drift apart.
+    const scoutTools = [
+      ...scout(
+        {
+          page,
+          start: bank.url,
+          trail,
+          credentials: deps.credentials,
+          code: async () => '',
+          judge: async () => ({ verdict: 'continue', says: '' }),
+        },
+        { goal: 'balance', member: input.member },
+      ).tools('scout'),
+      ...toolsOf('scout', [queryTool]),
+    ].map((t) => ({ name: t.name, description: t.description }));
     const sup = supervisor({
       agent: agent('supervisor'),
+      scoutTools,
       trail,
       goal: Object.values(GOALS)
         .map((g) => g(input))
@@ -191,6 +210,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
           : []),
       ].join('\n\n'),
       tools: [openFrameTool({ sql, store, trail }), queryTool],
+      clock: { text: () => clock?.text() ?? 'no clock running' },
     });
     let conversation: Conversation = [];
     for (const goal of ['balance', 'transfer', 'history'] as Goal[]) {
@@ -202,20 +222,45 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
         amountCents: 100,
         memo,
       };
+      // The Supervisor keeps the goal's time and can end the Scout: its model call, any tool in
+      // flight, and its page, at once.
+      const ctrl = new AbortController();
+      const end = (why: string) => {
+        if (ctrl.signal.aborted) return;
+        ctrl.abort(why);
+        void page
+          .context()
+          .close()
+          .catch(() => undefined);
+      };
+      clock = goalClock(GOAL_MS, () =>
+        end(`out of time: the ${goal} goal's ${GOAL_MS / 60_000} minutes ran out`),
+      );
       const s = scout(
         {
           page,
           start: bank.url,
           trail,
           credentials: deps.credentials,
-          code: () => deps.code(runId),
-          judge: (j) => sup.judge(j),
+          // A person's time does not count against the goal.
+          code: async () => {
+            clock?.pause();
+            try {
+              return await deps.code(runId);
+            } finally {
+              clock?.resume();
+            }
+          },
+          judge: async (j) => {
+            const v = await sup.judge(j);
+            if (v.verdict === 'end') end(`the Supervisor ended the Scout: ${v.says}`);
+            return v;
+          },
           ...(table ? { table } : {}),
         },
         task,
       );
       log(`${runId}: ${goal}`);
-      until = Date.now() + GOAL_MS;
       const ask = (nudge?: string) =>
         turn(agent('scout'), {
           system: SCOUT,
@@ -239,7 +284,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
           tools: [...s.tools('scout'), ...toolsOf('scout', [queryTool])],
           calls: SCOUT_CALLS,
           maxTokens: 8000,
-          until,
+          signal: ctrl.signal,
         });
       let said: Awaited<ReturnType<typeof ask>>;
       try {
@@ -250,21 +295,20 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
           return ask('Think briefly, then act: one tool call now.');
         });
       } catch (e) {
-        // Out of time, no answer twice, or the sign-in refused twice: the run stops and says why.
+        // Ended by the Supervisor or its clock, no answer twice, or the sign-in refused twice.
+        clock.stop();
         diagnosis =
-          e instanceof OutOfTime
-            ? `out of time: the ${goal} goal's ${GOAL_MS / 60_000} minutes ran out`
+          e instanceof Ended || ctrl.signal.aborted
+            ? String(ctrl.signal.reason ?? (e as Error).message)
             : `${goal} stopped: ${(e as Error).message}`;
         outcome = `${goal} not reached`;
         break;
       }
+      clock.stop();
       conversation = said.conversation;
       table = s.table();
       if (!table.ends[goal]) {
-        diagnosis =
-          Date.now() >= until
-            ? `out of time: the ${goal} goal's ${GOAL_MS / 60_000} minutes ran out`
-            : await sup.diagnose();
+        diagnosis = ctrl.signal.aborted ? String(ctrl.signal.reason) : await sup.diagnose();
         outcome = `${goal} not reached`;
         break;
       }
