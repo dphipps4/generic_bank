@@ -4,7 +4,15 @@
 // fails the first run is not recommended; one that breaks under the hazard is kept as broken and
 // opens a repair case with that run's frames, as a break in service would. A table that passes
 // both waits in the Console for a person's approval: nothing promotes it but that.
-import { checkBalance, prepareTransfer, Stop, type Table } from '@gb/crawler';
+import {
+  checkBalance,
+  inHistory,
+  isWritten,
+  prepareTransfer,
+  type Table,
+  type Written,
+} from '@gb/crawler';
+import { decideWritten, GuardError } from '@gb/guardrails';
 import type { FrameStore } from '@gb/evidence';
 import { driverFault, hazardHeader, type Sql } from '@gb/runs';
 import { type Browser, newPage } from '@gb/runtime';
@@ -39,12 +47,10 @@ async function checkRun(
     runId: string;
     bank: string;
     url: string;
-    table: Table;
+    table: Table | Written;
     member: string;
     from: string;
     to: string;
-    /** The factory run's cookies, so the check starts signed in and trusted, as the run ended. */
-    session?: string;
   },
   hazard: string | null,
 ): Promise<CheckRun> {
@@ -57,16 +63,28 @@ async function checkRun(
     known: [],
   });
   const headers = hazard && d.hazardKey ? hazardHeader([hazard as never], d.hazardKey) : undefined;
-  const page = await newPage(d.browser, {
-    ...(headers ? { headers } : {}),
-    ...(o.session ? { session: o.session } : {}),
-  });
+  // From a browser that has never signed in: as the service's first run on this bank will.
+  const page = await newPage(d.browser, headers ? { headers } : {});
   const session = {
     page,
     url: o.url,
     table: o.table,
     known: trail.known,
     everyStep: true,
+    // A written crawler runs with the guard on, as it will in service.
+    ...(isWritten(o.table) && {
+      guard: (a: {
+        verb: 'type' | 'press' | 'choose' | 'read';
+        control: string;
+        typed?: string;
+      }) => {
+        const v = decideWritten(a.verb, a.control, {
+          secrets: [d.credentials.password],
+          ...(a.typed !== undefined ? { typed: a.typed } : {}),
+        });
+        if (!v.allowed) throw new GuardError(v.layer, v.rule);
+      },
+    }),
     credentials: async () => d.credentials,
     code: () => d.code(o.runId),
     keep: async (seen: { did: string; page: string | null }, f: Parameters<typeof trail.step>[1]) =>
@@ -81,17 +99,35 @@ async function checkRun(
       amountCents: 100,
       memo: 'GBX GATE',
     });
-    const ok = r.amountCents === 100;
+    const holds = (drawn: string, asked: string) =>
+      drawn.includes(asked.match(/\d{4}$/)?.[0] ?? asked) ||
+      drawn.toLowerCase().includes(asked.toLowerCase());
+    const wrong = [
+      ...(holds(r.from, o.from) ? [] : ['From']),
+      ...(holds(r.to, o.to) ? [] : ['To']),
+      ...(r.amountCents === 100 ? [] : ['Amount']),
+      ...(r.memo.includes('GBX GATE') ? [] : ['Memo']),
+    ];
+    // The activity, reached and read: nothing was sent, so no line holds the memo.
+    const rows = await inHistory(session, { member: o.member, from: o.from, memo: 'GBX GATE' });
+    const ok = wrong.length === 0 && rows === 0;
     return {
       runId: o.runId,
       hazard,
       ok,
       said: ok
-        ? `the balance read ${b.availableCents} cents; the review read $1.00`
-        : `the review read ${r.amountCents} cents, not 100`,
+        ? `the balance read ${b.availableCents} cents; the review held the task's accounts, $1.00 and the memo; the activity was reached`
+        : wrong.length
+          ? `the review did not match the task in ${wrong.join(', ')}`
+          : `the activity held ${rows} lines with the memo, not 0`,
     };
   } catch (e) {
-    return { runId: o.runId, hazard, ok: false, said: e instanceof Stop ? e.message : String(e) };
+    return {
+      runId: o.runId,
+      hazard,
+      ok: false,
+      said: e instanceof Error ? e.message : String(e),
+    };
   } finally {
     await page
       .context()
@@ -110,18 +146,19 @@ export async function gate(
     factoryRunId: string;
     bank: string;
     url: string;
-    table: Table;
+    table: Table | Written;
     member: string;
     from: string;
     to: string;
-    /** The factory run's cookies, so the check starts signed in and trusted, as the run ended. */
-    session?: string;
+    /** Practice on a bank whose table is written by hand: checked, never recommended. */
+    practice?: boolean;
   },
 ): Promise<{ recommendationId: string | null; runs: CheckRun[] }> {
   const runs = [await checkRun(d, { ...o, runId: `${o.factoryRunId}-check` }, null)];
   if (runs[0]!.ok && d.hazardKey)
     runs.push(await checkRun(d, { ...o, runId: `${o.factoryRunId}-${GATE_HAZARD}` }, GATE_HAZARD));
   const passed = runs.every((r) => r.ok);
+  if (o.practice) return { recommendationId: null, runs };
   const broken = runs[0]!.ok && !passed;
   // Kept either way: approvable, or broken and the table a repair starts from.
   const rec = await d.sql.query<{ id: string }>(
