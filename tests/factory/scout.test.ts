@@ -5,8 +5,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { openTrail } from '../../apps/factory/src/trail.js';
 import { scout, type Judging } from '../../apps/factory/src/scout.js';
-import { BANK1 } from '../support/bank1-crawler.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
+import { checkBalance } from '../../packages/crawler/src/index.js';
 import { memoryStore } from '../../packages/evidence/src/index.js';
 import { controlDb } from '../../packages/oauth/test/control.js';
 import { type Browser, launch, newPage } from '../../packages/runtime/src/index.js';
@@ -47,13 +47,8 @@ async function aScout(judged: Judging[] = []) {
       code,
       judge: async (j) => (judged.push(j), { verdict: 'continue', says: 'Fine.' }),
     },
-    {
-      member: MEMBERS.demo,
-      from: 'Everyday Checking',
-      to: 'Rainy Day Savings',
-      amountCents: 100,
-      memo: 'GBX TEST',
-    },
+    // The account the gate checks, as a run is always given it.
+    { goal: 'balance', member: MEMBERS.demo, from: 'Everyday Checking' },
   );
   /** The id of the latest page's control with this role and, if given, this name. */
   const id = (role: string, name?: string) => {
@@ -98,26 +93,76 @@ describe('the Scout, scripted', () => {
     expect(judged.flatMap((j) => j.record.map((e) => e.tool))).toEqual(made);
   }, 120_000);
 
-  it('writes a crawler, tries it with no model, and is ready only when every part passed', async () => {
+  it("writes a table as it goes that reads the ledger's balance", async () => {
     const judged: Judging[] = [];
-    const { s, go } = await aScout(judged);
+    const { s, id, go } = await aScout(judged);
+    const why = 'the next step';
     await go('browser_open');
-    // A crawler that reaches past site is refused before it is kept.
-    await expect(
-      go('write_crawler', { source: `${BANK1}\nprocess.exit();`, why: 'x x' }),
-    ).rejects.toThrow(/can't run: it uses process/);
-    await go('write_crawler', { source: BANK1, why: 'from the pages walked' });
-    expect(judged.at(-1)!.crawler).toBe(BANK1);
-    await expect(go('crawler_ready', { why: 'x x' })).rejects.toThrow(/not passed a try/);
-    const tried = await go('try_crawler', { part: 'balance' });
-    expect(tried.text).toMatch(/tried balance: passed, it read an amount of money/);
-    expect(s.passed()).toEqual(['balance']);
-    expect(s.crawler()).toBeNull();
+    await go('name_page', { name: 'sign-in', shows: ['Operator ID:', 'Password:'] });
+    await go('browser_type', { id: id('textbox'), label: 'Operator ID', value: 'user_id', why });
+    await go('browser_type', { id: id('password'), label: 'Password', value: 'password', why });
+    await go('browser_press', { id: id('button', 'Sign In'), why });
+    await go('name_page', { name: 'code chooser', shows: ['Where should we send your code?'] });
+    await go('browser_press', { id: id('button', 'Send code'), why });
+    await go('name_page', { name: 'code', shows: ['Enter the 6-digit code we sent'] });
+    await go('browser_type', { id: id('textbox'), label: 'Code', value: 'code', why });
+    await go('browser_press', { id: id('link', 'Verify'), why });
+    await go('name_page', { name: 'home', shows: ['Use Member Search to begin.'] });
+    await go('browser_press', { id: id('link', 'Member Search'), why });
+    await go('name_page', { name: 'search', shows: ['Member number:'], never: ['Status'] });
+    await go('browser_type', { id: id('textbox'), label: 'Member number', value: 'member', why });
+    await go('browser_press', { id: id('clickable', 'Search'), why });
+    // A page showing the member's number is kept once a name read hides their name: that read first.
+    await go('note_read', { what: 'name', text: '$member\n{name}\n{status}' });
+    await go('name_page', { name: 'found', shows: ['Member number:', 'Status'] });
+    await go('browser_press', { id: id('link', 'Open'), why });
+    await go('name_page', { name: 'summary', shows: ['Member Summary', 'Available balance:'] });
+    await go('note_read', {
+      what: 'balance',
+      text: '{name} Account ending in {last4} Available balance: {available} Current balance: {current}',
+    });
+    await go('note_read', { what: 'name', text: 'Member $member · {name}' });
+    await go('goal_reached');
+
+    // Every action was judged, each with its picture.
+    expect(judged.length).toBeGreaterThanOrEqual(10);
+    expect(judged.every((j) => j.frame.picture.length > 0)).toBe(true);
+    // The table, in the step language bank 1's uses, citing the Scout's own frames.
+    const t = s.table();
+    expect(t.ends.balance).toBe('summary');
+    expect(t.rows.find((r) => r.page === 'sign-in')!.do.balance).toEqual([
+      { type: 'Operator ID', value: '$operator' },
+      { type: 'Password', value: '$password' },
+      { press: 'Sign In' },
+    ]);
+    expect(t.rows.every((r) => /^f\d+$/.test(r.frame))).toBe(true);
+
+    // It runs under the crawler's loop, as bank 1's own table does.
+    const [checking] = (
+      await bank.admin<{ nickname: string; availableCents: number }[]>(
+        `/members/${MEMBERS.demo}/balances`,
+      )
+    ).filter((a) => a.nickname === 'Everyday Checking');
+    const page = await newPage(browser);
+    const b = await checkBalance(
+      { page, url: bank.url, table: t, known: [], credentials: async () => credentials, code },
+      { member: MEMBERS.demo, account: 'Everyday Checking' },
+    );
+    expect(b.availableCents).toBe(checking!.availableCents);
   }, 240_000);
 
-  it('refuses a position that lands on no control', async () => {
-    const { go } = await aScout();
+  it('refuses a target the runtime finds elsewhere', async () => {
+    const { id, go } = await aScout();
     await go('browser_open');
+    // The password box, named by the operator ID's label: the runtime lands on another field.
+    await expect(
+      go('browser_type', {
+        id: id('password'),
+        label: 'Operator ID',
+        value: 'user_id',
+        why: 'x x',
+      }),
+    ).rejects.toThrow(/finds another control/);
     await expect(go('browser_press', { x: 1, y: 1, why: 'x x' })).rejects.toThrow(/lands on no/);
   }, 120_000);
 });
