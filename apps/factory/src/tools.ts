@@ -18,6 +18,7 @@ export const TOOLS: Readonly<Record<Role, readonly string[]>> = {
     'choose_item',
     'name_page',
     'note_answer',
+    'note_trouble',
     'note_read',
     'goal_reached',
     'memory_query',

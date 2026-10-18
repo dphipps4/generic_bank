@@ -44,8 +44,8 @@ describe('a transfer run', () => {
     });
     expect(context.review.from).toMatch(/Everyday Checking/);
     expect(context.review.to).toMatch(/Rainy Day Savings/);
-    // The accounts as the grant binds them: not one digit of an account number.
-    expect(`${context.review.from} ${context.review.to}`).not.toMatch(/\d/);
+    // The accounts as the grant binds them: the last four of each, never a whole account number.
+    expect(`${context.review.from} ${context.review.to}`).not.toMatch(/\d{5}/);
     // The frame beside it is the review page's own, and its picture was stored masked.
     expect(context.frame).toMatchObject({ runId });
     const frame = (

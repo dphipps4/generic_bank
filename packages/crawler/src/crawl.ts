@@ -296,13 +296,24 @@ export async function crawl(
       did = await home(`start again from home: "${trouble.says}"`);
       continue;
     }
-    if (!at) return stop('unknown_screen', unknown?.message);
+    if (!at) {
+      // A page the table doesn't know may be one that comes and goes (a notice, a promotion): one
+      // fresh start from home before the crawler is called broken. Never after Submit.
+      if (!o.submitted && !again.get('unknown page')) {
+        again.set('unknown page', 1);
+        did = await home('start again from home: a page the table does not know');
+        continue;
+      }
+      return stop('unknown_screen', unknown?.message);
+    }
     if (at === t.ends[goal]) return f;
     same = at === last ? same + 1 : 0;
     last = at;
     if (same >= 2) return stop('stuck', `the ${at} page three times running`);
     const row = t.rows.find((r) => r.page === at)!;
-    const steps = row.do[goal] ?? row.do.any;
+    // A goal's own steps on this page, else any goal's, else the balance goal's: a learned route crosses
+    // the sign-in and the search once, for the balance, and that way through serves every goal.
+    const steps = row.do[goal] ?? row.do.any ?? row.do.balance;
     if (!steps?.length) return stop('stuck', `nothing to do on the ${at} page`);
     try {
       for (const [i, st] of steps.entries()) {

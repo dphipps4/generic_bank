@@ -339,14 +339,15 @@ describe('the PII suite', () => {
     expect(scanText(`password=${PASSWORDS.service}`, seeded.text, 'log line 1')[0]?.what).toBe(
       'the service password',
     );
-    // A covered place in a real stored picture, with a stroke of dark text drawn back over it.
+    // A covered place in a real stored picture, with a stroke of dark text drawn back over it (a grey
+    // the mask never paints: 40 is its own block).
     expect(covered).toBeDefined();
     const { img, box } = covered!;
     expect(uncoveredShare(img, box)).toBeLessThanOrEqual(0.01);
     const data = new Uint8Array(img.data);
     const y = Math.ceil(box.y + box.h / 2);
     for (let x = Math.ceil(box.x); x < box.x + box.w; x++)
-      data.fill(40, (y * img.width + x) * 4, (y * img.width + x) * 4 + 3);
+      data.fill(30, (y * img.width + x) * 4, (y * img.width + x) * 4 + 3);
     expect(uncoveredShare({ ...img, data }, box)).toBeGreaterThan(0.01);
   });
 });

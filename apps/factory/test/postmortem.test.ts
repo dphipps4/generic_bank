@@ -5,8 +5,8 @@ import type { AgentMessage } from '@earendil-works/pi-agent-core';
 import { maskText } from '@gb/runtime';
 import { describe, expect, it } from 'vitest';
 import { compacted } from '../src/agent.js';
-import { aboutMasking } from '../src/memory.js';
-import { pointed } from '../src/scout.js';
+import { aboutMasking, sendsMoney } from '../src/memory.js';
+import { neverRepairs, pointed } from '../src/scout.js';
 import { findJudgment } from '../src/supervisor.js';
 
 /** Bank 2's lines as the crawler reads them, unmasked (tenants.ts, console.ts, transfer.ts). */
@@ -154,5 +154,53 @@ describe('reads, after runs 14 and 15', () => {
         TASK,
       ),
     ).toThrow(/\{last4\} overlaps \{name\} on the line "Everyday Checking Share \*\*\*\*8176-S01/);
+  });
+});
+
+describe('after run 16', () => {
+  const MOVE = ['Move Money', 'From:', 'To:', 'Memo:', 'Amount:', 'Next'];
+  const row = (page: string, shows: string[]) => ({ page, shows, do: {}, frame: 'f12' });
+  const on = (lines: string[]) => (w: string) =>
+    lines.some((l) => l.toLowerCase().includes(w.toLowerCase()));
+
+  it('gives an earlier screen a never-word when all its words show on the new one', () => {
+    // Move Money was named by words the review repeats: the review could never be named.
+    const { rows, repaired } = neverRepairs(
+      [
+        row('Move Money', ['Move Money', 'From:', 'To:', 'Memo:']),
+        row('Member Summary', ['Member Summary']),
+      ],
+      on([...REVIEW, 'Move Money']),
+      () => MOVE.join('\n'),
+      ['Review transfer', 'Amount:'],
+    );
+    expect(rows[0]!.never).toEqual(['Review transfer']);
+    expect(rows[1]!.never).toBeUndefined();
+    expect(repaired).toEqual(['"Move Money" now never shows "Review transfer"']);
+  });
+
+  it('refuses a name whose every word the earlier screen also shows', () => {
+    expect(() =>
+      neverRepairs(
+        [row('Move Money', ['Move Money', 'From:'])],
+        on([...REVIEW, 'Move Money']),
+        () => MOVE.join('\n'),
+        ['From:', 'Amount:'],
+      ),
+    ).toThrow(/doesn't show/);
+  });
+
+  it('refuses a lesson that advises sending money, as run 16 proposed', () => {
+    expect(
+      sendsMoney(
+        'A transfer on this console counts only once submitted on its own review page. Reach that page with the clock to spare and press submit first.',
+      ),
+    ).not.toBeNull();
+    expect(
+      sendsMoney(
+        'The review page carries edit, cancel and submit as separate controls and restates every detail of the move.',
+      ),
+    ).toBeNull();
+    expect(sendsMoney('Press Next on the move-money form to reach the review.')).toBeNull();
   });
 });

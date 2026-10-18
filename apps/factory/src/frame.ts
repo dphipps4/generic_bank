@@ -8,7 +8,8 @@
 //
 // A variant may set: instructions (added to the agent's own), effort, picture (another PNG for the
 // frame), action and why (what the Scout just did), said (the Supervisor's words the Scout read),
-// record (the Scout's calls since the last judgment), clock. Three samples run at a time.
+// record (the Scout's calls since the last judgment), clock, goal (balance, transfer, history, or
+// signin for signing in again: the goal the run was on at that frame). Three samples run at a time.
 import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { leaf } from '@gb/crawler';
@@ -21,7 +22,7 @@ import { z } from 'zod';
 import { TURN_MS, turn } from './agent.js';
 import { memoryClient, memoryQueryTool, servedBy } from './memory.js';
 import { ROLE_SETTINGS, rolesOf } from './models.js';
-import { GOALS, SCOUT } from './run.js';
+import { GOALS, SCOUT, SIGNIN } from './run.js';
 import { type Entry, scout } from './scout.js';
 import { supervisor } from './supervisor.js';
 import type { Trail } from './trail.js';
@@ -54,6 +55,7 @@ const Variant = z
       .array(z.object({ tool: z.string(), input: z.unknown(), error: z.string().optional() }))
       .optional(),
     clock: z.string().optional(),
+    goal: z.enum(['balance', 'transfer', 'history', 'signin']).optional(),
   })
   .strict();
 
@@ -85,8 +87,10 @@ const agentFor = (r: 'scout' | 'supervisor') => ({
   token: cfg.FACTORY_GATEWAY_TOKEN,
 });
 const input = { bank: 'example', member: '40017732', from: '8176', to: '9433' };
+const goal = variant.goal ?? 'balance';
+const goalText = (i: typeof input) => (goal === 'signin' ? SIGNIN : GOALS[goal](i));
 const task = {
-  goal: 'balance' as const,
+  goal,
   member: input.member,
   from: input.from,
   to: input.to,
@@ -100,6 +104,7 @@ const quiet: Trail = {
   has: () => false,
   shown: async () => null,
   keep: async () => null,
+  remask: async () => 0,
 };
 const scoutTools = () =>
   scout(
@@ -147,7 +152,7 @@ async function scoutSample() {
   }));
   const said = await turn(agentFor('scout'), {
     system: variant.instructions ? `${SCOUT}\n${variant.instructions}` : SCOUT,
-    say: `Goal: ${GOALS.balance(input)}\n\nThe tool returned:\n${variant.action ?? 'looked'}.${variant.said ? `\nThe Supervisor: ${variant.said}` : ''}\n${JSON.stringify(view)}\n\nAct now: one tool call.`,
+    say: `Goal: ${goalText(input)}\n\nThe tool returned:\n${variant.action ?? 'looked'}.${variant.said ? `\nThe Supervisor: ${variant.said}` : ''}\n${JSON.stringify(view)}\n\nAct now: one tool call.`,
     image: picture,
     tools,
     calls: 1,
@@ -163,7 +168,7 @@ async function supervisorSample() {
     signingKey: cfg.MEMORY_SIGNING_KEY,
   });
   const at = { bank: 'example', vendor: 'corelink' };
-  const pack = await memory.pack(at, GOALS.balance(input));
+  const pack = await memory.pack(at, goalText(input));
   const thoughts: string[] = [];
   const trail: Trail = {
     ...quiet,
@@ -172,7 +177,7 @@ async function supervisorSample() {
   const sup = supervisor({
     agent: agentFor('supervisor'),
     trail,
-    goal: GOALS.balance(input),
+    goal: goalText(input),
     knowledge: JSON.stringify(pack.tiers),
     tools: [memoryQueryTool(memory, at, servedBy(pack))],
     clock: { text: () => variant.clock ?? '60 s used of 420 s, 360 s left' },

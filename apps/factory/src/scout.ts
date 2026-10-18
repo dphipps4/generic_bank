@@ -40,7 +40,8 @@ import type { Trail } from './trail.js';
 
 /** What a run is for, and the values a teller is given for it. */
 export interface Task {
-  goal: Goal;
+  /** A goal, or signing in again from a remembered workstation, whose steps serve every goal. */
+  goal: Goal | 'signin';
   member: string;
   /** Accounts by name or last four; for a transfer, and for its history. */
   from?: string;
@@ -217,6 +218,32 @@ export function pointed(
   return out.join('\n').split(task.member).join('$member');
 }
 
+/**
+ * Earlier screens whose words all show on a new screen get one of the new screen's words that their
+ * own page doesn't show, as a never-word; returns the screens and what changed, or refuses when an
+ * earlier screen shows every word the new one is named by.
+ */
+export function neverRepairs(
+  earlier: Row[],
+  here: (w: string) => boolean,
+  pageOf: (r: Row) => string,
+  names: string[],
+): { rows: Row[]; repaired: string[] } {
+  const repaired: string[] = [];
+  const rows = earlier.map((r) => {
+    if (!r.shows.every(here)) return r;
+    const its = pageOf(r).toLowerCase();
+    const word = names.find((w) => !its.includes(w.toLowerCase()));
+    if (!word)
+      throw new ToolRefusal(
+        `"${r.page}" shows every word you named this screen by: name it by words "${r.page}" doesn't show`,
+      );
+    repaired.push(`"${r.page}" now never shows "${word}"`);
+    return { ...r, never: [...(r.never ?? []), word] };
+  });
+  return { rows, repaired };
+}
+
 export function scout(deps: ScoutDeps, task: Task) {
   const { page, trail } = deps;
   const known = trail.known;
@@ -228,8 +255,14 @@ export function scout(deps: ScoutDeps, task: Task) {
   const learnName = async () => {
     if (!t.reads.name?.length) return;
     const words = (await leaves(page)).join('\n');
+    let learned = false;
     for (const part of namesIn(words, t.reads.name, task.member))
-      if (!known.includes(part)) known.push(part);
+      if (!known.includes(part)) {
+        known.push(part);
+        learned = true;
+      }
+    // What was written before the name was known (a judgment quoting it) is masked again now.
+    if (learned) await trail.remask();
   };
 
   // The table as the Scout writes it; a repair starts from the broken one.
@@ -268,7 +301,7 @@ export function scout(deps: ScoutDeps, task: Task) {
    * page that got somewhere wins. Steps on a page not yet named are kept until it is.
    */
   const fileVisit = (on: Row | null) => {
-    if (on && visit.length) on.do[task.goal] = visit;
+    if (on && visit.length) on.do[task.goal === 'signin' ? 'any' : task.goal] = visit;
     visit = [];
   };
 
@@ -344,7 +377,7 @@ export function scout(deps: ScoutDeps, task: Task) {
     const said = j ? `\nThe Supervisor: ${j.verdict}. ${j.says}` : '';
     // The view as the Scout reads it, kept so this look can be replayed exactly.
     await trail.keep(
-      `view-${String(++viewed).padStart(3, '0')}.json`,
+      `view-${task.goal}-${String(++viewed).padStart(3, '0')}.json`,
       Buffer.from(JSON.stringify({ action, frame: ref, said: j?.says ?? null, view })),
       'application/json',
     );
@@ -914,7 +947,19 @@ export function scout(deps: ScoutDeps, task: Task) {
           do: old?.do ?? {},
           frame: latest.ref,
         };
-        const rows = [...t.rows.filter((r) => r.page !== i.name), next];
+        // An earlier screen whose words all show here would be taken for this one: it gets a word of
+        // this screen that its own page doesn't show, as a never-word (run 16: Move Money and the review).
+        const pageOf = new Map<string, string>();
+        for (const r of t.rows)
+          if (r.page !== i.name && r.shows.every((w) => shows(f, w)))
+            pageOf.set(r.page, ((await trail.shown(r.frame))?.texts ?? []).join('\n'));
+        const { rows: earlier, repaired } = neverRepairs(
+          t.rows.filter((r) => r.page !== i.name),
+          (w) => shows(f, w),
+          (r) => pageOf.get(r.page) ?? '',
+          i.shows,
+        );
+        const rows = [...earlier, next];
         try {
           if (
             knows(
@@ -932,8 +977,36 @@ export function scout(deps: ScoutDeps, task: Task) {
         }
         t.rows = rows;
         row = next;
-        await trail.step({ name: 'name page', action: `${i.name}: ${i.shows.join('; ')}` }, null);
-        return { text: `This page is "${i.name}", at ${latest.ref}.` };
+        const fixed = repaired.length
+          ? ` ${repaired.join('; ')}, so it is not taken for this one.`
+          : '';
+        await trail.step(
+          {
+            name: 'name page',
+            action: `${i.name}: ${i.shows.join('; ')}`,
+            ...(fixed ? { outcome: fixed.trim() } : {}),
+          },
+          null,
+        );
+        return { text: `This page is "${i.name}", at ${latest.ref}.${fixed}` };
+      },
+    },
+    note_trouble: {
+      description:
+        'Notes a page that gets in the way and goes away on its own (a maintenance notice, a promotion, an error a fresh start clears), by words it shows. The crawler starts again from home when it shows, at most twice, then stops. After noting it, open the start page to go on.',
+      input: z.object({
+        says: z.string().min(4).max(120),
+        means: z.enum(['unavailable', 'app_error']),
+      }),
+      async run(i: { says: string; means: 'unavailable' | 'app_error' }) {
+        if (!latest?.ref || !shows(latest.frame, i.says))
+          throw new ToolRefusal('the page does not show those words');
+        t.trouble = [
+          ...t.trouble.filter((x) => x.says !== i.says),
+          { says: i.says, code: i.means, again: 2, frame: latest.ref },
+        ];
+        await trail.step({ name: 'note trouble', action: `${i.means}: ${i.says}` }, null);
+        return { text: `Noted, citing ${latest.ref}. Open the start page to go on.` };
       },
     },
     note_answer: {
@@ -1112,6 +1185,16 @@ export function scout(deps: ScoutDeps, task: Task) {
       input: z.object({ submit: z.string().max(60).optional() }),
       async run(i: { submit?: string }) {
         if (!latest?.ref || !row) throw new ToolRefusal('name this page first');
+        // Signing in again ends on a screen the route already holds: its steps are filed, nothing more.
+        if (task.goal === 'signin') {
+          fileVisit(row);
+          stopped = true;
+          await trail.step(
+            { name: 'goal reached', action: `signed in again, on ${row.page}` },
+            null,
+          );
+          return { text: `Signed in again, on "${row.page}". Stop now.` };
+        }
         if (task.goal === 'transfer') {
           const s = i.submit?.trim() ?? '';
           // By id or by name; a send button drawn as a picture has a place, and the crawler finds it
