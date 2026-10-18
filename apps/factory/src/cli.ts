@@ -113,14 +113,6 @@ async function report(runId: string) {
   const sup = steps.filter((s) => s.name === 'supervisor');
   log(`cost: $${Number(spend ?? 0).toFixed(2)}`);
   log(`actions: ${sup.length} judged, ${steps.filter((s) => s.name === 'refused').length} refused`);
-  const tries = steps.filter((s) => s.name === 'crawler tried');
-  log(
-    `crawler: ${steps.filter((s) => s.name === 'crawler written').length} versions written; ${tries.length} tries${
-      tries.length
-        ? ` (${tries.map((t) => `${t.action} ${(t.outcome ?? '').split(':')[0]}`).join(', ')})`
-        : ''
-    }`,
-  );
   log(
     `corrections citing a frame: ${sup.filter((s) => s.action !== 'continue' && /\bf\d+\b/.test(s.outcome ?? '')).length}`,
   );
@@ -129,7 +121,7 @@ async function report(runId: string) {
   const framed = (
     await sql.query<{ seq: number; framed: boolean }>(
       `SELECT s.seq, EXISTS (SELECT 1 FROM "TrailFrame" f WHERE f."runId" = s."runId" AND f."stepSeq" = s.seq) AS framed
-         FROM "Step" s WHERE s."runId" = $1 AND (s.name = 'scout' OR s.name LIKE 'try %')`,
+         FROM "Step" s WHERE s."runId" = $1 AND s.name IN ('balance', 'transfer', 'history')`,
       [runId],
     )
   ).rows;

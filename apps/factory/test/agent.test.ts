@@ -105,16 +105,6 @@ describe.each([DEFAULT_ROLES.scout.provider] as const)('a turn on %s', (provider
     expect(ran).toEqual(['one', 'two']);
   });
 
-  it("carries on past a provider's passing failure, and stops at any other", async () => {
-    replies = [{ fail: 502, message: 'Download multimodal file timed out' }, { text: 'Done.' }];
-    const r = await turn(agent(), { system: 'You echo.', say: 'Go.', maxTokens: 1000 });
-    expect(r.text).toBe('Done.');
-    replies = [{ fail: 400, message: 'the request is malformed' }, { text: 'Done.' }];
-    await expect(
-      turn(agent(), { system: 'You echo.', say: 'Go.', maxTokens: 1000 }),
-    ).rejects.toThrow(/model failed/);
-  });
-
   it('stops when a tool breaks, with the tool’s error', async () => {
     replies = [{ tool: 'echo', input: { text: 'break' } }];
     await expect(

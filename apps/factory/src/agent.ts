@@ -190,11 +190,6 @@ function withAnswer(api: keyof typeof API, schema: Record<string, unknown>) {
   };
 }
 
-/** A provider's error that passes: tried again, in the same conversation. */
-export const TRANSIENT =
-  /\b(5\d\d|429)\b|timed? ?out|timeout|overloaded|rate.?limit|ECONNRESET|socket hang up|temporarily/i;
-const TRANSIENT_TRIES = 3;
-
 export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
   const model = modelOf(a);
   const api = apiOf(a.model);
@@ -272,23 +267,6 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
         : i.say,
     timestamp: Date.now(),
   });
-  // A provider's passing failure (a 5xx, a timeout, a rate limit) is not the agent's: the failed
-  // reply is dropped and the same conversation carries on, a few times at most. A long turn of many
-  // calls would otherwise end on one bad call.
-  for (let again = 1; again <= TRANSIENT_TRIES; again++) {
-    const failed = session.state.messages.at(-1) as AssistantMessage | undefined;
-    if (
-      i.signal?.aborted ||
-      failure !== undefined ||
-      failed?.role !== 'assistant' ||
-      failed.stopReason !== 'error' ||
-      !TRANSIENT.test(failed.errorMessage ?? '')
-    )
-      break;
-    session.state.messages = session.state.messages.slice(0, -1);
-    await new Promise((r) => setTimeout(r, 2000 * again));
-    await session.continue();
-  }
   await report(session.state.messages).catch(() => undefined);
   if (i.signal?.aborted) throw new Ended(String(i.signal.reason ?? 'ended'));
   if (failure !== undefined) throw failure;
