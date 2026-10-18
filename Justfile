@@ -111,6 +111,12 @@ build:
     @docker build -f infra/docker/node.Dockerfile --label gb.source={{source_stamp}} -t $GB_IMAGE .
     @docker build -f infra/docker/runner.Dockerfile --build-arg BASE=$GB_IMAGE --label gb.source={{source_stamp}} -t $GB_RUNNER_IMAGE .
 
+# The same, from nothing: no cached layers
+[private]
+build-nc:
+    @docker build --no-cache -f infra/docker/node.Dockerfile --label gb.source={{source_stamp}} -t $GB_IMAGE .
+    @docker build --no-cache -f infra/docker/runner.Dockerfile --build-arg BASE=$GB_IMAGE --label gb.source={{source_stamp}} -t $GB_RUNNER_IMAGE .
+
 # Build the image if it is missing or older than the source
 [private]
 image:
