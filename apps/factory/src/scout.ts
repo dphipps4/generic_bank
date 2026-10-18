@@ -14,6 +14,7 @@ import {
   choose,
   control,
   type Control,
+  chooseAt,
   clickAt,
   cropOf,
   field,
@@ -583,6 +584,40 @@ export function scout(deps: ScoutDeps, task: Task) {
         visit.push({ press: it.label, at });
         return look(
           `pressed ${it.id}, the ${it.kind} "${it.label}" (${it.labelFrom}), by clicking ${Math.round(p.x)},${Math.round(p.y)}`,
+          i.why,
+        );
+      },
+    },
+    choose_item: {
+      description:
+        "Chooses the task's from or to account in a list from your list_page, by its position: the browser reads the list's options, the mouse clicks the list, and the keyboard types the option holding the account.",
+      input: z.object({
+        item: z.string().regex(/^i\d{1,3}$/),
+        account: z.enum(['from', 'to']),
+        why: z.string().min(3).max(200),
+      }),
+      async run(i: { item: string; account: 'from' | 'to'; why: string }) {
+        mayAct();
+        const it = itemOf(i.item, ['list']);
+        if (!it.labelBox)
+          throw new ToolRefusal(
+            `${it.id} has no label box: list the page again with its label's box`,
+          );
+        const at = await anchorOf(it, it.labelBox);
+        const p = centre(it.box);
+        await chooseAt(page, p, account(i.account === 'from' ? task.from : task.to)).catch(
+          (e: Error) => {
+            if (e instanceof TargetError) throw new ToolRefusal(e.message);
+            throw e;
+          },
+        );
+        visit.push({
+          choose: it.label,
+          containing: i.account === 'from' ? '$from' : '$to',
+          at,
+        });
+        return look(
+          `chose the ${i.account} account in ${it.id}, the list labeled "${it.label}" (${it.labelFrom}), at ${Math.round(p.x)},${Math.round(p.y)}`,
           i.why,
         );
       },

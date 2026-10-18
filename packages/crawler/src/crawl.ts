@@ -5,6 +5,7 @@
 import { CODES, type ResultCode } from '@gb/contracts';
 import {
   choose,
+  chooseAt,
   clickAt,
   findCrop,
   type Frame,
@@ -160,7 +161,9 @@ async function step(s: Session, task: Task, screen: string, st: Step): Promise<s
   }
   if ('choose' in st) {
     s.guard?.({ screen, verb: 'choose', control: st.choose });
-    await choose(s.page, st.choose, await value(s, task, st.containing), s.table.pictures);
+    const v = await value(s, task, st.containing);
+    if (st.at) await chooseAt(s.page, await pointOf(s.page, st.at), v);
+    else await choose(s.page, st.choose, v, s.table.pictures);
     return `choose ${st.containing} in "${st.choose}"`;
   }
   const near = st.near && (await value(s, task, st.near));

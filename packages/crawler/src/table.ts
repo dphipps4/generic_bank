@@ -26,7 +26,7 @@ export interface At {
 export type Step =
   | { type: string; value: string; at?: At }
   | { press: string; near?: string; at?: At }
-  | { choose: string; containing: string };
+  | { choose: string; containing: string; at?: At };
 
 export interface Row {
   page: string;

@@ -21,7 +21,7 @@ import {
   UnknownPage,
 } from '../src/index.js';
 import { cropOf, findCrop } from '../src/match.js';
-import { clickAt, typeAt, whatIsAt } from '../src/hands.js';
+import { chooseAt, clickAt, typeAt, whatIsAt } from '../src/hands.js';
 import { serve } from './pages.js';
 
 let browser: Browser;
@@ -303,5 +303,18 @@ describe('the runtime: see first, then click', () => {
     expect(await page.locator('#u').inputValue()).toBe('again');
     await clickAt(page, { x: 80, y: 115 });
     expect(await page.locator('#b').textContent()).toBe('Pressed');
+  });
+
+  it('chooses from a list by position and keyboard, reading what it shows', async () => {
+    page = await newPage(browser);
+    await page.setContent(`<body style="margin:0"><select id="s" style="position:absolute;left:20px;top:20px;width:360px">
+      <option>Choose an account</option>
+      <option>Everyday Checking, Account ending in 8176, available $4,800.00</option>
+      <option>Rainy Day Savings, Account ending in 9433, available $12,000.00</option>
+    </select></body>`);
+    const shown = await chooseAt(page, { x: 200, y: 30 }, '9433');
+    expect(shown).toContain('Rainy Day Savings');
+    expect(await page.locator('#s').inputValue()).toContain('9433');
+    await expect(chooseAt(page, { x: 200, y: 30 }, '0000')).rejects.toBeInstanceOf(TargetError);
   });
 });
