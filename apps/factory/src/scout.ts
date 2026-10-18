@@ -579,7 +579,7 @@ export function scout(deps: ScoutDeps, task: Task) {
             labelFrom: 'text',
             box: c.box,
           };
-          // Two controls can look alike (a menu's "Move Money" and the panel's): a wider crop holds
+          // Two controls can look alike (a menu's link and a panel's of the same name): a wider crop holds
           // what is around it too, and is found once.
           const wide = { x: c.box.x - 40, y: c.box.y - 12, w: c.box.w + 80, h: c.box.h + 24 };
           const at = await anchorOf(it, c.box).catch(() => anchorOf(it, wide));
@@ -948,7 +948,7 @@ export function scout(deps: ScoutDeps, task: Task) {
           frame: latest.ref,
         };
         // An earlier screen whose words all show here would be taken for this one: it gets a word of
-        // this screen that its own page doesn't show, as a never-word (run 16: Move Money and the review).
+        // this screen that its own page doesn't show, as a never-word.
         const pageOf = new Map<string, string>();
         for (const r of t.rows)
           if (r.page !== i.name && r.shows.every((w) => shows(f, w)))

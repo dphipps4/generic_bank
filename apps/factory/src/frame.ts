@@ -9,7 +9,8 @@
 // A variant may set: instructions (added to the agent's own), effort, picture (another PNG for the
 // frame), action and why (what the Scout just did), said (the Supervisor's words the Scout read),
 // record (the Scout's calls since the last judgment), clock, goal (balance, transfer, history, or
-// signin for signing in again: the goal the run was on at that frame). Three samples run at a time.
+// signin for signing in again: the goal the run was on at that frame). It must set the run's task:
+// member, from and to. The bank comes from the run's own record. Three samples run at a time.
 import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { leaf } from '@gb/crawler';
@@ -20,7 +21,7 @@ import type { Frame } from '@gb/runtime';
 import { Agent as Dispatcher, setGlobalDispatcher } from 'undici';
 import { z } from 'zod';
 import { TURN_MS, turn } from './agent.js';
-import { memoryClient, memoryQueryTool, servedBy } from './memory.js';
+import { memoryClient, memoryQueryTool, servedBy, vendorOf } from './memory.js';
 import { ROLE_SETTINGS, rolesOf } from './models.js';
 import { GOALS, SCOUT, SIGNIN } from './run.js';
 import { type Entry, scout } from './scout.js';
@@ -56,15 +57,23 @@ const Variant = z
       .optional(),
     clock: z.string().optional(),
     goal: z.enum(['balance', 'transfer', 'history', 'signin']).optional(),
+    // The run's task: the member and the accounts it was given.
+    member: z.string().min(1),
+    from: z.string().min(1),
+    to: z.string().min(1),
   })
   .strict();
 
 const [run, frameArg, role, samplesArg = '5', variantPath] = process.argv.slice(2);
 if (!run || !frameArg || (role !== 'scout' && role !== 'supervisor')) {
-  console.error('usage: frame.js <run> <frame> <scout|supervisor> [samples] [variant.json]');
+  console.error('usage: frame.js <run> <frame> <scout|supervisor> <samples> <variant.json>');
   process.exit(2);
 }
-const variant = Variant.parse(variantPath ? JSON.parse(readFileSync(variantPath, 'utf8')) : {});
+if (!variantPath) {
+  console.error("a variant is required: it names the run's member and accounts");
+  process.exit(2);
+}
+const variant = Variant.parse(JSON.parse(readFileSync(variantPath, 'utf8')));
 const samples = Number(samplesArg);
 const n = Number(frameArg.replace(/^f/, ''));
 const store = fileStore(cfg.EVIDENCE_DIR);
@@ -74,11 +83,20 @@ const page = JSON.parse(String(await store.get(`${base}.json`))) as Omit<Frame, 
 const picture = variant.picture ? readFileSync(variant.picture) : (await store.get(`${base}.png`))!;
 const frame: Frame = { ...page, picture };
 
+// The run's bank, from its own record (a gate's frames belong to the run it checked).
+const tenant = (
+  await sql.query<{ tenant: string }>('SELECT tenant FROM "FactoryRun" WHERE id = $1', [
+    run.replace(/-check$/, ''),
+  ])
+).rows[0]?.tenant;
+if (!tenant) throw new Error(`no factory run ${run}`);
+const bank: string = tenant;
+
 // Its own ledger row: every call metered and capped, apart from any run's.
 const ledger = `frame-${run}-f${n}-${randomBytes(3).toString('hex')}`;
 await sql.query(
-  `INSERT INTO "FactoryRun" (id, tenant, task, mode, phase, status) VALUES ($1, 'example', 'check-balance', 'experiment', 'DONE', 'experiment')`,
-  [ledger],
+  `INSERT INTO "FactoryRun" (id, tenant, task, mode, phase, status) VALUES ($1, $2, 'check-balance', 'experiment', 'DONE', 'experiment')`,
+  [ledger, bank],
 );
 const roles = rolesOf(cfg);
 const agentFor = (r: 'scout' | 'supervisor') => ({
@@ -86,7 +104,7 @@ const agentFor = (r: 'scout' | 'supervisor') => ({
   url: `${cfg.FACTORY_URL}/gateway/${ledger}/${r}`,
   token: cfg.FACTORY_GATEWAY_TOKEN,
 });
-const input = { bank: 'example', member: '40017732', from: '8176', to: '9433' };
+const input = { bank, member: variant.member, from: variant.from, to: variant.to };
 const goal = variant.goal ?? 'balance';
 const goalText = (i: typeof input) => (goal === 'signin' ? SIGNIN : GOALS[goal](i));
 const task = {
@@ -167,7 +185,7 @@ async function supervisorSample() {
     token: cfg.MEMORY_TOKEN_FACTORY,
     signingKey: cfg.MEMORY_SIGNING_KEY,
   });
-  const at = { bank: 'example', vendor: 'corelink' };
+  const at = { bank, vendor: await vendorOf(sql, bank) };
   const pack = await memory.pack(at, goalText(input));
   const thoughts: string[] = [];
   const trail: Trail = {

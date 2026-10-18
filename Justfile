@@ -216,9 +216,9 @@ factory bank member from to: factory-up
     exit "$status"
 
 # A one-frame experiment: the real Scout or Supervisor on one kept frame of a run, a few cents a sample:
-# just frame <run> <frame> <scout|supervisor> [samples] [variant.json]
+# just frame <run> <frame> <scout|supervisor> <samples> <variant.json> (the variant names the run's member and accounts)
 [group('Factory')]
-frame run frame role samples="5" variant="": factory-up
+frame run frame role samples variant: factory-up
     #!/usr/bin/env bash
     set -euo pipefail
     mount=(); arg=()

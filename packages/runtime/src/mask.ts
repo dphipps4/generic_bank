@@ -72,7 +72,7 @@ async function boxesFrom(cdp: CDPSession, known: string[], dx: number, dy: numbe
     const size = (li: number | undefined) =>
       parseFloat(str(li === undefined ? -1 : (d.layout.styles[li]?.[0] ?? -1))) || 13;
     // A field's value is drawn by the field, from just inside its left edge, in its own font size.
-    // Only its hidden characters are painted, so a typed "████7732" shows that it was typed.
+    // Only its hidden characters are painted, so a typed "████5678" shows that it was typed.
     const inputs = d.nodes.inputValue;
     inputs?.index.forEach((node, k) => {
       const li = layoutOf.get(node);
@@ -199,7 +199,7 @@ export async function maskBoxes(page: Page, known: string[] = []): Promise<Box[]
 }
 
 /**
- * The picture with each hidden character drawn as a dark block, as the text shows it ("████7732"):
+ * The picture with each hidden character drawn as a dark block, as the text shows it ("████5678"):
  * a hidden value looks hidden, never absent. The seams are drawn over the block, never through it.
  */
 export function paint(png: Buffer, boxes: Box[]): Buffer {

@@ -79,7 +79,7 @@ export function memoryClient(o: { url: string; token: string; signingKey: string
 
 export type Memory = ReturnType<typeof memoryClient>;
 
-/** The product a bank runs, as memory names a vendor: `corelink` for "CoreLink 4.3". */
+/** The product a bank runs, as memory names a vendor: the first word of its product and version, lowercased. */
 export async function vendorOf(sql: Sql, bank: string): Promise<string | null> {
   const r = await sql.query<{ vendor: string }>(
     `SELECT lower(split_part("productVersion", ' ', 1)) AS vendor FROM "Bank" WHERE id = $1`,

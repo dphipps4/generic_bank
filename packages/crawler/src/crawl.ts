@@ -127,7 +127,7 @@ const stop = (code: ResultCode, note?: string, retryable?: boolean): never => {
 
 /**
  * An account as an option holds it: its name, or its last four digits, whatever words a bank puts
- * around them ("ending in 8176", "Share ****8176-S01"). Exactly one option must hold it.
+ * around them ("ending in 1234", "Acct ****1234"). Exactly one option must hold it.
  */
 const account = (ref = '') => ref;
 
@@ -361,7 +361,7 @@ export const leaves = async (page: Page) =>
     .map(leaf)
     .filter((l): l is string => l !== null);
 
-/** The last four digits of an account as a page draws it ("****8176-S01", "8176"). */
+/** The last four digits of an account as a page draws it ("Acct ****1234", "1234"). */
 const lastFour = (drawn: string) => drawn.match(/\d{4}(?!.*\d{4})/)?.[0] ?? '****';
 
 export async function checkBalance(s: Session, task: Task & { account: string }) {
