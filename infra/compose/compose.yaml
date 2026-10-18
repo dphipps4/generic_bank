@@ -216,7 +216,15 @@ services:
 
   bank-example:
     <<: *bank
-    environment: { TENANT: example, MALLOC_ARENA_MAX: '2', PORT: '8082', ADMIN_PORT: '9000' }
+    # No random hazards on bank 2: the factory learns it within its clock. Forced ones still fire.
+    environment:
+      {
+        TENANT: example,
+        MALLOC_ARENA_MAX: '2',
+        PORT: '8082',
+        ADMIN_PORT: '9000',
+        HAZARD_RUN_RATE_PCT: '0',
+      }
     ports:
       - '127.0.0.1:${BANK_EXAMPLE_PORT}:8082'
       - '127.0.0.1:${BANK_EXAMPLE_ADMIN_PORT}:9000'
