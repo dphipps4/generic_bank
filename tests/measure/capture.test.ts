@@ -6,7 +6,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
-import { TENANTS } from '../../apps/bank/src/tenants.js';
 import {
   chooseAt,
   clickAt,
@@ -52,7 +51,8 @@ describe.runIf(process.env.CAPTURE === '1')("bank 2's pages, for measuring sight
       'John',
       'Doe',
     ];
-    const words = (TENANTS.example.imageText?.labels ?? []).map((w) => `${w}:`);
+    // The words bank 2 draws as pictures, written down beforehand: the truth the models are scored on.
+    const words = ['Username:', 'Passcode:', 'Member number:', 'Amount:'];
     const pages: string[] = [];
     const keep = async (name: string) => {
       const f = await see(page, { known, limitMs: 15_000 });
