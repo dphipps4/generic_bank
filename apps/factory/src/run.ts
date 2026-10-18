@@ -179,8 +179,25 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
     );
   };
   try {
+    // The Scout's tools exactly as the Scout is given them, for the Supervisor to know what the
+    // Scout can do. Read from the same definitions, so the two never drift apart.
+    const scoutTools = [
+      ...scout(
+        {
+          page,
+          start: bank.url,
+          trail,
+          credentials: deps.credentials,
+          code: async () => '',
+          judge: async () => ({ verdict: 'continue', says: '' }),
+        },
+        { goal: 'balance', member: input.member },
+      ).tools('scout'),
+      ...toolsOf('scout', [queryTool]),
+    ].map((t) => ({ name: t.name, description: t.description }));
     const sup = supervisor({
       agent: agent('supervisor'),
+      scoutTools,
       trail,
       goal: Object.values(GOALS)
         .map((g) => g(input))
