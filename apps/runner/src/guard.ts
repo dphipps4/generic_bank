@@ -4,7 +4,14 @@
 // from the table, and nothing a page says. The first refusal trips it for good: every action after
 // it is refused too, and the run ends `escalated: guard_tripped`, which freezes the bank.
 import type { Action } from '@gb/crawler';
-import { decide, type GrantCheck, GuardError, type JOBS, type Layer } from '@gb/guardrails';
+import {
+  decide,
+  decideWritten,
+  type GrantCheck,
+  GuardError,
+  type JOBS,
+  type Layer,
+} from '@gb/guardrails';
 
 type Job = (typeof JOBS)[number];
 
@@ -22,18 +29,29 @@ export function runGuard(o: {
   names?: Record<string, string[]>;
   /** The operator's password: typed only by the secret path, never as plain text. */
   secrets: string[];
+  /**
+   * A crawler the factory wrote: its screens are its own, so each action is judged by what it does
+   * (the never list, a send without a grant, a secret as plain text), not by a screen's list.
+   */
+  written?: boolean;
 }): RunGuard {
   let grant: GrantCheck | undefined;
   let refusal: { layer: Layer; rule: string } | null = null;
   const guard = (a: Action) => {
     if (refusal) throw new GuardError(refusal.layer, `the guard has tripped: ${refusal.rule}`);
-    const v = decide(o.job, a.screen, a.verb, a.control, {
-      names: o.names ?? {},
-      secrets: o.secrets,
-      ...(a.secret ? { secret: true } : {}),
-      ...(a.typed !== undefined ? { typed: a.typed } : {}),
-      ...(grant ? { grant } : {}),
-    });
+    const v = o.written
+      ? decideWritten(a.verb, a.control, {
+          secrets: o.secrets,
+          ...(a.typed !== undefined ? { typed: a.typed } : {}),
+          ...(grant ? { grant } : {}),
+        })
+      : decide(o.job, a.screen, a.verb, a.control, {
+          names: o.names ?? {},
+          secrets: o.secrets,
+          ...(a.secret ? { secret: true } : {}),
+          ...(a.typed !== undefined ? { typed: a.typed } : {}),
+          ...(grant ? { grant } : {}),
+        });
     if (!v.allowed) {
       refusal = { layer: v.layer, rule: v.rule };
       throw new GuardError(v.layer, v.rule);
