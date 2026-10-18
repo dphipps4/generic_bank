@@ -132,10 +132,10 @@ up: env image
     @echo; echo "  Everything is in ACCESS.md. just show opens it all."
     @{{scripts}}/model-mode.sh
 
-# Open everything in the browser: ACCESS.html, Swagger UI, the Console, both banks and the simulated inbox
+# Write ACCESS.html afresh and open it, then Swagger UI, the Console, both banks and the simulated inbox
 [group('Run')]
-show:
-    @[[ -f ACCESS.html ]] && open ACCESS.html 2>/dev/null || true
+show: access
+    @open ACCESS.html 2>/dev/null || echo "  ACCESS.html"
     @for u in "http://localhost:$API_PORT/docs" "http://localhost:$CONSOLE_PORT" "http://localhost:$BANK_GENERIC_PORT/corelink/" \
         "http://localhost:$BANK_EXAMPLE_PORT/" "http://localhost:$BANK_INBOX_PORT"; do \
         open "$u" 2>/dev/null || echo "  $u"; done

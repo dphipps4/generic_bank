@@ -2,7 +2,7 @@
 
 Banks run a lot of back-office screens with no API at all. This gives an AI agent one: it calls with typed inputs to check a balance or move money, and gets a typed result back. Behind it, a crawler works the bank's staff console the way a teller does, looking at each page before it clicks. A person approves every transfer. Anything the system can't finish safely goes to a person, with the pictures of what happened.
 
-The target app is two local banks, both deliberately unfriendly: 2003-style consoles, server-rendered, framesets, nested tables, no test IDs. Bank 1's crawler was written by hand, from evidence. Bank 2's is learned by a software factory. Two agents, a Scout and a Supervisor, work it out on the live site, and a person approves what they wrote before it's used.
+The target app is two local banks, both deliberately unfriendly: 2003-style consoles, server-rendered, framesets, nested tables, no test IDs. Each bank's crawler is written ahead of time, and runs without AI. For bank 1, AI wrote it from a recorded walk through the site, and a person reviewed it. For bank 2, an agentic software factory writes it on its own: two agents, a Scout and a Supervisor, work out the live site, and a person approves the result before it's used.
 
 ## Run it
 
@@ -29,13 +29,13 @@ The crawler never touches the browser directly. It acts through the **runtime**,
 
 Sometimes only a person can answer: a sign-in code, a transfer to approve, a page nobody has seen before. Then the run waits in the **Console** until someone does.
 
-The **factory** is separate and works offline. It learns how to work a new bank, and a person approves what it learned before any run uses it.
+The **factory** works on its own, never during a task. It writes the crawler for a new bank, and a person approves it before any run uses it.
 
 **The key decisions, and what each one costs:**
 - **A typed contract, not a chat.** Each task has one schema. The API's input checks, its OpenAPI page and the agent's tool definitions are all generated from that schema, so they can never disagree. A balance comes back in a single call, which waits up to 60 seconds. The cost: if a run takes longer, the agent has to poll `GET /tasks/{runId}`.
 - **Look at the page the way a person does.** The runtime reads what the browser renders: a picture of the page, the text and controls a person can see, and where they sit. It never reads the bank's source code or relies on how its HTML is structured. This is slower, because it waits for each page to stop changing. In return, framesets, nested tables and buttons made of styled text don't trip it up.
-- **No AI model while a task runs.** A crawler is a table plus one loop. The table is plain data: for each page, the words that identify it and what a teller does there. The loop is ordinary code. That makes runs cheap, repeatable and easy to audit. When a page doesn't match any row, the run stops and asks a person rather than guessing. The cost is that every new bank needs a table, and that's the factory's job.
-- **A bank is just data.** Banks running the same vendor product share the loop, the runtime, the guard and the API. Only their tables differ. That's how one design serves many tenants.
+- **AI writes the crawler ahead of time, and nothing improvises during a task.** A crawler has two parts. The engine is shared code that every bank uses: it looks at the page in front of it, works out which page it is, and carries out the steps for that page. The table is the only part written for each bank: a list of the bank's pages, the words that identify each one, and the exact steps a teller takes there. Once the table is written, the crawler is deterministic, so the same page always gets the same steps. That makes runs cheap, repeatable and easy to audit. If a page isn't in the table, the run stops and asks a person instead of guessing.
+- **A new bank is a new table, not new code.** Banks running the same vendor product share the engine, the runtime, the guard and the API. Only the table differs. Bank 1's table was written by AI from a recorded walk through the site, and reviewed by a person. Bank 2's is written by the factory on its own. A person only enters the bank's sign-in code and, at the end, approves the table. The cost: a crawler can only do what its table describes, so when a bank changes its pages, its table has to change too. A different kind of app, such as a desktop program, would need a new runtime.
 
 **Why the boundaries are where they are.** The agent only ever sees tasks, never pages. Only the runner holds a browser, so a bank that hangs can't take the API down with it. The guard sits on the one path every action has to take. It judges the name of the page and the name drawn on the control, and ignores anything the page's text says, so a page can't talk it into anything. And no AI model ever sits between an agent's request and a bank's Submit button.
 
@@ -99,8 +99,8 @@ AI wrote nearly all of this code. The author set the requirements, reviewed the 
 
 **What we cut:**
 - Transfers over a bank's manager threshold. The run stops, and a person finishes it.
-- The factory for bank 1. Its table is written and maintained by hand.
-- Desktop apps. The runtime drives a browser, though the table and the loop would work just as well with a desktop runtime.
+- The factory for bank 1. Its table was written from the recorded walk, and it's updated by hand when the bank changes.
+- Desktop apps. The runtime drives a browser. The engine and the tables don't depend on it, so a desktop runtime could take its place.
 - Vault. Encrypted files already hold every secret.
 
 **What it still needs before running unattended:**
