@@ -85,6 +85,20 @@ describe('the runtime: see first, then click', () => {
     await expect(field(p, 'Member name')).rejects.toBeInstanceOf(TargetError);
   });
 
+  it('finds a field by its place when its label is a picture, not words', async () => {
+    page = await newPage(browser);
+    await page.setContent(
+      '<table><tr><td><img alt="" src="data:,"></td><td><input id="u"></td></tr><tr><td><img alt="" src="data:,"></td><td><input id="p" type="password"></td></tr></table>',
+    );
+    await type(page, 'field #2', 'secret');
+    await type(page, 'field #1', 'teller');
+    expect([await page.locator('#u').inputValue(), await page.locator('#p').inputValue()]).toEqual([
+      'teller',
+      'secret',
+    ]);
+    await expect(field(page, 'field #3')).rejects.toBeInstanceOf(TargetError);
+  });
+
   it('presses a "button" that is styled text, and a real submit, by their drawn names', async () => {
     const p = await open('/font');
     await see(p, { limitMs: 10_000 });

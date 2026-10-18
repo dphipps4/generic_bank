@@ -33,6 +33,9 @@ export type Conversation = readonly unknown[];
 /** A turn whose model spent its whole allowance thinking and gave no answer. */
 export class ThoughtTooLong extends Error {}
 
+/** The run's clock ran out during a turn. */
+export class OutOfTime extends Error {}
+
 export interface TurnInput {
   system: string;
   conversation?: Conversation;
@@ -45,6 +48,8 @@ export interface TurnInput {
   /** A JSON schema the answer must follow. */
   answer?: Record<string, unknown>;
   maxTokens: number;
+  /** The run's clock: no model call starts after this time (ms since the epoch). */
+  until?: number;
 }
 
 export interface TurnOutput {
@@ -188,7 +193,11 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
         timeoutMs: TURN_MS,
         ...(i.answer ? { onPayload: withAnswer(api, i.answer) } : {}),
       }),
-    finishTurn: () => (i.calls !== undefined && ++calls >= i.calls ? { action: 'end' } : undefined),
+    finishTurn: () =>
+      (i.calls !== undefined && ++calls >= i.calls) ||
+      (i.until !== undefined && Date.now() >= i.until)
+        ? { action: 'end' }
+        : undefined,
   });
   const before = session.state.messages.length;
   await session.prompt({
@@ -197,6 +206,7 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
     timestamp: Date.now(),
   });
   if (failure !== undefined) throw failure;
+  if (i.until !== undefined && Date.now() >= i.until) throw new OutOfTime('the run is out of time');
   const messages = session.state.messages;
   const added = messages.slice(before);
   const replies = added.filter((m): m is AssistantMessage => m.role === 'assistant');

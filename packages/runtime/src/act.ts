@@ -23,8 +23,33 @@ async function visible(l: Locator): Promise<Locator[]> {
   return out;
 }
 
-/** The field a label names: the nearest box to the label's right on its line, else just below it. */
+/** Every visible field on the page, in reading order: top to bottom, then left to right. */
+export async function fields(page: Page): Promise<{ target: Locator; box: Box }[]> {
+  const all: { target: Locator; box: Box }[] = [];
+  for (const f of page.frames())
+    for (const c of await visible(f.locator(FIELDS))) {
+      const b = await boxOf(c);
+      if (b) all.push({ target: c, box: b });
+    }
+  return all.sort((a, b) =>
+    Math.abs(a.box.y - b.box.y) > 4 ? a.box.y - b.box.y : a.box.x - b.box.x,
+  );
+}
+
+/** A field named by its place, "field #2", for a page whose labels are pictures, not words. */
+export const FIELD_AT = /^field #(\d+)$/;
+
+/**
+ * The field a label names: the nearest box to the label's right on its line, else just below it.
+ * "field #n" names the n-th field in reading order instead, where no words are drawn beside it.
+ */
 export async function field(page: Page, label: string): Promise<{ target: Locator; box: Box }> {
+  const at = FIELD_AT.exec(label);
+  if (at) {
+    const f = (await fields(page))[Number(at[1]) - 1];
+    if (!f) throw new TargetError(`there is no ${label} on the page`);
+    return f;
+  }
   const found: { target: Locator; box: Box; d: number }[] = [];
   for (const f of page.frames()) {
     for (const l of await visible(f.getByText(new RegExp(`^\\s*${escape(label)}\\s*:?\\s*$`)))) {
