@@ -199,10 +199,21 @@ bank: env image
 factory-up: env image
     @{{compose}} --profile factory up -d --wait {{factory}}
 
-# The factory learns a bank, or repairs it if a case is open, then the gate: just factory example 40017732 1234 5678
+# The factory learns a bank (or repairs it), then the gate, under a hard limit (FACTORY_RUN_LIMIT_MINUTES, default 11): just factory example 40017732 1234 5678
 [group('Factory')]
 factory bank member from to: factory-up
-    @{{compose}} --profile factory-run run --rm factory-run {{bank}} {{member}} {{from}} {{to}}
+    #!/usr/bin/env bash
+    set -uo pipefail
+    limit=$(( ${FACTORY_RUN_LIMIT_MINUTES:-11} * 60 ))
+    name="gb-factory-run-$$"
+    echo "  the run's hard limit: $(( limit / 60 )) minutes"
+    ( sleep "$limit"; docker stop -t 5 "$name" >/dev/null 2>&1 && echo "  ✗ stopped at the run's hard limit of $(( limit / 60 )) minutes" ) &
+    watchdog=$!
+    disown "$watchdog"
+    {{compose}} --profile factory-run run --rm --name "$name" factory-run {{bank}} {{member}} {{from}} {{to}}
+    status=$?
+    pkill -P "$watchdog" 2>/dev/null; kill "$watchdog" 2>/dev/null
+    exit "$status"
 
 # Apply database migrations
 [private]
