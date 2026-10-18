@@ -68,6 +68,8 @@ export interface Judging {
   ref: string | null;
   /** Every call the Scout made since the last judgment, in order, failures included. */
   record: Entry[];
+  /** At "goal reached": the route so far, for the Supervisor to check before it counts. */
+  route?: Table;
 }
 
 /** One call of the Scout's, as the Supervisor sees it: what it asked, and what came back. */
@@ -99,6 +101,8 @@ export interface Judgment {
   verdict: 'continue' | 'wait' | 'stop' | 'end';
   /** What the Supervisor sees, citing a frame; the Scout reads it. */
   says: string;
+  /** More time for the goal, when it is close: seconds to add to its clock. */
+  extendSeconds?: number;
 }
 
 // Words that could move money or change an account: never pressed by the factory.
@@ -116,7 +120,8 @@ const words = (f: Frame) =>
 const shows = (f: Frame, w: string) => f.tree.toLowerCase().includes(w.toLowerCase());
 
 /** An account as a page draws it: a name as it is, last four digits as "ending in" them. */
-const account = (ref = '') => (/^\d{4}$/.test(ref) ? `ending in ${ref}` : ref);
+/** An account as the lists hold it: its last four digits, whatever words a bank puts around them. */
+const account = (ref = '') => ref;
 
 export function scout(deps: ScoutDeps, task: Task) {
   const { page, trail } = deps;
@@ -642,7 +647,7 @@ export function scout(deps: ScoutDeps, task: Task) {
     },
     name_page: {
       description:
-        'Names the page now, by words it shows that tell it apart from every other page; `never` are words that would mean another page. Steps you take here are filed under it.',
+        'Names the screen now, for your route, by words it shows as text that tell it apart from every other screen; `never` are words that would mean another screen. Name each screen before you leave it: the steps you take here are filed under it.',
       input: z.object({
         name: z.string().min(2).max(40),
         shows: z.array(z.string().min(2).max(80)).min(1).max(4),
@@ -652,7 +657,17 @@ export function scout(deps: ScoutDeps, task: Task) {
         if (!latest?.ref) throw new ToolRefusal('look at the page first');
         const f = latest.frame;
         const missing = i.shows.filter((w) => !shows(f, w));
-        if (missing.length) throw new ToolRefusal(`the page does not show: ${missing.join('; ')}`);
+        if (missing.length) {
+          // Words drawn as pictures are not text the crawler can find: say which words are.
+          const text = f.tree
+            .split('\n')
+            .map(leaf)
+            .filter((w): w is string => !!w && w.length >= 3)
+            .slice(0, 15);
+          throw new ToolRefusal(
+            `the page does not show as text: ${missing.join('; ')}. Words it does show as text include: ${text.join('; ')}`,
+          );
+        }
         const wrong = (i.never ?? []).filter((w) => shows(f, w));
         if (wrong.length)
           throw new ToolRefusal(`the page shows what you said it never does: ${wrong.join('; ')}`);
@@ -750,7 +765,7 @@ export function scout(deps: ScoutDeps, task: Task) {
     },
     goal_reached: {
       description:
-        "Says the goal is reached on the page now (the balance shows; the transfer's review; the account's activity). For a transfer, `submit` is the control that would send it: named, never pressed.",
+        "Says the goal is reached on the screen now (the balance shows; the transfer's review; the account's activity). The Supervisor checks your route first: every screen from the start named, each with its own steps. For a transfer, `submit` is the control that would send it: named, never pressed.",
       input: z.object({ submit: z.string().max(60).optional() }),
       async run(i: { submit?: string }) {
         if (!latest?.ref || !row) throw new ToolRefusal('name this page first');
@@ -760,6 +775,18 @@ export function scout(deps: ScoutDeps, task: Task) {
           t.submit = { press: i.submit, frame: latest.ref };
         }
         fileVisit(row);
+        // The Supervisor checks the route before the goal counts: every screen named, each with its
+        // own steps. A "wait" sends the Scout back to fix it.
+        const j = await deps.judge({
+          action: `goal reached: ${task.goal} on "${row.page}"`,
+          why: 'the goal screen shows',
+          frame: latest.frame,
+          ref: latest.ref,
+          record: taken(),
+          route: { ...t, ends: { ...t.ends, [task.goal]: row.page } },
+        });
+        if (j.verdict === 'wait' || j.verdict === 'end')
+          throw new ToolRefusal(`the Supervisor has not accepted the route yet: ${j.says}`);
         t.ends = { ...t.ends, [task.goal]: row.page };
         stopped = true;
         await trail.step({ name: 'goal reached', action: `${task.goal} on ${row.page}` }, null);
