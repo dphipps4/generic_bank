@@ -15,9 +15,10 @@ import {
   control,
   type Control,
   field,
-  fields,
+  fingerprint,
   type Frame,
   knows,
+  labelPicture,
   NotReady,
   type Page,
   press,
@@ -272,21 +273,20 @@ export function scout(deps: ScoutDeps, task: Task) {
     },
     browser_type: {
       description:
-        "Types one of the task's values into a field: the one a label names, or, where no words are drawn beside it (its label is a picture), the field you choose by id or position. The sign-in and a person's code are typed by the server and never shown.",
+        "Types one of the task's values into the field you choose, by id or position, and the label beside it: its words, or, where the label is a picture of words, the words the picture shows. The sign-in and a person's code are typed by the server and never shown.",
       input: which.extend({
         label: z
           .string()
           .min(1)
           .max(60)
-          .optional()
-          .describe('The words drawn beside the field; leave it out when none are'),
+          .describe("The label's words, as drawn or as its picture shows them"),
         value: z.enum(['user_id', 'password', 'code', 'member', 'amount', 'memo']),
       }),
       async run(i: {
         id?: string;
         x?: number;
         y?: number;
-        label?: string;
+        label: string;
         value: 'user_id' | 'password' | 'code' | 'member' | 'amount' | 'memo';
         why: string;
       }) {
@@ -294,19 +294,19 @@ export function scout(deps: ScoutDeps, task: Task) {
         const c = chosen(i);
         if (i.value === 'password' && ++signIns > 2)
           throw new Error('two sign-ins did not get past the sign-in page: stopping for a person');
-        // No words beside the field: it is named by its place on the page, "field #n".
-        let label: string;
-        if (i.label) label = i.label;
-        else {
-          const all = await fields(page);
-          const n = all.findIndex(
-            (f) => within(centre(f.box), c.box) || within(centre(c.box), f.box),
-          );
-          if (n < 0) throw new ToolRefusal(`${i.id ?? 'that position'} is not a field to type in`);
-          label = `field #${n + 1}`;
-        }
-        const f = await field(page, label).catch((e: Error) => {
-          throw new ToolRefusal(`the runtime finds no field by "${label}": ${e.message}`);
+        const label = i.label;
+        // Words beside the field first. Where there are none, the label is a picture of words: it
+        // is known from now on by its fingerprint, under the words the Scout read off it.
+        const f = await field(page, label, t.pictures).catch(async (e: Error) => {
+          const pic = await labelPicture(page, c.box);
+          if (!pic) throw new ToolRefusal(`the runtime finds no field by "${label}": ${e.message}`);
+          t.pictures = [
+            ...(t.pictures ?? []).filter((p) => p.name !== label),
+            { name: label, print: fingerprint(pic) },
+          ];
+          return field(page, label, t.pictures).catch((e2: Error) => {
+            throw new ToolRefusal(`the runtime finds no field by "${label}": ${e2.message}`);
+          });
         });
         same(f.box, c, `the field by "${label}"`);
         const text =
@@ -322,7 +322,7 @@ export function scout(deps: ScoutDeps, task: Task) {
                     ? ((task.amountCents ?? 0) / 100).toFixed(2)
                     : (task.memo ?? '');
         if (i.value === 'code' && !known.includes(text)) known.push(text);
-        await type(page, label, text);
+        await type(page, label, text, t.pictures);
         // The sign-in and the code go into fields the allowlists know by their own names: the bank's
         // name for each is kept, so the guard knows them when the table runs.
         const listed = { user_id: 'Operator ID', password: 'Password', code: 'Code' }[

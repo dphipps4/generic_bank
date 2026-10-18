@@ -85,18 +85,44 @@ describe('the runtime: see first, then click', () => {
     await expect(field(p, 'Member name')).rejects.toBeInstanceOf(TargetError);
   });
 
-  it('finds a field by its place when its label is a picture, not words', async () => {
+  it('finds a field by sight when its label is a picture of words, wherever it moves', async () => {
+    // Two label pictures that look different: stripes one way, and the other.
+    const picture = (vertical: boolean) => {
+      const png = new PNG({ width: 90, height: 18 });
+      for (let y = 0; y < 18; y++)
+        for (let x = 0; x < 90; x++) {
+          const dark = vertical ? Math.floor(x / 10) % 2 === 0 : (x * 7 + y * 13) % 23 < 9;
+          const i = (y * 90 + x) * 4;
+          png.data[i] = png.data[i + 1] = png.data[i + 2] = dark ? 20 : 235;
+          png.data[i + 3] = 255;
+        }
+      return PNG.sync.write(png);
+    };
+    const [user, pass] = [picture(true), picture(false)];
+    const uri = (b: Buffer) => `data:image/png;base64,${b.toString('base64')}`;
+    const row = (b: Buffer, id: string, kind = 'text') =>
+      `<tr><td><img alt="" src="${uri(b)}"></td><td><input id="${id}" type="${kind}"></td></tr>`;
+    const pictures = [
+      { name: 'USERNAME', print: fingerprint(user) },
+      { name: 'PASSCODE', print: fingerprint(pass) },
+    ];
     page = await newPage(browser);
-    await page.setContent(
-      '<table><tr><td><img alt="" src="data:,"></td><td><input id="u"></td></tr><tr><td><img alt="" src="data:,"></td><td><input id="p" type="password"></td></tr></table>',
-    );
-    await type(page, 'field #2', 'secret');
-    await type(page, 'field #1', 'teller');
+    await page.setContent(`<table>${row(user, 'u')}${row(pass, 'p', 'password')}</table>`);
+    await type(page, 'PASSCODE', 'secret', pictures);
+    await type(page, 'USERNAME', 'teller', pictures);
     expect([await page.locator('#u').inputValue(), await page.locator('#p').inputValue()]).toEqual([
       'teller',
       'secret',
     ]);
-    await expect(field(page, 'field #3')).rejects.toBeInstanceOf(TargetError);
+    // The rows swapped, and a field added above: each label still finds its own field.
+    await page.setContent(
+      `<input id="extra"><table>${row(pass, 'p', 'password')}${row(user, 'u')}</table>`,
+    );
+    await type(page, 'USERNAME', 'teller', pictures);
+    expect(await page.locator('#u').inputValue()).toBe('teller');
+    expect(await page.locator('#extra').inputValue()).toBe('');
+    // Without its picture, a label drawn as an image finds nothing.
+    await expect(field(page, 'USERNAME')).rejects.toBeInstanceOf(TargetError);
   });
 
   it('presses a "button" that is styled text, and a real submit, by their drawn names', async () => {
