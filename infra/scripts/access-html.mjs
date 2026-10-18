@@ -2,6 +2,8 @@
 // every value in a table. Only the Markdown ACCESS.md uses: headings, paragraphs, tables, lists,
 // bold, code and links. Usage: node access-html.mjs ACCESS.md ACCESS.html
 import { readFileSync, writeFileSync } from 'node:fs';
+import process from 'node:process';
+import { URL } from 'node:url';
 
 const [src = 'ACCESS.md', out = 'ACCESS.html'] = process.argv.slice(2);
 const md = readFileSync(src, 'utf8');
