@@ -57,6 +57,8 @@ export interface RunOutput {
   table: Table | null;
   reached: Goal[];
   diagnosis: string | null;
+  /** Writes the run's lessons and closes its record: call it once the report and the gate are done. */
+  finish(): Promise<void>;
 }
 
 /** Each goal, as the Scout and the Supervisor are told it. */
@@ -83,8 +85,8 @@ memory_query asks what the factory has learned about this console and ones like 
 /** Model calls the Scout may make toward one goal. */
 const SCOUT_CALLS = 60;
 
-/** A factory run's clock: a demo learns a bank in minutes, or stops and says why. */
-const RUN_MS = Number(process.env.FACTORY_RUN_MINUTES ?? 3) * 60_000;
+/** Each goal's clock: a demo learns a bank in minutes, or stops and says why. */
+const GOAL_MS = Number(process.env.FACTORY_GOAL_MINUTES ?? 2) * 60_000;
 
 const packText = (p: Pack) =>
   JSON.stringify(Object.fromEntries(Object.entries(p.tiers).filter(([, items]) => items.length)));
@@ -113,7 +115,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
   const knowledge = packText(pack);
   const runId = `${mode}-${input.bank}-${randomBytes(4).toString('hex')}`;
   const startedAt = new Date();
-  const until = startedAt.getTime() + RUN_MS;
+  let until = 0;
   await sql.query(
     `INSERT INTO "FactoryRun" (id, tenant, task, mode, phase, status) VALUES ($1, $2, 'check-balance', $3, 'SCOUT', 'running')`,
     [runId, input.bank, mode],
@@ -134,10 +136,47 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
   const queryTool = memoryQueryTool(deps.memory, at, served);
   const memo = `GBX ${randomBytes(2).toString('hex').toUpperCase()}`;
   const page = await newPage(deps.browser);
+  // The bank is open before the Scout first looks: no clock is spent on a blank page.
+  await page.goto(bank.url).catch(() => undefined);
   const reached: Goal[] = [];
   let table: Table | undefined = input.repair?.table;
   let diagnosis: string | null = null;
   let outcome = 'crashed';
+  /** The lessons, and the run's record: after the report and the gate, never inside the clock. */
+  let finished = false;
+  const finish = async () => {
+    if (finished) return;
+    finished = true;
+    const learned = await writeLessons({
+      agent: agent('lessons'),
+      memory: deps.memory,
+      at,
+      trail,
+      ended: [outcome, ...(diagnosis ? [`diagnosis: ${diagnosis}`] : [])],
+      served,
+    }).catch(() => null);
+    if (learned)
+      await sendLearned(
+        deps.memory,
+        trail,
+        {
+          id: runId,
+          at,
+          task: 'factory',
+          driver: runId,
+          outcome,
+          startedAt,
+          model: deps.roles.scout.model,
+        },
+        learned,
+      ).catch(() => undefined);
+    await sql.query(
+      `UPDATE "FactoryRun" SET status = $2, phase = 'DONE', "lastActivityAt" = now(),
+              "spendUsd" = COALESCE((SELECT SUM("costUsd") FROM "ModelCall" WHERE "factoryRunId" = $1), 0)
+        WHERE id = $1`,
+      [runId, reached.length === 3 ? 'succeeded' : 'failed'],
+    );
+  };
   try {
     const sup = supervisor({
       agent: agent('supervisor'),
@@ -176,6 +215,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
         task,
       );
       log(`${runId}: ${goal}`);
+      until = Date.now() + GOAL_MS;
       const ask = (nudge?: string) =>
         turn(agent('scout'), {
           system: SCOUT,
@@ -213,7 +253,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
         // Out of time, no answer twice, or the sign-in refused twice: the run stops and says why.
         diagnosis =
           e instanceof OutOfTime
-            ? `out of time: the run's ${RUN_MS / 60_000} minutes ran out during the ${goal} goal`
+            ? `out of time: the ${goal} goal's ${GOAL_MS / 60_000} minutes ran out`
             : `${goal} stopped: ${(e as Error).message}`;
         outcome = `${goal} not reached`;
         break;
@@ -223,7 +263,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
       if (!table.ends[goal]) {
         diagnosis =
           Date.now() >= until
-            ? `out of time: the run's ${RUN_MS / 60_000} minutes ran out during the ${goal} goal`
+            ? `out of time: the ${goal} goal's ${GOAL_MS / 60_000} minutes ran out`
             : await sup.diagnose();
         outcome = `${goal} not reached`;
         break;
@@ -231,46 +271,24 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
       reached.push(goal);
     }
     if (reached.length === 3) outcome = 'every goal reached';
-  } finally {
+  } catch (e) {
+    // A crash still writes its lessons, before the error reaches the caller.
     await page
       .context()
       .close()
       .catch(() => undefined);
-    // The lessons are written at every ending, crashes included.
-    const learned = await writeLessons({
-      agent: agent('lessons'),
-      memory: deps.memory,
-      at,
-      trail,
-      ended: [outcome, ...(diagnosis ? [`diagnosis: ${diagnosis}`] : [])],
-      served,
-    }).catch(() => null);
-    if (learned)
-      await sendLearned(
-        deps.memory,
-        trail,
-        {
-          id: runId,
-          at,
-          task: 'factory',
-          driver: runId,
-          outcome,
-          startedAt,
-          model: deps.roles.scout.model,
-        },
-        learned,
-      ).catch(() => undefined);
-    await sql.query(
-      `UPDATE "FactoryRun" SET status = $2, phase = 'DONE', "lastActivityAt" = now(),
-              "spendUsd" = COALESCE((SELECT SUM("costUsd") FROM "ModelCall" WHERE "factoryRunId" = $1), 0)
-        WHERE id = $1`,
-      [runId, reached.length === 3 ? 'succeeded' : 'failed'],
-    );
+    await finish();
+    throw e;
   }
+  await page
+    .context()
+    .close()
+    .catch(() => undefined);
   return {
     runId,
     table: reached.length === 3 && table ? { ...table, bank: input.bank } : null,
     reached,
     diagnosis,
+    finish,
   };
 }

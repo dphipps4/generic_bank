@@ -108,6 +108,18 @@ async function report(runId: string) {
   log(
     `corrections citing a frame: ${sup.filter((s) => s.action !== 'continue' && /\bf\d+\b/.test(s.outcome ?? '')).length}`,
   );
+}
+
+/** The lessons the run sent to memory. */
+
+/** The lessons the run sent to memory. */
+async function lessonsLine(runId: string) {
+  const steps = (
+    await sql.query<{ name: string; action: string | null; outcome: string | null }>(
+      `SELECT name, action, outcome FROM "Step" WHERE "runId" = $1 ORDER BY seq`,
+      [runId],
+    )
+  ).rows;
   log(
     `lessons: ${
       steps
@@ -168,6 +180,10 @@ try {
     );
     if (!g.recommendationId) process.exitCode = 1;
   }
+  // The lessons last, after everything a person waits on.
+  log("writing the run's lessons to memory…");
+  await run.finish();
+  await lessonsLine(run.runId);
 } finally {
   await browser.close();
 }
