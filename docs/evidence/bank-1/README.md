@@ -12,7 +12,7 @@ The second half is the crawler itself: the words that give each page away, what 
 | The walk | [`tests/evidence/bank1.walk.ts`](../../../tests/evidence/bank1.walk.ts#L79) | Runs a scenario's steps against bank 1 and keeps a frame after every step |
 | What a teller is given | [`value()`](../../../tests/evidence/bank1.walk.ts#L52) | The sign-in, the code from their phone, the member's number: never read off a page |
 | What is never kept | [`known()`](../../../tests/evidence/bank1.walk.ts#L62) | Every seeded name and secret, handed to the masking |
-| A failed step | [the walk's `catch`](../../../tests/evidence/bank1.walk.ts#L126) | Where a step couldn't be done is evidence too: the page shown instead is kept |
+| A failed step | [the walk's `catch`](../../../tests/evidence/bank1.walk.ts#L127) | Where a step couldn't be done is evidence too: the page shown instead is kept |
 
 Each walk is one file, `<walk>.json`, with every frame's steps, page text, controls and dialogs; its pictures are in the folder of the same name. A frame the happy walk already kept word for word is a pointer to it.
 
@@ -33,8 +33,8 @@ The walk uses the same runtime the crawler will: [`packages/runtime`](../../../p
 **Acting,** in [`act.ts`](../../../packages/runtime/src/act.ts):
 - [`field()`](../../../packages/runtime/src/act.ts#L27): a field by its drawn label, then the box beside it. Bank 1's labels sit in a table cell of their own, with nothing linking them to the box.
 - [`control()`](../../../packages/runtime/src/act.ts#L53): a button by its drawn name, whatever the page built it from. Bank 1's "Search" is a styled `<font>` ([L64](../../../packages/runtime/src/act.ts#L64)). Where two share a name, as "Transfer Funds" does in the nav and in the member summary, it picks the one nearest the section a person means ([L68](../../../packages/runtime/src/act.ts#L68)).
-- [`press()`](../../../packages/runtime/src/act.ts#L92): Playwright's click with the real mouse, refused if anything covers the control.
-- [`choose()`](../../../packages/runtime/src/act.ts#L112): an account by its name, among options like "Everyday Checking, Account ending in …".
+- [`press()`](../../../packages/runtime/src/act.ts#L96): Playwright's click with the real mouse, refused if anything covers the control.
+- [`choose()`](../../../packages/runtime/src/act.ts#L116): an account by its name, among options like "Everyday Checking, Account ending in …".
 
 **Masking,** in [`mask.ts`](../../../packages/runtime/src/mask.ts), before anything is kept:
 - Money, long numbers, and every seeded name and secret, painted out of the picture character by character, from the browser's own layout ([L91](../../../packages/runtime/src/mask.ts#L91), [L99](../../../packages/runtime/src/mask.ts#L99)).
@@ -122,18 +122,18 @@ It's a table and a loop. That's all of it.
 
 **The table** ([`bank1.ts`](../../../packages/crawler/src/bank1.ts#L8), its shape in [`table.ts`](../../../packages/crawler/src/table.ts)) is the page-by-page rows above, written as data: each row has the words that show a page and the steps to take there, in the same step language the walk uses (type, choose, press, read). Values such as the member's number and the amount come from the task; the code comes from a person. Every row cites its frame.
 
-**The loop** ([`crawl()`](../../../packages/crawler/src/crawl.ts#L117)) runs any table:
+**The loop** ([`crawl()`](../../../packages/crawler/src/crawl.ts#L186)) runs any table:
 1. Look at the page, which the runtime keeps as a masked frame ([`see()`](../../../packages/runtime/src/see.ts#L136)).
-2. If it says one of the bank's answers, return that outcome ([L149](../../../packages/crawler/src/crawl.ts#L149)).
-3. If it shows trouble, start again from home, a few times at most, and never after Submit ([L151](../../../packages/crawler/src/crawl.ts#L151)).
-4. Otherwise find the one row whose words it shows ([`knows()`](../../../packages/runtime/src/see.ts#L240)), and do that row's steps for the goal ([L171](../../../packages/crawler/src/crawl.ts#L171)). The goal's own page ends the crawl ([L166](../../../packages/crawler/src/crawl.ts#L166)).
+2. If it says one of the bank's answers, return that outcome ([L149](../../../packages/crawler/src/crawl.ts#L216)).
+3. If it shows trouble, start again from home, a few times at most, and never after Submit ([L151](../../../packages/crawler/src/crawl.ts#L217)).
+4. Otherwise find the one row whose words it shows ([`knows()`](../../../packages/runtime/src/see.ts#L240)), and do that row's steps for the goal ([L171](../../../packages/crawler/src/crawl.ts#L241)). The goal's own page ends the crawl ([L166](../../../packages/crawler/src/crawl.ts#L236)).
 5. No row matches: stop with `unknown_screen`.
 
-The loop goes by what's on screen, not by the order it expects. A promo where home should be, a click the bank swallowed, a reload that lands somewhere odd: none of it needs special code, because whatever page shows up gets its row. If the same page comes back three times running, the crawler is stuck, and it tells a person ([L169](../../../packages/crawler/src/crawl.ts#L169)). Starting again means opening the console's home: a fresh request, never a reload, so nothing is ever sent twice ([L129](../../../packages/crawler/src/crawl.ts#L129)).
+The loop goes by what's on screen, not by the order it expects. A promo where home should be, a click the bank swallowed, a reload that lands somewhere odd: none of it needs special code, because whatever page shows up gets its row. If the same page comes back three times running, the crawler is stuck, and it tells a person ([L169](../../../packages/crawler/src/crawl.ts#L239)). Starting again means opening the console's home: a fresh request, never a reload, so nothing is ever sent twice ([L129](../../../packages/crawler/src/crawl.ts#L197)).
 
 Values are read with [`read()`](../../../packages/runtime/src/see.ts#L258), which returns the page's visible text unmasked and keeps nothing; only `see()` keeps evidence.
 
-**Submit is outside the table.** [`prepareTransfer()`](../../../packages/crawler/src/crawl.ts#L236) stops at review and hands From, To, Amount and Memo to a person. Once they approve, [`submitTransfer()`](../../../packages/crawler/src/crawl.ts#L252) presses "Submit transfer" once and reads the confirmation if the posted page comes. Then, hung or not, it crawls to the from-account's activity ([L268](../../../packages/crawler/src/crawl.ts#L268)). Exactly one row with the memo is success; none or two, and a person checks ([L271](../../../packages/crawler/src/crawl.ts#L271)).
+**Submit is outside the table.** [`prepareTransfer()`](../../../packages/crawler/src/crawl.ts#L307) stops at review and hands From, To, Amount and Memo to a person. Once they approve, [`submitTransfer()`](../../../packages/crawler/src/crawl.ts#L331) presses "Submit transfer" once and reads the confirmation if the posted page comes. Then, hung or not, it crawls to the from-account's activity ([L268](../../../packages/crawler/src/crawl.ts#L377)). Exactly one row with the memo is success; none or two, and a person checks ([L271](../../../packages/crawler/src/crawl.ts#L370)).
 
 **Its tests.** [`table.test.ts`](../../../packages/crawler/test/table.test.ts) holds the table against this evidence, with no browser: every row knows its own frame as its page and no other, and every answer and trouble is in the frame it cites. [`tests/crawler/bank1.test.ts`](../../../tests/crawler/bank1.test.ts) runs the crawler against bank 1 in a browser and checks it against the bank's ledger: a balance by name and by last four, a transfer through review to the activity, three of the bank's answers, a promo with a dialog and a swallowed click, an error page, an outage, an unknown page, and a hung Submit. Each test gets a bank of its own, because every run signs in as the same teller and a new code replaces the last. `CRAWL_FRAMES=<file>` writes every page a test's crawler saw.
 
@@ -141,10 +141,10 @@ When the bank changes its pages, repair means editing rows, not code. And the fa
 
 ## The runner
 
-The runner carries out each task run with this crawler ([`executeRun()`](../../../apps/runner/src/execute.ts#L49)):
-- **Every page the crawler sees** becomes a step and a stored frame: the masked picture, and the visible tree and controls ([L90](../../../apps/runner/src/execute.ts#L90)).
-- **The code** for the staff phone comes from a person, through the Console ([L142](../../../apps/runner/src/execute.ts#L142)).
-- **Every action** passes the job's allowlist first ([L146](../../../apps/runner/src/execute.ts#L146), [`runGuard()`](../../../apps/runner/src/guard.ts#L19)). Each row names the allowlist's screen it stands for, and [`table.test.ts`](../../../packages/crawler/test/table.test.ts) checks every step of the table against the allowlist, with no browser. The first refusal trips the guard and freezes the bank.
+The runner carries out each task run with this crawler ([`executeRun()`](../../../apps/runner/src/execute.ts#L58)):
+- **Every page the crawler sees** becomes a step and a stored frame: the masked picture, and the visible tree and controls ([L90](../../../apps/runner/src/execute.ts#L101)).
+- **The code** for the staff phone comes from a person, through the Console ([L142](../../../apps/runner/src/execute.ts#L153)).
+- **Every action** passes the job's allowlist first ([L146](../../../apps/runner/src/execute.ts#L157), [`runGuard()`](../../../apps/runner/src/guard.ts#L19)). Each row names the allowlist's screen it stands for, and [`table.test.ts`](../../../packages/crawler/test/table.test.ts) checks every step of the table against the allowlist, with no browser. The first refusal trips the guard and freezes the bank.
 - **A transfer** ([`runTransfer()`](../../../apps/runner/src/transfer.ts#L87)) parks at review for a person's approval. Just before the one press, the grant is consumed against what the review page shows, and the intent is written to the trail ([L153](../../../apps/runner/src/transfer.ts#L153)). A run that resumes after that point reads the history and never presses again ([L169](../../../apps/runner/src/transfer.ts#L169)).
 - **A page the crawler doesn't know** takes its version out of service and opens a repair case, unless a hazard was forced in the lab.
 

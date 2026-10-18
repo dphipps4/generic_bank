@@ -6,12 +6,12 @@ These prompts build the factory: two agents and a memory that learn a bank no on
 
 > Build the factory in its own code: `apps/factory` and `apps/memory`.
 >
-> - **Its output:** a crawler, in the same step format bank 1 uses, run by part 1's runtime.
+> - **Its output:** a table, in the same format as bank 1's, run by part 1's loop and runtime.
 > - **Agents:** two, on pi, through OpenRouter. The model is config; the default is Max Prime for both.
-> - **Cost:** every call goes through our meter. The caps are in code ($10 a run, $150 a week), and it fails closed.
+> - **Cost:** every call goes through our meter. The caps are in code ($25 a run, $150 a week), and it fails closed.
 > - **Live only:** it crawls the live site every time. Nothing is replayed.
 >
-> Bank 2 is held out. Nothing is tuned against it until its one live run. Develop against bank 1's redesign.
+> The factory is for bank 2 only; bank 1's author fixes bank 1. Bank 2 is held out: nothing is tuned against it until its live run.
 
 ## 2. Memory
 
@@ -37,7 +37,7 @@ These prompts build the factory: two agents and a memory that learn a bank no on
 > - **It never acts until the page is fully rendered.** Code refuses an action on a page still loading.
 > - **It sees:** after every action it gets the picture, the one before it, and the visible controls with their boxes.
 > - **It decides from the picture,** and clicks by id, or by a position read from the picture, which must land on a visible control. The runtime's own targeting must find that same control at once; if it doesn't, the Scout is told. Each action carries a one-line why.
-> - **It writes the crawler as it goes:** each step comes from an action it took, in the page's own words, citing its frame. It also states claims with frames.
+> - **It writes the table as it goes:** it names each page by words the page shows, code files each action it takes under that page, and it notes the bank's answers and how values are read, each checked against its frame.
 >
 > There's no word list, and no bank's words ever appear in a prompt.
 
@@ -53,11 +53,10 @@ These prompts build the factory: two agents and a memory that learn a bank no on
 
 ## 5. The gate
 
-> 1. Code runs the new crawler live first, from a fresh sign-in and a remembered one, against the ledger.
-> 2. A person approves it in the Console, seeing each step beside its picture. The Console's dashboard shows every crawler waiting for approval, learned or repaired, with its run's pictures and the Supervisor's diagnosis. Nothing is promoted without that approval.
-> 3. Each kept hazard is forced alone.
-> 4. Two clean runs.
-> 5. Promotion: `GET /banks` lists it.
+> 1. Code runs the new table live through the crawler's loop: the balance, and a transfer up to its review.
+> 2. Then once more with one hazard forced, the confirmation dialog. A table that breaks there opens a repair case.
+> 3. A person approves it in the Console, seeing each row beside its picture. Nothing is promoted without that approval.
+> 4. Promotion: `GET /banks` lists it.
 
 ## 6. Repair
 
@@ -75,8 +74,8 @@ These prompts build the factory: two agents and a memory that learn a bank no on
 > - no factory code or fake imports the bank's source.
 >
 > Then two live runs, one at a time, each only after my go:
-> 1. repair bank 1 after its redesign;
-> 2. learn bank 2.
+> 1. learn bank 2;
+> 2. switch on bank 2's redesign, then repair it.
 >
 > Each must be promoted with nothing but a person's approval. For each, report the cost, the actions the targeting confirmed or refused, the corrections that cite a frame, and the lessons relied on.
 >

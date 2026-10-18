@@ -1,131 +1,47 @@
 # Generic Bank
 
-This is a take-home implementation of an API for bank websites that have no API of their own. Your
-AI agent, or any other program, calls it to check a balance or transfer money (only once a person
-approves), and a crawler does the work by operating the bank's staff screens
-the way a person would. Behind it is a software factory where AI agents study a bank they haven't
-seen, like bank 2, and write the crawler for it as plain deterministic code, so no model runs
-when a customer's task does.
+Banks run a lot of back-office screens with no API at all. This gives an AI agent one: it calls with typed inputs to check a balance or move money, and gets a typed result back. Behind it, a crawler works the bank's staff console the way a teller does, looking at each page before it clicks. A person approves every transfer. Anything the system can't finish safely goes to a person, with the pictures of what happened.
 
-Everything runs locally with docker compose, and every step is a [just](https://just.systems) recipe.
-
-## Requirements (macOS)
-
-You need macOS 14 or newer, and an 8 GB Mac is enough. Install git to clone this, and
-[Docker Desktop](https://www.docker.com/products/docker-desktop/) (Engine 27+, Compose 2.29+)
-with 5.25 GB of memory set aside for it. To develop, add [Node 26](https://nodejs.org/en/download)
-for the tests, the type checker and the linter.
-
-```sh
-infra/scripts/bootstrap.sh      # installs just, the pinned release, its checksum verified
-just requirements               # checks all of the above, with versions, and fails until they are right
-```
-
-Already use Homebrew? `brew install just` and `brew install --cask docker` work just as well.
-
-You don't need Xcode or Homebrew, and nothing else goes on the Mac. SOPS, age, jq, the plan
-renderer, Postgres and Chromium all run in containers.
-
-## Read the plan
-
-```sh
-just plan                       # renders docs/plan as HTML pages and opens them
-```
-
-The pages land in `.run/plan/`. A container renders them, so this works before anything else is
-set up.
+The target app is two local banks, both deliberately unfriendly: 2003-style consoles, server-rendered, framesets, nested tables, no test IDs. Bank 1's crawler was written by hand, from evidence. Bank 2's is learned by a software factory. Two agents, a Scout and a Supervisor, work it out on the live site, and a person approves what they wrote before it's used.
 
 ## Run it
 
-```sh
-just setup                      # once, after git clone: checks the Mac, creates secrets, builds the images
-just up                         # everything: data, memory, API, Console, crawler, both banks, factory
-just open                       # Swagger UI, the Console and the staff inbox, in the browser
-just down                       # stop everything; the data stays
-just help                       # every recipe, grouped, with what each does
-```
-
-`just setup` generates every secret it can. The only one it can't is the OpenRouter key, because
-OpenRouter issues it. Run `just secret-set factory OPENROUTER_API_KEY` and paste the key when it
-asks; what you paste stays hidden. The factory needs it: without it, every model call is refused.
-
-Each factory role's model and effort are set in one place, `config/app.env`: `FACTORY_SCOUT_MODEL`
-and `FACTORY_SUPERVISOR_MODEL`, `FACTORY_SCOUT_EFFORT` and `FACTORY_SUPERVISOR_EFFORT`.
-
-`just up` starts everything: both banks, the staff inbox, the factory and memory. From there,
-**[ACCESS.md](ACCESS.md)** lists every page, API and health check you can reach, the logins
-(`just up` writes them to `secrets/credentials.txt`), and things to try, faults included.
-
-Try a fault:
+You need macOS 14 or newer, [Docker Desktop](https://www.docker.com/products/docker-desktop/) and git. An 8 GB Mac is enough.
 
 ```sh
-curl -i http://localhost:8082/             # HTTP/1.1 403 Forbidden ... Access denied
-curl -i http://localhost:8081/corelink/    # HTTP/1.1 200 OK
+infra/scripts/bootstrap.sh      # installs just, checksum verified
+just setup                      # once: checks the Mac, creates every secret, builds the images
+just up                         # both banks, the API, the Console, the runner, memory, the factory
+just open                       # Swagger UI, the Console and the staff inbox
+just try promo                  # a balance through the API, with a forced interstitial
 ```
 
-Bank 2 turns away anything that doesn't look like a browser, the way a real bank's bot
-screen does. Bank 1, the 2003 site, lets it through.
+[ACCESS.md](ACCESS.md) lists every page and login, and things to try. The factory needs one key you bring: `just secret-set factory OPENROUTER_API_KEY`.
 
-## Models
+## How it fits together
 
-Only the software factory calls a model. The crawler that runs customer tasks never does. Every
-factory call goes through a metering gateway, which holds spending to the caps ($25 a run, $150 a
-rolling week).
+![The system](docs/diagrams/system.svg)
 
-| Role | What it does | Default model | Effort |
-|---|---|---|---|
-| Scout | Navigates the bank, one simple step at a time | `qwen/qwen3.8-max-prime` | low |
-| Supervisor | Looks at every frame, reasons, directs the Scout, drafts the bank's profile | `qwen/qwen3.8-max-prime` | high |
+- **The API** ([`apps/api`](apps/api/src/server.ts)): OAuth2, then `POST /tasks/check-balance` and `POST /tasks/transfer` with typed inputs. A run answers 202 while working, 200 with its result, 422 for the bank's own answer ("no such member"), 409 when a person has it, and 502 or 503 for a failure, with `retryable` set. `GET /banks` lists what each bank serves, and `GET /tools` gives the agent its tool definitions. Swagger UI documents every call.
+- **The run** ([`apps/runner`](apps/runner/src/execute.ts)): a durable workflow per task. It holds one browser, runs the bank's crawler, records every page as a masked frame, asks a person through the Console when only a person can answer, and settles exactly one result.
+- **The runtime** ([`packages/runtime`](packages/runtime/README.md)): Playwright and Chrome, seeing first. A page is ready when its picture holds still and nothing says loading. A field is found by its drawn label, and a button by its drawn name, whatever the page built it from. Masking paints every personal value out of the picture before anything is kept.
+- **The crawler** ([`packages/crawler`](packages/crawler/src/crawl.ts)): a table and a loop. The table is data: each page of the bank, the words that show it, and what a teller does there. One loop runs any table: look at the page, return the bank's answer if it gave one, start again from home on trouble, otherwise do the row the page shows. [Bank 1's table](packages/crawler/src/bank1.ts) cites a frame of [its evidence](docs/evidence/bank-1/README.md) on every row.
+- **The Console** ([`apps/console`](apps/console/src/main.ts)): where a person works. The inbox holds codes the bank sends, transfers to approve, and runs that stopped. Each run is shown page by page, with its pictures. Learned tables wait there for approval.
+- **The factory** ([`apps/factory`](apps/factory/src/run.ts)) and **memory** ([`apps/memory`](apps/memory/src)): they learn bank 2 and repair it when its site changes. See [the factory's walkthrough](docs/factory.md).
 
-The factory needs `OPENROUTER_API_KEY`. Without it, the factory still starts, but it refuses every
-model call and names the missing key. Nothing stands in for the model.
+## How it meets the brief
 
-Enter the key once (sops keeps it encrypted). It asks for the key, then `just factory`
-restarts the factory with it:
+- **Driving a messy legacy UI.** The runtime sees the rendered page (picture, visible text, controls by role and position) and never the bank's source. Labels in cells of their own, buttons that are styled text, two links with one name: each is found the way a person finds it. Walking bank 1 for real turned up seven problems the synthetic tests never had; each became a runtime rule with a test, listed in [the evidence walkthrough](docs/evidence/bank-1/README.md#what-the-walk-changed).
+- **Outcomes kept apart.** The bank's answers ("insufficient funds", "member closed") are business outcomes, matched by its own words and returned as 422. Trouble (an outage, an error page, a balance that didn't load) is handled inside the run: start again from home, a bounded number of times, never after Submit. Past that, it's a failure, 503 when retrying may help. The [outcome tests](tests/outcomes/outcomes.test.ts) prove one of each.
+- **Escalation.** A page no row knows, the same page three times, or an unclear result after Submit stops the run as 409 with its frames. A person sees it in the Console, then resumes it, finishes it by hand or cancels. The [escalation test](tests/escalation/escalations.test.ts) goes 409, then resume, then 200, through the API.
+- **Safety.** Every action passes the job's [allowlist](packages/guardrails/allowlists) first; a refusal trips the guard and freezes the bank. Submit needs a single-use grant, which only a person's approval issues, and it's pressed once. A run that resumes afterwards reads the account's history for its memo token and never presses again. Masking covers the picture, the page text and the address before anything is stored, and the [PII suite](tests/pii/pii.test.ts) searches every row, object and log line for every seeded value.
+- **Across tenants.** A bank is just data: its table. Everything else (the loop, the runtime, the guard, the API) is shared. Another bank on the same vendor product gets its table from the factory, and a person approves it before it serves anyone.
 
-```sh
-just secret-set factory OPENROUTER_API_KEY
-just factory
-```
+## Cut lines
 
-To change a role's model or effort, edit it in `config/app.env`, then run `just factory`:
+- **Transfers over a bank's manager threshold.** Bank 1 asks a supervisor for an approval code above $2,500. Its table doesn't know that page, so the run escalates and a person finishes it.
+- **The factory serves bank 2 only.** Bank 1's table is written by hand from evidence, and its author fixes it when the bank changes.
+- **Desktop apps.** The runtime is a browser. The table-and-loop design doesn't depend on it, but nothing here drives a desktop window.
+- **Scale.** One runner, two runs at a time, on a laptop. The run is durable and the abstractions are per bank, but there's no cluster.
 
-```sh
-FACTORY_SCOUT_MODEL=qwen/qwen3.8-flash
-FACTORY_SCOUT_EFFORT=medium
-```
-
-Every model is reached through OpenRouter, with the one key. Any model in its catalog works, from
-Qwen, Google, OpenAI and others, named as OpenRouter lists it, maker first. The caps price each one
-from that catalog.
-
-## Develop
-
-```sh
-just dev
-```
-
-It installs Node 26, the dependencies and Chromium, runs everything GitHub's CI checks, then opens
-the API reference in Chrome and serves it until Ctrl-C. Each step is a recipe of its own too;
-`just help` lists them.
-
-To start again from nothing, `just all` deletes every database and rebuilds every image. It asks
-first. Then run `just up`.
-
-## Documents
-
-- [The plan](docs/plan/GENERIC_BANK_PLAN.md): what is built and why, Part 1 and Part 2, with
-  appendices for every part of the system.
-- [The requirements report](docs/plan/REQUIREMENTS.md): every point of the brief, how it is met,
-  and the code and tests that prove it.
-- [From 80% to 100%](docs/plan/80-to-100.md): what AI wrote, what we changed or threw away, and
-  what running this unattended still needs.
-- [The architecture](docs/plan/architecture.md): the boxes, the data, and where the risky parts
-  live.
-- [The technology choices](docs/plan/techstack.md): each tool, why it was chosen, and what it was
-  chosen over.
-- [The end-to-end test](docs/plan/end-to-end-test.md): a fresh clone through all three tasks,
-  step by step, with what you should see at each.
-- [The repair demo](docs/plan/manual_test.md): a bank redesigns, the crawler breaks, and the
-  factory repairs it.
-- [The build sheets](docs/build/): each milestone's pull requests, in order.
+[From 80% to 100%](docs/80-to-100.md) says what AI wrote, what changed, what was thrown away, and what unattended use still needs. [The architecture](docs/architecture.md) covers the data and where the risky parts live.

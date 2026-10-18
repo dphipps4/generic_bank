@@ -1,0 +1,61 @@
+# The factory: a walkthrough
+
+Nobody wrote a crawler for bank 2. The factory learns it, and repairs it when bank 2 changes its site. Two agents work on the live site: the Scout acts, writing the bank's table as it goes, and the Supervisor judges every action from its picture. What comes out is the same kind of table as [bank 1's](../packages/crawler/src/bank1.ts), run by the same loop, so no model is involved when a customer's task runs. A person approves each table before it serves. Bank 1 is never the factory's; its author fixes it.
+
+Read the files in this order.
+
+## 1. The run: `apps/factory/src/run.ts` (247 lines)
+
+It starts from memory's knowledge pack; with no pack, there's no run. Then three goals in order: the balance, a transfer up to its review (never sent), and the account's activity. For each one, the Scout works the live site in one conversation, and the Supervisor judges each action. A goal not reached ends the run with the Supervisor's diagnosis. Lessons go to memory at every ending, crashes included. A repair starts from the table that broke and where it broke, and changes only what moved.
+
+**Decision:** the run is told a member and two of their accounts, as an API caller would be. **Not chosen:** letting the agents discover members, which would have them browse personal data for no reason.
+
+## 2. The Scout's tools: `apps/factory/src/scout.ts` (520 lines)
+
+Every tool returns the page once the runtime calls it ready: the masked picture, the visible controls each with an id and a box, and the visible words. The Scout acts on one control at a time, by id or by a position read from the picture, with a one-line reason. **The runtime's own targeting must land on that same control**, or the action is refused and the Scout is told. Typed values are always the task's (the member, the amount, the memo), and the server types the sign-in and a person's code unseen, so no step carries literal data. Words that could move money are never pressed.
+
+As it goes, the Scout writes the table:
+- `name_page` names a page by words it shows; code checks they're there and fit no other named page;
+- code files each action under the page it was taken on;
+- `note_answer` records the bank's own refusals;
+- `note_read` records how a value is read, as visible text with `{placeholders}`, checked against the frame;
+- `goal_reached` marks the goal's page.
+
+**Decision:** the Scout writes the table from actions it actually took, each checked in code. **Not chosen:** having a model draft a profile at the end from its memory of the run. That's what the first factory did, and its claims could be guesses that no action had proved.
+
+**Reused from bank 1:** the runtime (`see`, `press`, `type`, `choose`, `field`, `control`), and the table format with its `readOf`.
+
+## 3. The Supervisor: `apps/factory/src/supervisor.ts` (161 lines)
+
+After each of the Scout's actions, it sees the page that action led to, picture first, and gives a verdict before the Scout may act again: continue, wait or stop. It cites a frame, and its words go back to the Scout. Code enforces the verdict; an unreadable answer counts as wait, and three in a row stop the run. It keeps the whole run in one conversation, and `open_frame` reopens any frame of this run or an earlier one, picture and all. When a goal isn't reached, it diagnoses from the frames where the run stopped and why.
+
+**Decision:** the Scout drives and the Supervisor judges. **Not chosen:** the Supervisor dictating each step, which is how the first factory worked. That doubled the model calls per action, and the Scout ended up following orders instead of looking at the page.
+
+## 4. Memory's loop: `apps/factory/src/memory.ts` (463 lines) and `apps/memory`
+
+Memory saves evidence, retrieves it, and writes new evidence. Every run is saved with its frames. Both agents get the same knowledge pack: lessons with the frames they cite, and recent attempts. At the end, the Supervisor turns what the run checked into lessons, each citing a frame of this run, and marks which served lessons were relied on or contradicted. Memory's [rules](../apps/memory/src/rules.ts) decide what that means, with no model: one contradiction disputes a lesson, two retire it, and a promotion confirms it. A lesson says how a site works ("member search sits behind a link on the home page"), never what it calls things. Memory starts empty.
+
+**Decision:** fixed rules over stored evidence decide what memory believes. **Not chosen:** a model judging its own lessons.
+
+## 5. The gate: `apps/factory/src/gate.ts` (140 lines)
+
+A table must work before a person sees it. Code runs it live through the crawler's loop: the balance, and a transfer up to its review. Then it runs once more with the confirmation dialog forced.
+
+- **Fails the plain run:** never shown to a person.
+- **Breaks under the hazard:** kept as broken, and a repair case opens with that run's frames, just as a break in service would.
+- **Passes both:** it waits in the Console. The card shows each row beside the frame it cites, and approving promotes the table for both tasks. Nothing else promotes it.
+
+**Decision:** one live check, one forced hazard, then a person. **Not chosen:** every hazard forced in turn, plus two clean probation runs. The loop that runs a learned table is the same one already tested against every hazard on bank 1.
+
+## 6. The command: `apps/factory/src/cli.ts` (174 lines)
+
+`just factory <bank> <member> <from> <to>` repairs if the bank has an open repair case, and learns it otherwise; then it runs the gate. It reports the run's cost, the actions judged and refused, the corrections that cite a frame, and the lessons sent. It refuses a bank whose table is written by hand.
+
+## Around it
+
+- **The model gateway** (`gateway.ts`, `upstream.ts`, `ledger.ts`): every model call goes through it. It meters each call, refuses one that would pass $25 a run or $150 a week before sending it, and keeps $1 of each run for the lessons.
+- **The agent** (`agent.ts`): one pi session per role. Each role's provider, model and effort come from `config/app.env`, so the Scout and the Supervisor can run different models. The default for both is `qwen/qwen3.8-max-prime` through OpenRouter, which is strong on pictures and reasoning.
+- **Tests with no model:**
+  - [`tests/factory/scout.test.ts`](../tests/factory/scout.test.ts): scripted tools write a table that reads bank 1's ledger, and a mismatched target is refused;
+  - [`apps/factory/test/supervisor.test.ts`](../apps/factory/test/supervisor.test.ts): every judgment carries its picture, and an earlier frame opens;
+  - [`tests/factory/gate.test.ts`](../tests/factory/gate.test.ts): a failing table never reaches a person.
