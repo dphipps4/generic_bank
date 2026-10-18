@@ -128,14 +128,16 @@ image:
 up: env image
     @just data
     @just backend console crawlers bank factory-up
-    @just credentials
-    @just urls
+    @just access
+    @echo; echo "  Everything is in ACCESS.md. just open opens it all."
+    @{{scripts}}/model-mode.sh
 
-# Open Swagger UI, the Console and the staff inbox in the browser
+# Open everything in the browser: Swagger UI, the Console, both banks and the simulated inbox
 [group('Run')]
 open:
-    @open "http://localhost:$API_PORT/docs" "http://localhost:$CONSOLE_PORT" "http://localhost:$BANK_INBOX_PORT" 2>/dev/null \
-      || echo "  Open http://localhost:$API_PORT/docs, http://localhost:$CONSOLE_PORT and http://localhost:$BANK_INBOX_PORT"
+    @for u in "http://localhost:$API_PORT/docs" "http://localhost:$CONSOLE_PORT" "http://localhost:$BANK_GENERIC_PORT/corelink/" \
+        "http://localhost:$BANK_EXAMPLE_PORT/" "http://localhost:$BANK_INBOX_PORT"; do \
+        open "$u" 2>/dev/null || echo "  $u"; done
 
 # Stop everything (data is kept), or only some groups: just down console bank
 [group('Run')]
@@ -148,23 +150,17 @@ down *groups:
 ps:
     @{{compose}} --profile '*' ps --format 'table {{{{.Service}}\t{{{{.Status}}\t{{{{.Ports}}'
 
-# Print where the main pages are (ACCESS.md has every URL; secrets/credentials.txt the logins)
-[private]
-urls:
-    @echo; \
-      echo "  Console        http://localhost:$CONSOLE_PORT"; \
-      echo "  Task API       http://localhost:$API_PORT/docs"; \
-      echo "  Generic Bank   http://localhost:$BANK_GENERIC_PORT/corelink/"; \
-      echo "  Example CU     http://localhost:$BANK_EXAMPLE_PORT/"; \
-      echo "  Staff inbox    http://localhost:$BANK_INBOX_PORT  (sign-in and approval codes)"; \
-      echo; echo "  Every URL: ACCESS.md. Logins: secrets/credentials.txt"
-    @{{scripts}}/model-mode.sh
-    @echo
-
-# Write secrets/credentials.txt: every login and token for HTTP access (never committed)
-[private]
-credentials:
-    @{{scripts}}/credentials.sh
+# Write ACCESS.md: links, logins, each bank's members, the demo in short (never committed)
+[group('Run')]
+access:
+    @mkdir -p .run; : > .run/members.md; \
+      for b in generic example; do \
+        rows="$({{compose}} exec -T bank-db psql -U postgres -d bank_$b -At -c "SELECT '| \`' || m.number || '\` | ' || m.first_name || ' ' || m.last_name || CASE WHEN m.status = 'closed' THEN ' (closed)' ELSE '' END || ' | ' || string_agg(a.nickname || ' …' || right(a.number, 4), ', ' ORDER BY a.id) || ' |' FROM members m JOIN accounts a ON a.member_number = m.number GROUP BY m.number, m.first_name, m.last_name, m.status ORDER BY m.number" 2>/dev/null || true)"; \
+        [[ -n "$rows" ]] || continue; \
+        { [[ $b == generic ]] && echo "**Bank 1, Generic Bank**" || echo "**Bank 2, Example Credit Union**"; \
+          echo; echo "| Member | Name | Accounts |"; echo "|---|---|---|"; echo "$rows"; echo; } >> .run/members.md; \
+      done
+    @{{scripts}}/access.sh
 
 # A signed X-Hazards value for curl: just hazard-header late-rows,promo
 [private]

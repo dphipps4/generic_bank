@@ -16,7 +16,7 @@ just open                       # Swagger UI, the Console and the staff inbox
 just try promo                  # a balance through the API, with a forced interstitial
 ```
 
-[ACCESS.md](ACCESS.md) lists every page and login, and things to try. The factory needs one key you bring: `just secret-set factory OPENROUTER_API_KEY`.
+`just up` writes ACCESS.md, the one place with every page, login and member, and the demo in short; `just open` opens the pages. The factory needs one key you bring: `just secret-set factory OPENROUTER_API_KEY`.
 
 ## How it fits together
 
