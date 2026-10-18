@@ -149,14 +149,19 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
   const finish = async () => {
     if (finished) return;
     finished = true;
-    const learned = await writeLessons({
-      agent: agent('lessons'),
-      memory: deps.memory,
-      at,
-      trail,
-      ended: [outcome, ...(diagnosis ? [`diagnosis: ${diagnosis}`] : [])],
-      served,
-    }).catch(() => null);
+    // Only a run that reached a goal writes lessons: one that reached none has nothing proven to
+    // teach, and its guesses about why became false lessons the next runs trusted.
+    const learned =
+      reached.length === 0
+        ? null
+        : await writeLessons({
+            agent: agent('lessons'),
+            memory: deps.memory,
+            at,
+            trail,
+            ended: [outcome, ...(diagnosis ? [`diagnosis: ${diagnosis}`] : [])],
+            served,
+          }).catch(() => null);
     if (learned)
       await sendLearned(
         deps.memory,
