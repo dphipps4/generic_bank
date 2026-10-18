@@ -37,6 +37,24 @@ const Answer = z.object({
     .transform((s) => (s.length > 500 ? `${s.slice(0, 499)}…` : s)),
 });
 
+/**
+ * A conversation that can take a new question: a last assistant message that asked for tools whose
+ * results never came is dropped, as a provider refuses a tool call left unanswered.
+ */
+export function answerable(conversation: Conversation): Conversation {
+  const c = [...conversation] as { role?: string; content?: unknown }[];
+  while (c.length) {
+    const last = c.at(-1)!;
+    const calls =
+      last.role === 'assistant' &&
+      Array.isArray(last.content) &&
+      (last.content as { type?: string }[]).some((b) => b.type === 'toolCall');
+    if (!calls) break;
+    c.pop();
+  }
+  return c as Conversation;
+}
+
 /** The verdict, or why it cannot be read. */
 export function readJudgment(text: string): Judgment | string {
   try {
@@ -125,11 +143,27 @@ export function supervisor(o: {
       });
       first = false;
       conversation = said.conversation;
-      const a = readJudgment(said.text);
+      let text = said.text;
+      // A judgment that spent its calls on tools (opening frames, asking memory) ends with no
+      // answer. One more call, with no tools, asks only for the verdict: a turn always answers.
+      if (!text.trim() && tools.length) {
+        const answered = await turn(o.agent, {
+          system: SYSTEM,
+          conversation: answerable(conversation),
+          say: 'Your calls for this action are used up. Give your verdict now, as the JSON answer only.',
+          answer: ANSWER_SCHEMA,
+          maxTokens: 8000,
+        });
+        conversation = answered.conversation;
+        text = answered.text;
+      }
+      const a = readJudgment(text);
       if (typeof a === 'string') {
         unreadable++;
+        // What the model said, so the evidence shows why it could not be read.
+        const said300 = text.trim() ? text.trim().slice(0, 300) : '(nothing)';
         await o.trail.step(
-          { name: 'supervisor', action: 'wait', outcome: `unreadable: ${a}` },
+          { name: 'supervisor', action: 'wait', outcome: `unreadable: ${a}. It said: ${said300}` },
           null,
         );
         return unreadable >= UNREADABLE_IN_A_ROW
