@@ -42,6 +42,8 @@ export interface TurnInput {
   /** What the role is told now, with a picture when there is one. */
   say: string;
   image?: Buffer | null;
+  /** More pictures with it: close-ups the Scout read from. */
+  images?: Buffer[];
   tools?: Tool[];
   /** At most this many model calls in the turn. */
   calls?: number;
@@ -200,7 +202,14 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
   const before = session.state.messages.length;
   await session.prompt({
     role: 'user',
-    content: i.image ? [png(i.image), { type: 'text', text: i.say }] : i.say,
+    content:
+      i.image || i.images?.length
+        ? [
+            ...(i.image ? [png(i.image)] : []),
+            ...(i.images ?? []).map(png),
+            { type: 'text', text: i.say },
+          ]
+        : i.say,
     timestamp: Date.now(),
   });
   if (i.signal?.aborted) throw new Ended(String(i.signal.reason ?? 'ended'));

@@ -66,7 +66,7 @@ export function recordText(record: readonly Entry[]): string {
           : e.result !== undefined
             ? `→ ${e.result}`
             : '(the action being judged)';
-      return `${i + 1}. ${e.tool} ${input} ${out}`;
+      return `${i + 1}. ${e.tool} ${input} ${out}${e.image ? ' [close-up attached]' : ''}`;
     })
     .join('\n');
 }
@@ -205,6 +205,8 @@ export function supervisor(o: {
           `The page now, ${j.ref ?? 'not kept'}:\n${JSON.stringify(view)}`,
         ].join('\n\n'),
         image: j.frame.picture,
+        // The close-ups the Scout read from, after the page itself.
+        images: j.record.flatMap((e) => (e.image ? [e.image] : [])),
         tools,
         calls: tools.length ? 3 : undefined,
         answer: ANSWER_SCHEMA,

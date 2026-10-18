@@ -9,7 +9,15 @@ import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
 import { checkBalance } from '../../packages/crawler/src/index.js';
 import { memoryStore } from '../../packages/evidence/src/index.js';
 import { controlDb } from '../../packages/oauth/test/control.js';
-import { type Browser, launch, newPage } from '../../packages/runtime/src/index.js';
+import {
+  type Browser,
+  findCrop,
+  launch,
+  newPage,
+  see,
+  whatIsAt,
+} from '../../packages/runtime/src/index.js';
+import type { At } from '../../packages/crawler/src/index.js';
 import { type LiveBank, liveBank, PASSWORDS } from '../support/banks.js';
 
 let bank: LiveBank;
@@ -166,4 +174,109 @@ describe('the Scout, scripted', () => {
     ).rejects.toThrow(/does not show/);
     await expect(go('browser_press', { x: 1, y: 1, why: 'x x' })).rejects.toThrow(/lands on no/);
   }, 120_000);
+});
+
+describe('the fallback, on bank 2: by sight and position, then replayed with no model', () => {
+  let bank2: LiveBank;
+  beforeAll(async () => {
+    bank2 = await liveBank('example');
+  }, 120_000);
+  afterAll(async () => {
+    await bank2?.close();
+  });
+
+  it('signs in through fields labeled with pictures, and the steps it learns are found again', async () => {
+    const judged: Judging[] = [];
+    const page = await newPage(browser);
+    const trail = await openTrail({
+      sql: db,
+      store: memoryStore(),
+      runId: `fr_${Math.random().toString(16).slice(2, 10)}`,
+      task: 'check-balance',
+      bank: 'example',
+      known: [],
+    });
+    const s = scout(
+      {
+        page,
+        start: bank2.url,
+        trail,
+        credentials,
+        code: async () => '000000',
+        judge: async (j) => (judged.push(j), { verdict: 'continue', says: 'Fine.' }),
+      },
+      { goal: 'balance', member: MEMBERS.demo },
+    );
+    const go = (tool: string, input: Record<string, unknown> = {}) => s.call('scout', tool, input);
+    await go('browser_open');
+    await go('name_page', { name: 'sign-in', shows: ['Log In'] });
+    // What a model would list from the picture: here the script reads the boxes off the page.
+    const box = async (l: ReturnType<typeof page.locator>) => {
+      const b = (await l.boundingBox())!;
+      return { x: b.x, y: b.y, w: b.width, h: b.height };
+    };
+    const fields = s
+      .latest()!
+      .controls.filter((c) => c.role === 'textbox' || c.role === 'password');
+    const labels = page.locator('img[src*="/img/t/"]');
+    const items = [
+      {
+        id: 'i1',
+        kind: 'field',
+        label: 'USERNAME:',
+        labelFrom: 'image',
+        box: fields[0]!.box,
+        labelBox: await box(labels.nth(0)),
+      },
+      {
+        id: 'i2',
+        kind: 'password field',
+        label: 'PASSCODE:',
+        labelFrom: 'image',
+        box: fields[1]!.box,
+        labelBox: await box(labels.nth(1)),
+      },
+      {
+        id: 'i3',
+        kind: 'button',
+        label: 'Log In',
+        labelFrom: 'text',
+        box: s.latest()!.controls.find((c) => c.role === 'button')!.box,
+      },
+    ];
+    const listed = await go('list_page', { items });
+    expect(listed.text).not.toMatch(/NOT CONFIRMED/);
+    await go('type_item', { item: 'i1', value: 'user_id', why: 'sign in' });
+    await go('list_page', { items });
+    await go('type_item', { item: 'i2', value: 'password', why: 'sign in' });
+    await go('list_page', { items });
+    await go('press_item', { item: 'i3', why: 'sign in' });
+    // The sign-in worked: the bank asks for its code.
+    expect(s.latest()!.frame.tree).toMatch(/code/i);
+    // Each action reached the Supervisor with a close-up of what the Scout read.
+    const typed = judged.flatMap((j) => j.record).filter((e) => e.tool === 'type_item');
+    expect(typed.every((e) => e.image && e.image.length > 0)).toBe(true);
+    // The steps learned carry anchors, found again on a fresh sign-in page, at the right controls.
+    const steps = s.table().rows.find((r) => r.page === 'sign-in')!.do.balance!;
+    expect(steps.map((st) => ('type' in st ? st.value : 'press' in st ? st.press : ''))).toEqual([
+      '$operator',
+      '$password',
+      'Log In',
+    ]);
+    const fresh = await newPage(browser);
+    await fresh.goto(bank2.url);
+    // Ready as the crawler waits for it: the picture holds still.
+    await see(fresh, { known: [], limitMs: 15_000 });
+    const shot = await fresh.screenshot();
+    for (const st of steps) {
+      const at = (st as { at?: At }).at!;
+      const found = findCrop(shot, Buffer.from(at.anchor, 'base64'));
+      expect(found, JSON.stringify(st).slice(0, 60)).not.toBeNull();
+      const p = {
+        x: found!.box.x + found!.box.w / 2 + at.dx,
+        y: found!.box.y + found!.box.h / 2 + at.dy,
+      };
+      expect((await whatIsAt(fresh, p)).kind).toBe(at.kind);
+    }
+  }, 180_000);
 });
