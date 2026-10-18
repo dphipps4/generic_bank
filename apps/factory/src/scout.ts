@@ -176,6 +176,17 @@ export function pointed(
       throw new ToolRefusal(`{${p.placeholder}}: give the label before it, or the words you see`);
   }
   if (!spans.size) throw new ToolRefusal('point at the values on this screen');
+  // A name read reaches back to the line with the member's number, within a few lines: it is
+  // anchored on it, so it never takes another line for a name.
+  if (what === 'name') {
+    const [line] = [...spans.keys()];
+    if (!real[line!]!.includes(task.member)) {
+      const back = [1, 2, 3]
+        .map((d) => line! - d)
+        .find((k) => k >= 0 && real[k]!.includes(task.member));
+      if (back !== undefined) labels.add(back);
+    }
+  }
   // A balance's account number, where the Scout did not point at it: the task's last four, on the
   // line it pointed at.
   if (what === 'balance' && !parts.some((p) => p.placeholder === 'last4') && task.from) {
@@ -192,8 +203,11 @@ export function pointed(
     const ss = (spans.get(k) ?? []).sort((x, y) => x[0] - y[0]);
     let line = '';
     let at = 0;
-    for (const [a, b, ph] of ss) {
-      if (a < at) throw new ToolRefusal(`{${ph}} overlaps another value`);
+    for (const [n, [a, b, ph]] of ss.entries()) {
+      if (a < at)
+        throw new ToolRefusal(
+          `{${ph}} overlaps {${ss[n - 1]![2]}} on the line "${shown[k]}": a value pointed at with after runs to the next label you point at, so point at a value you can see with is`,
+        );
       line += real[k]!.slice(at, a) + `{${ph}}`;
       at = b;
     }
@@ -272,7 +286,17 @@ export function scout(deps: ScoutDeps, task: Task) {
     }
     // The call's own input goes with its step, masked: the evidence shows what was asked for.
     const asked = current ? ` · input ${maskText(JSON.stringify(current.input), known)}` : '';
-    const seen = await trail.step({ name: task.goal, action: `${action} (${why})${asked}` }, f);
+    // A page that shows the member's number before their name is known could show their name: it is
+    // not kept until a name read hides the name. The Scout's next step is that read.
+    nameFirst =
+      !t.reads.name?.length && words(f).some((w) => w.includes(maskText(task.member, known)));
+    const seen = await trail.step(
+      {
+        name: task.goal,
+        action: `${action} (${why})${asked}${nameFirst ? " · not kept until the member's name is hidden" : ''}`,
+      },
+      nameFirst ? null : f,
+    );
     const ref = seen?.ref ?? null;
     const was = row;
     row = rowOf(f);
@@ -305,13 +329,29 @@ export function scout(deps: ScoutDeps, task: Task) {
         role: c.role,
         name: c.name,
         box: c.box,
+        // A field the words don't name: structure can't find it by a label, sight can by its id.
+        ...(!c.name && ['textbox', 'password', 'select'].includes(c.role)
+          ? {
+              label:
+                'none in the words: if it has one, it is drawn as a picture; act on it by this id',
+            }
+          : {}),
       })),
       words: words(f),
       ...(f.dialogs.length ? { dialogs: f.dialogs } : {}),
       ...(before ? { before: 'the picture before this one is in the previous result' } : {}),
     };
     const said = j ? `\nThe Supervisor: ${j.verdict}. ${j.says}` : '';
-    return { text: `${action}.${said}\n${JSON.stringify(view)}`, image: f.picture };
+    // The view as the Scout reads it, kept so this look can be replayed exactly.
+    await trail.keep(
+      `view-${String(++viewed).padStart(3, '0')}.json`,
+      Buffer.from(JSON.stringify({ action, frame: ref, said: j?.says ?? null, view })),
+      'application/json',
+    );
+    const first = nameFirst
+      ? "\nThis page shows the member's number, and maybe their name: before anything else, note_read name, pointing at where the member's name shows. The page is kept once their name is hidden."
+      : '';
+    return { text: `${action}.${said}${first}\n${JSON.stringify(view)}`, image: f.picture };
   }
 
   /** The control an action names: by id, or the one a position in the picture lands on. */
@@ -347,9 +387,33 @@ export function scout(deps: ScoutDeps, task: Task) {
   /** The region an action works on, cut again from the picture after it, for the Supervisor. */
   let closeUp: Box | null = null;
   /** What a field holds after typing, by length only: the typing is confirmed, the value unseen. */
-  const holds = async (p: { x: number; y: number }) => {
+  const holds = async (p: { x: number; y: number }, secret = false) => {
     const v = await valueAt(page, p).catch(() => '');
-    return v ? `; the field now holds ${v.length} characters` : '; the field reports no value';
+    if (!v) return '; the field reports no value';
+    // A secret's length is part of it: the field is said to be filled, nothing more.
+    return secret ? '; the field is filled' : `; the field now holds ${v.length} characters`;
+  };
+  /** Whether a value is a secret: the sign-in and a person's code. */
+  const secretValue = (v: string) => v === 'user_id' || v === 'password' || v === 'code';
+  /** Whether the page's own words hold a label, colon or not: then structure can find it. */
+  const inWords = (label: string) => {
+    const want = label.trim().replace(/:$/, '').toLowerCase();
+    return words(latest!.frame).some((w) => w.trim().replace(/:$/, '').toLowerCase() === want);
+  };
+  /**
+   * The anchor of a control with no words of its own: a crop of it and the label drawn to its left,
+   * found once on the page. The crawler finds it there again by sight.
+   */
+  const sightAnchor = async (c: Control, label: string): Promise<At> => {
+    const kind = (await whatIsAt(page, centre(c.box))).kind;
+    const it: Item = { id: 'c', kind, label, labelFrom: 'image', box: c.box };
+    const region = {
+      x: Math.max(0, c.box.x - 140),
+      y: c.box.y - 4,
+      w: c.box.w + Math.min(140, c.box.x) + 8,
+      h: c.box.h + 8,
+    };
+    return anchorOf(it, region);
   };
   const taken = () => {
     const r = record;
@@ -403,7 +467,14 @@ export function scout(deps: ScoutDeps, task: Task) {
   const mayAct = () => {
     if (stopped) throw new ToolRefusal('the Supervisor said stop');
     if (waiting) throw new ToolRefusal('the Supervisor said wait: wait or look first');
+    if (nameFirst)
+      throw new ToolRefusal(
+        "this page shows the member's number: note_read name first, pointing at where their name shows",
+      );
   };
+  /** A page showing the member's number before a name read hides their name: kept only after it. */
+  let nameFirst = false;
+  let viewed = 0;
 
   const BOX = z.object({
     x: z.number(),
@@ -500,13 +571,13 @@ export function scout(deps: ScoutDeps, task: Task) {
     },
     browser_type: {
       description:
-        "Types one of the task's values into the field you choose, by id or position, and the words of the label beside it, as text the page's words hold. A label drawn as a picture has no words to find: then list_page and type_item instead. The sign-in and a person's code are typed by the server and never shown.",
+        "Types one of the task's values into the field you choose, by its id, and the label beside it. When the page's words hold the label, the field is found by it; when they don't (a label drawn as a picture), the field the id names is typed at its position. The sign-in and a person's code are typed by the server and never shown.",
       input: which.extend({
         label: z
           .string()
           .min(1)
           .max(60)
-          .describe("The label's words, as text on the page; a pictured label has none"),
+          .describe("The label's words, as drawn or as its picture shows them"),
         value: z.enum(['user_id', 'password', 'code', 'member', 'amount', 'memo']),
       }),
       async run(i: {
@@ -520,13 +591,6 @@ export function scout(deps: ScoutDeps, task: Task) {
         mayAct();
         const c = chosen(i);
         const label = i.label;
-        // Words only: a label drawn as a picture is found by sight instead (list_page, type_item).
-        const f = await field(page, label).catch((e: Error) => {
-          throw new ToolRefusal(
-            `no words "${label}" beside a field (${e.message}); if its label is a picture, list_page and type_item`,
-          );
-        });
-        same(f.box, c, `the field by "${label}"`);
         const text =
           i.value === 'user_id'
             ? deps.credentials.operatorId
@@ -540,7 +604,37 @@ export function scout(deps: ScoutDeps, task: Task) {
                     ? ((task.amountCents ?? 0) / 100).toFixed(2)
                     : (task.memo ?? '');
         if (i.value === 'code' && !known.includes(text)) known.push(text);
-        await type(page, label, text);
+        const token = {
+          user_id: '$operator',
+          password: '$password',
+          code: '$code',
+          member: '$member',
+          amount: '$amount',
+          memo: '$memo',
+        }[i.value];
+        // Structure first: the label's words, when the page's words hold them. Otherwise sight, in
+        // the same call: the field the id names, typed at its position, with an anchor of it and the
+        // label drawn beside it. A failed lookup costs milliseconds, not a refusal and a judgment.
+        const f = inWords(label) ? await field(page, label).catch(() => null) : null;
+        let how: string;
+        let at: { x: number; y: number };
+        if (f) {
+          same(f.box, c, `the field by "${label}"`);
+          await type(page, label, text);
+          visit.push({ type: label, value: token });
+          at = centre(f.box);
+          how = `"${label}"`;
+        } else {
+          if (!['textbox', 'password'].includes(c.role))
+            throw new ToolRefusal(
+              `the page's words don't hold "${label}", and ${i.id ?? 'that position'} is a ${c.role}, not a field: choose the field by its id`,
+            );
+          const anchor = await sightAnchor(c, label);
+          at = centre(c.box);
+          await typeAt(page, at, text);
+          visit.push({ type: label, value: token, at: anchor });
+          how = `${i.id ?? 'the field'}, by its position (the label "${label}" is not in the page's words)`;
+        }
         // The sign-in and the code go into fields the allowlists know by their own names: the bank's
         // name for each is kept, so the guard knows them when the table runs.
         const listed = { user_id: 'Operator ID', password: 'Password', code: 'Code' }[
@@ -550,17 +644,8 @@ export function scout(deps: ScoutDeps, task: Task) {
           t.names ??= {};
           t.names[listed] = [...new Set([...(t.names[listed] ?? []), label])];
         }
-        const token = {
-          user_id: '$operator',
-          password: '$password',
-          code: '$code',
-          member: '$member',
-          amount: '$amount',
-          memo: '$memo',
-        }[i.value];
-        visit.push({ type: label, value: token });
-        const held = await holds(centre(f.box));
-        return look(`typed the ${i.value.replace('_', ' ')} into "${label}"${held}`, i.why);
+        const held = await holds(at, secretValue(i.value));
+        return look(`typed the ${i.value.replace('_', ' ')} into ${how}${held}`, i.why);
       },
     },
     list_page: {
@@ -671,7 +756,7 @@ export function scout(deps: ScoutDeps, task: Task) {
           memo: '$memo',
         }[i.value];
         visit.push({ type: it.label, value: token, at });
-        const held = await holds(p);
+        const held = await holds(p, secretValue(i.value));
         return look(
           `typed the ${i.value.replace('_', ' ')} into ${it.id}, the ${it.kind} labeled "${it.label}" (${it.labelFrom}), by clicking ${Math.round(p.x)},${Math.round(p.y)}${held}`,
           i.why,
@@ -737,7 +822,8 @@ export function scout(deps: ScoutDeps, task: Task) {
       },
     },
     browser_choose: {
-      description: "Chooses the task's from or to account in the list a label names.",
+      description:
+        "Chooses the task's from or to account in the list you choose, by its id, and the label beside it. When the page's words hold the label, the list is found by it; when they don't, the list the id names is chosen at its position.",
       input: which.extend({
         label: z.string().min(1).max(60),
         account: z.enum(['from', 'to']),
@@ -752,18 +838,31 @@ export function scout(deps: ScoutDeps, task: Task) {
       }) {
         mayAct();
         const c = chosen(i);
-        const f = await field(page, i.label).catch((e: Error) => {
-          throw new ToolRefusal(`the runtime finds no list by "${i.label}": ${e.message}`);
-        });
-        same(f.box, c, `the list by "${i.label}"`);
-        await choose(page, i.label, account(i.account === 'from' ? task.from : task.to)).catch(
-          (e: Error) => {
-            if (e instanceof TargetError) throw new ToolRefusal(e.message);
-            throw e;
-          },
+        const want = account(i.account === 'from' ? task.from : task.to);
+        const refuse = (e: Error) => {
+          if (e instanceof TargetError) throw new ToolRefusal(e.message);
+          throw e;
+        };
+        const containing = i.account === 'from' ? '$from' : '$to';
+        // Structure first, sight in the same call, as browser_type.
+        const f = inWords(i.label) ? await field(page, i.label).catch(() => null) : null;
+        if (f) {
+          same(f.box, c, `the list by "${i.label}"`);
+          await choose(page, i.label, want).catch(refuse);
+          visit.push({ choose: i.label, containing });
+          return look(`chose the ${i.account} account in "${i.label}"`, i.why);
+        }
+        if (c.role !== 'select')
+          throw new ToolRefusal(
+            `the page's words don't hold "${i.label}", and ${i.id ?? 'that position'} is a ${c.role}, not a list: choose the list by its id`,
+          );
+        const anchor = await sightAnchor(c, i.label);
+        await chooseAt(page, centre(c.box), want).catch(refuse);
+        visit.push({ choose: i.label, containing, at: anchor });
+        return look(
+          `chose the ${i.account} account in ${i.id ?? 'the list'}, by its position (the label "${i.label}" is not in the page's words)`,
+          i.why,
         );
-        visit.push({ choose: i.label, containing: i.account === 'from' ? '$from' : '$to' });
-        return look(`chose the ${i.account} account in "${i.label}"`, i.why);
       },
     },
     name_page: {
@@ -775,6 +874,10 @@ export function scout(deps: ScoutDeps, task: Task) {
         never: z.array(z.string().min(2).max(80)).max(4).optional(),
       }),
       async run(i: { name: string; shows: string[]; never?: string[] }) {
+        if (nameFirst)
+          throw new ToolRefusal(
+            "this page shows the member's number: note_read name first, then name the page",
+          );
         if (!latest?.ref) throw new ToolRefusal('look at the page first');
         const f = latest.frame;
         const missing = i.shows.filter((w) => !shows(f, w));
@@ -889,7 +992,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         text?: string;
         parts?: { placeholder: string; after?: string; is?: string }[];
       }) {
-        if (!latest?.ref) throw new ToolRefusal('look at the page first');
+        if (!latest) throw new ToolRefusal('look at the page first');
         const need = {
           balance: ['name', 'last4', 'available', 'current'],
           review: ['from', 'to', 'amount', 'memo'],
@@ -910,6 +1013,8 @@ export function scout(deps: ScoutDeps, task: Task) {
             .map((l, n) => `  ${Math.max(0, k - 3) + n + 1}: ${l}`)
             .join('\n');
         };
+        if (i.text && i.parts)
+          throw new ToolRefusal('give the read as parts or as text, not both: parts are best');
         let text = i.text;
         if (!text && i.parts) text = pointed(i.what, i.parts, real, shown, task);
         if (!text) throw new ToolRefusal('give the read as parts, or as text');
@@ -966,6 +1071,11 @@ export function scout(deps: ScoutDeps, task: Task) {
             fail("reads a memo that is not the task's");
           found = `From ${maskText(r.from!, known)}, To ${maskText(r.to!, known)}, the task's amount and memo`;
         } else if (i.what === 'name') {
+          // A name read is anchored on the member's own number: it can never take another line.
+          if (!text.includes('$member'))
+            fail(
+              "is not anchored on the member's number: point at the name on a line next to the member's number",
+            );
           if (!readOf(text, task.member).exec(words)?.groups?.name) fail('finds no name');
           found = "the member's name, which is hidden from now on";
         } else {
@@ -976,11 +1086,23 @@ export function scout(deps: ScoutDeps, task: Task) {
           i.what === 'name'
             ? { ...t.reads, name: [...(t.reads.name ?? []).filter((n) => n !== text), text] }
             : { ...t.reads, [i.what]: text };
-        if (i.what === 'name') await learnName();
         await trail.step(
           { name: 'note read', action: `${i.what}: ${text}`, outcome: found! },
           null,
         );
+        if (i.what === 'name') {
+          await learnName();
+          if (nameFirst) {
+            // The page again, with the member's name hidden: now it is kept.
+            nameFirst = false;
+            const again = await see(page, { known, limitMs: 15_000, everyMs: 150 });
+            const kept = await trail.step(
+              { name: task.goal, action: "the page again, the member's name hidden" },
+              again,
+            );
+            latest = { frame: again, ref: kept?.ref ?? null, controls: latest.controls };
+          }
+        }
         return { text: `Noted, citing ${latest.ref}: ${text}\nThe crawler reads ${found!}.` };
       },
     },

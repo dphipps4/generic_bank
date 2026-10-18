@@ -120,8 +120,9 @@ describe('the Scout, scripted', () => {
     await go('name_page', { name: 'search', shows: ['Member number:'], never: ['Status'] });
     await go('browser_type', { id: id('textbox'), label: 'Member number', value: 'member', why });
     await go('browser_press', { id: id('clickable', 'Search'), why });
-    await go('name_page', { name: 'found', shows: ['Member number:', 'Status'] });
+    // A page showing the member's number is kept once a name read hides their name: that read first.
     await go('note_read', { what: 'name', text: '$member\n{name}\n{status}' });
+    await go('name_page', { name: 'found', shows: ['Member number:', 'Status'] });
     await go('browser_press', { id: id('link', 'Open'), why });
     await go('name_page', { name: 'summary', shows: ['Member Summary', 'Available balance:'] });
     await go('note_read', {

@@ -49,6 +49,12 @@ A table must work before a person sees it. Code runs it live through the crawler
 
 **Decision:** one live check, one forced hazard, then a person. **Not chosen:** every hazard forced in turn, plus two clean probation runs. The loop that runs a learned table is the same one already tested against every hazard on bank 1.
 
+## Changing an agent
+
+A change to the Scout's or the Supervisor's instructions, tools or view is tested first on the frame where the old behavior failed: `just frame <run> <frame> <scout|supervisor> [samples] [variant.json]` gives that one kept frame to the real agent, through the factory's own code, a few cents and seconds a sample. A change merges when it beats the old behavior over five samples or more. A full run comes after, with a written hypothesis and a person's go, never as the experiment.
+
+The Supervisor thinks briefly: its whole output per judgment, thinking included, is capped, and one that runs past the cap is asked once more for its verdict alone. Every judgment's packet and every view the Scout read are kept beside the run's frames, so any of them can be replayed; a judgment over 30 seconds is listed in the run's report.
+
 ## 6. The command: `apps/factory/src/cli.ts` (227 lines)
 
 `just factory <bank> <member> <from> <to>` repairs if the bank has an open repair case, and learns it otherwise; then it runs the gate. It reports the run's cost, the actions judged and refused, the corrections that cite a frame, whether every action kept its frame and every refusal its input, and the lessons sent. It refuses a bank whose table is written by hand.

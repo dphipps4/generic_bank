@@ -215,6 +215,19 @@ factory bank member from to: factory-up
     pkill -P "$watchdog" 2>/dev/null; kill "$watchdog" 2>/dev/null
     exit "$status"
 
+# A one-frame experiment: the real Scout or Supervisor on one kept frame of a run, a few cents a sample:
+# just frame <run> <frame> <scout|supervisor> [samples] [variant.json]
+[group('Factory')]
+frame run frame role samples="5" variant="": factory-up
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mount=(); arg=()
+    if [ -n "{{variant}}" ]; then
+      dir="$(cd "$(dirname "{{variant}}")" && pwd)"
+      mount=(-v "$dir:/tmp/variant:ro"); arg=("/tmp/variant/$(basename "{{variant}}")")
+    fi
+    {{compose}} --profile factory-run run --rm --no-deps ${mount[@]+"${mount[@]}"} --entrypoint node factory-run apps/factory/dist/frame.js {{run}} {{frame}} {{role}} {{samples}} ${arg[@]+"${arg[@]}"}
+
 # Apply database migrations
 [private]
 migrate: env image

@@ -185,7 +185,9 @@ describe('the runtime: see first, then click', () => {
       const x = Math.floor(b.x + b.w / 2);
       const y = Math.floor(b.y + b.h / 2);
       const i = (y * img.width + x) * 4;
-      expect([img.data[i], img.data[i + 1], img.data[i + 2]]).toEqual([255, 255, 255]);
+      // A dark block, or the seam between two: a hidden value looks hidden, never absent.
+      expect([40, 120]).toContain(img.data[i]);
+      expect(img.data[i + 1]).toBe(img.data[i]);
     }
   });
 

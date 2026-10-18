@@ -130,3 +130,29 @@ describe("the Supervisor's verdict", () => {
     expect(findJudgment('prose', 'no verdict here')).toBe('the answer is not JSON');
   });
 });
+
+describe('reads, after runs 14 and 15', () => {
+  it("anchors a name read on the member's number, a line or two above", () => {
+    const lines = ['Member', 'Name', 'Status', '40017732', 'J. Doe', 'Active'];
+    expect(
+      pointed('name', [{ placeholder: 'name', is: 'J. Doe' }], lines, shown(lines), TASK),
+    ).toBe('$member\n{name}');
+  });
+
+  it('says which two values overlap, and on which line', () => {
+    expect(() =>
+      pointed(
+        'balance',
+        [
+          { placeholder: 'name', after: 'Everyday Checking' },
+          { placeholder: 'last4', after: 'Share ****' },
+          { placeholder: 'available', after: 'Available balance:' },
+          { placeholder: 'current', after: 'Current balance:' },
+        ],
+        SUMMARY,
+        shown(SUMMARY),
+        TASK,
+      ),
+    ).toThrow(/\{last4\} overlaps \{name\} on the line "Everyday Checking Share \*\*\*\*8176-S01/);
+  });
+});

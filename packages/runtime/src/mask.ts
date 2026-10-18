@@ -11,7 +11,14 @@ export interface Box {
   y: number;
   w: number;
   h: number;
+  /** Where one hidden character ends and the next begins, so the picture shows each one as a block. */
+  cuts?: number[];
 }
+
+/** A hidden character as the picture shows it: a dark block, the "█" of the text. */
+export const BLOCK = 40;
+/** The seam between two blocks, lighter, so each hidden character shows as its own block. */
+export const SEAM = 120;
 
 export { HIDDEN, maskText, spans } from './rule.js';
 
@@ -142,7 +149,8 @@ function hiddenBoxes(
   const pad = w / Math.max(1, text.length) / 3;
   return spans(text, known).map(([a, b]) => {
     const left = at(a) - pad;
-    return { x: left - 1, y: y - 1, w: at(b) + pad - left + 2, h: h + 2 };
+    const cuts = Array.from({ length: b - a - 1 }, (_, k) => at(a + k + 1));
+    return { x: left - 1, y: y - 1, w: at(b) + pad - left + 2, h: h + 2, cuts };
   });
 }
 
@@ -160,10 +168,13 @@ function drawnInside(
   size: number,
 ): Box[] {
   const runW = [...text].map(em).reduce((a, b) => a + b, 0) * size;
+  // Inside the control's outline: its border stays drawn, so the field still looks like a field.
+  const inset = 2;
   return hiddenBoxes(text, known, x + 3, y, runW, h).flatMap((b) => {
-    const left = Math.max(b.x, x);
-    const right = Math.min(b.x + b.w, x + w);
-    return right > left ? [{ x: left, y, w: right - left, h }] : [];
+    const left = Math.max(b.x, x + inset);
+    const right = Math.min(b.x + b.w, x + w - inset);
+    const cuts = (b.cuts ?? []).filter((c) => c > left && c < right);
+    return right > left ? [{ x: left, y: y + inset, w: right - left, h: h - 2 * inset, cuts }] : [];
   });
 }
 
@@ -187,17 +198,29 @@ export async function maskBoxes(page: Page, known: string[] = []): Promise<Box[]
   return out;
 }
 
-/** The picture with each box painted white. */
+/**
+ * The picture with each hidden character drawn as a dark block, as the text shows it ("████7732"):
+ * a hidden value looks hidden, never absent. The seams are drawn over the block, never through it.
+ */
 export function paint(png: Buffer, boxes: Box[]): Buffer {
   const img = PNG.sync.read(png);
+  const fill = (x: number, y: number, v: number) => {
+    const i = (y * img.width + x) * 4;
+    img.data[i] = v;
+    img.data[i + 1] = v;
+    img.data[i + 2] = v;
+    img.data[i + 3] = 255;
+  };
   for (const b of boxes) {
     const x1 = Math.max(0, Math.floor(b.x));
     const y1 = Math.max(0, Math.floor(b.y));
     const x2 = Math.min(img.width, Math.ceil(b.x + b.w));
     const y2 = Math.min(img.height, Math.ceil(b.y + b.h));
-    for (let y = y1; y < y2; y++)
-      for (let x = x1; x < x2; x++)
-        img.data.fill(255, (y * img.width + x) * 4, (y * img.width + x) * 4 + 4);
+    for (let y = y1; y < y2; y++) for (let x = x1; x < x2; x++) fill(x, y, BLOCK);
+    for (const c of b.cuts ?? []) {
+      const x = Math.round(c);
+      if (x > x1 && x < x2 - 1) for (let y = y1; y < y2; y++) fill(x, y, SEAM);
+    }
   }
   return PNG.sync.write(img);
 }
