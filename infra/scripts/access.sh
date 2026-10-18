@@ -23,7 +23,7 @@ umask 077
 cat >"$out" <<EOF
 # Access
 
-Everything for this machine's stack, in one place. \`just up\` writes it, and \`just access\` writes it again. It's never committed. \`just open\` opens every page below. The demo, step by step: [docs/demo.md](docs/demo.md).
+Everything for this machine's stack, in one place. \`just up\` writes it, and \`just access\` writes it again. It's never committed. \`just show\` writes this page again as ACCESS.html and opens it, then every page below. The demos, step by step: [Demo 1, bank 1](docs/demo-1.md) and [Demo 2, bank 2](docs/demo-2.md).
 
 ## Open these
 
@@ -75,4 +75,6 @@ For curl and debugging; the demo doesn't need these.
 Every service answers \`/healthz\`: ports ${API_PORT:-8000}, ${CONSOLE_PORT:-8080}, ${RUNNER_PORT:-8100}, ${FACTORY_PORT:-8200}, ${MEMORY_PORT:-8470}, ${BANK_GENERIC_PORT:-8081}, ${BANK_EXAMPLE_PORT:-8082}, ${BANK_INBOX_PORT:-8089}, ${BANK_GENERIC_ADMIN_PORT:-9081} and ${BANK_EXAMPLE_ADMIN_PORT:-9082}. Postgres's login isn't here: \`just secrets-edit local\`.
 EOF
 chmod 600 "$out"
-ok "$out written (readable only by you)"
+# The same, as a page to read in a browser, with a Copy button beside every value.
+node "$(dirname "$0")/access-html.mjs" "$out" "${out%.md}.html" && chmod 600 "${out%.md}.html"
+ok "$out and ${out%.md}.html written (readable only by you)"
