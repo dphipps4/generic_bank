@@ -72,7 +72,14 @@ For curl and debugging; the demo doesn't need these.
 | Factory gateway | :${FACTORY_PORT:-8200} | \`$(get FACTORY_GATEWAY_TOKEN "$(decrypt factory 2>/dev/null || true)")\` |
 | A forced hazard for curl, as \`X-Hazards\` | either bank | \`just hazard-header late-rows,promo\` |
 
-Every service answers \`/healthz\`: ports ${API_PORT:-8000}, ${CONSOLE_PORT:-8080}, ${RUNNER_PORT:-8100}, ${FACTORY_PORT:-8200}, ${MEMORY_PORT:-8470}, ${BANK_GENERIC_PORT:-8081}, ${BANK_EXAMPLE_PORT:-8082}, ${BANK_INBOX_PORT:-8089}, ${BANK_GENERIC_ADMIN_PORT:-9081} and ${BANK_EXAMPLE_ADMIN_PORT:-9082}. Postgres's login isn't here: \`just secrets-edit local\`.
+**Postgres, for TablePlus or any SQL client.** Host \`127.0.0.1\`, user \`postgres\`, no SSL.
+
+| Server | Port | Databases | Password |
+|---|---|---|---|
+| The system: runs, people's tasks, API clients, the audit | \`${CONTROL_DB_PORT:-5433}\` | \`control\`, \`memory\` | \`$(get POSTGRES_PASSWORD "$local_env")\` |
+| The banks' own data: members, accounts, codes sent | \`${BANK_DB_PORT:-5434}\` | \`bank_generic\`, \`bank_example\` | \`$(get BANK_DB_PASSWORD "$local_env")\` |
+
+Every service answers \`/healthz\`: ports ${API_PORT:-8000}, ${CONSOLE_PORT:-8080}, ${RUNNER_PORT:-8100}, ${FACTORY_PORT:-8200}, ${MEMORY_PORT:-8470}, ${BANK_GENERIC_PORT:-8081}, ${BANK_EXAMPLE_PORT:-8082}, ${BANK_INBOX_PORT:-8089}, ${BANK_GENERIC_ADMIN_PORT:-9081} and ${BANK_EXAMPLE_ADMIN_PORT:-9082}.
 EOF
 chmod 600 "$out"
 # The same, as a page to read in a browser, with a Copy button beside every value.

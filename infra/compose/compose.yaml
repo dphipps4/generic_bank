@@ -29,6 +29,7 @@ networks:
   data: { internal: true }
   world: {}
   bankdb: { internal: true }
+  bankdb-port: {}
   edge: {}
   factory: {}
 
@@ -52,6 +53,8 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ../postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks: [app, data]
+    # For a SQL client on this machine (TablePlus and the like); never beyond it.
+    ports: ['127.0.0.1:${CONTROL_DB_PORT}:5432']
     # Over TCP: on first start the image runs its init script on a socket-only server, which a
     # socket check would call ready before the real server listens.
     healthcheck: { <<: *health, test: ['CMD', 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres'] }
@@ -175,7 +178,10 @@ services:
     volumes:
       - bank-db-data:/var/lib/postgresql/data
       - ../bank-db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    networks: [bankdb]
+    # bankdb is internal, and Docker publishes no port from an internal network alone: bankdb-port
+    # holds only this database, so a SQL client on this machine reaches it and no service does.
+    networks: [bankdb, bankdb-port]
+    ports: ['127.0.0.1:${BANK_DB_PORT}:5432']
     healthcheck: { <<: *health, test: ['CMD', 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres'] }
 
   bank-generic: &bank
