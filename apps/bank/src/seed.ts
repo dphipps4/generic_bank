@@ -35,55 +35,16 @@ export const MEMBERS = {
   missing: '40099999', // never seeded: "No member found"
 } as const;
 
-const SURNAMES = [
-  'Sample',
-  'Example',
-  'Placeholder',
-  'Fixture',
-  'Testcase',
-  'Specimen',
-  'Prototype',
-  'Template',
-  'Mockup',
-  'Standin',
-  'Facsimile',
-  'Replica',
-  'Dummy',
-  'Draft',
-  'Pattern',
-  'Widget',
-  'Gadget',
-  'Lorem',
-  'Ipsum',
-  'Dolor',
-  'Sitamet',
-  'Proxy',
-  'Surrogate',
-  'Model',
-  'Exemplar',
-];
-const FIRST = [
-  'Alex',
-  'Blair',
-  'Casey',
-  'Dana',
-  'Emery',
-  'Finley',
-  'Gray',
-  'Harper',
-  'Indigo',
-  'Jordan',
-  'Kai',
-  'Logan',
-  'Morgan',
-  'Noel',
-  'Oakley',
-  'Parker',
-  'Quinn',
-  'Riley',
-  'Sage',
-  'Taylor',
-];
+/** Each member's plain name, clearly no real person's. */
+const NAMES: Record<string, [string, string]> = {
+  [MEMBERS.demo]: ['John', 'Doe'],
+  [MEMBERS.ira]: ['Jane', 'Doe'],
+  [MEMBERS.cd]: ['Mickey', 'Muse'],
+  [MEMBERS.nearZero]: ['Minnie', 'Muse'],
+  [MEMBERS.restricted]: ['Richard', 'Roe'],
+  [MEMBERS.closed]: ['Mary', 'Major'],
+  [MEMBERS.wealthy]: ['Warren', 'Wealth'],
+};
 const PURCHASES = [
   'POS PURCHASE CORNER GROCERY',
   'POS PURCHASE CITY FUEL',
@@ -185,12 +146,8 @@ export async function seed(db: Db, t: Tenant, secrets: SeedSecrets, now: Date): 
   );
   const suspenseId = suspense.rows[0]!.id;
 
-  const special = Object.values(MEMBERS).filter((m) => m !== MEMBERS.missing);
-  const numbers: string[] = [...special];
-  while (numbers.length < 25) {
-    const n = String(40_000_000 + r.int(32_000, 98_000));
-    if (!numbers.includes(n)) numbers.push(n);
-  }
+  // Only the members with a story: the demo shows each.
+  const numbers = Object.values(MEMBERS).filter((m) => m !== MEMBERS.missing);
 
   const entries: unknown[][] = [];
   let txn = 0;
@@ -207,9 +164,8 @@ export async function seed(db: Db, t: Tenant, secrets: SeedSecrets, now: Date): 
   };
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 12, 1, 9));
 
-  for (const [i, number] of numbers.entries()) {
-    const first = number === MEMBERS.demo ? 'Alex' : (FIRST[i % FIRST.length] as string);
-    const last = number === MEMBERS.demo ? 'Sample' : (SURNAMES[i % SURNAMES.length] as string);
+  for (const number of numbers) {
+    const [first, last] = NAMES[number]!;
     const status = number === MEMBERS.closed ? 'closed' : 'active';
     await db.query(
       'INSERT INTO members (number, first_name, last_name, status) VALUES ($1, $2, $3, $4)',

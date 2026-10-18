@@ -208,17 +208,9 @@ services:
 
   bank-example:
     <<: *bank
-    environment:
-      {
-        TENANT: example,
-        MALLOC_ARENA_MAX: '2',
-        PORT: '8082',
-        SECOND_PORT: '8092',
-        ADMIN_PORT: '9000',
-      }
+    environment: { TENANT: example, MALLOC_ARENA_MAX: '2', PORT: '8082', ADMIN_PORT: '9000' }
     ports:
       - '127.0.0.1:${BANK_EXAMPLE_PORT}:8082'
-      - '127.0.0.1:${BANK_EXAMPLE_SECOND_PORT}:8092'
       - '127.0.0.1:${BANK_EXAMPLE_ADMIN_PORT}:9000'
 
   # The staff inbox, where codes arrive. On its own network: people reach it, the Runner and the

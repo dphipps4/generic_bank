@@ -115,7 +115,7 @@ function codePage(c: Ctx, bank: Bank, o: { error?: string }) {
   const d = dialect(bank.t, bank.uiVersion, 'code-enter');
   const rows =
     row(c, d, 'Code', input(c, 'code', { size: 8 })) +
-    `<TR><TD COLSPAN="2"></TD><TD>${input(c, 'trust', { type: 'checkbox', value: '1' })} ${font(c, `Trust this workstation for ${WORKSTATION_DAYS} days`)}</TD></TR>`;
+    `<TR><TD COLSPAN="2"></TD><TD>${input(c, 'trust', { type: 'checkbox', value: '1', checked: true })} ${font(c, `Trust this workstation for ${WORKSTATION_DAYS} days`)}</TD></TR>`;
   return doc(c, d, {
     title: 'Enter Code',
     body: nest(
@@ -236,16 +236,15 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
     const cs = await codeSession(bank, req);
     if (!cs) return reply.redirect(`${base}signin`);
     const now = bank.now();
-    const f = readFields(req.body ?? {}, req.nonce, ['code', 'trust'] as const);
+    const f = readFields(req.body ?? {}, req.nonce, ['code'] as const);
     const r = await checkCode(bank.db, cs.operator.pk, 'sign-in', f.code, now);
     if (r !== 'ok') {
       const error = r === 'wrong' ? 'That code is not correct.' : 'That code has expired.';
       return html(reply, codePage(ctxOf(bank, req), bank, { error }));
     }
-    if (f.trust === '1') {
-      const w = await trustWorkstation(bank.db, cs.operator.pk, now);
-      reply.setCookie(COOKIE.workstation, w, cookieOptions(bank, WORKSTATION_DAYS * 86_400));
-    }
+    // Always remembered for 30 days, whatever the box says: a code is entered once.
+    const w = await trustWorkstation(bank.db, cs.operator.pk, now);
+    reply.setCookie(COOKIE.workstation, w, cookieOptions(bank, WORKSTATION_DAYS * 86_400));
     return handOff(bank, reply, cs.session.token);
   });
 

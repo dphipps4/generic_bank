@@ -19,7 +19,7 @@ export interface Member {
   status: 'active' | 'closed';
 }
 
-/** "A. Sample": the only form of a member's name the console shows. */
+/** "J. Doe": the only form of a member's name the console shows. */
 export const maskedName = (m: Member) => `${m.firstName.charAt(0)}. ${m.lastName}`;
 
 export async function findMember(db: Db, number: string): Promise<Member | null> {

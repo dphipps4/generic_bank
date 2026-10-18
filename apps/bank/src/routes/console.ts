@@ -15,25 +15,16 @@ import {
   nest,
   palette,
   row,
-  select,
   submit,
 } from '../markup/html.js';
 import { apiOperator, html, mainFrame, onSignedOut } from './frame.js';
 
 // The console after sign-in: a frameset of banner, nav and main frame; member search; the member
-// summary with one tile per account; activity; the alerts a confirmation dialog leads to; and
-// the decoys that move money or change a record, in plain view, for the guardrails to refuse.
+// summary with one tile per account; activity; the alerts a confirmation dialog leads to; the
+// member list a person opens from search; and one decoy, Close account, in plain view, for the
+// guardrails to refuse.
 
 export const DECOYS = {
-  'waive-fee': { title: 'Waive fee', fields: ['Fee amount', 'Reason'], button: 'Waive fee' },
-  'add-payee': { title: 'Add payee', fields: ['Payee name', 'Payee account'], button: 'Add payee' },
-  'change-address': {
-    title: 'Change address',
-    fields: ['Street', 'City', 'ZIP code'],
-    button: 'Save address',
-  },
-  estatements: { title: 'Enroll in eStatements', fields: ['Email address'], button: 'Enroll' },
-  'pay-now': { title: 'Pay now', fields: ['Amount'], button: 'Pay now' },
   'close-account': { title: 'Close account', fields: ['Reason'], button: 'Close account' },
 } as const;
 export type Decoy = keyof typeof DECOYS;
@@ -56,7 +47,7 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
       bank.t.theme === 'y2003'
         ? `<MARQUEE SCROLLAMOUNT="2" WIDTH="360">${font(c, 'Branch notice: the vault closes at 4:30 &middot; New member promotion runs through month end &middot; Report suspicious calls to Security')}</MARQUEE>`
         : '';
-    const line = `<TABLE WIDTH="100%" CELLPADDING="4" CELLSPACING="0" BORDER="0" BGCOLOR="${p.head}"><TR><TD>${font(c, `<B>${esc(bank.t.brand)} &middot; ${esc(bank.t.branch)}</B>`, ` COLOR="${p.headText}"`)}</TD><TD ALIGN="right">${font(c, esc(greeting), ` COLOR="${p.headText}"`)}</TD></TR></TABLE>`;
+    const line = `<TABLE WIDTH="100%" CELLPADDING="4" CELLSPACING="0" BORDER="0" BGCOLOR="${p.head}"><TR><TD WIDTH="1" BGCOLOR="#FFFFFF"><IMG SRC="${base}img/logo.svg" HEIGHT="40" ALT=""></TD><TD>${font(c, `<B>${esc(bank.t.brand)} &middot; ${esc(bank.t.branch)}</B>`, ` COLOR="${p.headText}"`)}</TD><TD ALIGN="right">${font(c, esc(greeting), ` COLOR="${p.headText}"`)}</TD></TR></TABLE>`;
     return html(
       reply,
       doc(c, d, {
@@ -76,16 +67,6 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
         bank.t.redesigned
           ? `${heading(c, d, 'Online Banking')}<P>${font(c, `Open the Menu and choose ${esc(L.memberSearch)}.`)}</P>`
           : `${heading(c, d, 'CoreLink Branch Console')}<P>${font(c, req.query.learn ? 'Upgrade information is available from your administrator.' : `Use ${esc(L.memberSearch)} to begin.`)}</P>`,
-      ),
-    })),
-  );
-
-  app.get<{ Params: { area: string } }>(`${base}area/:area`, async (req, reply) =>
-    mainFrame(bank, req, reply, { page: 'area', title: 'Restricted' }, async ({ c, d }) => ({
-      body: nest(
-        c,
-        d,
-        `${heading(c, d, req.params.area === 'admin' ? 'Admin' : 'Reports')}${message(c, 'You do not have access to this area.')}`,
       ),
     })),
   );
@@ -118,7 +99,7 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
         body: nest(
           c,
           d,
-          `${heading(c, d, L.memberSearch)}${form(c, d, `${base}members/search${next ? `?next=${encodeURIComponent(next)}` : ''}`, rows, submit(c, d, L.search))}<DIV CLASS="${results}"></DIV>`,
+          `${heading(c, d, L.memberSearch)}${form(c, d, `${base}members/search${next ? `?next=${encodeURIComponent(next)}` : ''}`, rows, submit(c, d, L.search))}<DIV CLASS="${results}"></DIV><P>${linkButton(c, `${base}members/list`, 'List members')}</P>`,
         ),
         script,
       };
@@ -170,6 +151,35 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
       const open = `${base}members/${m.number}${where}`;
       return { member, open, members: [{ ...member, open }] };
     },
+  );
+
+  // Every member, by number and name: for a person who doesn't know the number. The crawler never
+  // comes here; it is given the member's number.
+  app.get(`${base}members/list`, async (req, reply) =>
+    mainFrame(bank, req, reply, { page: 'list', title: 'Members' }, async ({ c, d }) => {
+      const r = await bank.db.query<{
+        number: string;
+        first: string;
+        last: string;
+        status: string;
+      }>(
+        'SELECT number, first_name AS first, last_name AS last, status FROM members ORDER BY last_name, first_name',
+      );
+      const rows = r.rows
+        .map(
+          (m) =>
+            `<TR><TD>${font(c, esc(m.number))}</TD><TD>${font(c, esc(`${m.first} ${m.last}`))}</TD><TD>${font(c, m.status === 'closed' ? 'Closed' : 'Active')}</TD></TR>`,
+        )
+        .join('');
+      return {
+        body: nest(
+          c,
+          d,
+          `${heading(c, d, 'Members')}<TABLE BORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TH>${font(c, 'Number')}</TH><TH>${font(c, 'Name')}</TH><TH>${font(c, 'Standing')}</TH></TR>${rows}</TABLE>
+<P>${linkButton(c, `${base}members/search`, `Back to ${L.memberSearch}`)}</P>`,
+        ),
+      };
+    }),
   );
 
   // The member summary: one tile per account, drawn by script, and drawn again a moment later.
@@ -255,8 +265,9 @@ ${confirm ? `setTimeout(function () { if (window.confirm("This member has 2 unre
     ),
   );
 
-  // Activity: a date-range control, and rows that arrive by a late request after the page draws.
-  app.get<{ Params: { n: string }; Querystring: { account?: string; from?: string; to?: string } }>(
+  // Activity: the account's latest transactions, newest first, in rows that arrive by a late
+  // request after the page draws.
+  app.get<{ Params: { n: string }; Querystring: { account?: string } }>(
     `${base}members/:n/activity`,
     async (req, reply) =>
       mainFrame(
@@ -268,42 +279,15 @@ ${confirm ? `setTimeout(function () { if (window.confirm("This member has 2 unre
           const accounts = await accountsOf(bank.db, member!.number);
           const account = accounts.find((a) => String(a.id) === req.query.account) ?? accounts[0];
           if (!account) return { body: nest(c, d, message(c, 'This member has no accounts.')) };
-          const months = monthsBack(bank.now(), 12);
-          const from = months.includes(String(req.query.from))
-            ? String(req.query.from)
-            : months[2]!;
-          const to = months.includes(String(req.query.to)) ? String(req.query.to) : months[0]!;
           const rowsBox = d.cls('rows');
           const late = c.hz.on('late-rows') ? 1000 : 250;
-          const opt = (m: string, sel: string) => ({ value: m, text: m, selected: m === sel });
-          const rows =
-            row(
-              c,
-              d,
-              'From',
-              select(
-                c,
-                'from',
-                months.map((m) => opt(m, from)),
-              ),
-            ) +
-            row(
-              c,
-              d,
-              'To',
-              select(
-                c,
-                'to',
-                months.map((m) => opt(m, to)),
-              ),
-            );
           const script = `setTimeout(function () {
-  CL.get(${js(`${base}api/members/${member!.number}/accounts/${account.id}/activity?from=${from}&to=${to}`)}, function (err, r) {
+  CL.get(${js(`${base}api/members/${member!.number}/accounts/${account.id}/activity`)}, function (err, r) {
     if (err) { (${onSignedOut(base)})(err); return; }
-    var h = '<table border="1" cellpadding="3" cellspacing="0" width="600"><tr><th><font size="1">Date</font></th><th><font size="1">Description</font></th><th><font size="1">Amount</font></th><th><font size="1">Status</font></th></tr>';
+    var h = '<table border="1" cellpadding="4" cellspacing="0" width="680"><tr><th>Date</th><th>Description</th><th>Amount</th><th>Status</th></tr>';
     for (var i = 0; i < r.rows.length; i++) {
       var x = r.rows[i];
-      h += '<tr><td><font size="1">' + x.date + '</font></td><td><font size="1">' + x.description + '</font></td><td align="right"><font size="1">' + CL.money(x.amount) + '</font></td><td><font size="1">' + (x.pending ? 'Pending' : 'Posted') + '</font></td></tr>';
+      h += '<tr><td>' + x.date + '</td><td>' + x.description + '</td><td align="right">' + CL.money(x.amount) + '</td><td>' + (x.pending ? 'Pending' : 'Posted') + '</td></tr>';
     }
     CL.byClass('div', ${js(rowsBox)})[0].innerHTML = h + '</table>';
   });
@@ -312,8 +296,7 @@ ${confirm ? `setTimeout(function () { if (window.confirm("This member has 2 unre
             body: nest(
               c,
               d,
-              `${heading(c, d, `${L.activity}: ${account.nickname}, ${bank.t.accountWording(account.number)}`)}
-${form(c, d, `${base}members/${member!.number}/activity?account=${account.id}`, rows, submit(c, d, 'Show'))}<DIV CLASS="${rowsBox}"></DIV>
+              `${heading(c, d, `${L.activity}: ${account.nickname}, ${bank.t.accountWording(account.number)}`)}<DIV CLASS="${rowsBox}"></DIV>
 <P>${linkButton(c, `${base}members/${member!.number}`, 'Back to member summary')}</P>`,
             ),
             script,
@@ -322,21 +305,7 @@ ${form(c, d, `${base}members/${member!.number}/activity?account=${account.id}`, 
       ),
   );
 
-  app.post<{
-    Params: { n: string };
-    Querystring: { account?: string };
-    Body: Record<string, string>;
-  }>(`${base}members/:n/activity`, async (req, reply) => {
-    const f = readFields(req.body ?? {}, req.nonce, ['from', 'to'] as const);
-    const q = new URLSearchParams({
-      account: String(req.query.account ?? ''),
-      from: f.from,
-      to: f.to,
-    });
-    return reply.redirect(`${base}members/${encodeURIComponent(req.params.n)}/activity?${q}`);
-  });
-
-  app.get<{ Params: { n: string; id: string }; Querystring: { from?: string; to?: string } }>(
+  app.get<{ Params: { n: string; id: string } }>(
     `${base}api/members/:n/accounts/:id/activity`,
     async (req, reply) => {
       if (!(await apiOperator(bank, req, reply))) return;
@@ -344,12 +313,12 @@ ${form(c, d, `${base}members/${member!.number}/activity?account=${account.id}`, 
         (a) => String(a.id) === req.params.id,
       );
       if (!account) return reply.code(404).send({ error: 'No such account for this member.' });
-      const start = monthStart(String(req.query.from ?? ''));
-      const endMonth = monthStart(String(req.query.to ?? ''));
-      if (!start || !endMonth || endMonth < start)
-        return reply.code(400).send({ error: 'Choose a valid date range.' });
-      const end = new Date(Date.UTC(endMonth.getUTCFullYear(), endMonth.getUTCMonth() + 1, 1));
-      const rows = await activity(bank.db, account.id, start, end);
+      // The last 90 days, newest first: what a teller looks at.
+      const end = new Date(bank.now().getTime() + 86_400_000);
+      const start = new Date(end.getTime() - 91 * 86_400_000);
+      const rows = (await activity(bank.db, account.id, start, end))
+        .sort((x, y) => y.postedAt.getTime() - x.postedAt.getTime())
+        .slice(0, 40);
       return {
         rows: rows.map((r) => ({
           date: r.postedAt.toISOString().slice(0, 10),
@@ -413,9 +382,4 @@ export function monthsBack(now: Date, n: number): string[] {
   return Array.from({ length: n }, (_, i) =>
     new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1)).toISOString().slice(0, 7),
   );
-}
-
-function monthStart(m: string): Date | null {
-  const x = /^(\d{4})-(\d{2})$/.exec(m);
-  return x ? new Date(Date.UTC(Number(x[1]), Number(x[2]) - 1, 1)) : null;
 }

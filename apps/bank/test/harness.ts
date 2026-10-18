@@ -16,10 +16,10 @@ export const PASSWORDS = {
   supervisor: 'supervisor-password-for-tests',
 };
 export const HMAC = 'h'.repeat(32);
-/** The ports each bank runs on in compose; a second port is a second origin. */
-export const PORTS: Record<TenantId, { main: number; second?: number }> = {
+/** The port each bank runs on in compose. */
+export const PORTS: Record<TenantId, { main: number }> = {
   generic: { main: 8081 },
-  example: { main: 8082, second: 8092 },
+  example: { main: 8082 },
 };
 
 export interface TestBank {

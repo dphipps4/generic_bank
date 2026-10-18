@@ -82,7 +82,7 @@ setTimeout(function () {
               d,
               `${heading(c, d, L.statements)}${form(c, d, `${base}members/${n}/statements`, picker, submit(c, d, 'Show'))}<DIV CLASS="${box}"></DIV>
 <P>${font(c, esc(KEPT_ONLINE))}</P>
-<P>${linkButton(c, `${base}members/${n}/estatements`, 'Enroll in eStatements')} &nbsp; ${font(c, '|')} &nbsp; ${linkButton(c, `${base}members/${n}`, 'Back to member summary')}</P>`,
+<P>${linkButton(c, `${base}members/${n}`, 'Back to member summary')}</P>`,
             ),
             script,
           };

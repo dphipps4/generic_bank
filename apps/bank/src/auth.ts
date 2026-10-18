@@ -3,7 +3,7 @@ import argon2 from 'argon2';
 import type { Db } from './db.js';
 
 export const IDLE_MS = 10 * 60_000;
-export const CODE_MS = 5 * 60_000;
+export const CODE_MS = 7 * 60_000;
 export const CODE_TRIES = 3;
 export const WORKSTATION_DAYS = 30;
 const LOCK_WINDOW_MS = 15 * 60_000;
@@ -200,7 +200,7 @@ export async function sendCode(
   );
   const body =
     purpose === 'sign-in'
-      ? `${brand}: your CoreLink sign-in code is ${code}. It expires in 5 minutes.`
+      ? `${brand}: your CoreLink sign-in code is ${code}. It expires in 7 minutes.`
       : `${brand}: approval code ${code} for transfer ${ref}. Give it only to the operator who asked.`;
   await db.query('INSERT INTO messages (mailbox, address, body, at) VALUES ($1, $2, $3, $4)', [
     channel === 'text' ? 'phone' : 'email',

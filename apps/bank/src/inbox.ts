@@ -37,10 +37,14 @@ export async function buildInbox(banks: InboxBank[]): Promise<FastifyInstance> {
         )
         .catch(() => ({ rows: [] as (Message & { username: string | null })[] }));
       const items = r.rows
-        .map(
-          (m) =>
-            `<li><span class="when">${esc(new Date(m.at).toISOString().slice(11, 19))} UTC</span> <span class="kind">${m.mailbox === 'phone' ? 'Text' : 'Email'}</span> <b>for ${esc(m.username ?? 'unknown')}</b> <span class="to">${esc(m.address)}</span><div class="body">${esc(m.body)}</div></li>`,
-        )
+        .map((m) => {
+          // The code in the message, to copy without retyping it.
+          const code = /(?<!\d)(\d{6})(?!\d)/.exec(m.body)?.[1];
+          const copy = code
+            ? ` <button class="copy" onclick="navigator.clipboard.writeText('${code}'); this.textContent = 'Copied'">Copy code</button>`
+            : '';
+          return `<li><span class="when">${esc(new Date(m.at).toISOString().slice(11, 19))} UTC</span> <span class="kind">${m.mailbox === 'phone' ? 'Text' : 'Email'}</span> <b>for ${esc(m.username ?? 'unknown')}</b> <span class="to">${esc(m.address)}</span>${copy}<div class="body">${esc(m.body)}</div></li>`;
+        })
         .join('');
       sections.push(
         `<section><h2>${esc(b.t.brand)}</h2>${items ? `<ul>${items}</ul>` : '<p class="none">No messages yet.</p>'}</section>`,
@@ -55,7 +59,7 @@ header{background:#fff;border-bottom:1px solid #e3e5e8;padding:18px 20px}h1{font
 main{max-width:860px;margin:0 auto;padding:12px 16px 40px}h2{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:#1f4d7a;margin:24px 0 8px}
 ul{list-style:none;margin:0;padding:0}li{background:#fff;border:1px solid #e3e5e8;border-radius:8px;padding:10px 12px;margin:6px 0}
 .when{color:#888;font-size:12px}.kind{font-size:11px;text-transform:uppercase;letter-spacing:.05em;background:#eef3f8;color:#1f4d7a;padding:1px 6px;border-radius:4px;margin:0 6px}
-.to{color:#555;font-size:13px}.body{margin-top:4px;font-size:15px}.none{color:#888}
+.to{color:#555;font-size:13px}.copy{float:right;font:inherit;font-size:13px;padding:3px 10px;border:1px solid #1f4d7a;border-radius:6px;background:#fff;color:#1f4d7a;cursor:pointer}.body{margin-top:4px;font-size:15px}.none{color:#888}
 </style></head><body><header><h1>Simulated phone and email inbox</h1><p>It stands in for the bank staff's phones and email: every text and email a bank sends its staff arrives here, and a person reads the sign-in codes from it. The crawler can't reach this page. Refreshes every five seconds.</p></header>
 <main>${sections.join('')}</main></body></html>`);
   });

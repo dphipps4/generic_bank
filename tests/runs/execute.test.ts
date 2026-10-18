@@ -125,7 +125,7 @@ describe('the Runner carries out a run', () => {
       JSON.stringify(frames),
     ].join('\n');
     // The member's name was not known before the run; the crawler learned it when the bank showed it.
-    for (const v of [MEMBERS.demo, acct.number, acct.number.slice(-4), PASSWORDS.service, 'Sample'])
+    for (const v of [MEMBERS.demo, acct.number, acct.number.slice(-4), PASSWORDS.service, 'Doe'])
       expect(stored).not.toContain(v);
   }, 120_000);
 });

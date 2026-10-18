@@ -18,28 +18,7 @@ export interface Bank {
   /** BANK_UI_VERSION: bumping it relabels and moves things, for the repair loop. */
   uiVersion: number;
   /** The ports the bank answers on. A different port is a different origin. */
-  ports?: { main: number; second?: number };
-}
-
-/**
- * The bank's two origins, built from the host the request came to, so a frame's URL is right
- * both from a person's browser (localhost) and from inside the compose network (bank-example).
- */
-export function origins(bank: Bank, req: FastifyRequest) {
-  const host = String(req.headers.host ?? 'localhost');
-  const name = host.replace(/:\d+$/, '');
-  const hostPort = Number(/:(\d+)$/.exec(host)?.[1] ?? 0);
-  // Which of the bank's two servers answered: the port the request arrived on, inside the container.
-  const local = req.socket?.localPort ?? hostPort;
-  const main = bank.ports?.main ?? local;
-  const second = bank.ports?.second ?? main + 10;
-  // A copy of the stack may publish every port moved by the same amount (config/local.env):
-  // links keep that shift, so a person's browser stays on the copy it is looking at.
-  const shift = hostPort && local ? hostPort - local : 0;
-  return {
-    main: `http://${name}:${main + shift}`,
-    second: `http://${name}:${second + shift}`,
-  };
+  ports?: { main: number };
 }
 
 declare module 'fastify' {

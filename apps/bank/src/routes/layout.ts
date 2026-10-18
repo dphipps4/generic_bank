@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { type Bank, ctxOf, current, origins } from '../context.js';
+import { type Bank, ctxOf, current } from '../context.js';
 import { dialect } from '../markup/dialect.js';
 import { type Ctx, doc, esc, font, js, linkButton, palette } from '../markup/html.js';
 import { html } from './frame.js';
@@ -11,7 +11,7 @@ import { html } from './frame.js';
 interface NavItem {
   href: string;
   text: string;
-  group: 'members' | 'money' | 'tools' | 'out';
+  group: 'members' | 'money' | 'out';
   isNew?: boolean;
 }
 
@@ -27,10 +27,6 @@ export function navItems(bank: Bank): NavItem[] {
       group: 'money',
       isNew: true,
     },
-    { href: `${base}area/reports`, text: 'Reports', group: 'tools' },
-    { href: `${base}area/admin`, text: 'Admin', group: 'tools' },
-    { href: `${base}members/search?next=waive-fee`, text: 'Fee Waivers', group: 'tools' },
-    { href: `${base}members/search?next=change-address`, text: 'Address Change', group: 'tools' },
     { href: `${base}signout`, text: 'Sign Out', group: 'out' },
   ];
 }
@@ -39,24 +35,17 @@ const target = (i: NavItem) => (i.group === 'out' ? '_top' : 'main');
 const newGif = (base: string) =>
   ` <IMG SRC="${base}img/new.svg" WIDTH="34" HEIGHT="14" ALT="NEW!">`;
 
-function frameset(bank: Bank, o: ReturnType<typeof origins>): string {
+function frameset(bank: Bank): string {
   const base = bank.t.basePath;
   const f = (src: string, name: string, extra = '') =>
     `<FRAME SRC="${base}${src}" NAME="${name}"${extra}>`;
   const banner = f('frame/banner', 'banner', ' SCROLLING="no" NORESIZE');
-  // Bank 2's tab strip comes from its second origin: a cross-origin frame.
-  const tabsFrom = bank.t.secondOrigin === 'tabs' ? o.second : '';
-  const tabs = `<FRAME SRC="${tabsFrom}${base}frame/tabs" NAME="tabs" SCROLLING="no" NORESIZE>`;
   const body =
     bank.t.layout === 'nav'
-      ? `<FRAMESET ROWS="64,*" BORDER="1">${banner}<FRAMESET COLS="170,*">${f('frame/nav', 'nav')}${f('home', 'main')}</FRAMESET></FRAMESET>`
-      : `<FRAMESET ROWS="56,30,*" BORDER="0">${banner}${tabs}${f('home', 'main')}</FRAMESET>`;
-  // The cross-origin tab strip asks for a page by message; only a page of this console is opened.
-  const relay = tabsFrom
-    ? `<SCRIPT>window.onmessage = function (e) { var u = String(e.data); if (e.origin === ${js(o.second)} && u.indexOf(${js(`${o.main}${base}`)}) === 0) { frames['main'].location.href = u; } };</SCRIPT>`
-    : '';
+      ? `<FRAMESET ROWS="84,*" BORDER="1">${banner}<FRAMESET COLS="230,*">${f('frame/nav', 'nav')}${f('home', 'main')}</FRAMESET></FRAMESET>`
+      : `<FRAMESET ROWS="84,52,*" BORDER="0">${banner}${f('frame/tabs', 'tabs', ' SCROLLING="no" NORESIZE')}${f('home', 'main')}</FRAMESET>`;
   return `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Frameset//EN">
-<HTML><HEAD><TITLE>CoreLink Branch Console - ${esc(bank.t.brand)}</TITLE>${relay}</HEAD>
+<HTML><HEAD><TITLE>CoreLink Branch Console - ${esc(bank.t.brand)}</TITLE></HEAD>
 ${body}</HTML>`;
 }
 
@@ -106,7 +95,7 @@ export function layoutRoutes(app: FastifyInstance, bank: Bank) {
     if (!cur) return reply.redirect(`${base}signin`);
     if (bank.t.redesigned)
       return html(reply, refreshedPage(bank, ctxOf(bank, req), cur.operator.displayName));
-    return html(reply, frameset(bank, origins(bank, req)));
+    return html(reply, frameset(bank));
   });
 
   // Bank 1's nav frame, an older page that writes itself with document.write.
@@ -116,8 +105,7 @@ export function layoutRoutes(app: FastifyInstance, bank: Bank) {
     const items = navItems(bank);
     const rows = items
       .map((i, k) => {
-        const gap =
-          k > 0 && items[k - 1]!.group !== i.group && (i.group === 'tools' || i.group === 'out');
+        const gap = k > 0 && items[k - 1]!.group !== i.group && i.group === 'out';
         const spacer = gap
           ? `<TR><TD><IMG SRC="${base}img/spacer.gif" WIDTH="1" HEIGHT="12" ALT=""></TD></TR>`
           : '';
@@ -140,19 +128,10 @@ export function layoutRoutes(app: FastifyInstance, bank: Bank) {
   app.get(`${base}frame/tabs`, async (req, reply) => {
     const c = ctxOf(bank, req);
     const d = dialect(bank.t, bank.uiVersion, 'tabs');
-    // Served from the second origin, the tabs must name the main origin to navigate it. A browser
-    // lets a frame of another origin neither find the main frame by its name (TARGET="main" alone
-    // would open a new window) nor navigate it: the tab asks the frameset to, by message.
-    const cross = bank.t.secondOrigin === 'tabs';
-    const home = cross ? origins(bank, req).main : '';
-    const link = (i: NavItem) =>
-      cross && target(i) === 'main'
-        ? `<A HREF="${home}${i.href}" TARGET="main" ONCLICK="parent.postMessage(this.href, ${esc(js(home))}); return false;">${font(c, esc(i.text))}</A>`
-        : linkButton(c, `${home}${i.href}`, i.text, target(i));
     const tabs = navItems(bank)
       .map(
         (i) =>
-          `<TD BGCOLOR="${i.group === 'out' ? p.body : p.panel}" STYLE="border:1px solid ${p.head};border-bottom:0;padding:4px 12px" NOWRAP>${link(i)}</TD><TD WIDTH="3"></TD>`,
+          `<TD BGCOLOR="${i.group === 'out' ? p.body : p.panel}" STYLE="border:1px solid ${p.head};border-bottom:0;padding:8px 16px" NOWRAP>${linkButton(c, i.href, i.text, target(i))}</TD><TD WIDTH="3"></TD>`,
       )
       .join('');
     return html(
