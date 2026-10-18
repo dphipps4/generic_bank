@@ -1,6 +1,6 @@
 # The demo
 
-About fifteen minutes. Run `just up`, then `just open`: Swagger UI, the Console, both banks and the simulated inbox open in tabs. Every login and member number is in `ACCESS.md`.
+About fifteen minutes. Run `just up`, then `just show`: Swagger UI, the Console, both banks and the simulated inbox open in tabs. Every login and member number is in `ACCESS.md`.
 
 ## 1. Authorize in Swagger UI
 

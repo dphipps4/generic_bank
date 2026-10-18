@@ -129,12 +129,12 @@ up: env image
     @just data
     @just backend console crawlers bank factory-up
     @just access
-    @echo; echo "  Everything is in ACCESS.md. just open opens it all."
+    @echo; echo "  Everything is in ACCESS.md. just show opens it all."
     @{{scripts}}/model-mode.sh
 
 # Open everything in the browser: Swagger UI, the Console, both banks and the simulated inbox
 [group('Run')]
-open:
+show:
     @for u in "http://localhost:$API_PORT/docs" "http://localhost:$CONSOLE_PORT" "http://localhost:$BANK_GENERIC_PORT/corelink/" \
         "http://localhost:$BANK_EXAMPLE_PORT/" "http://localhost:$BANK_INBOX_PORT"; do \
         open "$u" 2>/dev/null || echo "  $u"; done

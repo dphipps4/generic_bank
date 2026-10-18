@@ -23,7 +23,7 @@ umask 077
 cat >"$out" <<EOF
 # Access
 
-Everything for this machine's stack, in one place. \`just up\` writes it, and \`just access\` writes it again. It's never committed. \`just open\` opens every page below. The demo, step by step: [docs/demo.md](docs/demo.md).
+Everything for this machine's stack, in one place. \`just up\` writes it, and \`just access\` writes it again. It's never committed. \`just show\` opens every page below. The demo, step by step: [docs/demo.md](docs/demo.md).
 
 ## Open these
 

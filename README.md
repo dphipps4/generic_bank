@@ -12,36 +12,72 @@ You need macOS 14 or newer, [Docker Desktop](https://www.docker.com/products/doc
 infra/scripts/bootstrap.sh      # installs just, checksum verified
 just setup                      # once: checks the Mac, creates every secret, builds the images
 just up                         # both banks, the API, the Console, the runner, memory, the factory
-just open                       # Swagger UI, the Console and the staff inbox
-just try promo                  # a balance through the API, with a forced interstitial
+just show                       # Swagger UI, the Console, both banks and the simulated inbox
 ```
 
-`just up` writes ACCESS.md, the one place with every page, login and member, and the demo in short; `just open` opens the pages. The factory needs one key you bring: `just secret-set factory OPENROUTER_API_KEY`.
+`just up` writes ACCESS.md, the one place with every page, login and member number. [The demo](docs/demo.md) walks both tasks, three hazards and bank 2 in about fifteen minutes. The factory needs one key you bring: `just secret-set factory OPENROUTER_API_KEY`.
 
-## How it fits together
+---
 
-![The system](docs/diagrams/system.svg)
+## 1. How the system fits together
 
-- **The API** ([`apps/api`](apps/api/src/server.ts)): OAuth2, then `POST /tasks/check-balance` and `POST /tasks/transfer` with typed inputs. A run answers 202 while working, 200 with its result, 422 for the bank's own answer ("no such member"), 409 when a person has it, and 502 or 503 for a failure, with `retryable` set. `GET /banks` lists what each bank serves, and `GET /tools` gives the agent its tool definitions. Swagger UI documents every call.
-- **The run** ([`apps/runner`](apps/runner/src/execute.ts)): a durable workflow per task. It holds one browser, runs the bank's crawler, records every page as a masked frame, asks a person through the Console when only a person can answer, and settles exactly one result.
-- **The runtime** ([`packages/runtime`](packages/runtime/README.md)): Playwright and Chrome, seeing first. A page is ready when its picture holds still and nothing says loading. A field is found by its drawn label, and a button by its drawn name, whatever the page built it from. Masking paints every personal value out of the picture before anything is kept.
-- **The crawler** ([`packages/crawler`](packages/crawler/src/crawl.ts)): a table and a loop. The table is data: each page of the bank, the words that show it, and what a teller does there. One loop runs any table: look at the page, return the bank's answer if it gave one, start again from home on trouble, otherwise do the row the page shows. [Bank 1's table](packages/crawler/src/bank1.ts) cites a frame of [its evidence](docs/evidence/bank-1/README.md) on every row.
-- **The Console** ([`apps/console`](apps/console/src/main.ts)): where a person works. The inbox holds codes the bank sends, transfers to approve, and runs that stopped. Each run is shown page by page, with its pictures. Learned tables wait there for approval.
-- **The factory** ([`apps/factory`](apps/factory/src/run.ts)) and **memory** ([`apps/memory`](apps/memory/src)): they learn bank 2 and repair it when its site changes. See [the factory's walkthrough](docs/factory.md).
+![The system: boundaries, data, and where the risky parts live](docs/diagrams/system.svg)
 
-## How it meets the brief
+An agent calls the **API** ([`apps/api`](apps/api/src/server.ts)) with a typed task. The API starts a durable **run** ([`apps/runner`](apps/runner/src/execute.ts)), which opens a browser and runs that bank's **crawler** ([`packages/crawler`](packages/crawler/src/crawl.ts)). The crawler only ever acts through the **runtime** ([`packages/runtime`](packages/runtime/README.md)), and the **guard** ([`packages/guardrails`](packages/guardrails/src/allowlist.ts)) checks every action before it happens. When only a person can answer (a code, an approval, a page nobody knows), the run waits in the **Console** ([`apps/console`](apps/console/src/main.ts)). The **factory** ([`apps/factory`](apps/factory/src/run.ts)) works offline. It learns a new bank, and a person approves what it learned.
 
-- **Driving a messy legacy UI.** The runtime sees the rendered page (picture, visible text, controls by role and position) and never the bank's source. Labels in cells of their own, buttons that are styled text, two links with one name: each is found the way a person finds it. Walking bank 1 for real turned up seven problems the synthetic tests never had; each became a runtime rule with a test, listed in [the evidence walkthrough](docs/evidence/bank-1/README.md#what-the-walk-changed).
-- **Outcomes kept apart.** The bank's answers ("insufficient funds", "member closed") are business outcomes, matched by its own words and returned as 422. Trouble (an outage, an error page, a balance that didn't load) is handled inside the run: start again from home, a bounded number of times, never after Submit. Past that, it's a failure, 503 when retrying may help. The [outcome tests](tests/outcomes/outcomes.test.ts) prove one of each.
-- **Escalation.** A page no row knows, the same page three times, or an unclear result after Submit stops the run as 409 with its frames. A person sees it in the Console, then resumes it, finishes it by hand or cancels. The [escalation test](tests/escalation/escalations.test.ts) goes 409, then resume, then 200, through the API.
-- **Safety.** Every action passes the job's [allowlist](packages/guardrails/allowlists) first; a refusal trips the guard and freezes the bank. Submit needs a single-use grant, which only a person's approval issues, and it's pressed once. A run that resumes afterwards reads the account's history for its memo token and never presses again. Masking covers the picture, the page text and the address before anything is stored, and the [PII suite](tests/pii/pii.test.ts) searches every row, object and log line for every seeded value.
-- **Across tenants.** A bank is just data: its table. Everything else (the loop, the runtime, the guard, the API) is shared. Another bank on the same vendor product gets its table from the factory, and a person approves it before it serves anyone.
+**The decisions that matter, and what they cost:**
+- **A typed contract, not chat.** Each task has one schema ([`contracts`](packages/contracts/src/index.ts)), and the API's validation, its OpenAPI page and the agent's tools all come from it, so they can't drift apart. A balance comes back in one call, which waits up to 60 seconds. The price: a slower run means polling `GET /tasks/{runId}`.
+- **Look at the page the way a person does.** The runtime reads what's rendered: the picture, the visible accessibility tree, the controls. Never the bank's source, never the shape of its DOM. It's slower, since it waits for the page to hold still, but that's why framesets and styled-text buttons don't break it.
+- **No model at run time.** A crawler is a table and one loop. The table is plain data: each page, the words that give it away, what a teller does there. Runs are cheap, repeatable and auditable, and an unseen page stops the run instead of inviting a guess. The catch is that a new bank needs a table. The factory writes it.
+- **A bank is data.** Banks running the same vendor product share everything but their table. That's the whole story of reuse across tenants.
 
-## Cut lines
+**Why the boundaries sit where they do.** The agent sees tasks, never pages. Only the runner holds a browser, so a hung bank never reaches the API. The guard sits on the one path every action takes, and it judges page names and the names drawn on controls, never what the page text says. And no model ever sits between an agent's request and a Submit button. The risky parts are three: the Submit press, the secrets typed at sign-in, and the pictures kept as evidence. [The architecture](docs/architecture.md) shows the data models and where each of those lives.
 
-- **Transfers over a bank's manager threshold.** Bank 1 asks a supervisor for an approval code above $2,500. Its table doesn't know that page, so the run escalates and a person finishes it.
-- **The factory serves bank 2 only.** Bank 1's table is written by hand from evidence, and its author fixes it when the bank changes.
-- **Desktop apps.** The runtime is a browser. The table-and-loop design doesn't depend on it, but nothing here drives a desktop window.
-- **Scale.** One runner, two runs at a time, on a laptop. The run is durable and the abstractions are per bank, but there's no cluster.
+## 2. How it meets the task and minimum scope
 
-[From 80% to 100%](docs/80-to-100.md) says what AI wrote, what changed, what was thrown away, and what unattended use still needs. [The architecture](docs/architecture.md) covers the data and where the risky parts live.
+**Two typed tasks, end to end.** `POST /tasks/check-balance` and `POST /tasks/transfer` each return one structured result, and `GET /banks` and `GET /tools` let an agent find them. Both run all the way through bank 1's UI ([`execute.test.ts`](tests/runs/execute.test.ts), [`transfer.test.ts`](tests/runs/transfer.test.ts)).
+
+**Driving the messy legacy UI.** The target ([`apps/bank`](apps/bank/src)) is a console straight out of 2003: framesets, nested tables, no test IDs, buttons built from styled `<font>`. The runtime ([`see()`](packages/runtime/src/see.ts), [`act.ts`](packages/runtime/src/act.ts)) waits until two pictures 700 ms apart match and nothing says loading. It finds a field by the label drawn next to it, and a button by its drawn name, taking the one nearest the section it means. Clicks use the real mouse, and are refused if anything covers the control. Bank 1's table came from [a walk through its pages](docs/evidence/bank-1/README.md), every row citing its picture; the walk found seven problems the synthetic tests had missed.
+
+**Outcomes kept apart.** Each kind reaches the caller its own way ([every response, with examples](apps/api/src/responses.ts)):
+
+| Kind | Example | The caller gets |
+|---|---|---|
+| The bank's own answer | "No member found with that number." | 422, `no_such_member` |
+| Recovered inside the run | a dialog, a promo, a swallowed click, a session that ended early | 200; the steps show it |
+| Hard failure | the bank is down, an error page | 503 `retryable: true`, or 502 |
+| A person has it | an unknown page, stuck, an unclear transfer | 409 `escalated` |
+
+On every page, the bank's answers are checked first, by its own words. Trouble means going back to home and starting again, at most twice and never after Submit. [The outcome tests](tests/outcomes/outcomes.test.ts) prove one of each, and `just hazards all` forces all 18 hazards.
+
+**Escalating when stuck.** A run stops and hands off to a person when it hits:
+- a page no row knows;
+- the same page three times;
+- a transfer the history doesn't show exactly once;
+- a guard refusal;
+- bank 1's supervisor page, for anything over $2,500.
+
+The API answers 409 with an `escalationId`. In the Console's Inbox, the escalation links to the run: every step, every masked picture, right up to where it stopped. A person resumes it, finishes it by hand, takes it over, or cancels it. [The escalation test](tests/escalation/escalations.test.ts) goes 409, then Resume, then 200.
+
+**Safety with regulated data.**
+- **An allowlist.** Each job has a short list of page, verb and control ([`allowlists/`](packages/guardrails/allowlists)), checked before every action. Pay now, Add payee, Change address, Waive fee and Close account are refused everywhere, and words that move money need a grant. The first refusal freezes the bank until an admin clears it.
+- **Irreversible actions.** A transfer stops on the review page. A person's approval issues a grant: single use, five minutes, checked against what the page shows. Submit gets pressed once. If the result is unclear, the crawler reads the history for the run's memo token and doesn't press again. Sending the same `idempotencyKey` returns the same run.
+- **Nothing sensitive kept.** Money, numbers and names are painted out of every picture, and masked in text and addresses, before anything is stored ([`mask.ts`](packages/runtime/src/mask.ts)). Inputs and codes are sealed. The password is only ever typed from a stored secret. [The PII suite](tests/pii/pii.test.ts) searches every row, object and log line for every seeded value.
+
+**Evidence, and scale.** Every page becomes a step with its masked picture and visible tree, shown in the Console. A bank is a table and a run is durable, but there's no machinery: one runner, two runs at a time.
+
+**The extension: reuse across tenants.** Bank 2 is the same vendor product, configured and branded differently. Until it's learned, `GET /banks` marks it `"stub": true`. The factory's Scout explores it and writes its table, and a Supervisor judges every action from its picture. The table is checked live, healthy and with a forced dialog, then a person approves it. [The factory](docs/factory.md) has the detail.
+
+## 3. From 80% to 100%
+
+AI wrote nearly all of this; the author set the requirements, reviewed everything, and cut what was overbuilt. [The full account](docs/80-to-100.md) has the detail.
+
+- **Thrown away: the first crawler.** It passed its tests and was still wrong, in a way the tests couldn't show. It read a JSON model of the DOM, written by an AI that had read the bank's source. So we rebuilt it from evidence: walk the rendered pages, keep the pictures, write a table from them. The first factory, where a Supervisor dictated steps and guessed at the bank's words, got the same treatment.
+- **Hardened:** Submit pressed once, ever. A guard that froze the bank whenever a code contained the username. Docs claiming safety the code never had. A browser turned away as a bot, only inside Docker. Hazards so frequent that a third of runs needed a person.
+- **Cut:** transfers over the manager threshold (a person finishes them); the factory for bank 1; desktop apps (the runtime is a browser, though the table and loop don't care); Vault.
+- **Before trusting this unattended:**
+  - more than one runner, in the cloud, behind a WAF;
+  - the manager-approval page as a row of its own;
+  - escalations that show a person the run's real inputs (today they're masked);
+  - the full hazard matrix, nightly;
+  - the factory on more banks of the same vendor.
