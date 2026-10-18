@@ -208,7 +208,8 @@ try {
         member,
         from,
         to,
-        ...(run.session ? { session: run.session } : {}),
+        // From a browser that has never signed in, as the service's first run will: a saved
+        // session met a sign-in the route never learned (run 16).
       },
     );
     for (const r of g.runs)
