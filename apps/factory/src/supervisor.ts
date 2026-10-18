@@ -21,6 +21,7 @@ const ANSWER_SCHEMA = {
     verdict: { type: 'string', enum: ['continue', 'wait', 'stop', 'end'] },
     says: {
       type: 'string',
+      maxLength: 700,
       description:
         'What you see, for the Scout, citing a frame such as f3; a correction if it went wrong',
     },
@@ -38,12 +39,10 @@ const ANSWER_SCHEMA = {
 const Answer = z.object({
   verdict: z.enum(['continue', 'wait', 'stop', 'end']),
   extendSeconds: z.number().int().min(0).max(120).optional(),
-  says: z
-    .string()
-    .trim()
-    .min(1)
-    .transform((s) => (s.length > 500 ? `${s.slice(0, 499)}…` : s)),
+  says: z.string().trim().min(1),
 });
+/** The longest "says": one frame cited, what is wrong, and the one next action. */
+export const SAYS_MAX = 700;
 
 /**
  * A conversation that can take a new question: a last assistant message that asked for tools whose
@@ -106,14 +105,15 @@ export function readJudgment(text: string): Judgment | string {
 }
 
 const SYSTEM = `You are the Supervisor. A Scout works a bank's staff console toward a goal, like a person at the desk; you never touch the browser. Your job is to get the goal reached, with a route code can follow: the screens from the bank's first screen to the goal's, each recognized by words it shows as text, each with its own steps. Do not let the run fail when the evidence shows a way forward. You are the Scout's coach and its skeptic.
-You have the evidence, and every judgment uses it. You see the picture after each action, the page's words and controls, everything the Scout did since your last judgment (each call, its result or its exact error), the close-ups it read from, and the Scout's own tool list. open_frame shows any earlier page, and memory_query asks memory. Cite at least one piece of evidence in every judgment: a frame, a record entry, or a close-up.
+You have the evidence, and every judgment uses it. You see the picture after each action, the page's words and controls, everything the Scout did since your last judgment (each call, its input, its result or its exact error), a close-up of what it acted on taken after it acted, the route so far, your own last judgments, and the Scout's tool list. open_frame shows any earlier page, and memory_query asks memory. Cite at least one piece of evidence in every judgment: a frame, a record entry, or a close-up.
+"says" is at most 700 characters: one frame cited, what is wrong if anything, and the one next action. Do not repeat what you have already said. Never suggest a way the evidence says will fail.
 When something fails:
 1. say plainly what went wrong, citing the evidence ("f6: press_item on i3 was refused; the record says the tool found text there; the close-up shows the Verify link");
 2. give your best explanation, as a hypothesis;
 3. tell the Scout the next test to try: another tool, another way, or another look;
 4. if the Scout made a mistake, confront it: "you left f3 without naming it", "you repeated the same refused action".
-"Impossible" is a hypothesis, not a finding. Before you answer stop or end, you must have re-read the record and opened the frames that matter, checked the Scout's tool list for another way, and seen at least two different approaches fail; say which, citing the evidence. When memory and the tool list disagree, have the Scout test which is true: memory is advice, and a lesson marked a guess has never been confirmed.
-When a tool's answer contradicts the picture, name it as a possible tool defect, saying exactly what disagreed, and send the Scout another way. Do not accept the tool's answer as the page's truth.
+"Impossible" is a hypothesis, not a finding. Before you answer stop or end, you must have re-read the record and opened the frames that matter, checked the Scout's tool list for another way, and seen at least two different approaches fail; say which, citing the evidence. When memory and the tool list disagree, have the Scout test which is true: a lesson is untested until a frame of this run shows it. Values shown as █ are hidden by us, not by the bank: the page shows other characters there. A lesson about hidden values describes our masking, never the bank.
+When a tool's answer contradicts the picture, name it as a possible tool defect, saying exactly what disagreed, and send the Scout another way after one retry at most. Do not accept the tool's answer as the page's truth.
 When the Scout says the goal is reached, you see its route. Check it against the frames: every screen crossed from the start is named by words it shows as text, and holds its own steps. If not, answer wait and tell the Scout exactly what to fix.
 Time is yours to keep: each judgment says how much of the goal's time is used and how much is left. When it is short, steer the Scout to the shortest way; do not stop early. When the goal is close and the clock is the only obstacle, extend it: extendSeconds adds up to 120 seconds, at most twice per goal; say which steps remain, citing the evidence. End only when the evidence shows the remaining steps cannot fit even with an extension, and say which steps those are.
 Your verdicts:
@@ -165,6 +165,8 @@ export function goalClock(ms: number, out: () => void) {
       return true;
     },
     usedMs: now,
+    /** How long the goal has left, extensions included. */
+    leftMs: () => Math.max(0, ms - now()),
     text: () =>
       `${Math.round(now() / 1000)} s used of ${Math.round(ms / 1000)} s, ${Math.max(0, Math.round((ms - now()) / 1000))} s left`,
   };
@@ -208,20 +210,26 @@ export function supervisor(o: {
   /** The Scout's tools, as the Scout is given them: what it can do, not what to do. */
   scoutTools?: { name: string; description: string }[];
 }) {
-  let conversation: Conversation = [];
   let unreadable = 0;
   const tools = toolsOf('supervisor', o.tools ?? []);
-  let first = true;
-
+  /** Every judgment so far, in short: the last three in full go with each new judgment. */
+  const past: { ref: string | null; action: string; verdict: string; says: string }[] = [];
+  /** The Scout's tools in a line each: what it can do. */
+  const toolList = (o.scoutTools ?? [])
+    .map((t) => `- ${t.name}: ${t.description.split(/(?<=\.)\s/)[0]}`)
+    .join('\n');
   let goal = o.goal;
-  let goalTold = false;
   return {
-    /** The goal now being worked toward, the one the clock times: told at the next judgment. */
+    /** The goal now being worked toward, the one the clock times. */
     goalNow(g: string) {
-      if (g !== goal) goalTold = false;
       goal = g;
     },
-    /** The judgment of one action, before the next: what the Scout reads, and what code enforces. */
+    /**
+     * The judgment of one action, before the next: what the Scout reads, and what code enforces.
+     * Each judgment starts fresh from one packet of the same size: the goal and its time, what the
+     * Scout can do, what memory knows, the route so far, the last three judgments, what the Scout
+     * did since, and the page now. Its record, its route and its frames are its memory.
+     */
     async judge(j: Judging): Promise<Judgment> {
       const view = {
         frame: j.ref,
@@ -229,68 +237,89 @@ export function supervisor(o: {
           .split('\n')
           .map(leaf)
           .filter((t): t is string => !!t),
-        controls: j.frame.controls.map((c) => `${c.role} "${c.name}"`),
+        controls: j.frame.controls.map((c, k) => `c${k + 1} ${c.role} "${c.name}"`),
         ...(j.frame.dialogs.length ? { dialogs: j.frame.dialogs } : {}),
       };
-      const said = await turn(o.agent, {
-        system: SYSTEM,
-        conversation,
-        say: [
-          ...(!goalTold ? [`The goal now, the one the clock times: ${goal}`] : []),
-          ...(first
-            ? [
-                ...(o.scoutTools?.length
-                  ? [
-                      `The Scout's tools, as it is given them:\n${o.scoutTools.map((t) => `- ${t.name}: ${t.description}`).join('\n')}`,
-                    ]
-                  : []),
-                ...(o.knowledge ? [`What memory knows:\n${o.knowledge}`] : []),
-              ]
-            : []),
-          ...(j.record.length
-            ? [
-                `Everything the Scout did since your last judgment, in order:\n${recordText(j.record)}`,
-              ]
-            : []),
-          ...(o.clock ? [`Time: ${o.clock.text()}.`] : []),
-          `The Scout: ${j.action}. Its reason: ${j.why}.`,
-          `The page now, ${j.ref ?? 'not kept'}:\n${JSON.stringify(view)}`,
-          ...(j.route
-            ? [
-                `The Scout's route so far, to check against the frames before the goal counts:\n${routeText(j.route)}`,
-              ]
-            : []),
-        ].join('\n\n'),
-        image: j.frame.picture,
-        // The close-ups the Scout read from, after the page itself.
-        images: j.record.flatMap((e) => (e.image ? [e.image] : [])),
-        tools,
-        calls: tools.length ? 3 : undefined,
-        answer: ANSWER_SCHEMA,
-        maxTokens: 8000,
-      });
-      first = false;
-      goalTold = true;
-      conversation = said.conversation;
-      let text = said.text;
-      // A judgment that spent its calls on tools (opening frames, asking memory) ends with no
-      // answer. One more call, with no tools, asks only for the verdict: a turn always answers.
-      if (!text.trim() && tools.length) {
-        const answered = await turn(o.agent, {
+      const checking = j.action.startsWith('goal reached');
+      const say = [
+        `The goal, the one the clock times: ${goal}`,
+        ...(o.clock ? [`Time: ${o.clock.text()}.`] : []),
+        ...(toolList ? [`The Scout's tools:\n${toolList}`] : []),
+        ...(o.knowledge
+          ? [`What memory knows (a proposed lesson is untested):\n${o.knowledge}`]
+          : []),
+        ...(j.route?.rows.length
+          ? [
+              `${checking ? "The Scout's route, to check against the frames before the goal counts" : 'The route so far'}:\n${routeText(j.route)}`,
+            ]
+          : []),
+        ...(past.length
+          ? [
+              `Your last judgments:\n${past
+                .slice(-3)
+                .map((p) => `- ${p.ref ?? '-'} after "${p.action}": ${p.verdict}. ${p.says}`)
+                .join('\n')}`,
+            ]
+          : []),
+        ...(j.record.length
+          ? [`What the Scout did since your last judgment, in order:\n${recordText(j.record)}`]
+          : []),
+        `The Scout: ${j.action}. Its reason: ${j.why}.`,
+        `The page now, ${j.ref ?? 'not kept'}:\n${JSON.stringify(view)}`,
+      ].join('\n\n');
+      const ask = (conversation: Conversation, words: string, withTools: boolean) =>
+        turn(o.agent, {
           system: SYSTEM,
-          conversation: answerable(conversation),
-          say: 'Your calls for this action are used up. Give your verdict now, as the JSON answer only.',
+          conversation,
+          say: words,
+          ...(conversation.length
+            ? {}
+            : {
+                image: j.frame.picture,
+                // The close-ups of what the Scout acted on, taken after it acted.
+                images: j.record.flatMap((e) => (e.image ? [e.image] : [])),
+              }),
+          ...(withTools && tools.length ? { tools, calls: 3 } : {}),
           answer: ANSWER_SCHEMA,
           maxTokens: 8000,
         });
-        conversation = answered.conversation;
-        text = answered.text;
+      let said = await ask([], say, true);
+      let thinking = said.thinking;
+      // A judgment that spent its calls on tools (opening frames, asking memory) ends with no
+      // answer. One more call, with no tools, asks only for the verdict: a turn always answers.
+      if (!said.text.trim() && tools.length) {
+        said = await ask(
+          answerable(said.conversation),
+          'Your calls for this action are used up. Give your verdict now, as the JSON answer only.',
+          false,
+        );
+        thinking += `\n${said.thinking}`;
       }
-      const a = readJudgment(text);
+      let a = readJudgment(said.text);
+      // Over-long words are sent back once to be shortened, never cut unseen.
+      if (typeof a !== 'string' && a.says.length > SAYS_MAX) {
+        said = await ask(
+          answerable(said.conversation),
+          `Your "says" is ${a.says.length} characters; the Scout reads at most ${SAYS_MAX}. Give the same verdict, with "says" under ${SAYS_MAX}: one frame cited, what is wrong if anything, the one next action.`,
+          false,
+        );
+        thinking += `\n${said.thinking}`;
+        a = readJudgment(said.text);
+        if (typeof a !== 'string' && a.says.length > SAYS_MAX)
+          a = {
+            ...a,
+            says: `${a.says.slice(0, SAYS_MAX - 40)} (cut by the factory at ${SAYS_MAX})`,
+          };
+      }
+      if (thinking.trim())
+        await o.trail.step(
+          { name: 'supervisor thought', action: j.ref ?? '-', outcome: thinking.slice(0, 12_000) },
+          null,
+        );
       if (typeof a === 'string') {
         unreadable++;
         // What the model said, so the evidence shows why it could not be read.
-        const said300 = text.trim() ? text.trim().slice(0, 300) : '(nothing)';
+        const said300 = said.text.trim() ? said.text.trim().slice(0, 300) : '(nothing)';
         await o.trail.step(
           { name: 'supervisor', action: 'wait', outcome: `unreadable: ${a}. It said: ${said300}` },
           null,
@@ -300,21 +329,22 @@ export function supervisor(o: {
           : { verdict: 'wait', says: 'The Supervisor could not be read; look again.' };
       }
       unreadable = 0;
+      past.push({ ref: j.ref, action: j.action, verdict: a.verdict, says: a.says });
       await o.trail.step({ name: 'supervisor', action: a.verdict, outcome: a.says }, null);
       return a;
     },
 
-    /** Where a failed run stopped and why, from its frames, in the same conversation. */
+    /** Where a failed run stopped and why, from its judgments and its frames. */
     async diagnose(): Promise<string> {
       const said = await turn(o.agent, {
         system: SYSTEM,
-        conversation,
-        say: DIAGNOSE,
+        say: `The goal: ${goal}\n\nEvery judgment of this goal, in order:\n${past
+          .map((p) => `- ${p.ref ?? '-'} after "${p.action}": ${p.verdict}. ${p.says}`)
+          .join('\n')}\n\n${DIAGNOSE}`,
         tools,
         calls: tools.length ? 4 : undefined,
         maxTokens: 4000,
       });
-      conversation = said.conversation;
       await o.trail.step({ name: 'supervisor', action: 'diagnosis', outcome: said.text }, null);
       return said.text;
     },
