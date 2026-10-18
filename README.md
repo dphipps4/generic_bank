@@ -108,4 +108,5 @@ AI wrote nearly all of this code. The author set the requirements, reviewed the 
 - the bank's manager-approval page as a row of its own;
 - escalations that show a person the run's real inputs (today they're masked, so taking over a transfer means asking the caller for the member and amount);
 - the full hazard matrix, run every night;
+- a step that scrolls until an item is drawn, for the long virtualized lists single-page apps use, where only the visible rows exist;
 - the factory learning more banks of the same vendor.
