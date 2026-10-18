@@ -128,10 +128,14 @@ describe('API clients in the Console', () => {
     const hooks = (
       res!.options.actions as { show: { after: ((r: unknown) => Promise<unknown> | unknown)[] } }
     ).show.after;
-    let out: unknown = { record: { id: 'r9', params: { secretHash: 'h', name: 'n' } } };
+    let out: unknown = {
+      record: { id: 'r9', params: { secretHash: 'h', name: 'n', 'scopes.0': 'tasks:read' } },
+    };
     for (const hook of hooks) out = await hook(out);
     expect((out as { record: { params: object } }).record.params).toEqual({
       name: 'n',
+      'scopes.0': 'tasks:read',
+      scopeNames: 'tasks:read',
       codeOnce: 'gbcode_x',
     });
   });

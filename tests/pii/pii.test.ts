@@ -119,11 +119,11 @@ beforeAll(async () => {
   inboxPages(consoleApp, {
     sql: db,
     answerKey: ANSWER_KEY,
-    whoIs: () => ({ email: 'approver@generic-bank.local', role: 'approver' }),
+    whoIs: () => ({ email: 'admin@generic-bank.local', role: 'admin' }),
   });
   await consoleApp.ready();
 
-  // The person at the staff phone, and the approver: each open task is answered through the Console.
+  // The person at the staff phone, and the admin who approves: each open task is answered through the Console.
   answering = setInterval(async () => {
     const open = await db.query<{ id: string; kind: string; bank: string }>(
       `SELECT h.id, h.kind, r.bank FROM "HumanTask" h JOIN "TaskRun" r ON r.id = h."runId" WHERE h.status = 'open'`,

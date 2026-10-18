@@ -78,7 +78,7 @@ describe('the Freezes page', () => {
   it('lets no one but an admin clear a freeze', async () => {
     const { freezeId } = await trip('r_role', 'pressed Pay now');
     try {
-      who = { email: 'ann@generic-bank.local', role: 'approver' };
+      who = { email: 'ann@generic-bank.local', role: 'viewer' };
       expect((await app.inject({ url: '/freezes' })).body).not.toContain(
         `/freezes/${freezeId}/clear`,
       );

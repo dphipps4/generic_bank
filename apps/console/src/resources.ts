@@ -26,6 +26,20 @@ export function stripSecrets<T extends ActionResponse>(response: T): T {
   return response;
 }
 
+/** An API client's scopes by name, in one column: AdminJS would show a list as a count. */
+export function withScopeNames<T extends ActionResponse>(response: T): T {
+  for (const r of [response.record, ...(response.records ?? [])]) {
+    if (!r?.params) continue;
+    const p = r.params;
+    p.scopeNames = Object.keys(p)
+      .filter((k) => /^scopes\.\d+$/.test(k))
+      .sort((a, b) => Number(a.split('.')[1]) - Number(b.split('.')[1]))
+      .map((k) => String(p[k]))
+      .join(', ');
+  }
+  return response;
+}
+
 // The runs, the inbox, approvals and freezes have pages of their own. Here: what a person manages
 // (API clients and Console users) and the audit log, read-only.
 const MODELS: { name: string; sortBy: string; nav: string; evidence?: boolean }[] = [
@@ -55,12 +69,15 @@ export function resources(client: PrismaClient, apiClients: Record<string, objec
       ...(m.name === 'ApiClient'
         ? {
             ...apiClients,
+            list: { after: [stripSecrets, withScopeNames] },
             // Strip hashes first, then add the once-only fields: both run, in order.
             show: {
               ...(apiClients.show ?? {}),
-              after: [stripSecrets, (apiClients.show as { after?: unknown })?.after].filter(
-                Boolean,
-              ),
+              after: [
+                stripSecrets,
+                withScopeNames,
+                (apiClients.show as { after?: unknown })?.after,
+              ].filter(Boolean),
             },
             edit: { isAccessible: false },
             delete: { isAccessible: false },
@@ -82,7 +99,16 @@ export function resources(client: PrismaClient, apiClients: Record<string, objec
                 createdBy: { isVisible: { list: true, show: true, edit: false, filter: true } },
                 createdAt: { isVisible: { list: true, show: true, edit: false, filter: true } },
                 revokedAt: { isVisible: { list: true, show: true, edit: false, filter: true } },
-                scopes: { isArray: true, availableValues: SCOPE_CHOICES },
+                scopes: {
+                  isArray: true,
+                  availableValues: SCOPE_CHOICES,
+                  isVisible: { list: false, show: false, edit: true, filter: false },
+                },
+                scopeNames: {
+                  type: 'string',
+                  isVisible: { list: true, show: true, edit: false, filter: false },
+                  position: 2,
+                },
                 // Shown once, on the client's page right after it is created; never stored.
                 clientSecretOnce: {
                   type: 'string',

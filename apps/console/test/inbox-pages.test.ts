@@ -19,7 +19,7 @@ import type { Viewer } from '../src/pages/layout.js';
 const KEY = 'a'.repeat(40);
 let db: Awaited<ReturnType<typeof controlDb>>;
 let app: ReturnType<typeof Fastify>;
-let who: Viewer | null = { email: 'ann@generic-bank.local', role: 'approver' };
+let who: Viewer | null = { email: 'ann@generic-bank.local', role: 'admin' };
 const restarted: string[] = [];
 
 const input = { bank: 'generic', memberId: '40017732', account: '7890' };
@@ -223,7 +223,7 @@ describe('the inbox', () => {
     who = { email: 'val@generic-bank.local', role: 'viewer' };
     try {
       const page = (await app.inject({ url: '/inbox' })).body;
-      expect(page).toContain('Approvers answer here.');
+      expect(page).toContain('An admin answers here.');
       expect(page).not.toContain('<form');
       expect(page).toContain('$1,250.50');
       expect((await post(task, 'answer', { code: '120034' })).statusCode).toBe(403);
@@ -234,7 +234,7 @@ describe('the inbox', () => {
       expect((await app.inject({ url: '/inbox' })).headers.location).toBe('/admin/login');
       expect((await post(task, 'answer', { code: '120034' })).statusCode).toBe(401);
     } finally {
-      who = { email: 'ann@generic-bank.local', role: 'approver' };
+      who = { email: 'ann@generic-bank.local', role: 'admin' };
     }
     const open = await db.query<{ status: string }>(
       'SELECT status FROM "HumanTask" WHERE id = $1',

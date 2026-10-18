@@ -26,7 +26,7 @@ beforeAll(async () => {
   inboxPages(consoleApp, {
     sql: db,
     answerKey: ANSWER_KEY,
-    whoIs: () => ({ email: 'staff@test', role: 'approver' }),
+    whoIs: () => ({ email: 'staff@test', role: 'admin' }),
   });
   await consoleApp.ready();
   // The person at the staff phone: answers any open staff-code task with the code the bank sent.

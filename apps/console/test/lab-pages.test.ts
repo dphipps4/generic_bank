@@ -114,7 +114,7 @@ describe('the hazard lab', () => {
     const html = (await app.inject({ url: '/lab' })).body;
     for (const h of OUTCOMES['check-balance'].hazards)
       expect(html).toContain(`name="hazards" value="${h.hazard}"`);
-    who = { email: 'val@generic-bank.local', role: 'approver' };
+    who = { email: 'val@generic-bank.local', role: 'viewer' };
     const n = started.length;
     expect((await app.inject({ url: '/lab' })).body).toContain(
       'Only an admin starts runs in the hazard lab.',

@@ -14,6 +14,7 @@ import {
   type OutcomeTask,
 } from '@gb/contracts';
 import { type OAuth, TASK_SCOPES } from '@gb/oauth';
+import { HAZARD_HEADER, hazardHeader } from '@gb/runs';
 import { waitingTooLong } from './inbox.js';
 import { esc, page, type Sql, type Viewer } from './layout.js';
 import { FRAMES_POPUP, framesButton, framesOf } from './runs.js';
@@ -32,7 +33,19 @@ export interface LabDeps {
   whoIs(req: FastifyRequest): Viewer | null;
   /** Starts the run through the Task API's lab door. */
   start(run: LabRun): Promise<Started>;
+  /** Signs a hazard for a bank's address, so a person sees it in their own browser. */
+  hazardKey?: string;
 }
+
+/** The arguments that force one hazard on a bank page in a person's browser, for the rest of the visit. */
+export const hazardArgs = (h: HazardName, key: string) =>
+  `?hazards=${encodeURIComponent(hazardHeader([h], key)[HAZARD_HEADER]!)}`;
+
+/** Copies a button's arguments, and says so on the button. */
+const COPY = `<script>document.addEventListener('click', function (e) {
+  var b = e.target.closest('button[data-args]'); if (!b) return;
+  navigator.clipboard.writeText(b.dataset.args).then(function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy arguments'; }, 1500); });
+});</script>`;
 
 const TASK_NAMES: Record<OutcomeTask, string> = { 'check-balance': 'Check Balance' };
 
@@ -93,7 +106,7 @@ export function labPages(app: FastifyInstance, deps: LabDeps) {
     const hazards = o.hazards
       .map(
         (h) =>
-          `<tr data-hazard="${esc(h.hazard)}"><td><input type="checkbox" name="hazards" value="${esc(h.hazard)}" id="h-${esc(h.hazard)}"></td><td><label for="h-${esc(h.hazard)}"><code>${esc(h.hazard)}</code></label></td><td>${esc(h.does)}</td><td>${outcome(h.expected)}</td></tr>`,
+          `<tr data-hazard="${esc(h.hazard)}"><td><input type="checkbox" name="hazards" value="${esc(h.hazard)}" id="h-${esc(h.hazard)}"></td><td><label for="h-${esc(h.hazard)}"><code>${esc(h.hazard)}</code></label></td><td>${esc(h.does)}</td><td>${outcome(h.expected)}</td>${deps.hazardKey ? `<td><button type="button" class="quiet" data-args="${esc(hazardArgs(h.hazard, deps.hazardKey))}">Copy arguments</button></td>` : ''}</tr>`,
       )
       .join('');
     const rows = (
@@ -120,14 +133,14 @@ export function labPages(app: FastifyInstance, deps: LabDeps) {
       )
     ).join('');
 
-    return wrap(`${note}<p class="soft">Each result beside a hazard is the one the outcome table proves on Generic Bank, with the hazard forced alone on the healthy member. Forced hazards reach the bank in a header signed by the Runner.</p>
+    return wrap(`${note}<p class="soft">Each result beside a hazard is the one the outcome table proves on Generic Bank, with the hazard forced alone on the healthy member. Forced hazards reach the bank in a header signed by the Runner.${deps.hazardKey ? ' To see a hazard yourself, copy its arguments and add them to the end of a bank page’s address: the bank keeps it until you sign out, or open any page with <code>?hazards=</code> alone.' : ''}</p>
 <form method="post" action="/lab">
 <h2>Bank and task</h2>
 <div class="row"><select name="bank" aria-label="Bank">${bankPick}</select> <select name="task" aria-label="Task">${(Object.keys(OUTCOMES) as OutcomeTask[]).map((t) => `<option value="${t}">${TASK_NAMES[t]}</option>`).join('')}</select></div>
 <h2>Member</h2>
 <table><tr><th></th><th>Member</th><th>Expected with nothing forced</th></tr>${members}</table>
 <h2>Hazards</h2>
-<table><tr><th></th><th>Hazard</th><th>What the bank does</th><th>Expected, forced alone</th></tr>${hazards}</table>
+<table><tr><th></th><th>Hazard</th><th>What the bank does</th><th>Expected, forced alone</th>${deps.hazardKey ? '<th>In your browser</th>' : ''}</tr>${hazards}</table>${COPY}
 <p><button>Start the run</button></p>
 </form>
 <h2>Recent lab runs</h2>
