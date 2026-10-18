@@ -18,6 +18,7 @@ const cfg = loadConfig(
     RUN_SEAL_KEY: secret(),
     ANSWER_SEAL_KEY: secret(),
     EVIDENCE_DIR: z.string().min(1).default('/data/evidence'),
+    SESSIONS_DIR: z.string().min(1).default('/data/sessions'),
     BANK_SERVICE_PASSWORD: z.string().min(16),
     BANK_OPERATOR_ID: z.string().min(8),
     BANK_SUPERVISOR_ID: z.string().min(8),
@@ -46,6 +47,7 @@ registerTaskWorkflow(
   {
     sql: control,
     store,
+    sessions: cfg.SESSIONS_DIR,
     sealKey: cfg.RUN_SEAL_KEY,
     answerKey: cfg.ANSWER_SEAL_KEY,
     // The staff service account: the same operator at every bank, from the Runner's secrets.

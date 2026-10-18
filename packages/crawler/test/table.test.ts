@@ -55,8 +55,9 @@ describe("bank 1's table, against its evidence", () => {
   });
   it("finds where the member's name shows, on happy/10 and happy/11", () => {
     const [results, summary] = bank1.reads.name;
-    expect(readOf(results!, '********').exec(lines('happy/10'))?.groups?.name).toBe('********');
-    expect(readOf(summary!, '********').exec(lines('happy/11'))?.groups?.name).toBe('********');
+    // Masked letter for letter: the member number is eight, the happy member's name six.
+    expect(readOf(results!, '********').exec(lines('happy/10'))?.groups?.name).toBe('******');
+    expect(readOf(summary!, '********').exec(lines('happy/11'))?.groups?.name).toBe('******');
   });
 
   it('has a row for every end, and nothing to do on an end for its goal', () => {

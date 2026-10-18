@@ -40,6 +40,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 COPY --from=build --chown=node:node /app /app
 # Memory's embedding model, and the evidence (frames as files), are kept in volumes mounted
 # here; each takes its directory's owner.
-RUN mkdir -p /models /data/evidence && chown node:node /models /data/evidence
+RUN mkdir -p /models /data/evidence /data/sessions && chown node:node /models /data/evidence /data/sessions
 ENV NODE_ENV=production ADMIN_JS_SKIP_BUNDLE=true
 USER node

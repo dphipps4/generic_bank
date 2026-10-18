@@ -77,6 +77,8 @@ export interface PageOptions {
   headers?: Record<string, string>;
   /** What to do with a JavaScript dialog; dismissing it is the non-committal answer. */
   dialog?: (d: Dialog) => Promise<void>;
+  /** Cookies to start from: a file `context.storageState` wrote. */
+  session?: string;
 }
 
 /** A page of its own (its own cookies), as Chrome on an Apple-silicon Mac. */
@@ -85,6 +87,7 @@ export async function newPage(browser: Browser, o: PageOptions = {}): Promise<Pa
     viewport: { width: 1280, height: 900 },
     locale: 'en-US',
     ...(o.headers && { extraHTTPHeaders: o.headers }),
+    ...(o.session && { storageState: o.session }),
   });
   // Nothing waits long by default: a crawler that waits sets its own limit.
   context.setDefaultTimeout(10_000);

@@ -1,6 +1,8 @@
 // One task run, carried out: a browser held for the run, the bank's crawler, every page it sees
 // recorded and its masked frame stored, a person asked when only a person can answer, and exactly
 // one result.
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   type Action,
   checkBalance,
@@ -47,6 +49,11 @@ export interface RunDeps {
   pollMs?: number;
   now?: () => Date;
   headers?: Record<string, string>;
+  /**
+   * Where each bank's cookies are kept between runs, one file per bank: the bank remembers a
+   * workstation for 30 days after a code, so a code is entered once. Only the runner reads it.
+   */
+  sessions?: string;
 }
 
 /** At most this many frames per run (plan, §9). */
@@ -161,12 +168,16 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
   // fresh one if it was lost meanwhile.
   let browser: Browser | null = null;
   let page: Page | null = null;
+  const cookies = deps.sessions ? join(deps.sessions, `${run.bank}.json`) : undefined;
   const hold = async (): Promise<{ s: Session; fresh: boolean }> => {
     if (browser?.isConnected() && page && !page.isClosed())
       return { s: sessionOf(page), fresh: false };
     await browser?.close().catch(() => undefined);
     browser = await (deps.launch ?? launch)();
-    page = await newPage(browser, deps.headers ? { headers: deps.headers } : {});
+    page = await newPage(browser, {
+      ...(deps.headers && { headers: deps.headers }),
+      ...(cookies && existsSync(cookies) && { session: cookies }),
+    });
     return { s: sessionOf(page), fresh: true };
   };
 
@@ -197,6 +208,12 @@ export async function executeRun(runId: string, deps: RunDeps): Promise<Ending> 
   } catch (e) {
     ending = endingOf(e);
   } finally {
+    // The bank's cookies, kept for the next run: its trust in this workstation among them.
+    if (cookies && page)
+      await (page as Page)
+        .context()
+        .storageState({ path: cookies })
+        .catch(() => undefined);
     await (browser as Browser | null)?.close().catch(() => undefined);
   }
   // A refusal ends the run as a trip, whatever came of the error: the bank is frozen with the

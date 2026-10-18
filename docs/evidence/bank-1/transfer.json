@@ -60,18 +60,18 @@
    "frame": "12",
    "picture": "transfer/12.png",
    "did": "press \"Transfer Funds\" near \"Member Summary\"",
-   "at": "2026-10-17T18:27:45.687Z",
-   "address": "http://localhost:65176/corelink/console",
-   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ********\":\n      - cell \"Member ******** · ********\"\n- table:\n  - rowgroup:\n    - 'row \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n      - 'cell \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n        - table:\n          - rowgroup:\n            - 'row \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n              - 'cell \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                      - 'cell \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                              - 'cell \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                      - 'cell \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                              - 'cell \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                                      - 'cell \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Transfer Funds\":\n                                                              - cell \"Transfer Funds\"\n                                                        - table:\n                                                          - rowgroup:\n                                                            - 'row \"From: Choose an account\"':\n                                                              - cell \"From:\"\n                                                              - cell \"Choose an account\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\" [selected]\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\"\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\"\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - 'row \"To: Choose an account\"':\n                                                              - cell \"To:\"\n                                                              - cell \"Choose an account\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\" [selected]\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\"\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\"\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - row \"Amount:\":\n                                                              - cell \"Amount:\"\n                                                              - cell:\n                                                                - textbox\n                                                            - row \"Memo:\":\n                                                              - cell \"Memo:\"\n                                                              - cell:\n                                                                - textbox\n                                                            - row \"Continue\":\n                                                              - cell\n                                                              - cell \"Continue\":\n                                                                - table:\n                                                                  - rowgroup:\n                                                                    - row \"Continue\":\n                                                                      - cell \"Continue\"\n                                                        - paragraph:\n                                                          - link \"Back to member summary\":\n                                                            - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "at": "2026-10-18T03:03:18.672Z",
+   "address": "http://localhost:56165/corelink/console",
+   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good morning, ********\":\n      - cell\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good morning, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ******\":\n      - cell \"Member ******** · ******\"\n- table:\n  - rowgroup:\n    - 'row \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n      - 'cell \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n        - table:\n          - rowgroup:\n            - 'row \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n              - 'cell \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                      - 'cell \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                              - 'cell \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                      - 'cell \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                              - 'cell \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                                      - 'cell \"Transfer Funds From: Choose an account To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Transfer Funds\":\n                                                              - cell \"Transfer Funds\"\n                                                        - table:\n                                                          - rowgroup:\n                                                            - 'row \"From: Choose an account\"':\n                                                              - cell \"From:\"\n                                                              - cell \"Choose an account\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\" [selected]\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\"\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\"\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - 'row \"To: Choose an account\"':\n                                                              - cell \"To:\"\n                                                              - cell \"Choose an account\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\" [selected]\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\"\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\"\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - row \"Amount:\":\n                                                              - cell \"Amount:\"\n                                                              - cell:\n                                                                - textbox\n                                                            - row \"Memo:\":\n                                                              - cell \"Memo:\"\n                                                              - cell:\n                                                                - textbox\n                                                            - row \"Continue\":\n                                                              - cell\n                                                              - cell \"Continue\":\n                                                                - table:\n                                                                  - rowgroup:\n                                                                    - row \"Continue\":\n                                                                      - cell \"Continue\"\n                                                        - paragraph:\n                                                          - link \"Back to member summary\":\n                                                            - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
    "controls": [
     {
      "role": "link",
      "name": "Member Search",
      "box": {
       "x": 11,
-      "y": 72,
-      "w": 78.6875,
-      "h": 18
+      "y": 100,
+      "w": 118.03125,
+      "h": 17
      }
     },
     {
@@ -79,9 +79,9 @@
      "name": "Transfer Funds",
      "box": {
       "x": 11,
-      "y": 90,
-      "w": 73.921875,
-      "h": 18
+      "y": 129.75,
+      "w": 110.890625,
+      "h": 17
      }
     },
     {
@@ -89,49 +89,9 @@
      "name": "Statements",
      "box": {
       "x": 11,
-      "y": 112,
-      "w": 57.84375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Reports",
-     "box": {
-      "x": 11,
-      "y": 150,
-      "w": 38.390625,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Admin",
-     "box": {
-      "x": 11,
-      "y": 168,
-      "w": 31.875,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Fee Waivers",
-     "box": {
-      "x": 11,
-      "y": 186,
-      "w": 60.359375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Address Change",
-     "box": {
-      "x": 11,
-      "y": 204,
-      "w": 81.296875,
-      "h": 18
+      "y": 159.5,
+      "w": 86.765625,
+      "h": 17
      }
     },
     {
@@ -139,77 +99,77 @@
      "name": "Sign Out",
      "box": {
       "x": 11,
-      "y": 240,
-      "w": 43.796875,
-      "h": 18
+      "y": 210.25,
+      "w": 65.703125,
+      "h": 17
      }
     },
     {
      "role": "link",
      "name": "Back to member summary",
      "box": {
-      "x": 427.5,
-      "y": 265,
-      "w": 133.59375,
-      "h": 18
+      "x": 263,
+      "y": 387.25,
+      "w": 200.390625,
+      "h": 17
      }
     },
     {
      "role": "textbox",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 176,
-      "w": 97,
-      "h": 21
+      "x": 344.0625,
+      "y": 261.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "textbox",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 203,
-      "w": 181,
-      "h": 21
+      "x": 344.0625,
+      "y": 298.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "select",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 126,
-      "w": 411,
-      "h": 19
+      "x": 344.0625,
+      "y": 187.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "select",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 151,
-      "w": 411,
-      "h": 19
+      "x": 344.0625,
+      "y": 224.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "clickable",
      "name": "Continue",
      "box": {
-      "x": 484.546875,
-      "y": 230,
-      "w": 68.6875,
-      "h": 20
+      "x": 344.0625,
+      "y": 335.5,
+      "w": 91.03125,
+      "h": 29.75
      }
     }
    ],
    "dialogs": [],
    "animated": [
     {
-     "x": 71,
-     "y": 110,
+     "x": 100,
+     "y": 157,
      "w": 38,
      "h": 18
     }
@@ -219,18 +179,18 @@
    "frame": "13",
    "picture": "transfer/13.png",
    "did": "choose \"Everyday Checking\" in \"From\"",
-   "at": "2026-10-17T18:27:48.349Z",
-   "address": "http://localhost:65176/corelink/console",
-   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ********\":\n      - cell \"Member ******** · ********\"\n- table:\n  - rowgroup:\n    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n        - table:\n          - rowgroup:\n            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Transfer Funds\":\n                                                              - cell \"Transfer Funds\"\n                                                        - table:\n                                                          - rowgroup:\n                                                            - 'row \"From: Everyday Checking, Account ending in ****, available ********\"':\n                                                              - cell \"From:\"\n                                                              - cell \"Everyday Checking, Account ending in ****, available ********\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\"\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\" [selected]\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\"\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - 'row \"To: Choose an account\"':\n                                                              - cell \"To:\"\n                                                              - cell \"Choose an account\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\" [selected]\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\"\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\"\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - row \"Amount:\":\n                                                              - cell \"Amount:\"\n                                                              - cell:\n                                                                - textbox\n                                                            - row \"Memo:\":\n                                                              - cell \"Memo:\"\n                                                              - cell:\n                                                                - textbox\n                                                            - row \"Continue\":\n                                                              - cell\n                                                              - cell \"Continue\":\n                                                                - table:\n                                                                  - rowgroup:\n                                                                    - row \"Continue\":\n                                                                      - cell \"Continue\"\n                                                        - paragraph:\n                                                          - link \"Back to member summary\":\n                                                            - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "at": "2026-10-18T03:03:21.647Z",
+   "address": "http://localhost:56165/corelink/console",
+   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good morning, ********\":\n      - cell\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good morning, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ******\":\n      - cell \"Member ******** · ******\"\n- table:\n  - rowgroup:\n    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n        - table:\n          - rowgroup:\n            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Choose an account Amount: Memo: Continue Back to member summary\"':\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Transfer Funds\":\n                                                              - cell \"Transfer Funds\"\n                                                        - table:\n                                                          - rowgroup:\n                                                            - 'row \"From: Everyday Checking, Account ending in ****, available ********\"':\n                                                              - cell \"From:\"\n                                                              - cell \"Everyday Checking, Account ending in ****, available ********\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\"\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\" [selected]\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\"\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - 'row \"To: Choose an account\"':\n                                                              - cell \"To:\"\n                                                              - cell \"Choose an account\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\" [selected]\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\"\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\"\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - row \"Amount:\":\n                                                              - cell \"Amount:\"\n                                                              - cell:\n                                                                - textbox\n                                                            - row \"Memo:\":\n                                                              - cell \"Memo:\"\n                                                              - cell:\n                                                                - textbox\n                                                            - row \"Continue\":\n                                                              - cell\n                                                              - cell \"Continue\":\n                                                                - table:\n                                                                  - rowgroup:\n                                                                    - row \"Continue\":\n                                                                      - cell \"Continue\"\n                                                        - paragraph:\n                                                          - link \"Back to member summary\":\n                                                            - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
    "controls": [
     {
      "role": "link",
      "name": "Member Search",
      "box": {
       "x": 11,
-      "y": 72,
-      "w": 78.6875,
-      "h": 18
+      "y": 100,
+      "w": 118.03125,
+      "h": 17
      }
     },
     {
@@ -238,9 +198,9 @@
      "name": "Transfer Funds",
      "box": {
       "x": 11,
-      "y": 90,
-      "w": 73.921875,
-      "h": 18
+      "y": 129.75,
+      "w": 110.890625,
+      "h": 17
      }
     },
     {
@@ -248,49 +208,9 @@
      "name": "Statements",
      "box": {
       "x": 11,
-      "y": 112,
-      "w": 57.84375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Reports",
-     "box": {
-      "x": 11,
-      "y": 150,
-      "w": 38.390625,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Admin",
-     "box": {
-      "x": 11,
-      "y": 168,
-      "w": 31.875,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Fee Waivers",
-     "box": {
-      "x": 11,
-      "y": 186,
-      "w": 60.359375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Address Change",
-     "box": {
-      "x": 11,
-      "y": 204,
-      "w": 81.296875,
-      "h": 18
+      "y": 159.5,
+      "w": 86.765625,
+      "h": 17
      }
     },
     {
@@ -298,77 +218,77 @@
      "name": "Sign Out",
      "box": {
       "x": 11,
-      "y": 240,
-      "w": 43.796875,
-      "h": 18
+      "y": 210.25,
+      "w": 65.703125,
+      "h": 17
      }
     },
     {
      "role": "link",
      "name": "Back to member summary",
      "box": {
-      "x": 427.5,
-      "y": 265,
-      "w": 133.59375,
-      "h": 18
+      "x": 263,
+      "y": 387.25,
+      "w": 200.390625,
+      "h": 17
      }
     },
     {
      "role": "textbox",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 176,
-      "w": 97,
-      "h": 21
+      "x": 344.0625,
+      "y": 261.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "textbox",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 203,
-      "w": 181,
-      "h": 21
+      "x": 344.0625,
+      "y": 298.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "select",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 126,
-      "w": 411,
-      "h": 19
+      "x": 344.0625,
+      "y": 187.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "select",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 151,
-      "w": 411,
-      "h": 19
+      "x": 344.0625,
+      "y": 224.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "clickable",
      "name": "Continue",
      "box": {
-      "x": 484.546875,
-      "y": 230,
-      "w": 68.6875,
-      "h": 20
+      "x": 344.0625,
+      "y": 335.5,
+      "w": 91.03125,
+      "h": 29.75
      }
     }
    ],
    "dialogs": [],
    "animated": [
     {
-     "x": 71,
-     "y": 110,
+     "x": 100,
+     "y": 157,
      "w": 38,
      "h": 18
     }
@@ -378,18 +298,18 @@
    "frame": "14",
    "picture": "transfer/14.png",
    "did": "choose \"Rainy Day Savings\" in \"To\"",
-   "at": "2026-10-17T18:27:51.023Z",
-   "address": "http://localhost:65176/corelink/console",
-   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ********\":\n      - cell \"Member ******** · ********\"\n- table:\n  - rowgroup:\n    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n        - table:\n          - rowgroup:\n            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Transfer Funds\":\n                                                              - cell \"Transfer Funds\"\n                                                        - table:\n                                                          - rowgroup:\n                                                            - 'row \"From: Everyday Checking, Account ending in ****, available ********\"':\n                                                              - cell \"From:\"\n                                                              - cell \"Everyday Checking, Account ending in ****, available ********\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\"\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\" [selected]\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\"\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - 'row \"To: Rainy Day Savings, Account ending in ****, available ********\"':\n                                                              - cell \"To:\"\n                                                              - cell \"Rainy Day Savings, Account ending in ****, available ********\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\"\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\"\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\" [selected]\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - row \"Amount:\":\n                                                              - cell \"Amount:\"\n                                                              - cell:\n                                                                - textbox\n                                                            - row \"Memo:\":\n                                                              - cell \"Memo:\"\n                                                              - cell:\n                                                                - textbox\n                                                            - row \"Continue\":\n                                                              - cell\n                                                              - cell \"Continue\":\n                                                                - table:\n                                                                  - rowgroup:\n                                                                    - row \"Continue\":\n                                                                      - cell \"Continue\"\n                                                        - paragraph:\n                                                          - link \"Back to member summary\":\n                                                            - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "at": "2026-10-18T03:03:24.499Z",
+   "address": "http://localhost:56165/corelink/console",
+   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good morning, ********\":\n      - cell\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good morning, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ******\":\n      - cell \"Member ******** · ******\"\n- table:\n  - rowgroup:\n    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n        - table:\n          - rowgroup:\n            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: Memo: Continue Back to member summary\"':\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Transfer Funds\":\n                                                              - cell \"Transfer Funds\"\n                                                        - table:\n                                                          - rowgroup:\n                                                            - 'row \"From: Everyday Checking, Account ending in ****, available ********\"':\n                                                              - cell \"From:\"\n                                                              - cell \"Everyday Checking, Account ending in ****, available ********\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\"\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\" [selected]\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\"\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - 'row \"To: Rainy Day Savings, Account ending in ****, available ********\"':\n                                                              - cell \"To:\"\n                                                              - cell \"Rainy Day Savings, Account ending in ****, available ********\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\"\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\"\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\" [selected]\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - row \"Amount:\":\n                                                              - cell \"Amount:\"\n                                                              - cell:\n                                                                - textbox\n                                                            - row \"Memo:\":\n                                                              - cell \"Memo:\"\n                                                              - cell:\n                                                                - textbox\n                                                            - row \"Continue\":\n                                                              - cell\n                                                              - cell \"Continue\":\n                                                                - table:\n                                                                  - rowgroup:\n                                                                    - row \"Continue\":\n                                                                      - cell \"Continue\"\n                                                        - paragraph:\n                                                          - link \"Back to member summary\":\n                                                            - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
    "controls": [
     {
      "role": "link",
      "name": "Member Search",
      "box": {
       "x": 11,
-      "y": 72,
-      "w": 78.6875,
-      "h": 18
+      "y": 100,
+      "w": 118.03125,
+      "h": 17
      }
     },
     {
@@ -397,9 +317,9 @@
      "name": "Transfer Funds",
      "box": {
       "x": 11,
-      "y": 90,
-      "w": 73.921875,
-      "h": 18
+      "y": 129.75,
+      "w": 110.890625,
+      "h": 17
      }
     },
     {
@@ -407,49 +327,9 @@
      "name": "Statements",
      "box": {
       "x": 11,
-      "y": 112,
-      "w": 57.84375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Reports",
-     "box": {
-      "x": 11,
-      "y": 150,
-      "w": 38.390625,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Admin",
-     "box": {
-      "x": 11,
-      "y": 168,
-      "w": 31.875,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Fee Waivers",
-     "box": {
-      "x": 11,
-      "y": 186,
-      "w": 60.359375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Address Change",
-     "box": {
-      "x": 11,
-      "y": 204,
-      "w": 81.296875,
-      "h": 18
+      "y": 159.5,
+      "w": 86.765625,
+      "h": 17
      }
     },
     {
@@ -457,77 +337,77 @@
      "name": "Sign Out",
      "box": {
       "x": 11,
-      "y": 240,
-      "w": 43.796875,
-      "h": 18
+      "y": 210.25,
+      "w": 65.703125,
+      "h": 17
      }
     },
     {
      "role": "link",
      "name": "Back to member summary",
      "box": {
-      "x": 427.5,
-      "y": 265,
-      "w": 133.59375,
-      "h": 18
+      "x": 263,
+      "y": 387.25,
+      "w": 200.390625,
+      "h": 17
      }
     },
     {
      "role": "textbox",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 176,
-      "w": 97,
-      "h": 21
+      "x": 344.0625,
+      "y": 261.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "textbox",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 203,
-      "w": 181,
-      "h": 21
+      "x": 344.0625,
+      "y": 298.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "select",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 126,
-      "w": 411,
-      "h": 19
+      "x": 344.0625,
+      "y": 187.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "select",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 151,
-      "w": 411,
-      "h": 19
+      "x": 344.0625,
+      "y": 224.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "clickable",
      "name": "Continue",
      "box": {
-      "x": 484.546875,
-      "y": 230,
-      "w": 68.6875,
-      "h": 20
+      "x": 344.0625,
+      "y": 335.5,
+      "w": 91.03125,
+      "h": 29.75
      }
     }
    ],
    "dialogs": [],
    "animated": [
     {
-     "x": 71,
-     "y": 110,
+     "x": 100,
+     "y": 157,
      "w": 38,
      "h": 18
     }
@@ -537,18 +417,18 @@
    "frame": "15",
    "picture": "transfer/15.png",
    "did": "type text into \"Amount\"",
-   "at": "2026-10-17T18:27:53.849Z",
-   "address": "http://localhost:65176/corelink/console",
-   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ********\":\n      - cell \"Member ******** · ********\"\n- table:\n  - rowgroup:\n    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n        - table:\n          - rowgroup:\n            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Transfer Funds\":\n                                                              - cell \"Transfer Funds\"\n                                                        - table:\n                                                          - rowgroup:\n                                                            - 'row \"From: Everyday Checking, Account ending in ****, available ********\"':\n                                                              - cell \"From:\"\n                                                              - cell \"Everyday Checking, Account ending in ****, available ********\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\"\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\" [selected]\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\"\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - 'row \"To: Rainy Day Savings, Account ending in ****, available ********\"':\n                                                              - cell \"To:\"\n                                                              - cell \"Rainy Day Savings, Account ending in ****, available ********\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\"\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\"\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\" [selected]\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - 'row \"Amount: 25.00\"':\n                                                              - cell \"Amount:\"\n                                                              - cell \"25.00\":\n                                                                - textbox: \"25.00\"\n                                                            - row \"Memo:\":\n                                                              - cell \"Memo:\"\n                                                              - cell:\n                                                                - textbox\n                                                            - row \"Continue\":\n                                                              - cell\n                                                              - cell \"Continue\":\n                                                                - table:\n                                                                  - rowgroup:\n                                                                    - row \"Continue\":\n                                                                      - cell \"Continue\"\n                                                        - paragraph:\n                                                          - link \"Back to member summary\":\n                                                            - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "at": "2026-10-18T03:03:26.664Z",
+   "address": "http://localhost:56165/corelink/console",
+   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good morning, ********\":\n      - cell\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good morning, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ******\":\n      - cell \"Member ******** · ******\"\n- table:\n  - rowgroup:\n    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n        - table:\n          - rowgroup:\n            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: Continue Back to member summary\"':\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Transfer Funds\":\n                                                              - cell \"Transfer Funds\"\n                                                        - table:\n                                                          - rowgroup:\n                                                            - 'row \"From: Everyday Checking, Account ending in ****, available ********\"':\n                                                              - cell \"From:\"\n                                                              - cell \"Everyday Checking, Account ending in ****, available ********\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\"\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\" [selected]\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\"\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - 'row \"To: Rainy Day Savings, Account ending in ****, available ********\"':\n                                                              - cell \"To:\"\n                                                              - cell \"Rainy Day Savings, Account ending in ****, available ********\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\"\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\"\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\" [selected]\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - 'row \"Amount: 25.00\"':\n                                                              - cell \"Amount:\"\n                                                              - cell \"25.00\":\n                                                                - textbox: \"25.00\"\n                                                            - row \"Memo:\":\n                                                              - cell \"Memo:\"\n                                                              - cell:\n                                                                - textbox\n                                                            - row \"Continue\":\n                                                              - cell\n                                                              - cell \"Continue\":\n                                                                - table:\n                                                                  - rowgroup:\n                                                                    - row \"Continue\":\n                                                                      - cell \"Continue\"\n                                                        - paragraph:\n                                                          - link \"Back to member summary\":\n                                                            - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
    "controls": [
     {
      "role": "link",
      "name": "Member Search",
      "box": {
       "x": 11,
-      "y": 72,
-      "w": 78.6875,
-      "h": 18
+      "y": 100,
+      "w": 118.03125,
+      "h": 17
      }
     },
     {
@@ -556,9 +436,9 @@
      "name": "Transfer Funds",
      "box": {
       "x": 11,
-      "y": 90,
-      "w": 73.921875,
-      "h": 18
+      "y": 129.75,
+      "w": 110.890625,
+      "h": 17
      }
     },
     {
@@ -566,49 +446,9 @@
      "name": "Statements",
      "box": {
       "x": 11,
-      "y": 112,
-      "w": 57.84375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Reports",
-     "box": {
-      "x": 11,
-      "y": 150,
-      "w": 38.390625,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Admin",
-     "box": {
-      "x": 11,
-      "y": 168,
-      "w": 31.875,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Fee Waivers",
-     "box": {
-      "x": 11,
-      "y": 186,
-      "w": 60.359375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Address Change",
-     "box": {
-      "x": 11,
-      "y": 204,
-      "w": 81.296875,
-      "h": 18
+      "y": 159.5,
+      "w": 86.765625,
+      "h": 17
      }
     },
     {
@@ -616,228 +456,69 @@
      "name": "Sign Out",
      "box": {
       "x": 11,
-      "y": 240,
-      "w": 43.796875,
-      "h": 18
+      "y": 210.25,
+      "w": 65.703125,
+      "h": 17
      }
     },
     {
      "role": "link",
      "name": "Back to member summary",
      "box": {
-      "x": 427.5,
-      "y": 265,
-      "w": 133.59375,
-      "h": 18
+      "x": 263,
+      "y": 387.25,
+      "w": 200.390625,
+      "h": 17
      }
     },
     {
      "role": "textbox",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 176,
-      "w": 97,
-      "h": 21
+      "x": 344.0625,
+      "y": 261.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "textbox",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 203,
-      "w": 181,
-      "h": 21
+      "x": 344.0625,
+      "y": 298.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "select",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 126,
-      "w": 411,
-      "h": 19
+      "x": 344.0625,
+      "y": 187.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "select",
      "name": "",
      "box": {
-      "x": 484.546875,
-      "y": 151,
-      "w": 411,
-      "h": 19
+      "x": 344.0625,
+      "y": 224.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
      "role": "clickable",
      "name": "Continue",
      "box": {
-      "x": 484.546875,
-      "y": 230,
-      "w": 68.6875,
-      "h": 20
-     }
-    }
-   ],
-   "dialogs": [],
-   "animated": [
-    {
-     "x": 71,
-     "y": 110,
-     "w": 38,
-     "h": 18
-    }
-   ]
-  },
-  {
-   "frame": "16",
-   "picture": "transfer/16.png",
-   "did": "type text into \"Memo\"",
-   "at": "2026-10-17T18:27:56.117Z",
-   "address": "http://localhost:65176/corelink/console",
-   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ********\":\n      - cell \"Member ******** · ********\"\n- table:\n  - rowgroup:\n    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n        - table:\n          - rowgroup:\n            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Transfer Funds\":\n                                                              - cell \"Transfer Funds\"\n                                                        - table:\n                                                          - rowgroup:\n                                                            - 'row \"From: Everyday Checking, Account ending in ****, available ********\"':\n                                                              - cell \"From:\"\n                                                              - cell \"Everyday Checking, Account ending in ****, available ********\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\"\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\" [selected]\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\"\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - 'row \"To: Rainy Day Savings, Account ending in ****, available ********\"':\n                                                              - cell \"To:\"\n                                                              - cell \"Rainy Day Savings, Account ending in ****, available ********\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\"\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\"\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\" [selected]\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - 'row \"Amount: 25.00\"':\n                                                              - cell \"Amount:\"\n                                                              - cell \"25.00\":\n                                                                - textbox: \"25.00\"\n                                                            - 'row \"Memo: GBX TEST lunch\"':\n                                                              - cell \"Memo:\"\n                                                              - cell \"GBX TEST lunch\":\n                                                                - textbox: GBX TEST lunch\n                                                            - row \"Continue\":\n                                                              - cell\n                                                              - cell \"Continue\":\n                                                                - table:\n                                                                  - rowgroup:\n                                                                    - row \"Continue\":\n                                                                      - cell \"Continue\"\n                                                        - paragraph:\n                                                          - link \"Back to member summary\":\n                                                            - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
-   "controls": [
-    {
-     "role": "link",
-     "name": "Member Search",
-     "box": {
-      "x": 11,
-      "y": 72,
-      "w": 78.6875,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Transfer Funds",
-     "box": {
-      "x": 11,
-      "y": 90,
-      "w": 73.921875,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Statements",
-     "box": {
-      "x": 11,
-      "y": 112,
-      "w": 57.84375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Reports",
-     "box": {
-      "x": 11,
-      "y": 150,
-      "w": 38.390625,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Admin",
-     "box": {
-      "x": 11,
-      "y": 168,
-      "w": 31.875,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Fee Waivers",
-     "box": {
-      "x": 11,
-      "y": 186,
-      "w": 60.359375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Address Change",
-     "box": {
-      "x": 11,
-      "y": 204,
-      "w": 81.296875,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Sign Out",
-     "box": {
-      "x": 11,
-      "y": 240,
-      "w": 43.796875,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Back to member summary",
-     "box": {
-      "x": 427.5,
-      "y": 265,
-      "w": 133.59375,
-      "h": 18
-     }
-    },
-    {
-     "role": "textbox",
-     "name": "",
-     "box": {
-      "x": 484.546875,
-      "y": 176,
-      "w": 97,
-      "h": 21
-     }
-    },
-    {
-     "role": "textbox",
-     "name": "",
-     "box": {
-      "x": 484.546875,
-      "y": 203,
-      "w": 181,
-      "h": 21
-     }
-    },
-    {
-     "role": "select",
-     "name": "",
-     "box": {
-      "x": 484.546875,
-      "y": 126,
-      "w": 411,
-      "h": 19
-     }
-    },
-    {
-     "role": "select",
-     "name": "",
-     "box": {
-      "x": 484.546875,
-      "y": 151,
-      "w": 411,
-      "h": 19
-     }
-    },
-    {
-     "role": "clickable",
-     "name": "Continue",
-     "box": {
-      "x": 484.546875,
-      "y": 230,
-      "w": 68.6875,
-      "h": 20
+      "x": 344.0625,
+      "y": 335.5,
+      "w": 91.03125,
+      "h": 29.75
      }
     }
    ],
@@ -845,21 +526,21 @@
    "animated": []
   },
   {
-   "frame": "17",
-   "picture": "transfer/17.png",
-   "did": "press \"Continue\"",
-   "at": "2026-10-17T18:27:59.672Z",
-   "address": "http://localhost:65176/corelink/console",
-   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ********\":\n      - cell \"Member ******** · ********\"\n- table:\n  - rowgroup:\n    - 'row \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n      - 'cell \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n        - table:\n          - rowgroup:\n            - 'row \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n              - 'cell \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n                      - 'cell \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n                              - 'cell \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n                                - table:\n                                  - rowgroup:\n                                    - row \"Review transfer\":\n                                      - cell \"Review transfer\"\n                                - paragraph: Check the details with the member before you submit.\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"From: Everyday Checking, Account ending in ****\"':\n                                      - cell \"From:\"\n                                      - cell \"Everyday Checking, Account ending in ****\"\n                                    - 'row \"To: Rainy Day Savings, Account ending in ****\"':\n                                      - cell \"To:\"\n                                      - cell \"Rainy Day Savings, Account ending in ****\"\n                                    - 'row \"Amount: ******\"':\n                                      - cell \"Amount:\"\n                                      - cell \"******\"\n                                    - 'row \"Memo: GBX TEST lunch\"':\n                                      - cell \"Memo:\"\n                                      - cell \"GBX TEST lunch\"\n                                - table:\n                                  - rowgroup:\n                                    - row \"Submit transfer\":\n                                      - cell\n                                      - cell \"Submit transfer\":\n                                        - button \"Submit transfer\"\n                                - paragraph:\n                                  - link \"Edit\":\n                                    - /url: /corelink/members/********/transfer?edit=1\n                                  - link \"Cancel\":\n                                    - /url: /corelink/members/********/transfer/cancel\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "frame": "16",
+   "picture": "transfer/16.png",
+   "did": "type text into \"Memo\"",
+   "at": "2026-10-18T03:03:29.752Z",
+   "address": "http://localhost:56165/corelink/console",
+   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good morning, ********\":\n      - cell\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good morning, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ******\":\n      - cell \"Member ******** · ******\"\n- table:\n  - rowgroup:\n    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n        - table:\n          - rowgroup:\n            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                                              - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                                                      - 'cell \"Transfer Funds From: Everyday Checking, Account ending in ****, available ******** To: Rainy Day Savings, Account ending in ****, available ******** Amount: 25.00 Memo: GBX TEST lunch Continue Back to member summary\"':\n                                                        - table:\n                                                          - rowgroup:\n                                                            - row \"Transfer Funds\":\n                                                              - cell \"Transfer Funds\"\n                                                        - table:\n                                                          - rowgroup:\n                                                            - 'row \"From: Everyday Checking, Account ending in ****, available ********\"':\n                                                              - cell \"From:\"\n                                                              - cell \"Everyday Checking, Account ending in ****, available ********\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\"\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\" [selected]\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\"\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - 'row \"To: Rainy Day Savings, Account ending in ****, available ********\"':\n                                                              - cell \"To:\"\n                                                              - cell \"Rainy Day Savings, Account ending in ****, available ********\":\n                                                                - combobox:\n                                                                  - option \"Choose an account\"\n                                                                  - option \"Everyday Checking, Account ending in ****, available ********\"\n                                                                  - option \"Rainy Day Savings, Account ending in ****, available ********\" [selected]\n                                                                  - option \"Money Market, Account ending in ****, available ********\"\n                                                            - 'row \"Amount: 25.00\"':\n                                                              - cell \"Amount:\"\n                                                              - cell \"25.00\":\n                                                                - textbox: \"25.00\"\n                                                            - 'row \"Memo: GBX TEST lunch\"':\n                                                              - cell \"Memo:\"\n                                                              - cell \"GBX TEST lunch\":\n                                                                - textbox: GBX TEST lunch\n                                                            - row \"Continue\":\n                                                              - cell\n                                                              - cell \"Continue\":\n                                                                - table:\n                                                                  - rowgroup:\n                                                                    - row \"Continue\":\n                                                                      - cell \"Continue\"\n                                                        - paragraph:\n                                                          - link \"Back to member summary\":\n                                                            - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
    "controls": [
     {
      "role": "link",
      "name": "Member Search",
      "box": {
       "x": 11,
-      "y": 72,
-      "w": 78.6875,
-      "h": 18
+      "y": 100,
+      "w": 118.03125,
+      "h": 17
      }
     },
     {
@@ -867,9 +548,9 @@
      "name": "Transfer Funds",
      "box": {
       "x": 11,
-      "y": 90,
-      "w": 73.921875,
-      "h": 18
+      "y": 129.75,
+      "w": 110.890625,
+      "h": 17
      }
     },
     {
@@ -877,49 +558,9 @@
      "name": "Statements",
      "box": {
       "x": 11,
-      "y": 112,
-      "w": 57.84375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Reports",
-     "box": {
-      "x": 11,
-      "y": 150,
-      "w": 38.390625,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Admin",
-     "box": {
-      "x": 11,
-      "y": 168,
-      "w": 31.875,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Fee Waivers",
-     "box": {
-      "x": 11,
-      "y": 186,
-      "w": 60.359375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Address Change",
-     "box": {
-      "x": 11,
-      "y": 204,
-      "w": 81.296875,
-      "h": 18
+      "y": 159.5,
+      "w": 86.765625,
+      "h": 17
      }
     },
     {
@@ -927,47 +568,166 @@
      "name": "Sign Out",
      "box": {
       "x": 11,
-      "y": 240,
-      "w": 43.796875,
-      "h": 18
+      "y": 210.25,
+      "w": 65.703125,
+      "h": 17
      }
     },
     {
      "role": "link",
-     "name": "Edit",
+     "name": "Back to member summary",
      "box": {
-      "x": 425.5,
-      "y": 281,
-      "w": 19.25,
-      "h": 18
+      "x": 263,
+      "y": 387.25,
+      "w": 200.390625,
+      "h": 17
      }
     },
     {
-     "role": "link",
-     "name": "Cancel",
+     "role": "textbox",
+     "name": "",
      "box": {
-      "x": 456.75,
-      "y": 281,
-      "w": 33.234375,
-      "h": 18
+      "x": 344.0625,
+      "y": 261.5,
+      "w": 300,
+      "h": 29
      }
     },
     {
-     "role": "button",
-     "name": "Submit transfer",
+     "role": "textbox",
+     "name": "",
      "box": {
-      "x": 435.5,
-      "y": 240,
-      "w": 127,
-      "h": 22
+      "x": 344.0625,
+      "y": 298.5,
+      "w": 300,
+      "h": 29
+     }
+    },
+    {
+     "role": "select",
+     "name": "",
+     "box": {
+      "x": 344.0625,
+      "y": 187.5,
+      "w": 300,
+      "h": 29
+     }
+    },
+    {
+     "role": "select",
+     "name": "",
+     "box": {
+      "x": 344.0625,
+      "y": 224.5,
+      "w": 300,
+      "h": 29
+     }
+    },
+    {
+     "role": "clickable",
+     "name": "Continue",
+     "box": {
+      "x": 344.0625,
+      "y": 335.5,
+      "w": 91.03125,
+      "h": 29.75
      }
     }
    ],
    "dialogs": [],
    "animated": [
     {
-     "x": 71,
-     "y": 110,
+     "x": 100,
+     "y": 157,
+     "w": 38,
+     "h": 18
+    }
+   ]
+  },
+  {
+   "frame": "17",
+   "picture": "transfer/17.png",
+   "did": "press \"Continue\"",
+   "at": "2026-10-18T03:03:33.338Z",
+   "address": "http://localhost:56165/corelink/console",
+   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good morning, ********\":\n      - cell\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good morning, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ******\":\n      - cell \"Member ******** · ******\"\n- table:\n  - rowgroup:\n    - 'row \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n      - 'cell \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n        - table:\n          - rowgroup:\n            - 'row \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n              - 'cell \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n                      - 'cell \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n                              - 'cell \"Review transfer Check the details with the member before you submit. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Submit transfer Edit Cancel\"':\n                                - table:\n                                  - rowgroup:\n                                    - row \"Review transfer\":\n                                      - cell \"Review transfer\"\n                                - paragraph: Check the details with the member before you submit.\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"From: Everyday Checking, Account ending in ****\"':\n                                      - cell \"From:\"\n                                      - cell \"Everyday Checking, Account ending in ****\"\n                                    - 'row \"To: Rainy Day Savings, Account ending in ****\"':\n                                      - cell \"To:\"\n                                      - cell \"Rainy Day Savings, Account ending in ****\"\n                                    - 'row \"Amount: ******\"':\n                                      - cell \"Amount:\"\n                                      - cell \"******\"\n                                    - 'row \"Memo: GBX TEST lunch\"':\n                                      - cell \"Memo:\"\n                                      - cell \"GBX TEST lunch\"\n                                - table:\n                                  - rowgroup:\n                                    - row \"Submit transfer\":\n                                      - cell\n                                      - cell \"Submit transfer\":\n                                        - button \"Submit transfer\"\n                                - paragraph:\n                                  - link \"Edit\":\n                                    - /url: /corelink/members/********/transfer?edit=1\n                                  - link \"Cancel\":\n                                    - /url: /corelink/members/********/transfer/cancel\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "controls": [
+    {
+     "role": "link",
+     "name": "Member Search",
+     "box": {
+      "x": 11,
+      "y": 100,
+      "w": 118.03125,
+      "h": 17
+     }
+    },
+    {
+     "role": "link",
+     "name": "Transfer Funds",
+     "box": {
+      "x": 11,
+      "y": 129.75,
+      "w": 110.890625,
+      "h": 17
+     }
+    },
+    {
+     "role": "link",
+     "name": "Statements",
+     "box": {
+      "x": 11,
+      "y": 159.5,
+      "w": 86.765625,
+      "h": 17
+     }
+    },
+    {
+     "role": "link",
+     "name": "Sign Out",
+     "box": {
+      "x": 11,
+      "y": 210.25,
+      "w": 65.703125,
+      "h": 17
+     }
+    },
+    {
+     "role": "link",
+     "name": "Edit",
+     "box": {
+      "x": 261,
+      "y": 408.25,
+      "w": 28.859375,
+      "h": 17
+     }
+    },
+    {
+     "role": "link",
+     "name": "Cancel",
+     "box": {
+      "x": 301.109375,
+      "y": 408.25,
+      "w": 49.84375,
+      "h": 17
+     }
+    },
+    {
+     "role": "button",
+     "name": "Submit transfer",
+     "box": {
+      "x": 271,
+      "y": 346.25,
+      "w": 177,
+      "h": 40
+     }
+    }
+   ],
+   "dialogs": [],
+   "animated": [
+    {
+     "x": 100,
+     "y": 157,
      "w": 38,
      "h": 18
     }
@@ -977,18 +737,18 @@
    "frame": "18",
    "picture": "transfer/18.png",
    "did": "press \"Submit transfer\"",
-   "at": "2026-10-17T18:28:03.173Z",
-   "address": "http://localhost:65176/corelink/console",
-   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ********\":\n      - cell \"Member ******** · ********\"\n- table:\n  - rowgroup:\n    - 'row \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n      - 'cell \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n        - table:\n          - rowgroup:\n            - 'row \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n              - 'cell \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n                      - 'cell \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n                              - 'cell \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n                                - table:\n                                  - rowgroup:\n                                    - row \"Transfer posted\":\n                                      - cell \"Transfer posted\"\n                                - paragraph: Transfer posted. Confirmation number GB-*****-G.\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"From: Everyday Checking, Account ending in ****\"':\n                                      - cell \"From:\"\n                                      - cell \"Everyday Checking, Account ending in ****\"\n                                    - 'row \"To: Rainy Day Savings, Account ending in ****\"':\n                                      - cell \"To:\"\n                                      - cell \"Rainy Day Savings, Account ending in ****\"\n                                    - 'row \"Amount: ******\"':\n                                      - cell \"Amount:\"\n                                      - cell \"******\"\n                                    - 'row \"Memo: GBX TEST lunch\"':\n                                      - cell \"Memo:\"\n                                      - cell \"GBX TEST lunch\"\n                                - paragraph:\n                                  - link \"Back to member summary\":\n                                    - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "at": "2026-10-18T03:03:38.982Z",
+   "address": "http://localhost:56165/corelink/console",
+   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good morning, ********\":\n      - cell\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good morning, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ******\":\n      - cell \"Member ******** · ******\"\n- table:\n  - rowgroup:\n    - 'row \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n      - 'cell \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n        - table:\n          - rowgroup:\n            - 'row \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n              - 'cell \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n                      - 'cell \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n                              - 'cell \"Transfer posted Transfer posted. Confirmation number GB-*****-G. From: Everyday Checking, Account ending in **** To: Rainy Day Savings, Account ending in **** Amount: ****** Memo: GBX TEST lunch Back to member summary\"':\n                                - table:\n                                  - rowgroup:\n                                    - row \"Transfer posted\":\n                                      - cell \"Transfer posted\"\n                                - paragraph: Transfer posted. Confirmation number GB-*****-G.\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"From: Everyday Checking, Account ending in ****\"':\n                                      - cell \"From:\"\n                                      - cell \"Everyday Checking, Account ending in ****\"\n                                    - 'row \"To: Rainy Day Savings, Account ending in ****\"':\n                                      - cell \"To:\"\n                                      - cell \"Rainy Day Savings, Account ending in ****\"\n                                    - 'row \"Amount: ******\"':\n                                      - cell \"Amount:\"\n                                      - cell \"******\"\n                                    - 'row \"Memo: GBX TEST lunch\"':\n                                      - cell \"Memo:\"\n                                      - cell \"GBX TEST lunch\"\n                                - paragraph:\n                                  - link \"Back to member summary\":\n                                    - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
    "controls": [
     {
      "role": "link",
      "name": "Member Search",
      "box": {
       "x": 11,
-      "y": 72,
-      "w": 78.6875,
-      "h": 18
+      "y": 100,
+      "w": 118.03125,
+      "h": 17
      }
     },
     {
@@ -996,9 +756,9 @@
      "name": "Transfer Funds",
      "box": {
       "x": 11,
-      "y": 90,
-      "w": 73.921875,
-      "h": 18
+      "y": 129.75,
+      "w": 110.890625,
+      "h": 17
      }
     },
     {
@@ -1006,49 +766,9 @@
      "name": "Statements",
      "box": {
       "x": 11,
-      "y": 112,
-      "w": 57.84375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Reports",
-     "box": {
-      "x": 11,
-      "y": 150,
-      "w": 38.390625,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Admin",
-     "box": {
-      "x": 11,
-      "y": 168,
-      "w": 31.875,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Fee Waivers",
-     "box": {
-      "x": 11,
-      "y": 186,
-      "w": 60.359375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Address Change",
-     "box": {
-      "x": 11,
-      "y": 204,
-      "w": 81.296875,
-      "h": 18
+      "y": 159.5,
+      "w": 86.765625,
+      "h": 17
      }
     },
     {
@@ -1056,27 +776,27 @@
      "name": "Sign Out",
      "box": {
       "x": 11,
-      "y": 240,
-      "w": 43.796875,
-      "h": 18
+      "y": 210.25,
+      "w": 65.703125,
+      "h": 17
      }
     },
     {
      "role": "link",
      "name": "Back to member summary",
      "box": {
-      "x": 425.5,
-      "y": 249,
-      "w": 133.59375,
-      "h": 18
+      "x": 261,
+      "y": 360.25,
+      "w": 200.390625,
+      "h": 17
      }
     }
    ],
    "dialogs": [],
    "animated": [
     {
-     "x": 71,
-     "y": 110,
+     "x": 100,
+     "y": 157,
      "w": 38,
      "h": 18
     }
@@ -1086,18 +806,18 @@
    "frame": "19",
    "picture": "transfer/19.png",
    "did": "press \"Back to member summary\"",
-   "at": "2026-10-17T18:28:05.932Z",
-   "address": "http://localhost:65176/corelink/console",
-   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ********\":\n      - cell \"Member ******** · ********\"\n- table:\n  - rowgroup:\n    - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n      - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n        - table:\n          - rowgroup:\n            - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n              - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                      - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                              - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                                      - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                                              - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Waive fee | Add payee | Change address | Enroll in eStatements | Pay now | Close account\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - row \"Member Summary\":\n                                                      - cell \"Member Summary\"\n                                                - paragraph:\n                                                  - link \"Transfer Funds\":\n                                                    - /url: /corelink/members/********/transfer\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements\"':\n                                                      - 'cell \"Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements\"':\n                                                        - text: \"Everyday Checking Account ending in **** Available balance: ******** Current balance: ********\"\n                                                        - link \"Activity\":\n                                                          - /url: /corelink/members/********/activity?account=2\n                                                        - link \"Statements\":\n                                                          - /url: /corelink/members/********/statements?account=2\n                                                      - 'cell \"Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements\"':\n                                                        - text: \"Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ********\"\n                                                        - link \"Activity\":\n                                                          - /url: /corelink/members/********/activity?account=3\n                                                        - link \"Statements\":\n                                                          - /url: /corelink/members/********/statements?account=3\n                                                      - 'cell \"Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements\"':\n                                                        - text: \"Money Market Account ending in **** Available balance: ******** Current balance: ********\"\n                                                        - link \"Activity\":\n                                                          - /url: /corelink/members/********/activity?account=4\n                                                        - link \"Statements\":\n                                                          - /url: /corelink/members/********/statements?account=4\n                                                - paragraph:\n                                                  - link \"Waive fee\":\n                                                    - /url: /corelink/members/********/waive-fee\n                                                  - text: \"|\"\n                                                  - link \"Add payee\":\n                                                    - /url: /corelink/members/********/add-payee\n                                                  - text: \"|\"\n                                                  - link \"Change address\":\n                                                    - /url: /corelink/members/********/change-address\n                                                  - text: \"|\"\n                                                  - link \"Enroll in eStatements\":\n                                                    - /url: /corelink/members/********/estatements\n                                                  - text: \"|\"\n                                                  - link \"Pay now\":\n                                                    - /url: /corelink/members/********/pay-now\n                                                  - text: \"|\"\n                                                  - link \"Close account\":\n                                                    - /url: /corelink/members/********/close-account\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "at": "2026-10-18T03:03:43.906Z",
+   "address": "http://localhost:56165/corelink/console",
+   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good morning, ********\":\n      - cell\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good morning, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ******\":\n      - cell \"Member ******** · ******\"\n- table:\n  - rowgroup:\n    - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Close account\"':\n      - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Close account\"':\n        - table:\n          - rowgroup:\n            - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Close account\"':\n              - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Close account\"':\n                - table:\n                  - rowgroup:\n                    - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Close account\"':\n                      - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Close account\"':\n                        - table:\n                          - rowgroup:\n                            - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Close account\"':\n                              - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Close account\"':\n                                - table:\n                                  - rowgroup:\n                                    - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Close account\"':\n                                      - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Close account\"':\n                                        - table:\n                                          - rowgroup:\n                                            - 'row \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Close account\"':\n                                              - 'cell \"Member Summary Transfer Funds Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Close account\"':\n                                                - table:\n                                                  - rowgroup:\n                                                    - row \"Member Summary\":\n                                                      - cell \"Member Summary\"\n                                                - paragraph:\n                                                  - link \"Transfer Funds\":\n                                                    - /url: /corelink/members/********/transfer\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements\"':\n                                                      - 'cell \"Everyday Checking Account ending in **** Available balance: ******** Current balance: ******** Activity Statements\"':\n                                                        - text: \"Everyday Checking Account ending in **** Available balance: ******** Current balance: ********\"\n                                                        - link \"Activity\":\n                                                          - /url: /corelink/members/********/activity?account=2\n                                                        - link \"Statements\":\n                                                          - /url: /corelink/members/********/statements?account=2\n                                                      - 'cell \"Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ******** Activity Statements\"':\n                                                        - text: \"Rainy Day Savings Account ending in **** Available balance: ******** Current balance: ********\"\n                                                        - link \"Activity\":\n                                                          - /url: /corelink/members/********/activity?account=3\n                                                        - link \"Statements\":\n                                                          - /url: /corelink/members/********/statements?account=3\n                                                      - 'cell \"Money Market Account ending in **** Available balance: ******** Current balance: ******** Activity Statements\"':\n                                                        - text: \"Money Market Account ending in **** Available balance: ******** Current balance: ********\"\n                                                        - link \"Activity\":\n                                                          - /url: /corelink/members/********/activity?account=4\n                                                        - link \"Statements\":\n                                                          - /url: /corelink/members/********/statements?account=4\n                                                - paragraph:\n                                                  - link \"Close account\":\n                                                    - /url: /corelink/members/********/close-account\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
    "controls": [
     {
      "role": "link",
      "name": "Member Search",
      "box": {
       "x": 11,
-      "y": 72,
-      "w": 78.6875,
-      "h": 18
+      "y": 100,
+      "w": 118.03125,
+      "h": 17
      }
     },
     {
@@ -1105,9 +825,9 @@
      "name": "Transfer Funds",
      "box": {
       "x": 11,
-      "y": 90,
-      "w": 73.921875,
-      "h": 18
+      "y": 129.75,
+      "w": 110.890625,
+      "h": 17
      }
     },
     {
@@ -1115,49 +835,9 @@
      "name": "Statements",
      "box": {
       "x": 11,
-      "y": 112,
-      "w": 57.84375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Reports",
-     "box": {
-      "x": 11,
-      "y": 150,
-      "w": 38.390625,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Admin",
-     "box": {
-      "x": 11,
-      "y": 168,
-      "w": 31.875,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Fee Waivers",
-     "box": {
-      "x": 11,
-      "y": 186,
-      "w": 60.359375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Address Change",
-     "box": {
-      "x": 11,
-      "y": 204,
-      "w": 81.296875,
-      "h": 18
+      "y": 159.5,
+      "w": 86.765625,
+      "h": 17
      }
     },
     {
@@ -1165,18 +845,38 @@
      "name": "Sign Out",
      "box": {
       "x": 11,
-      "y": 240,
-      "w": 43.796875,
-      "h": 18
+      "y": 210.25,
+      "w": 65.703125,
+      "h": 17
      }
     },
     {
      "role": "link",
      "name": "Transfer Funds",
      "box": {
-      "x": 426.5,
-      "y": 134,
-      "w": 73.921875,
+      "x": 262,
+      "y": 197.5,
+      "w": 110.890625,
+      "h": 17
+     }
+    },
+    {
+     "role": "link",
+     "name": "Activity",
+     "box": {
+      "x": 276,
+      "y": 396.5,
+      "w": 55.8125,
+      "h": 18
+     }
+    },
+    {
+     "role": "link",
+     "name": "Statements",
+     "box": {
+      "x": 347.640625,
+      "y": 396.5,
+      "w": 86.765625,
       "h": 18
      }
     },
@@ -1184,149 +884,72 @@
      "role": "link",
      "name": "Activity",
      "box": {
-      "x": 440.5,
-      "y": 308,
-      "w": 48.375,
-      "h": 16
+      "x": 520,
+      "y": 396.5,
+      "w": 55.8125,
+      "h": 18
      }
     },
     {
      "role": "link",
      "name": "Statements",
      "box": {
-      "x": 502.59375,
-      "y": 308,
-      "w": 75.203125,
-      "h": 16
+      "x": 591.640625,
+      "y": 396.5,
+      "w": 86.765625,
+      "h": 18
      }
     },
     {
      "role": "link",
      "name": "Activity",
      "box": {
-      "x": 637.828125,
-      "y": 308,
-      "w": 48.375,
-      "h": 16
+      "x": 764,
+      "y": 396.5,
+      "w": 55.8125,
+      "h": 18
      }
     },
     {
      "role": "link",
      "name": "Statements",
      "box": {
-      "x": 699.921875,
-      "y": 308,
-      "w": 75.203125,
-      "h": 16
-     }
-    },
-    {
-     "role": "link",
-     "name": "Activity",
-     "box": {
-      "x": 835.15625,
-      "y": 308,
-      "w": 48.375,
-      "h": 16
-     }
-    },
-    {
-     "role": "link",
-     "name": "Statements",
-     "box": {
-      "x": 897.25,
-      "y": 308,
-      "w": 75.203125,
-      "h": 16
-     }
-    },
-    {
-     "role": "link",
-     "name": "Waive fee",
-     "box": {
-      "x": 426.5,
-      "y": 354,
-      "w": 48.890625,
-      "h": 12
-     }
-    },
-    {
-     "role": "link",
-     "name": "Add payee",
-     "box": {
-      "x": 494,
-      "y": 354,
-      "w": 52.71875,
-      "h": 12
-     }
-    },
-    {
-     "role": "link",
-     "name": "Change address",
-     "box": {
-      "x": 565.328125,
-      "y": 354,
-      "w": 80.46875,
-      "h": 12
-     }
-    },
-    {
-     "role": "link",
-     "name": "Enroll in eStatements",
-     "box": {
-      "x": 664.40625,
-      "y": 354,
-      "w": 108.390625,
-      "h": 12
-     }
-    },
-    {
-     "role": "link",
-     "name": "Pay now",
-     "box": {
-      "x": 791.40625,
-      "y": 354,
-      "w": 41.734375,
-      "h": 12
+      "x": 835.640625,
+      "y": 396.5,
+      "w": 86.765625,
+      "h": 18
      }
     },
     {
      "role": "link",
      "name": "Close account",
      "box": {
-      "x": 851.75,
-      "y": 354,
-      "w": 69.578125,
-      "h": 12
+      "x": 262,
+      "y": 445.25,
+      "w": 104.359375,
+      "h": 18
      }
     }
    ],
    "dialogs": [],
-   "animated": [
-    {
-     "x": 71,
-     "y": 110,
-     "w": 38,
-     "h": 18
-    }
-   ]
+   "animated": []
   },
   {
    "frame": "20",
    "picture": "transfer/20.png",
    "did": "press \"Activity\" near \"Everyday Checking\"",
-   "at": "2026-10-17T18:28:09.488Z",
-   "address": "http://localhost:65176/corelink/console",
-   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good evening, ********\":\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good evening, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Reports\":\n      - cell \"Reports\":\n        - link \"Reports\":\n          - /url: /corelink/area/reports\n    - row \"Admin\":\n      - cell \"Admin\":\n        - link \"Admin\":\n          - /url: /corelink/area/admin\n    - row \"Fee Waivers\":\n      - cell \"Fee Waivers\":\n        - link \"Fee Waivers\":\n          - /url: /corelink/members/search?next=waive-fee\n    - row \"Address Change\":\n      - cell \"Address Change\":\n        - link \"Address Change\":\n          - /url: /corelink/members/search?next=change-address\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ********\":\n      - cell \"Member ******** · ********\"\n- table:\n  - rowgroup:\n    - row:\n      - cell:\n        - table:\n          - rowgroup:\n            - row:\n              - cell:\n                - table:\n                  - rowgroup:\n                    - row:\n                      - cell:\n                        - table:\n                          - rowgroup:\n                            - row:\n                              - cell:\n                                - table:\n                                  - rowgroup:\n                                    - row:\n                                      - cell:\n                                        - table:\n                                          - rowgroup:\n                                            - row:\n                                              - cell:\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Activity: Everyday Checking, Account ending in ****\"':\n                                                      - 'cell \"Activity: Everyday Checking, Account ending in ****\"'\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"From: ****-08\"':\n                                                      - cell \"From:\"\n                                                      - cell \"****-08\":\n                                                        - combobox:\n                                                          - option \"****-10\"\n                                                          - option \"****-09\"\n                                                          - option \"****-08\" [selected]\n                                                          - option \"****-07\"\n                                                          - option \"****-06\"\n                                                          - option \"****-05\"\n                                                          - option \"****-04\"\n                                                          - option \"****-03\"\n                                                          - option \"****-02\"\n                                                          - option \"****-01\"\n                                                          - option \"****-12\"\n                                                          - option \"****-11\"\n                                                    - 'row \"To: ****-10\"':\n                                                      - cell \"To:\"\n                                                      - cell \"****-10\":\n                                                        - combobox:\n                                                          - option \"****-10\" [selected]\n                                                          - option \"****-09\"\n                                                          - option \"****-08\"\n                                                          - option \"****-07\"\n                                                          - option \"****-06\"\n                                                          - option \"****-05\"\n                                                          - option \"****-04\"\n                                                          - option \"****-03\"\n                                                          - option \"****-02\"\n                                                          - option \"****-01\"\n                                                          - option \"****-12\"\n                                                          - option \"****-11\"\n                                                    - row \"Show\":\n                                                      - cell\n                                                      - cell \"Show\":\n                                                        - button \"Show\"\n                                                - table:\n                                                  - rowgroup:\n                                                    - row \"Date Description Amount Status\":\n                                                      - columnheader \"Date\"\n                                                      - columnheader \"Description\"\n                                                      - columnheader \"Amount\"\n                                                      - columnheader \"Status\"\n                                                    - row \"****-10-17 TRANSFER OUT GBX TEST lunch -****** Posted\":\n                                                      - cell \"****-10-17\"\n                                                      - cell \"TRANSFER OUT GBX TEST lunch\"\n                                                      - cell \"-******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-10-17 POS PURCHASE CORNER GROCERY -****** Pending\":\n                                                      - cell \"****-10-17\"\n                                                      - cell \"POS PURCHASE CORNER GROCERY\"\n                                                      - cell \"-******\"\n                                                      - cell \"Pending\"\n                                                    - row \"****-09-27 UTILITY PAYMENT CITY WATER -***** Posted\":\n                                                      - cell \"****-09-27\"\n                                                      - cell \"UTILITY PAYMENT CITY WATER\"\n                                                      - cell \"-*****\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-24 POS PURCHASE BOOK NOOK -****** Posted\":\n                                                      - cell \"****-09-24\"\n                                                      - cell \"POS PURCHASE BOOK NOOK\"\n                                                      - cell \"-******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-22 POS PURCHASE HARDWARE BARN -****** Posted\":\n                                                      - cell \"****-09-22\"\n                                                      - cell \"POS PURCHASE HARDWARE BARN\"\n                                                      - cell \"-******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-19 ONLINE PURCHASE GENERIC MARKET -****** Posted\":\n                                                      - cell \"****-09-19\"\n                                                      - cell \"ONLINE PURCHASE GENERIC MARKET\"\n                                                      - cell \"-******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-16 POS PURCHASE CORNER GROCERY -****** Posted\":\n                                                      - cell \"****-09-16\"\n                                                      - cell \"POS PURCHASE CORNER GROCERY\"\n                                                      - cell \"-******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-15 PAYROLL DEPOSIT ACME CORP ******** Posted\":\n                                                      - cell \"****-09-15\"\n                                                      - cell \"PAYROLL DEPOSIT ACME CORP\"\n                                                      - cell \"********\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-11 POS PURCHASE DINER 24 -******* Posted\":\n                                                      - cell \"****-09-11\"\n                                                      - cell \"POS PURCHASE DINER 24\"\n                                                      - cell \"-*******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-05 POS PURCHASE MAIN ST PHARMACY -****** Posted\":\n                                                      - cell \"****-09-05\"\n                                                      - cell \"POS PURCHASE MAIN ST PHARMACY\"\n                                                      - cell \"-******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-03 RENT PAYMENT ONLINE -******** Posted\":\n                                                      - cell \"****-09-03\"\n                                                      - cell \"RENT PAYMENT ONLINE\"\n                                                      - cell \"-********\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-01 PAYROLL DEPOSIT ACME CORP ******** Posted\":\n                                                      - cell \"****-09-01\"\n                                                      - cell \"PAYROLL DEPOSIT ACME CORP\"\n                                                      - cell \"********\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-21 POS PURCHASE CORNER GROCERY -****** Posted\":\n                                                      - cell \"****-08-21\"\n                                                      - cell \"POS PURCHASE CORNER GROCERY\"\n                                                      - cell \"-******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-21 POS PURCHASE CITY FUEL -******* Posted\":\n                                                      - cell \"****-08-21\"\n                                                      - cell \"POS PURCHASE CITY FUEL\"\n                                                      - cell \"-*******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-17 POS PURCHASE MAIN ST PHARMACY -****** Posted\":\n                                                      - cell \"****-08-17\"\n                                                      - cell \"POS PURCHASE MAIN ST PHARMACY\"\n                                                      - cell \"-******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-15 PAYROLL DEPOSIT ACME CORP ******** Posted\":\n                                                      - cell \"****-08-15\"\n                                                      - cell \"PAYROLL DEPOSIT ACME CORP\"\n                                                      - cell \"********\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-14 POS PURCHASE HARDWARE BARN -****** Posted\":\n                                                      - cell \"****-08-14\"\n                                                      - cell \"POS PURCHASE HARDWARE BARN\"\n                                                      - cell \"-******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-10 POS PURCHASE MAIN ST PHARMACY -******* Posted\":\n                                                      - cell \"****-08-10\"\n                                                      - cell \"POS PURCHASE MAIN ST PHARMACY\"\n                                                      - cell \"-*******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-06 POS PURCHASE MAIN ST PHARMACY -******* Posted\":\n                                                      - cell \"****-08-06\"\n                                                      - cell \"POS PURCHASE MAIN ST PHARMACY\"\n                                                      - cell \"-*******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-03 RENT PAYMENT ONLINE -******** Posted\":\n                                                      - cell \"****-08-03\"\n                                                      - cell \"RENT PAYMENT ONLINE\"\n                                                      - cell \"-********\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-02 UTILITY PAYMENT CITY WATER -******* Posted\":\n                                                      - cell \"****-08-02\"\n                                                      - cell \"UTILITY PAYMENT CITY WATER\"\n                                                      - cell \"-*******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-01 PAYROLL DEPOSIT ACME CORP ******** Posted\":\n                                                      - cell \"****-08-01\"\n                                                      - cell \"PAYROLL DEPOSIT ACME CORP\"\n                                                      - cell \"********\"\n                                                      - cell \"Posted\"\n                                                - paragraph:\n                                                  - link \"Back to member summary\":\n                                                    - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
+   "at": "2026-10-18T03:03:48.989Z",
+   "address": "http://localhost:56165/corelink/console",
+   "tree": "\n\n## frame banner\n- table:\n  - rowgroup:\n    - row \"Generic Bank · Main Street Branch Good morning, ********\":\n      - cell\n      - cell \"Generic Bank · Main Street Branch\"\n      - cell \"Good morning, ********\"\n- text: \"Branch notice: the vault closes at 4:30 · New member promotion runs through month end · Report suspicious calls to Security\"\n\n## frame nav\n- table:\n  - rowgroup:\n    - row \"Member Search\":\n      - cell \"Member Search\":\n        - link \"Member Search\":\n          - /url: /corelink/members/search\n    - row \"Transfer Funds\":\n      - cell \"Transfer Funds\":\n        - link \"Transfer Funds\":\n          - /url: /corelink/members/search?next=transfer\n    - row \"Statements NEW!\":\n      - cell \"Statements NEW!\":\n        - link \"Statements\":\n          - /url: /corelink/members/search?next=statements\n        - img \"NEW!\"\n    - row:\n      - cell\n    - row \"Sign Out\":\n      - cell \"Sign Out\":\n        - link \"Sign Out\":\n          - /url: /corelink/signout\n\n## frame main\n- table:\n  - rowgroup:\n    - row \"Member ******** · ******\":\n      - cell \"Member ******** · ******\"\n- table:\n  - rowgroup:\n    - row:\n      - cell:\n        - table:\n          - rowgroup:\n            - row:\n              - cell:\n                - table:\n                  - rowgroup:\n                    - row:\n                      - cell:\n                        - table:\n                          - rowgroup:\n                            - row:\n                              - cell:\n                                - table:\n                                  - rowgroup:\n                                    - row:\n                                      - cell:\n                                        - table:\n                                          - rowgroup:\n                                            - row:\n                                              - cell:\n                                                - table:\n                                                  - rowgroup:\n                                                    - 'row \"Activity: Everyday Checking, Account ending in ****\"':\n                                                      - 'cell \"Activity: Everyday Checking, Account ending in ****\"'\n                                                - table:\n                                                  - rowgroup:\n                                                    - row \"Date Description Amount Status\":\n                                                      - columnheader \"Date\"\n                                                      - columnheader \"Description\"\n                                                      - columnheader \"Amount\"\n                                                      - columnheader \"Status\"\n                                                    - row \"****-10-18 TRANSFER OUT GBX TEST lunch -****** Posted\":\n                                                      - cell \"****-10-18\"\n                                                      - cell \"TRANSFER OUT GBX TEST lunch\"\n                                                      - cell \"-******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-10-18 POS PURCHASE CORNER GROCERY -****** Pending\":\n                                                      - cell \"****-10-18\"\n                                                      - cell \"POS PURCHASE CORNER GROCERY\"\n                                                      - cell \"-******\"\n                                                      - cell \"Pending\"\n                                                    - row \"****-09-25 POS PURCHASE CITY FUEL -******* Posted\":\n                                                      - cell \"****-09-25\"\n                                                      - cell \"POS PURCHASE CITY FUEL\"\n                                                      - cell \"-*******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-21 POS PURCHASE CORNER GROCERY -****** Posted\":\n                                                      - cell \"****-09-21\"\n                                                      - cell \"POS PURCHASE CORNER GROCERY\"\n                                                      - cell \"-******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-21 POS PURCHASE CITY FUEL -******* Posted\":\n                                                      - cell \"****-09-21\"\n                                                      - cell \"POS PURCHASE CITY FUEL\"\n                                                      - cell \"-*******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-20 ATM WITHDRAWAL BRANCH 004 -******* Posted\":\n                                                      - cell \"****-09-20\"\n                                                      - cell \"ATM WITHDRAWAL BRANCH 004\"\n                                                      - cell \"-*******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-15 PAYROLL DEPOSIT ACME CORP ******** Posted\":\n                                                      - cell \"****-09-15\"\n                                                      - cell \"PAYROLL DEPOSIT ACME CORP\"\n                                                      - cell \"********\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-06 POS PURCHASE DINER 24 -******* Posted\":\n                                                      - cell \"****-09-06\"\n                                                      - cell \"POS PURCHASE DINER 24\"\n                                                      - cell \"-*******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-03 RENT PAYMENT ONLINE -******** Posted\":\n                                                      - cell \"****-09-03\"\n                                                      - cell \"RENT PAYMENT ONLINE\"\n                                                      - cell \"-********\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-09-01 PAYROLL DEPOSIT ACME CORP ******** Posted\":\n                                                      - cell \"****-09-01\"\n                                                      - cell \"PAYROLL DEPOSIT ACME CORP\"\n                                                      - cell \"********\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-26 POS PURCHASE CITY FUEL -******* Posted\":\n                                                      - cell \"****-08-26\"\n                                                      - cell \"POS PURCHASE CITY FUEL\"\n                                                      - cell \"-*******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-25 POS PURCHASE DINER 24 -****** Posted\":\n                                                      - cell \"****-08-25\"\n                                                      - cell \"POS PURCHASE DINER 24\"\n                                                      - cell \"-******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-19 POS PURCHASE HARDWARE BARN -******* Posted\":\n                                                      - cell \"****-08-19\"\n                                                      - cell \"POS PURCHASE HARDWARE BARN\"\n                                                      - cell \"-*******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-18 POS PURCHASE CORNER GROCERY -******* Posted\":\n                                                      - cell \"****-08-18\"\n                                                      - cell \"POS PURCHASE CORNER GROCERY\"\n                                                      - cell \"-*******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-17 POS PURCHASE MAIN ST PHARMACY -******* Posted\":\n                                                      - cell \"****-08-17\"\n                                                      - cell \"POS PURCHASE MAIN ST PHARMACY\"\n                                                      - cell \"-*******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-15 PAYROLL DEPOSIT ACME CORP ******** Posted\":\n                                                      - cell \"****-08-15\"\n                                                      - cell \"PAYROLL DEPOSIT ACME CORP\"\n                                                      - cell \"********\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-14 POS PURCHASE DINER 24 -******* Posted\":\n                                                      - cell \"****-08-14\"\n                                                      - cell \"POS PURCHASE DINER 24\"\n                                                      - cell \"-*******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-08 UTILITY PAYMENT CITY WATER -****** Posted\":\n                                                      - cell \"****-08-08\"\n                                                      - cell \"UTILITY PAYMENT CITY WATER\"\n                                                      - cell \"-******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-05 POS PURCHASE HARDWARE BARN -******* Posted\":\n                                                      - cell \"****-08-05\"\n                                                      - cell \"POS PURCHASE HARDWARE BARN\"\n                                                      - cell \"-*******\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-03 RENT PAYMENT ONLINE -******** Posted\":\n                                                      - cell \"****-08-03\"\n                                                      - cell \"RENT PAYMENT ONLINE\"\n                                                      - cell \"-********\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-08-01 PAYROLL DEPOSIT ACME CORP ******** Posted\":\n                                                      - cell \"****-08-01\"\n                                                      - cell \"PAYROLL DEPOSIT ACME CORP\"\n                                                      - cell \"********\"\n                                                      - cell \"Posted\"\n                                                    - row \"****-07-20 ONLINE PURCHASE GENERIC MARKET -****** Posted\":\n                                                      - cell \"****-07-20\"\n                                                      - cell \"ONLINE PURCHASE GENERIC MARKET\"\n                                                      - cell \"-******\"\n                                                      - cell \"Posted\"\n                                                - paragraph:\n                                                  - link \"Back to member summary\":\n                                                    - /url: /corelink/members/********\n- paragraph: CoreLink Branch Console 4.2 © Acme Core Systems Best viewed in Internet Explorer at 800x600.",
    "controls": [
     {
      "role": "link",
      "name": "Member Search",
      "box": {
       "x": 11,
-      "y": 72,
-      "w": 78.6875,
-      "h": 18
+      "y": 100,
+      "w": 118.03125,
+      "h": 17
      }
     },
     {
@@ -1334,9 +957,9 @@
      "name": "Transfer Funds",
      "box": {
       "x": 11,
-      "y": 90,
-      "w": 73.921875,
-      "h": 18
+      "y": 129.75,
+      "w": 110.890625,
+      "h": 17
      }
     },
     {
@@ -1344,49 +967,9 @@
      "name": "Statements",
      "box": {
       "x": 11,
-      "y": 112,
-      "w": 57.84375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Reports",
-     "box": {
-      "x": 11,
-      "y": 150,
-      "w": 38.390625,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Admin",
-     "box": {
-      "x": 11,
-      "y": 168,
-      "w": 31.875,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Fee Waivers",
-     "box": {
-      "x": 11,
-      "y": 186,
-      "w": 60.359375,
-      "h": 18
-     }
-    },
-    {
-     "role": "link",
-     "name": "Address Change",
-     "box": {
-      "x": 11,
-      "y": 204,
-      "w": 81.296875,
-      "h": 18
+      "y": 159.5,
+      "w": 86.765625,
+      "h": 17
      }
     },
     {
@@ -1394,59 +977,29 @@
      "name": "Sign Out",
      "box": {
       "x": 11,
-      "y": 240,
-      "w": 43.796875,
-      "h": 18
+      "y": 210.25,
+      "w": 65.703125,
+      "h": 17
      }
     },
     {
      "role": "link",
      "name": "Back to member summary",
      "box": {
-      "x": 425.5,
-      "y": 709,
-      "w": 133.59375,
-      "h": 18
-     }
-    },
-    {
-     "role": "button",
-     "name": "Show",
-     "box": {
-      "x": 467.453125,
-      "y": 175,
-      "w": 43.421875,
-      "h": 18
-     }
-    },
-    {
-     "role": "select",
-     "name": "",
-     "box": {
-      "x": 467.453125,
-      "y": 125,
-      "w": 67,
-      "h": 19
-     }
-    },
-    {
-     "role": "select",
-     "name": "",
-     "box": {
-      "x": 467.453125,
-      "y": 150,
-      "w": 67,
-      "h": 19
+      "x": 262,
+      "y": 929.75,
+      "w": 200.390625,
+      "h": 17
      }
     }
    ],
    "dialogs": [],
    "animated": [
     {
-     "x": 71,
-     "y": 110,
-     "w": 38,
-     "h": 18
+     "x": 74,
+     "y": 157,
+     "w": 64,
+     "h": 71
     }
    ]
   }
