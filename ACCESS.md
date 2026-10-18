@@ -1,8 +1,8 @@
 # Access
 
 Everything you can open, call or poke once `just up` has run. That command starts the whole
-stack: the data box, memory and its seed, the Task API, the Console, the crawler, both banks,
-the staff inbox and the factory. Every port listens only on this machine (127.0.0.1).
+stack: the data box, memory (empty until the factory learns something), the Task API, the Console,
+the runner, both banks, the staff inbox and the factory. Every port listens only on this machine (127.0.0.1).
 
 The logins are in `secrets/credentials.txt`. `just up` writes it from the encrypted secrets, and
 `just credentials` writes it again. The file never leaves your machine and is never committed.
@@ -16,9 +16,9 @@ The Postgres login isn't in it; read that one with `just secrets-edit local`.
 | Console inbox (codes, approvals, escalations) | http://localhost:8080/inbox | the same |
 | Console runs, with each run's frames | http://localhost:8080/runs | the same |
 | Hazard lab | http://localhost:8080/lab | the same |
-| Recommendations (the factory's drafts) | http://localhost:8080/recommendations | the same |
+| Recommendations (tables the factory learned, waiting for approval) | http://localhost:8080/recommendations | the same |
 | Freezes | http://localhost:8080/freezes | the same |
-| Database tables (AdminJS) | http://localhost:8080/admin | the same |
+| API clients, Console users, the audit log (AdminJS) | http://localhost:8080/admin | the same |
 | Task API, Swagger UI | http://localhost:8000/docs | press Authorize, enter the local client's id and secret (secrets/credentials.txt) |
 | API reference, static | http://localhost:8099 | none (`just api-docs` serves it) |
 | Bank 1, Generic Bank (2003 frameset) | http://localhost:8081/corelink/ | `teller0412` and its password |
@@ -26,10 +26,11 @@ The Postgres login isn't in it; read that one with `just secrets-edit local`.
 | Staff inbox (the bank staff's phone and email) | http://localhost:8089 | none |
 
 Bank 2 also serves pages from a second origin on 8092. You reach those through the bank's own
-pages, not directly. Supervisor `supervisor0901` signs in just like
-`teller0412` and approves large transfers.
+pages, not directly. Supervisor `supervisor0901` signs in just like `teller0412`. A transfer over a
+bank's manager threshold ($2,500 at bank 1) asks for a supervisor's code; the crawler doesn't
+handle that page, so the run stops and a person finishes it.
 
-Banks send their sign-in codes to the staff inbox.
+Banks send their sign-in codes to the staff inbox. A code lasts five minutes.
 
 ## APIs
 
@@ -166,16 +167,18 @@ curl -s -X POST http://localhost:8000/tasks/check-balance \
   -d '{"bank":"generic","memberId":"40017732","account":"Everyday Checking"}'
 ```
 
-Read the result. `?wait=30` holds the call until the run ends, or 30 seconds pass. If the bank asks
+Read the result. `?wait=30` holds the call until the run ends, or 30 seconds pass. When the bank asks
 for a sign-in code, the run waits for you: the code is in the staff inbox, http://localhost:8089,
-and you answer it in the Console inbox, http://localhost:8080/inbox. If a safety check stops a
+and you enter it in the Console inbox, http://localhost:8080/inbox, within its five minutes. If a safety check stops a
 run, it freezes that bank until an admin clears it on the Console's Freezes page.
 
 ```sh
 curl -s "http://localhost:8000/tasks/<runId>?wait=30" -H "Authorization: Bearer $TOKEN"
 ```
 
-The same on bank 2, where an account goes by its last four digits. The bank's admin API lists them:
+The same on bank 2, once the factory has learned it and a person has approved its table (see
+below); until then bank 2 answers `task_not_available`. An account goes by its last four digits, and
+the bank's admin API lists them:
 
 ```sh
 BANK_ADMIN_TOKEN=$(awk '/^Bank admin API/{f=1; next} f && /^  token/{print $2; exit}' secrets/credentials.txt)
@@ -194,3 +197,17 @@ curl -s -X POST http://localhost:8000/tasks/transfer \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"bank":"generic","memberId":"40017732","from":"Everyday Checking","to":"Rainy Day Savings","amountCents":2500,"memo":"rent","idempotencyKey":"try-transfer-0001"}'
 ```
+
+## Run the factory
+
+The factory learns bank 2, or repairs it if a repair case is open. Give it a member and two of their
+accounts by last four (the bank admin API lists them, as above):
+
+```sh
+just factory example 40017732 <from last four> <to last four>
+```
+
+While it runs, enter the bank's sign-in codes in the Console inbox as above. It ends with a report:
+its cost, the actions judged and refused, the corrections, and the lessons sent. A table that passes
+its live check waits on the Console's Recommendations page, each row beside its picture; approving it
+puts bank 2 into service. Each run is capped at $25.

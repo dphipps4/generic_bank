@@ -90,7 +90,7 @@ These prompts build the brief's system: two banks on one product, a small runtim
 >   Each is recorded in the run.
 > - **Outcomes:** a business answer, a recoverable condition, a hard failure and an escalation each get their own code.
 >
-> A crawler is a list of steps for each part of a task (sign in, find the member, read the balance, fill a transfer). Each step names its control and the words of its page.
+> A crawler is a table and a loop. The table is data: each page, the words that show it, and the steps a teller takes there. One loop runs any table: look at the page, return the bank's answer if it gave one, start again from home on trouble, otherwise do the row the page shows.
 
 ## 6. Bank 1, by the arrow
 
@@ -101,20 +101,19 @@ These prompts build the brief's system: two banks on one product, a small runtim
 >
 >    Index each frame: the page, and what was done. Never open the bank's source.
 > 2. **Claims.** From the frames alone, write what each page is, the words that show it, and what each control used does, each citing its frame.
-> 3. **Code.** From the claims alone, write bank 1's crawler as steps:
+> 3. **Code.** From the claims alone, write bank 1's table:
 >    - check balance;
 >    - transfer to the review page, then the granted Submit, pressed once, then a check of the history.
 >
 >    Each step cites its frame.
-> 4. **Proof.** Against the ledger, run:
->    - the outcome table;
->    - each kept hazard, forced alone;
->    - the member's own cases;
->    - the transfer through approval.
+> 4. **Proof.** Test the table against its evidence frames with no browser, then against the ledger:
+>    - a balance, by name and by last four;
+>    - the transfer through approval;
+>    - the bank's answers, and the forced hazards.
 >
 >    On a failure, go back for evidence, never to the source.
 >
-> A test fails if a word in the crawler isn't in a cited frame, or if the crawler imports the bank's code. Register bank 1's two tasks, marked "written by hand from captured evidence".
+> A test fails if a row's words aren't in its cited frame, or if the crawler imports the bank's code. Register bank 1's two tasks, marked "written by hand from captured evidence".
 
 ## 7. The Task API
 
