@@ -16,6 +16,7 @@
     "@gb/crawler": "*",
     "@gb/db": "*",
     "@gb/evidence": "*",
+    "@gb/guardrails": "*",
     "@gb/runs": "*",
     "@gb/runtime": "*",
     "fastify": "^5.6.0",

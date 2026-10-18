@@ -199,9 +199,10 @@ bank: env image
 factory-up: env image
     @{{compose}} --profile factory up -d --wait {{factory}}
 
-# The factory learns a bank (or repairs it), then the gate, under a hard limit (FACTORY_RUN_LIMIT_MINUTES, default 15): just factory example 40017732 1234 5678
+# The factory writes a bank's crawler (or repairs it), then the gate, under a hard limit (FACTORY_RUN_LIMIT_MINUTES, default 15): just factory example 40017732 1234 5678
+# Add practice for a bank whose table is written by hand: learned from scratch, checked, never recommended
 [group('Factory')]
-factory bank member from to: factory-up
+factory bank member from to mode="": factory-up
     #!/usr/bin/env bash
     set -uo pipefail
     limit=$(( ${FACTORY_RUN_LIMIT_MINUTES:-15} * 60 ))
@@ -210,7 +211,7 @@ factory bank member from to: factory-up
     ( sleep "$limit"; docker stop -t 5 "$name" >/dev/null 2>&1 && echo "  ✗ stopped at the run's hard limit of $(( limit / 60 )) minutes" ) &
     watchdog=$!
     disown "$watchdog"
-    {{compose}} --profile factory-run run --rm --name "$name" factory-run {{bank}} {{member}} {{from}} {{to}}
+    {{compose}} --profile factory-run run --rm --name "$name" factory-run {{bank}} {{member}} {{from}} {{to}} {{mode}}
     status=$?
     pkill -P "$watchdog" 2>/dev/null; kill "$watchdog" 2>/dev/null
     exit "$status"
