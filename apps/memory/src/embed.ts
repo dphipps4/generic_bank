@@ -23,3 +23,24 @@ export function localEmbedder(opts: { cacheDir?: string } = {}): Embed {
 
 /** A vector as pgvector reads it. */
 export const asVector = (v: number[]) => `[${v.join(',')}]`;
+
+/**
+ * Embeds every lesson version written without a vector, such as the base lessons a migration
+ * writes: search finds them by meaning too, and a near-duplicate proposal merges into them.
+ */
+export async function embedMissing(
+  db: { query<R>(sql: string, params?: unknown[]): Promise<{ rows: R[] }> },
+  embed: Embed,
+): Promise<number> {
+  const missing = (
+    await db.query<{ lessonId: string; version: number; text: string }>(
+      `SELECT "lessonId", version, text FROM "LessonVersion" WHERE embedding IS NULL`,
+    )
+  ).rows;
+  for (const m of missing)
+    await db.query(
+      `UPDATE "LessonVersion" SET embedding = $3::vector WHERE "lessonId" = $1 AND version = $2`,
+      [m.lessonId, m.version, asVector(await embed(m.text))],
+    );
+  return missing.length;
+}

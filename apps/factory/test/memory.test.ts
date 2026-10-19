@@ -169,12 +169,13 @@ describe('a run’s lessons', () => {
         frames: ['f3'],
         evidenceHash: 'ab'.repeat(32),
       });
-    const pack = await m.pack(at, 'statements and transfers');
+    const pack = await m.pack(at, 'statements and transfers', 'supervisor');
     const served = servedBy(pack);
     const idOf = (start: string) => [...served].find(([, text]) => text.startsWith(start))![0];
     const newestFirst = idOf('Statements here');
     const accountsOnly = idOf('The transfer form');
-    expect(served.size).toBe(2);
+    // The base lessons are served too, and are tested in memory's own tests.
+    expect([...served.keys()].filter((id) => !id.startsWith('base-'))).toHaveLength(2);
 
     const { trail, steps } = trailOf();
     script = (seen, results) => {
@@ -209,6 +210,7 @@ describe('a run’s lessons', () => {
       };
     };
     const learned = await writeLessons({
+      who: 'supervisor',
       agent: agent('lessons'),
       memory: m,
       at,
@@ -236,10 +238,10 @@ describe('a run’s lessons', () => {
         startedAt: new Date(),
         model: DEFAULT_ROLES.lessons.model,
       },
-      learned,
+      { supervisor: learned },
     );
     // The lesson naming a person is refused by memory's privacy screen, and goes no further.
-    expect(refused).toEqual(['propose a lesson: 422 privacy_screen person']);
+    expect(refused).toEqual(['propose a lesson for the supervisor: 422 privacy_screen person']);
 
     const q = <T>(sql: string) => memory.db.query<T>(sql, [RUN]).then((r) => r.rows);
     expect(await q(`SELECT kind::text AS kind, driver, outcome FROM "Run" WHERE id = $1`)).toEqual([

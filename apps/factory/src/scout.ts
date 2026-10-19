@@ -6,7 +6,7 @@
 // words the page shows, code files each step it takes under that page, and it notes the bank's
 // answers and where a value is read, each checked against the page. The Supervisor judges every
 // action before the next one. The server types the sign-in and a person's code; the model never
-// sees either. It never presses a control that could move money.
+// sees either. It never presses a control that could send money.
 import type { Answer, At, Goal, Row, Step, Table } from '@gb/crawler';
 import { LISTED, judge, pressesOn, refusals, SCREEN_KINDS } from './guard.js';
 import { accountsIn, actionOf, cents, leaf, leaves, namesIn, pagesOf, readOf } from '@gb/crawler';
@@ -108,7 +108,7 @@ export interface Judgment {
   extendSeconds?: number;
 }
 
-// Words that could move money or change an account: never pressed by the factory.
+// Words that could send money or change an account: never pressed by the factory.
 const MONEY =
   /\b(confirm|submit|send\s+(money|payment|funds|transfer)|pay|authori[sz]e|approve|transfer\s+now|waive|close account|change address|add payee)\b/i;
 
@@ -659,7 +659,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         await mayAct();
         const c = chosen(i);
         if (MONEY.test(c.name))
-          throw new ToolRefusal(`"${c.name}" could move money or change an account: never pressed`);
+          throw new ToolRefusal(`"${c.name}" could send money or change an account: never pressed`);
         allow({ press: c.name || 'Submit' }, i.as);
         // By its name when the name finds it alone; otherwise (no name, or a name two controls share)
         // by its position, with an anchor the crawler finds it by again.
@@ -842,7 +842,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         const it = itemOf(i.item, ['button', 'link', 'checkbox']);
         if (MONEY.test(it.label))
           throw new ToolRefusal(
-            `"${it.label}" could move money or change an account: never pressed`,
+            `"${it.label}" could send money or change an account: never pressed`,
           );
         allow({ press: it.label }, i.as);
         const at = await anchorOf(it, it.labelBox ?? it.box);

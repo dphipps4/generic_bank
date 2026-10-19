@@ -21,7 +21,14 @@ const post = async (write: string, body: unknown, role: Role = 'factory') => {
 const get = (url: string) =>
   app.inject({ url, headers: { authorization: `Bearer ${TOKENS.factory}` } });
 
-type Item = { id: string; state: string; label?: string; text: string; kind?: string };
+type Item = {
+  id: string;
+  state: string;
+  label?: string;
+  text: string;
+  kind?: string;
+  base?: boolean;
+};
 type Pack = {
   budget: number;
   size: number;
@@ -167,7 +174,11 @@ describe('the knowledge pack for bank 2', () => {
   it('comes in tier order, labels every unconfirmed lesson, and fits its budget', async () => {
     const p = await pack('bank=example&vendor=corelink');
     expect(Object.keys(p.tiers)).toEqual([...TIERS]);
-    const keys = (t: string) => p.tiers[t]!.map((l) => l.id).sort();
+    // The base lessons are served to every pack, and tested on their own (base.test.ts).
+    const keys = (t: string) =>
+      p.tiers[t]!.filter((l) => !l.base)
+        .map((l) => l.id)
+        .sort();
 
     expect(keys('patterns')).toEqual(
       ['P-statements', ...PATTERNS.map((_, i) => `P-${i + 1}`)].sort(),
@@ -178,7 +189,7 @@ describe('the knowledge pack for bank 2', () => {
     expect(keys('disputed')).toEqual([ids.disputed]);
 
     // What is confirmed is known and carries no label; everything else says what it is.
-    for (const l of lessonsOf(p))
+    for (const l of lessonsOf(p).filter((x) => !x.base))
       if (l.state === 'confirmed') expect(l.label).toBeUndefined();
       else expect(l.label, l.text).toBeDefined();
     const label = (id: string) => lessonsOf(p).find((l) => l.id === id)!.label;
@@ -201,7 +212,12 @@ describe('the knowledge pack for bank 2', () => {
   it('within a small budget, counts the lessons left out', async () => {
     const full = await pack('bank=example&vendor=corelink');
     const p = await pack('bank=example&vendor=corelink&budget=2500');
-    expect(p.size).toBeLessThanOrEqual(2500);
+    // The base lessons are always served; the rest fill what is left of the budget.
+    const base = Object.values(p.tiers)
+      .flat()
+      .filter((l) => l.base)
+      .reduce((n, l) => n + JSON.stringify(l).length, 0);
+    expect(p.size - base).toBeLessThanOrEqual(2500);
     expect(p.omitted.patterns).toBeGreaterThan(0);
     for (const t of TIERS) {
       const kept = p.tiers[t]!.map((l) => l.id);
@@ -215,7 +231,7 @@ describe('the knowledge pack for bank 2', () => {
     const p = await pack(
       `bank=example&vendor=corelink&q=${encodeURIComponent('statements list loading rows')}`,
     );
-    expect(p.tiers.patterns![0]).toMatchObject({
+    expect(p.tiers.patterns!.find((l) => !l.base)).toMatchObject({
       id: 'P-statements',
       why: 'A count taken early is short.',
     });

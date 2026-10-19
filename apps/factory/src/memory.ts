@@ -16,6 +16,9 @@ export interface At {
   vendor: string | null;
 }
 
+/** The agent whose lessons these are: each writes its own, and is served its own. */
+export type Owner = 'scout' | 'supervisor';
+
 /** The knowledge pack, as memory serves it: lessons in tiers, best first. */
 export interface Pack {
   bank: string;
@@ -51,12 +54,20 @@ export function memoryClient(o: { url: string; token: string; signingKey: string
     return (await r.json()) as T;
   }
   return {
-    pack: (at: At, q: string) =>
-      get<Pack>('/knowledge/pack', { bank: at.bank, vendor: at.vendor, q, budget: PACK_BUDGET }),
-    query: (at: At, q: string) =>
+    /** The lessons for one agent: its own, and those for both. */
+    pack: (at: At, q: string, who: Owner) =>
+      get<Pack>('/knowledge/pack', {
+        bank: at.bank,
+        vendor: at.vendor,
+        for: who,
+        q,
+        budget: PACK_BUDGET,
+      }),
+    query: (at: At, q: string, who: Owner) =>
       get<{ items: Record<string, unknown>[] }>('/knowledge/query', {
         bank: at.bank,
         vendor: at.vendor,
+        for: who,
         q,
       }),
     async write(write: string, body: unknown): Promise<Written> {
@@ -99,7 +110,12 @@ export function servedBy(pack: Pack): Map<string, string> {
 
 /** `memory_query`: read-only, at most eight lessons. A lesson it serves can be named as relied on
  *  or contradicted. */
-export function memoryQueryTool(memory: Memory, at: At, served: Map<string, string>): Tool {
+export function memoryQueryTool(
+  memory: Memory,
+  at: At,
+  served: Map<string, string>,
+  who: Owner,
+): Tool {
   const Input = z.object({
     question: z.string().trim().min(3).max(500).describe('What to ask, in a few words'),
   });
@@ -111,7 +127,7 @@ export function memoryQueryTool(memory: Memory, at: At, served: Map<string, stri
     async run(input) {
       const { question } = Input.parse(input);
       try {
-        const a = await memory.query(at, question);
+        const a = await memory.query(at, question, who);
         for (const i of a.items)
           if (i.kind === 'lesson' && typeof i.id === 'string') served.set(i.id, String(i.text));
         return { text: JSON.stringify(a) };
@@ -239,7 +255,14 @@ export function recordLessonTool(trail: Trail, kept: Lesson[]): Tool {
   };
 }
 
-const LESSONS = `You are the Supervisor, and the run at this site has ended. Write down what it taught, for the factory's next runs at this site and at sites like it.
+/** The lesson phase's instructions, for the agent writing: each writes its own lessons, for itself. */
+const LESSONS = (who: Owner) => `${
+  who === 'scout'
+    ? 'You are the Scout, and the run at this site has ended. Write down what it taught you about working the site: how to reach each screen, and how to act on it.'
+    : "You are the Supervisor, and the run at this site has ended. Write down what it taught you about judging the Scout's work: what to look at, and how to tell a step worked."
+} Your lessons are kept for you alone, for the factory's next runs at this site and at sites like it; the ${
+  who === 'scout' ? 'Supervisor' : 'Scout'
+} writes its own.
 
 Values shown as █ were hidden by the factory, not by the site: never record a lesson about hidden, masked or starred values. The factory never sends money: never record a lesson that advises pressing a control that would send it. Record each lesson with record_lesson: one to three sentences of advice, stated generally, with no names, numbers, codes or page data; its area; its scope (tenant: true of this site; vendor: of every site on the same product; pattern: everywhere); a confidence; the frames of this run that show it; and whether it was seen on them or is a guess. A lesson with no frame of this run is refused. Record only what the run taught.
 
@@ -302,6 +325,8 @@ export interface Learned {
  * with no frame of this run, is dropped, and the trail says so.
  */
 export async function writeLessons(o: {
+  /** The agent writing, whose lessons these are. */
+  who: Owner;
   agent: Agent;
   memory: Memory;
   at: At;
@@ -317,7 +342,7 @@ export async function writeLessons(o: {
   }
   const lessons: Lesson[] = [];
   const said = await turn(o.agent, {
-    system: LESSONS,
+    system: LESSONS(o.who),
     say: [
       `How the run ended:\n${o.ended.map((e) => `- ${e}`).join('\n')}`,
       `Lessons memory served this run:\n${
@@ -327,7 +352,7 @@ export async function writeLessons(o: {
     ].join('\n\n'),
     tools: toolsOf('lessons', [
       recordLessonTool(o.trail, lessons),
-      memoryQueryTool(o.memory, o.at, o.served),
+      memoryQueryTool(o.memory, o.at, o.served, o.who),
     ]),
     answer: ANSWER_SCHEMA,
     calls: MAX_LESSONS + 3,
@@ -391,7 +416,8 @@ export async function sendLearned(
     startedAt: Date;
     model: string;
   },
-  learned: Learned,
+  /** What each agent learned: its lessons are kept as its own. */
+  learned: Partial<Record<Owner, Learned>>,
 ): Promise<string[]> {
   const refused: string[] = [];
   const note = async (action: string, w: Written) => {
@@ -415,27 +441,31 @@ export async function sendLearned(
     await note('the run', episode);
     return refused;
   }
-  for (const l of learned.lessons)
-    await note(
-      'propose a lesson',
-      await memory.write('lessons/proposals', {
-        runId: run.id,
-        text: l.text,
-        area: l.area,
-        scope: l.scope,
-        confidence: l.confidence,
-        seen: l.basis === 'seen',
-        frames: l.frames,
-        evidenceHash: await evidenceHash(trail, l.frames),
-        model: run.model,
-      }),
-    );
-  if (learned.reliedOn.length)
+  const all = Object.entries(learned) as [Owner, Learned][];
+  for (const [who, { lessons }] of all)
+    for (const l of lessons)
+      await note(
+        `propose a lesson for the ${who}`,
+        await memory.write('lessons/proposals', {
+          runId: run.id,
+          audience: who,
+          text: l.text,
+          area: l.area,
+          scope: l.scope,
+          confidence: l.confidence,
+          seen: l.basis === 'seen',
+          frames: l.frames,
+          evidenceHash: await evidenceHash(trail, l.frames),
+          model: run.model,
+        }),
+      );
+  const reliedOn = [...new Set(all.flatMap(([, l]) => l.reliedOn))];
+  if (reliedOn.length)
     await note(
       'relied on',
-      await memory.write('lessons/relied-on', { runId: run.id, lessonIds: learned.reliedOn }),
+      await memory.write('lessons/relied-on', { runId: run.id, lessonIds: reliedOn }),
     );
-  for (const c of learned.contradicted)
+  for (const c of all.flatMap(([, l]) => l.contradicted))
     await note(
       'contradicts a lesson',
       await memory.write('facts/invalidate', {

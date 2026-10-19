@@ -186,7 +186,8 @@ async function supervisorSample() {
     signingKey: cfg.MEMORY_SIGNING_KEY,
   });
   const at = { bank, vendor: await vendorOf(sql, bank) };
-  const pack = await memory.pack(at, goalText(input));
+  // The Supervisor's own lessons, as a live run gives them.
+  const pack = await memory.pack(at, goalText(input), 'supervisor');
   const thoughts: string[] = [];
   const trail: Trail = {
     ...quiet,
@@ -197,7 +198,7 @@ async function supervisorSample() {
     trail,
     goal: goalText(input),
     knowledge: JSON.stringify(pack.tiers),
-    tools: [memoryQueryTool(memory, at, servedBy(pack))],
+    tools: [memoryQueryTool(memory, at, servedBy(pack), 'supervisor')],
     clock: { text: () => variant.clock ?? '60 s used of 420 s, 360 s left' },
     scoutTools: scoutTools().map((t) => ({ name: t.name, description: t.description })),
     ...(variant.instructions ? { instructions: variant.instructions } : {}),

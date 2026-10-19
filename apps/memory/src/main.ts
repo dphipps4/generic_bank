@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { loadConfig, port, secret } from '@gb/config';
 import { pgDb } from './db.js';
 import { door } from './door.js';
-import { localEmbedder } from './embed.js';
+import { embedMissing, localEmbedder } from './embed.js';
 import { episodes } from './episodes.js';
 import { knowledgeRoutes } from './knowledge.js';
 import { buildServer } from './server.js';
@@ -37,4 +37,7 @@ const app = buildServer({
 });
 knowledgeRoutes(app, db, embed);
 await embed('ready');
+// Lessons written with no vector (the base lessons, from a migration) are embedded before serving.
+const embedded = await embedMissing(db, embed);
+if (embedded) app.log.info({ embedded }, 'lessons embedded at start');
 await app.listen({ host: '0.0.0.0', port: cfg.MEMORY_PORT });

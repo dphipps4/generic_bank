@@ -18,6 +18,13 @@ enum RunKind {
 }
 
 /// tenant: one bank; vendor: every bank on the same product; pattern: everywhere.
+/// Whom a lesson is for: each agent is served its own.
+enum Audience {
+  scout
+  supervisor
+  both
+}
+
 enum Scope {
   tenant
   vendor
@@ -62,6 +69,8 @@ model Run {
 model Lesson {
   id        String          @id
   current   Int             @default(0)
+  /// A base lesson, true of any such console from the first start: a run may dispute it, never retire it.
+  base      Boolean         @default(false)
   createdAt DateTime        @default(now()) @db.Timestamptz(3)
   versions  LessonVersion[]
   reliances Reliance[]
@@ -89,6 +98,7 @@ model LessonVersion {
   evidence       Json
   reason         String?
   role           Role
+  audience       Audience                    @default(both)
   runId          String?
   model          String?
   prompts        Json?

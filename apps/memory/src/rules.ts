@@ -53,7 +53,11 @@ export async function contradict(
 
   let change: { state?: 'disputed' | 'retired'; retiredAtBanks?: string[] } = {};
   let rule = 'dispute';
-  if (against.length >= 2 && (cur.scope === 'tenant' || banks.length >= 2)) {
+  // A base lesson is served from the first start: runs can dispute it, and only a person retires it.
+  if (cur.base) {
+    if (cur.state !== 'retired') change = { state: 'disputed' };
+    rule = 'dispute a base lesson';
+  } else if (against.length >= 2 && (cur.scope === 'tenant' || banks.length >= 2)) {
     change = { state: 'retired' };
     rule = 'retire';
   } else if (against.length >= 2) {
