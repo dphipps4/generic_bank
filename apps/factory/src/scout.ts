@@ -615,16 +615,27 @@ export function scout(deps: ScoutDeps, task: Task) {
 
   const tools = {
     browser_open: {
-      description: "Opens the site's start page, or a path on its own host. Nothing else opens.",
-      input: z.object({ path: z.string().max(200).optional() }),
-      async run(i: { path?: string }) {
+      description:
+        "Opens the site's start page (no path), or a path on its own host, such as /help. Opening a page repeats every screen before it, so say why nothing on the page you are on can do instead. Nothing else opens.",
+      input: z.object({
+        path: z
+          .string()
+          .regex(
+            /^\/[^\s?#]*$/,
+            'a path on the site starts with / ; for the start page, give no path',
+          )
+          .max(200)
+          .optional(),
+        why: z.string().min(3).max(200).describe('One line: why open a page, not act on this one'),
+      }),
+      async run(i: { path?: string; why: string }) {
         await mayAct();
         const url = new URL(i.path ?? deps.start, deps.start);
         if (url.host !== new URL(deps.start).host)
           throw new ToolRefusal(`${url.host} is not the site being learned`);
         await page.goto(url.href);
         if (!t.home) t.home = url.pathname.replace(new URL(deps.start).pathname, '') || '';
-        return look(`opened ${url.pathname}`, 'to start');
+        return look(`opened ${url.pathname}`, i.why);
       },
     },
     browser_look: {
