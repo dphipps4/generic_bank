@@ -72,6 +72,9 @@ const OPENROUTER_PRICES = Object.fromEntries(
 );
 export const PRICES: Readonly<Record<string, Price>> = {
   ...OPENROUTER_PRICES,
+  // Not in pi's catalog: OpenRouter's published rates, per million tokens. A model the meter
+  // can't price counts as free, so the run's budget cap would not hold.
+  'meta/muse-spark-1.3': { input: 1.25, output: 4.25, cacheRead: 0.15, cacheWrite: 1.25 },
   'claude-opus-5-5': { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 8 },
   'claude-sonnet-5-5': { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 4 },
 };
