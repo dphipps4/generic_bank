@@ -36,10 +36,12 @@ const ANSWER_SCHEMA = {
       type: 'integer',
       minimum: 0,
       maximum: 120,
-      description: 'Only when the goal is close and time is the only obstacle: seconds to add',
+      description:
+        'Seconds to add, only when the goal is close and time is the only obstacle; 0 otherwise',
     },
   },
-  required: ['verdict', 'says'],
+  // Every property required: a provider that enforces strict schemas refuses an optional one (run 23).
+  required: ['verdict', 'says', 'extendSeconds'],
   additionalProperties: false,
 };
 const Answer = z.object({
