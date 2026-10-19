@@ -72,7 +72,7 @@ describe('the Scout, scripted', () => {
       made.push(tool);
       return go(tool, input).catch((e: Error) => e);
     };
-    await call('browser_open');
+    await call('browser_open', { why: 'to start' });
     await call('browser_look');
     // Refused: no control at that point. The Supervisor judges it at once, error and all.
     const before = judged.length;
@@ -98,7 +98,7 @@ describe('the Scout, scripted', () => {
     const judged: Judging[] = [];
     const { s, id, go } = await aScout(judged);
     const why = 'the next step';
-    await go('browser_open');
+    await go('browser_open', { why: 'to start' });
     await go('name_page', {
       name: 'sign-in',
       kind: 'sign_in',
@@ -191,9 +191,18 @@ describe('the Scout, scripted', () => {
     expect(b.availableCents).toBe(checking!.availableCents);
   }, 240_000);
 
+  it('opens only a path on the site, and only with a reason (run 28 opened "?" twice)', async () => {
+    const { go } = await aScout();
+    await expect(go('browser_open', { path: '?', why: 'to fill the memo' })).rejects.toThrow(
+      /a path on the site starts with \//,
+    );
+    await expect(go('browser_open', {})).rejects.toThrow(/why/);
+    await expect(go('browser_open', { why: 'the browser lost its place' })).resolves.toBeDefined();
+  }, 120_000);
+
   it('refuses a target the runtime finds elsewhere', async () => {
     const { id, go } = await aScout();
-    await go('browser_open');
+    await go('browser_open', { why: 'to start' });
     await go('name_page', {
       name: 'sign-in',
       kind: 'sign_in',
