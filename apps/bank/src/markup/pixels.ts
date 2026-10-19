@@ -141,5 +141,3 @@ export function pixelImage(id: string): Buffer | null {
   const e = registry.get(id);
   return e ? renderText(e.text, e.style) : null;
 }
-
-export const glyphs = () => Object.keys(FONT);

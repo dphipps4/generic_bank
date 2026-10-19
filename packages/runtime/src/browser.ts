@@ -3,7 +3,7 @@
 // page from outside it (DevTools), never by script inside it.
 import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { type Browser, chromium, type Dialog, type Page } from 'playwright-core';
+import { type Browser, chromium, type Page } from 'playwright-core';
 
 /** Where Chrome is: CHROME_PATH, `just browser`'s install, or the Runner image's Debian chromium. */
 export function findChrome(root = process.cwd()): string {
@@ -80,8 +80,6 @@ export function brandsFor(major: number, version = String(major)) {
 export interface PageOptions {
   /** Extra request headers, such as a signed X-Hazards in tests. */
   headers?: Record<string, string>;
-  /** What to do with a JavaScript dialog; dismissing it is the non-committal answer. */
-  dialog?: (d: Dialog) => Promise<void>;
   /** Cookies to start from: a file `context.storageState` wrote. */
   session?: string;
 }
@@ -119,10 +117,10 @@ export async function newPage(browser: Browser, o: PageOptions = {}): Promise<Pa
       wow64: false,
     },
   });
-  const answer = o.dialog ?? ((d: Dialog) => d.dismiss());
+  // A JavaScript dialog is dismissed: the non-committal answer.
   page.on('dialog', (d) => {
     dialogs.get(page)?.push(`${d.type()}: ${d.message()}`);
-    void answer(d).catch(() => undefined);
+    void d.dismiss().catch(() => undefined);
   });
   dialogs.set(page, []);
   return page;

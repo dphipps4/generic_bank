@@ -8,7 +8,7 @@
 // action before the next one. The server types the sign-in and a person's code; the model never
 // sees either. It never presses a control that could move money.
 import type { Answer, At, Goal, Row, Step, Table } from '@gb/crawler';
-import { accountsIn, cents, leaf, leaves, namesIn, readOf } from '@gb/crawler';
+import { accountsIn, cents, leaf, leaves, namesIn, pagesOf, readOf } from '@gb/crawler';
 import {
   type Box,
   choose,
@@ -121,8 +121,16 @@ const words = (f: Frame) =>
     .filter((t): t is string => !!t);
 const shows = (f: Frame, w: string) => f.tree.toLowerCase().includes(w.toLowerCase());
 
-/** An account as the lists hold it: its last four digits, whatever words a bank puts around them. */
-const account = (ref = '') => ref;
+/** A value the Scout types, and the token its step keeps in the table. */
+type Value = 'user_id' | 'password' | 'code' | 'member' | 'amount' | 'memo';
+const TOKEN: Record<Value, string> = {
+  user_id: '$operator',
+  password: '$password',
+  code: '$code',
+  member: '$member',
+  amount: '$amount',
+  memo: '$memo',
+};
 
 /**
  * A read written from the page's own lines, where the Scout points: each placeholder after a label
@@ -272,7 +280,6 @@ export function scout(deps: ScoutDeps, task: Task) {
   // last four, the same for the gate and every run. The member's name joins once a read finds it.
   for (const v of [deps.credentials.operatorId, deps.credentials.password])
     if (!known.includes(v)) known.push(v);
-  /** Learns the member's name where a noted name read finds it, as the crawler does. */
   /** The member's name, read from the page now by the name reads: true when it is new. */
   const learnName = async (): Promise<boolean> => {
     if (!t.reads.name?.length) return false;
@@ -310,17 +317,10 @@ export function scout(deps: ScoutDeps, task: Task) {
   let waiting = false;
   let stopped = false;
 
-  const pages = () =>
-    t.rows.map((r) => ({
-      name: r.page,
-      shows: r.shows,
-      never: r.never ?? [],
-      looks: r.looks ?? [],
-    }));
   /** Which named page this is, if one. */
   const rowOf = (f: Frame): Row | null => {
     try {
-      const name = knows(f, pages());
+      const name = knows(f, pagesOf(t));
       return t.rows.find((r) => r.page === name) ?? null;
     } catch (e) {
       if (e instanceof UnknownPage) return null;
@@ -462,6 +462,36 @@ export function scout(deps: ScoutDeps, task: Task) {
   };
   /** Whether a value is a secret: the sign-in and a person's code. */
   const secretValue = (v: string) => v === 'user_id' || v === 'password' || v === 'code';
+  /** The task's value as typed; a person's code joins what is hidden whole. */
+  const textOf = async (v: Value) => {
+    const text =
+      v === 'user_id'
+        ? deps.credentials.operatorId
+        : v === 'password'
+          ? deps.credentials.password
+          : v === 'code'
+            ? (await deps.code()).trim()
+            : v === 'member'
+              ? task.member
+              : v === 'amount'
+                ? ((task.amountCents ?? 0) / 100).toFixed(2)
+                : (task.memo ?? '');
+    if (v === 'code' && !known.includes(text)) known.push(text);
+    return text;
+  };
+  /**
+   * The sign-in and the code go into fields the allowlists know by their own names: the bank's
+   * name for each is kept, so the guard knows them when the table runs.
+   */
+  const nameField = (v: Value, label: string) => {
+    const listed = { user_id: 'Operator ID', password: 'Password', code: 'Code' }[
+      v as 'user_id' | 'password' | 'code'
+    ];
+    if (listed && listed !== label) {
+      t.names ??= {};
+      t.names[listed] = [...new Set([...(t.names[listed] ?? []), label])];
+    }
+  };
   /** Whether the page's own words hold a label, colon or not: then structure can find it. */
   const inWords = (label: string) => {
     const want = label.trim().replace(/:$/, '').toLowerCase();
@@ -632,11 +662,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         await press(page, c.name, i.near ? { near: i.near } : {});
         // Near the task's own account, the step says so, and fits any member's account.
         const near =
-          i.near && [task.from, account(task.from)].includes(i.near)
-            ? '$from'
-            : i.near && [task.to, account(task.to)].includes(i.near)
-              ? '$to'
-              : i.near;
+          i.near && i.near === task.from ? '$from' : i.near && i.near === task.to ? '$to' : i.near;
         visit.push({ press: c.name, ...(near ? { near } : {}) });
         return look(`pressed "${c.name}"`, i.why);
       },
@@ -657,33 +683,14 @@ export function scout(deps: ScoutDeps, task: Task) {
         x?: number;
         y?: number;
         label: string;
-        value: 'user_id' | 'password' | 'code' | 'member' | 'amount' | 'memo';
+        value: Value;
         why: string;
       }) {
         await mayAct();
         const c = chosen(i);
         const label = i.label;
-        const text =
-          i.value === 'user_id'
-            ? deps.credentials.operatorId
-            : i.value === 'password'
-              ? deps.credentials.password
-              : i.value === 'code'
-                ? (await deps.code()).trim()
-                : i.value === 'member'
-                  ? task.member
-                  : i.value === 'amount'
-                    ? ((task.amountCents ?? 0) / 100).toFixed(2)
-                    : (task.memo ?? '');
-        if (i.value === 'code' && !known.includes(text)) known.push(text);
-        const token = {
-          user_id: '$operator',
-          password: '$password',
-          code: '$code',
-          member: '$member',
-          amount: '$amount',
-          memo: '$memo',
-        }[i.value];
+        const text = await textOf(i.value);
+        const token = TOKEN[i.value];
         // Structure first: the label's words, when the page's words hold them. Otherwise sight, in
         // the same call: the field the id names, typed at its position, with an anchor of it and the
         // label drawn beside it. A failed lookup costs milliseconds, not a refusal and a judgment.
@@ -707,15 +714,7 @@ export function scout(deps: ScoutDeps, task: Task) {
           visit.push({ type: label, value: token, at: anchor });
           how = `${i.id ?? 'the field'}, by its position (the label "${label}" is not in the page's words)`;
         }
-        // The sign-in and the code go into fields the allowlists know by their own names: the bank's
-        // name for each is kept, so the guard knows them when the table runs.
-        const listed = { user_id: 'Operator ID', password: 'Password', code: 'Code' }[
-          i.value as 'user_id' | 'password' | 'code'
-        ];
-        if (listed && listed !== label) {
-          t.names ??= {};
-          t.names[listed] = [...new Set([...(t.names[listed] ?? []), label])];
-        }
+        nameField(i.value, label);
         const held = await holds(at, secretValue(i.value));
         return look(`typed the ${i.value.replace('_', ' ')} into ${how}${held}`, i.why);
       },
@@ -785,11 +784,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         value: z.enum(['user_id', 'password', 'code', 'member', 'amount', 'memo']),
         why: z.string().min(3).max(200),
       }),
-      async run(i: {
-        item: string;
-        value: 'user_id' | 'password' | 'code' | 'member' | 'amount' | 'memo';
-        why: string;
-      }) {
+      async run(i: { item: string; value: Value; why: string }) {
         await mayAct();
         const it = itemOf(i.item, ['field', 'password field']);
         if (!it.labelBox)
@@ -797,36 +792,11 @@ export function scout(deps: ScoutDeps, task: Task) {
             `${it.id} has no label box: list the page again with its label's box`,
           );
         const at = await anchorOf(it, it.labelBox);
-        const text =
-          i.value === 'user_id'
-            ? deps.credentials.operatorId
-            : i.value === 'password'
-              ? deps.credentials.password
-              : i.value === 'code'
-                ? (await deps.code()).trim()
-                : i.value === 'member'
-                  ? task.member
-                  : i.value === 'amount'
-                    ? ((task.amountCents ?? 0) / 100).toFixed(2)
-                    : (task.memo ?? '');
-        if (i.value === 'code' && !known.includes(text)) known.push(text);
+        const text = await textOf(i.value);
         const p = centre(it.box);
         await typeAt(page, p, text);
-        const listed = { user_id: 'Operator ID', password: 'Password', code: 'Code' }[
-          i.value as 'user_id' | 'password' | 'code'
-        ];
-        if (listed && listed !== it.label) {
-          t.names ??= {};
-          t.names[listed] = [...new Set([...(t.names[listed] ?? []), it.label])];
-        }
-        const token = {
-          user_id: '$operator',
-          password: '$password',
-          code: '$code',
-          member: '$member',
-          amount: '$amount',
-          memo: '$memo',
-        }[i.value];
+        nameField(i.value, it.label);
+        const token = TOKEN[i.value];
         visit.push({ type: it.label, value: token, at });
         const held = await holds(p, secretValue(i.value));
         return look(
@@ -876,7 +846,7 @@ export function scout(deps: ScoutDeps, task: Task) {
           );
         const at = await anchorOf(it, it.labelBox);
         const p = centre(it.box);
-        await chooseAt(page, p, account(i.account === 'from' ? task.from : task.to)).catch(
+        await chooseAt(page, p, (i.account === 'from' ? task.from : task.to) ?? '').catch(
           (e: Error) => {
             if (e instanceof TargetError) throw new ToolRefusal(e.message);
             throw e;
@@ -910,7 +880,7 @@ export function scout(deps: ScoutDeps, task: Task) {
       }) {
         await mayAct();
         const c = chosen(i);
-        const want = account(i.account === 'from' ? task.from : task.to);
+        const want = (i.account === 'from' ? task.from : task.to) ?? '';
         const refuse = (e: Error) => {
           if (e instanceof TargetError) throw new ToolRefusal(e.message);
           throw e;
@@ -1033,17 +1003,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         );
         const rows = [...earlier, next];
         try {
-          if (
-            knows(
-              f,
-              rows.map((r) => ({
-                name: r.page,
-                shows: r.shows,
-                never: r.never ?? [],
-                looks: r.looks ?? [],
-              })),
-            ) !== i.name
-          )
+          if (knows(f, pagesOf({ rows })) !== i.name)
             throw new ToolRefusal('those words also show another named page');
         } catch (e) {
           if (e instanceof UnknownPage)

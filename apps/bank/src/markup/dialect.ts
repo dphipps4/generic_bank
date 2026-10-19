@@ -2,9 +2,9 @@ import { createHmac } from 'node:crypto';
 import { hash32 } from '../rng.js';
 import type { Tenant } from '../tenants.js';
 
-// Every page renders its controls in its own dialect, fixed by the tenant's markup seed, the UI
-// version and the page's name. The same tenant and version always produce the same markup, as a
-// real enterprise UI does; a version bump moves things, which is what the repair loop is for.
+// Every page renders its controls in its own dialect, fixed by the tenant's markup seed and the
+// page's name. The same tenant always produces the same markup, as a real enterprise UI does; a
+// redesign is a different tenant (BANK_REDESIGN), and moves things.
 
 export type SubmitStyle = 'image' | 'button' | 'jslink' | 'cell';
 export type LabelStyle = 'plain' | 'bold' | 'split';
@@ -15,7 +15,7 @@ export interface Dialect {
   label: LabelStyle;
   depth: number;
   upper: boolean;
-  /** A class name hashed per tenant, version and page: stable, and meaningless. */
+  /** A class name hashed per tenant and page: stable, and meaningless. */
   cls(role: string): string;
 }
 
@@ -23,7 +23,7 @@ const SUBMITS: SubmitStyle[] = ['image', 'button', 'jslink', 'cell'];
 
 /**
  * The product's pages, in a fixed order. Their submit dialects rotate through all four styles, so
- * every bank uses every style; the rotation's starting point is fixed per tenant and version.
+ * every bank uses every style; the rotation's starting point is fixed per tenant.
  * Hashing each page on its own could leave a style unused.
  */
 export const PAGES = [
@@ -41,13 +41,16 @@ export const PAGES = [
 ] as const;
 const LABELS: LabelStyle[] = ['plain', 'bold', 'split'];
 
-export function dialect(t: Tenant, uiVersion: number, page: string): Dialect {
-  const h = (k: string) => hash32(t.markupSeed, uiVersion, page, k);
+/** Hashed into every dialect, as it always was: changing it would redraw every bank's pages. */
+const VERSION = 1;
+
+export function dialect(t: Tenant, page: string): Dialect {
+  const h = (k: string) => hash32(t.markupSeed, VERSION, page, k);
   return {
     page,
     submit: SUBMITS[
       ((PAGES as readonly string[]).includes(page)
-        ? hash32(t.markupSeed, uiVersion, 'rotation') + (PAGES as readonly string[]).indexOf(page)
+        ? hash32(t.markupSeed, VERSION, 'rotation') + (PAGES as readonly string[]).indexOf(page)
         : h('submit')) % SUBMITS.length
     ] as SubmitStyle,
     label: LABELS[h('label') % LABELS.length] as LabelStyle,

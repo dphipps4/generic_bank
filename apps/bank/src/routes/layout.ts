@@ -62,7 +62,7 @@ const NOTICES = [
 function refreshedPage(bank: Bank, c: Ctx, operator: string): string {
   const base = bank.t.basePath;
   const p = palette(bank.t);
-  const d = dialect(bank.t, bank.uiVersion, 'refreshed-console');
+  const d = dialect(bank.t, 'refreshed-console');
   const items = navItems(bank)
     .map(
       (i) =>
@@ -101,7 +101,7 @@ export function layoutRoutes(app: FastifyInstance, bank: Bank) {
   // Bank 1's nav frame, an older page that writes itself with document.write.
   app.get(`${base}frame/nav`, async (req, reply) => {
     const c = ctxOf(bank, req);
-    const d = dialect(bank.t, bank.uiVersion, 'nav');
+    const d = dialect(bank.t, 'nav');
     const items = navItems(bank);
     const rows = items
       .map((i, k) => {
@@ -127,7 +127,7 @@ export function layoutRoutes(app: FastifyInstance, bank: Bank) {
   // Bank 2: a tab strip across the top.
   app.get(`${base}frame/tabs`, async (req, reply) => {
     const c = ctxOf(bank, req);
-    const d = dialect(bank.t, bank.uiVersion, 'tabs');
+    const d = dialect(bank.t, 'tabs');
     const tabs = navItems(bank)
       .map(
         (i) =>

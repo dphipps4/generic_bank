@@ -53,7 +53,6 @@ const bank = {
   ports: { main: port },
   db,
   now,
-  uiVersion: Number(process.env.BANK_UI_VERSION ?? 1),
   hazards: hazards({
     profile,
     runRatePct: process.env.HAZARD_RUN_RATE_PCT

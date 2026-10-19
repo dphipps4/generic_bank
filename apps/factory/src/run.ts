@@ -5,8 +5,6 @@
 // reached ends the run with the Supervisor's diagnosis, from the frames. At every ending, crashes
 // included, the run's lessons go to memory. A table that reached every goal waits for the gate.
 import { randomBytes } from 'node:crypto';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import type { Goal, Table } from '@gb/crawler';
 import type { FrameStore } from '@gb/evidence';
 import type { Sql } from '@gb/runs';
@@ -61,8 +59,6 @@ export interface RunOutput {
   diagnosis: string | null;
   /** Writes the run's lessons and closes its record: call it once the report and the gate are done. */
   finish(): Promise<void>;
-  /** The browser's cookies once a goal was reached, for the gate to start signed in and trusted. */
-  session?: string;
 }
 
 /** Each goal, as the Scout and the Supervisor are told it. */
@@ -175,7 +171,6 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
   // The bank is open before the Scout first looks: no clock is spent on a blank page.
   await page.goto(bank.url).catch(() => undefined);
   const reached: Goal[] = [];
-  let session: string | undefined;
   let table: Table | undefined = input.repair?.table;
   let diagnosis: string | null = null;
   let outcome = 'crashed';
@@ -396,12 +391,6 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
         break;
       }
       reached.push(goal);
-      // The signed-in, trusted session, for the gate: one code for the run and its check.
-      session = join(tmpdir(), `${runId}.session.json`);
-      await page
-        .context()
-        .storageState({ path: session })
-        .catch(() => (session = undefined));
     }
     if (reached.length === 3) outcome = 'every goal reached';
   } catch (e) {
@@ -424,6 +413,5 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
     reached,
     diagnosis,
     finish,
-    ...(session ? { session } : {}),
   };
 }

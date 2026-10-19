@@ -128,5 +128,3 @@ export function resources(client: PrismaClient, apiClients: Record<string, objec
     };
   });
 }
-
-export const MODEL_NAMES = MODELS.map((m) => m.name);
