@@ -13,21 +13,13 @@ const cfg = loadConfig(
   {
     MEMORY_PORT: port(8470),
     MEMORY_DATABASE_URL: z.url(),
-    MEMORY_TOKEN_RUNNER: secret(),
     MEMORY_TOKEN_FACTORY: secret(),
     MEMORY_TOKEN_CURATOR: secret(),
-    MEMORY_TOKEN_SYSTEM: secret(),
     MEMORY_SIGNING_KEY: secret(),
     MEMORY_MODEL_DIR: z.string().min(1).optional(),
   },
   process.env,
-  [
-    'MEMORY_TOKEN_RUNNER',
-    'MEMORY_TOKEN_FACTORY',
-    'MEMORY_TOKEN_CURATOR',
-    'MEMORY_TOKEN_SYSTEM',
-    'MEMORY_SIGNING_KEY',
-  ],
+  ['MEMORY_TOKEN_FACTORY', 'MEMORY_TOKEN_CURATOR', 'MEMORY_SIGNING_KEY'],
 );
 const db = pgDb(cfg.MEMORY_DATABASE_URL);
 const embed = localEmbedder({ cacheDir: cfg.MEMORY_MODEL_DIR });
@@ -35,10 +27,8 @@ const app = buildServer({
   db,
   door: door({
     tokens: {
-      runner: cfg.MEMORY_TOKEN_RUNNER,
       factory: cfg.MEMORY_TOKEN_FACTORY,
       curator: cfg.MEMORY_TOKEN_CURATOR,
-      system: cfg.MEMORY_TOKEN_SYSTEM,
     },
     signingKey: cfg.MEMORY_SIGNING_KEY,
   }),

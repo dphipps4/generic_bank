@@ -4,15 +4,14 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { ROLES, type Role } from './memory.js';
 
-/** Who may make each write. The app box (the runner) adds runs and forwards lessons, nothing
- *  more; the factory's agents add runs, propose lessons and challenge what is held; a person
- *  retires a lesson. */
+/** Who may make each write. The factory's agents add runs, propose lessons, and say which they
+ *  relied on and which do not hold; a person retires a lesson. */
 export const WRITES = {
-  'episodes/runs': ['runner', 'factory'],
-  'lessons/proposals': ['runner', 'factory'],
-  'lessons/relied-on': ['runner', 'factory'],
-  'facts/invalidate': ['factory', 'curator', 'system'],
-  'lessons/retire': ['curator', 'system'],
+  'episodes/runs': ['factory'],
+  'lessons/proposals': ['factory'],
+  'lessons/relied-on': ['factory'],
+  'facts/invalidate': ['factory'],
+  'lessons/retire': ['curator'],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Write = keyof typeof WRITES;

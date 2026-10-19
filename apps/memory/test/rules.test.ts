@@ -30,7 +30,7 @@ const post = async (write: string, body: unknown, role: Role = 'factory') => {
 };
 const get = async (url: string) =>
   (
-    await app.inject({ url, headers: { authorization: `Bearer ${TOKENS.runner}` } })
+    await app.inject({ url, headers: { authorization: `Bearer ${TOKENS.factory}` } })
   ).json() as Record<string, unknown>;
 
 /** A run, recorded now. */
@@ -46,7 +46,7 @@ const run = async (id: string, bank: string, extra: Record<string, unknown> = {}
       startedAt: new Date().toISOString(),
       ...extra,
     },
-    'runner',
+    'factory',
   );
 
 const propose = async (runId: string, text: string, scope = 'tenant', seen = true) =>

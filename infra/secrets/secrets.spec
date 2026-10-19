@@ -15,9 +15,7 @@ local   ANSWER_SEAL_KEY          hex
 local   CONSOLE_SESSION_SECRET   hex
 local   CONSOLE_COOKIE_SECRET    hex
 local   CONSOLE_ADMIN_PASSWORD   password
-local   MEMORY_TOKEN_RUNNER      hex
 local   MEMORY_TOKEN_CURATOR     hex
-local   MEMORY_TOKEN_SYSTEM      hex
 local   MEMORY_SIGNING_KEY       hex
 local   HAZARD_HMAC_KEY          hex
 local   BANK_ADMIN_TOKEN         hex

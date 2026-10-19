@@ -67,7 +67,6 @@ For curl and debugging; the demo doesn't need these.
 |---|---|---|
 | Task API token for curl | $A | \`just api-token\` (8 hours) |
 | Banks' admin API: \`/state\`, \`/members/{m}/balances\`, \`/hazards\`, \`/messages\` | :${BANK_GENERIC_ADMIN_PORT:-9081} and :${BANK_EXAMPLE_ADMIN_PORT:-9082} | \`$(get BANK_ADMIN_TOKEN "$local_env")\` |
-| Memory, runner role | :${MEMORY_PORT:-8470} | \`$(get MEMORY_TOKEN_RUNNER "$local_env")\` |
 | Memory, curator role | :${MEMORY_PORT:-8470} | \`$(get MEMORY_TOKEN_CURATOR "$local_env")\` |
 | Factory gateway | :${FACTORY_PORT:-8200} | \`$(get FACTORY_GATEWAY_TOKEN "$(decrypt factory 2>/dev/null || true)")\` |
 | A forced hazard for curl, as \`X-Hazards\` | either bank | \`just hazard-header late-rows,promo\` |

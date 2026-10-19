@@ -80,7 +80,7 @@ const current = async (lessonId: string) =>
 
 describe('episodes', () => {
   it('records a run once', async () => {
-    const r = await post('episodes/runs', run('run-1'), 'runner');
+    const r = await post('episodes/runs', run('run-1'));
     expect(r.statusCode).toBe(201);
     expect(r.json()).toEqual({ run: 'run-1' });
     expect(
@@ -88,7 +88,7 @@ describe('episodes', () => {
     ).toEqual([
       { bank: 'generic', vendor: 'corelink', outcome: 'succeeded', model: 'claude-sonnet-4-5' },
     ]);
-    const e = await refused('episodes/runs', run('run-1'), 409, 'runner');
+    const e = await refused('episodes/runs', run('run-1'), 409);
     expect(e).toMatchObject({ error: 'run_exists' });
   });
 });
@@ -160,7 +160,7 @@ describe('lessons', () => {
     // The same advice, worded in another order and case.
     const again =
       'Choose the account by identity, never by its position; one member can hold several accounts.';
-    const r = await post('lessons/proposals', proposal('run-3', { text: again }), 'runner');
+    const r = await post('lessons/proposals', proposal('run-3', { text: again }));
     expect(r.statusCode).toBe(201);
     expect(r.json()).toMatchObject({ lesson: held, version: 2, merged: true });
     expect(await count('Lesson')).toBe(lessons);
@@ -172,7 +172,7 @@ describe('lessons', () => {
       text: ADVICE,
       state: 'proposed',
       seen: true,
-      role: 'runner',
+      role: 'factory',
       runId: 'run-3',
       reason: 'a near-duplicate proposal added its evidence',
       evidence: [
@@ -221,7 +221,7 @@ describe('lessons', () => {
   });
 
   it('records the lessons a run relied on once, at their current version', async () => {
-    const r = await post('lessons/relied-on', { runId: 'run-4', lessonIds: [held] }, 'runner');
+    const r = await post('lessons/relied-on', { runId: 'run-4', lessonIds: [held] });
     expect(r.statusCode).toBe(201);
     expect((await db.query(`SELECT "runId", "lessonId", version FROM "Reliance"`)).rows).toEqual([
       { runId: 'run-4', lessonId: held, version: 3 },

@@ -19,7 +19,7 @@ const post = async (write: string, body: unknown, role: Role = 'factory') => {
   return r.json() as Record<string, unknown>;
 };
 const get = (url: string) =>
-  app.inject({ url, headers: { authorization: `Bearer ${TOKENS.runner}` } });
+  app.inject({ url, headers: { authorization: `Bearer ${TOKENS.factory}` } });
 
 type Item = { id: string; state: string; label?: string; text: string; kind?: string };
 type Pack = {

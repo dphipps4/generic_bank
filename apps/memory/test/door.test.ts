@@ -10,10 +10,8 @@ import { memoryDb, SIGNING_KEY, testDoor, testEmbed, TOKENS } from './db.js';
 
 // The writes each role is given, as §A.6 states them.
 const GIVEN: Record<Role, Write[]> = {
-  runner: ['episodes/runs', 'lessons/proposals', 'lessons/relied-on'],
   factory: ['episodes/runs', 'lessons/proposals', 'lessons/relied-on', 'facts/invalidate'],
-  curator: ['facts/invalidate', 'lessons/retire'],
-  system: ['facts/invalidate', 'lessons/retire'],
+  curator: ['lessons/retire'],
 };
 
 let db: Awaited<ReturnType<typeof memoryDb>>;
@@ -92,7 +90,7 @@ describe('the door', () => {
     expect((await app.inject({ url: '/knowledge/pack?bank=example' })).statusCode).toBe(401);
     const read = await app.inject({
       url: '/knowledge/pack?bank=example',
-      headers: { authorization: `Bearer ${TOKENS.runner}` },
+      headers: { authorization: `Bearer ${TOKENS.factory}` },
     });
     expect(read.statusCode).toBe(200);
     expect((await app.inject({ url: '/healthz' })).statusCode).toBe(200);

@@ -37,10 +37,8 @@ export async function memoryDb(): Promise<Db & { pg: PGlite }> {
 }
 
 export const TOKENS = {
-  runner: 'r'.repeat(40),
   factory: 'f'.repeat(40),
   curator: 'c'.repeat(40),
-  system: 'y'.repeat(40),
 } as const;
 export const SIGNING_KEY = 'm'.repeat(40);
 
