@@ -36,7 +36,8 @@ const ANSWER_SCHEMA = {
       type: 'integer',
       minimum: 0,
       maximum: 120,
-      description: 'Seconds to add, only when the goal is close and time is the only obstacle; 0 otherwise',
+      description:
+        'Seconds to add, only when the goal is close and time is the only obstacle; 0 otherwise',
     },
   },
   // Every property required: a provider that enforces strict schemas refuses an optional one (run 23).
