@@ -256,7 +256,7 @@ export function recordLessonTool(trail: Trail, kept: Lesson[]): Tool {
 }
 
 /** The lesson phase's instructions, for the agent writing: each writes its own lessons, for itself. */
-const LESSONS = (who: Owner) => `${
+export const LESSONS = (who: Owner) => `${
   who === 'scout'
     ? 'You are the Scout, and the run at this site has ended. Write down what it taught you about working the site: how to reach each screen, and how to act on it.'
     : "You are the Supervisor, and the run at this site has ended. Write down what it taught you about judging the Scout's work: what to look at, and how to tell a step worked."
@@ -265,6 +265,9 @@ const LESSONS = (who: Owner) => `${
 } writes its own.
 
 Values shown as █ were hidden by the factory, not by the site: never record a lesson about hidden, masked or starred values. The factory never sends money: never record a lesson that advises pressing a control that would send it. Record each lesson with record_lesson: one to three sentences of advice, stated generally, with no names, numbers, codes or page data; its area; its scope (tenant: true of this site; vendor: of every site on the same product; pattern: everywhere); a confidence; the frames of this run that show it; and whether it was seen on them or is a guess. A lesson with no frame of this run is refused. Record only what the run taught.
+
+- The factory opens the start page before each goal. Never record that as the site's behavior, such as an interruption or an expired session.
+- Prefer lessons about how such a site behaves and how to tell (what the picture shows, what the next screen confirms) over lists of its words.
 
 Then answer with the lessons memory served that the run relied on, by id, and those it contradicted, each with why in one line and the frames of this run that show it.`;
 
