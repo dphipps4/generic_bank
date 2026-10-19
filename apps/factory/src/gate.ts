@@ -1,8 +1,10 @@
 // The gate (prompts, part 2, §5): a learned table must work before a person sees it. Code runs it
 // live through the crawler's own loop, exactly what an approval would promote: the balance, if the
 // route ends there; and, if it ends at both the review and the activity, a transfer up to its
-// review (never sent) and the activity the transfer's Submit is confirmed by. Then once more with
-// one hazard forced, the confirmation dialog the brief names. A table that fails the first run is
+// review (never sent) and the activity the transfer's Submit is confirmed by. Then each again from
+// the browser the bank now trusts, as every run in service after the first meets it: a sign-in
+// that welcomes the operator back. Then once more with one hazard forced, the confirmation dialog
+// the brief names. A table that fails the first run is
 // not recommended; one that breaks under the hazard is kept as broken and opens a repair case with
 // that run's frames, as a break in service would. A table that passes both waits in the Console
 // for a person's approval: nothing promotes it but that.
@@ -16,8 +18,11 @@ import {
   Stop,
   type Table,
 } from '@gb/crawler';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { driverFault, type FrameStore, hazardHeader, type Sql } from '@gb/runs';
-import { type Browser, newPage } from '@gb/runtime';
+import { type Browser, newPage, type Page } from '@gb/runtime';
 import { judge, refusals } from './guard.js';
 import { openTrail } from './trail.js';
 
@@ -38,6 +43,8 @@ export interface GateDeps {
 export interface CheckRun {
   runId: string;
   hazard: string | null;
+  /** Run from the cookies the first run left, as the runner keeps them between runs. */
+  trusted?: true;
   ok: boolean;
   /** What the run read, or why it stopped. */
   said: string;
@@ -54,7 +61,9 @@ export function covered(t: Table) {
 
 /**
  * One live run of what the table covers, its pages kept: the balance; a transfer to its review;
- * the activity, opened and read, with nothing submitted.
+ * the activity, opened and read, with nothing submitted. From a new browser, the tasks follow one
+ * another in it, and its cookies are saved at the end. From a trusted one, each task starts from
+ * those cookies in a browser of its own, as each run in service does.
  */
 async function checkRun(
   d: GateDeps,
@@ -68,6 +77,7 @@ async function checkRun(
     to: string;
   },
   hazard: string | null,
+  cookies: { save?: string; from?: string } = {},
 ): Promise<CheckRun> {
   const trail = await openTrail({
     sql: d.sql,
@@ -78,9 +88,13 @@ async function checkRun(
     known: [],
   });
   const headers = hazard && d.hazardKey ? hazardHeader([hazard as never], d.hazardKey) : undefined;
-  // From a browser that has never signed in, as the service's first run will, and judged by the
-  // guard as service judges it.
-  const page = await newPage(d.browser, headers ? { headers } : {});
+  const trusted = !!cookies.from;
+  const open = () =>
+    newPage(d.browser, { ...(headers && { headers }), ...(trusted && { session: cookies.from }) });
+  const pages: Page[] = [];
+  // Judged by the guard as service judges it.
+  let page = await open();
+  pages.push(page);
   let goal: Goal = 'balance';
   const session = {
     guard: (a: Action) => {
@@ -107,6 +121,10 @@ async function checkRun(
     }
     if (covers.transfer) {
       goal = 'transfer';
+      if (trusted && covers.balance) {
+        page = session.page = await open();
+        pages.push(page);
+      }
       const r = await prepareTransfer(session, task);
       if (r.amountCents !== 100)
         return {
@@ -130,14 +148,23 @@ async function checkRun(
       const lines = await leaves(page);
       checked.push(`the activity opened (${lines.length} lines)`);
     }
-    return { runId: o.runId, hazard, ok: true, said: checked.join('; ') };
+    if (cookies.save) await page.context().storageState({ path: cookies.save });
+    return {
+      runId: o.runId,
+      hazard,
+      ...(trusted && { trusted }),
+      ok: true,
+      said: checked.join('; '),
+    };
   } catch (e) {
-    return { runId: o.runId, hazard, ok: false, said: e instanceof Stop ? e.message : String(e) };
+    const said = e instanceof Stop ? e.message : String(e);
+    return { runId: o.runId, hazard, ...(trusted && { trusted }), ok: false, said };
   } finally {
-    await page
-      .context()
-      .close()
-      .catch(() => undefined);
+    for (const p of pages)
+      await p
+        .context()
+        .close()
+        .catch(() => undefined);
   }
 }
 
@@ -161,7 +188,7 @@ export async function gate(
   // service, is not run at all.
   const covers = covered(o.table);
   const refused = refusals(o.table);
-  const runs: CheckRun[] =
+  let runs: CheckRun[] | null =
     !covers.balance && !covers.transfer
       ? [
           {
@@ -183,11 +210,23 @@ export async function gate(
                 .join('; ')}`,
             },
           ]
-        : [await checkRun(d, { ...o, runId: `${o.factoryRunId}-check` }, null)];
-  if (runs[0]!.ok && d.hazardKey)
+        : null;
+  if (!runs) {
+    const dir = await mkdtemp(join(tmpdir(), 'gate-'));
+    const save = join(dir, 'cookies.json');
+    try {
+      const at = (end: string) => ({ ...o, runId: `${o.factoryRunId}-${end}` });
+      runs = [await checkRun(d, at('check'), null, { save })];
+      if (runs[0]!.ok) runs.push(await checkRun(d, at('trusted'), null, { from: save }));
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }
+  if (runs.every((r) => r.ok) && d.hazardKey)
     runs.push(await checkRun(d, { ...o, runId: `${o.factoryRunId}-${GATE_HAZARD}` }, GATE_HAZARD));
   const passed = runs.every((r) => r.ok);
-  const broken = runs[0]!.ok && !passed;
+  // A route that served both ways in and failed only with the hazard forced broke under it.
+  const broken = runs.some((r) => r.hazard && !r.ok);
   // Kept either way: approvable, or broken and the table a repair starts from.
   const rec = await d.sql.query<{ id: string }>(
     `INSERT INTO "Recommendation" (id, "factoryRunId", tenant, status, "table", "check")

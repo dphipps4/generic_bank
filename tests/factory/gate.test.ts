@@ -1,7 +1,7 @@
 // The gate against bank 1, with no model: a table runs live through the crawler's loop before a
 // person sees it, on exactly what an approval would promote. One that fails never reaches a
-// person's approval; one that passes the plain run and the run with the confirmation dialog forced
-// waits for it.
+// person's approval; one that passes the plain run, the run from a trusted browser and the run with
+// the confirmation dialog forced waits for it.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { gate } from '../../apps/factory/src/gate.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
@@ -69,9 +69,10 @@ describe('the gate', () => {
   it('recommends a table that passes the plain run and the forced dialog', async () => {
     const id = await aRun();
     const g = await gate(deps(), { factoryRunId: id, url: bank.url, table: bank1, ...input });
-    expect(g.runs.map((r) => [r.hazard, r.ok])).toEqual([
-      [null, true],
-      ['confirm-dialog', true],
+    expect(g.runs.map((r) => [r.hazard, !!r.trusted, r.ok])).toEqual([
+      [null, false, true],
+      [null, true, true],
+      ['confirm-dialog', false, true],
     ]);
     // The balance, the review and the activity, each checked.
     for (const r of g.runs)
@@ -80,6 +81,26 @@ describe('the gate', () => {
       );
     expect(g.recommendationId).not.toBeNull();
     expect(await statusOf(id)).toBe('open');
+  }, 240_000);
+
+  it('fails a route whose returning sign-in serves the transfer and the activity alone, from a trusted browser', async () => {
+    // As run 29's route was: it starts at the sign-in page, as a learned route does, and its
+    // returning sign-in holds steps for the transfer and the activity only. The plain run passes:
+    // the balance meets the full sign-in, the rest the returning one. From a browser the bank
+    // trusts, the balance has nothing to do there.
+    const t: Table = structuredClone(bank1);
+    t.home = 'signin';
+    const back = t.rows.find((r) => r.page === 'welcome back')!;
+    back.do = { transfer: back.do.any!, history: back.do.any! };
+    const id = await aRun();
+    const g = await gate(deps(), { factoryRunId: id, url: bank.url, table: t, ...input });
+    expect(g.runs.map((r) => [!!r.trusted, r.ok])).toEqual([
+      [false, true],
+      [true, false],
+    ]);
+    expect(g.runs[1]!.said).toMatch(/stuck \(nothing to do on the welcome back page\)/);
+    expect(g.recommendationId).toBeNull();
+    expect(await statusOf(id)).toBe('failed');
   }, 240_000);
 
   it('passes a route that covers only the balance on the balance alone', async () => {
@@ -96,9 +117,10 @@ describe('the gate', () => {
     }
     const id = await aRun();
     const g = await gate(deps(), { factoryRunId: id, url: bank.url, table: t, ...input });
-    expect(g.runs.map((r) => [r.hazard, r.ok])).toEqual([
-      [null, true],
-      ['confirm-dialog', true],
+    expect(g.runs.map((r) => [r.hazard, !!r.trusted, r.ok])).toEqual([
+      [null, false, true],
+      [null, true, true],
+      ['confirm-dialog', false, true],
     ]);
     for (const r of g.runs) expect(r.said).toMatch(/^the balance read \d+ cents$/);
     expect(g.recommendationId).not.toBeNull();
