@@ -445,7 +445,7 @@ export async function submitTransfer(
     const text = f.tree.toLowerCase();
     const answer = t.answers.find((a) => text.includes(a.says.toLowerCase()));
     if (answer) return stop(answer.code, answer.says, answer.retryable);
-    if (at) {
+    if (at && t.reads.confirmation) {
       s.guard?.({ screen: screenOf(t, at), verb: 'read', control: 'Page' });
       confirmation = readOf(t.reads.confirmation).exec((await leaves(s.page)).join('\n'))?.groups
         ?.confirmation;

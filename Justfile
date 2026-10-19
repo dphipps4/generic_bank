@@ -254,7 +254,7 @@ logs *groups:
 db-shell:
     @{{compose}} exec postgres psql -U postgres control
 
-# An access token for curl (15 minutes), from the local client just setup made
+# An access token for curl (8 hours), from the local client just setup made
 [private]
 api-token:
     @{{compose}} exec -T api node -e "fetch('http://127.0.0.1:8000/oauth/token',{method:'POST',headers:{authorization:'Basic '+Buffer.from(process.env.API_LOCAL_CLIENT_ID+':'+process.env.API_LOCAL_CLIENT_SECRET).toString('base64')},body:new URLSearchParams({grant_type:'client_credentials'})}).then((r)=>r.json()).then((j)=>console.log(j.access_token))"

@@ -95,8 +95,8 @@ export interface Table {
     balance: string;
     /** On the review: `{from}`, `{to}`, `{amount}`, `{memo}`. */
     review: string;
-    /** On the posted page: `{confirmation}`. */
-    confirmation: string;
+    /** On the posted page: `{confirmation}`. A bank that shows none has no read. */
+    confirmation?: string;
     /** Where the member's name shows, `{name}`: learned when it first shows, masked from then on. */
     name: string[];
   };

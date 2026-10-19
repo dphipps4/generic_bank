@@ -197,7 +197,7 @@ const EXAMPLES: Record<Task, Record<string, Example>> = {
     },
     bank2: {
       summary: 'Bank 2, Example Credit Union: an account by its last four digits',
-      value: { bank: 'example', ...demo, account: '7255' },
+      value: { bank: 'example', ...demo, account: '8176' },
     },
   },
   transfer: {
