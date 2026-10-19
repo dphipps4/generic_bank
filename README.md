@@ -25,10 +25,10 @@ just show                       # Swagger UI, the Console, both banks and the si
 | `just setup` | Once, after cloning: checks the Mac, creates the secrets, builds the images |
 | `just up` | Starts everything; data is kept |
 | `just show` | Opens ACCESS, Swagger UI, the Console, both banks and the inbox |
-| `just reset` | Empties the data and keeps the images; asks first |
-| `just down` | Stops everything; data is kept |
+| `just reset` | Empties the data and keeps the images and memory's models; asks first |
+| `just down` | Stops everything, or only some groups, as in `just down console bank`; data is kept |
 
-Every other recipe is listed [at the end](#every-recipe).
+The other recipes are listed [at the end](#other-recipes).
 
 ---
 
@@ -80,20 +80,15 @@ AI wrote nearly all of this code, and a person set the requirements, reviewed th
 - [Where the factory's prompts live](docs/agent-prompts.md): every text the agents read.
 - [The prompts that build Generic Bank](docs/prompts.md): the condensed prompts behind the whole system.
 
-## Every recipe
+## Other recipes
 
-`just` alone lists them all.
+`just` alone lists every recipe.
 
 | Recipe | What it does |
 |---|---|
 | `just help` | Lists every recipe (the same as `just`) |
 | `just doctor` | Checks that this Mac can build and run the stack (also `just requirements`) |
-| `just setup` | Once, after cloning: checks the Mac, creates the secrets, builds the images |
-| `just up` | Starts everything; data is kept |
-| `just show` | Opens ACCESS, Swagger UI, the Console, both banks and the inbox |
 | `just access` | Writes ACCESS.md afresh |
-| `just down` | Stops everything, or only some groups, as in `just down console bank`; data is kept |
-| `just reset` | Deletes the data and keeps the images and memory's models; asks first |
 | `just all` | Starts again from nothing: deletes every volume and rebuilds the images; asks first |
 | `just secret-set <file> <key>` | Sets one secret unseen, for example `just secret-set factory OPENROUTER_API_KEY` |
 | `just factory <bank> <member> <from> <to>` | The factory learns a bank, or repairs its route, then the gate, for example `just factory example 40017732 8176 9433` |

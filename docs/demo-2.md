@@ -43,7 +43,7 @@ Bank 2 asks for a sign-in code by email, up to three times: once for the run, an
 
 The run has a hard limit of 20 minutes of the agents' own time. The time you spend fetching a code doesn't count.
 
-Before anyone sees the route, the gate replays it with no model, live: once as normal, and once with a surprise dialog forced. The run ends with a report: what it cost, how many actions the Supervisor judged and how many the tools refused, the corrections that cite a frame, the gate's two results, and the lessons saved to memory.
+Before anyone sees the route, the gate replays it with no model, live: once from a new browser, once from a browser the bank trusts, and once with a surprise dialog forced. The run ends with a report: what it cost, how many actions the Supervisor judged and how many the tools refused, the corrections that cite a frame, the gate's three results, and the lessons saved to memory.
 
 ## 3. Approve the route
 
