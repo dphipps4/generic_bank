@@ -66,3 +66,26 @@ export function refusals(t: Table, goals: Goal[] = ['balance', 'transfer', 'hist
       }),
     );
 }
+
+const same = (a: string, b: string) =>
+  a.trim().replace(/:$/, '').toLowerCase() === b.trim().replace(/:$/, '').toLowerCase();
+
+/**
+ * The route's names with one more: the guard's `listed` control drawn as `label`. A label is one
+ * label, and an allowed name stands for one drawn label: run 28 drew "Member Search" as five
+ * different controls, and took run-on text that held several labels for one.
+ */
+export function nameFor(
+  names: Record<string, string[]>,
+  listed: string,
+  label: string,
+): Record<string, string[]> | string {
+  if (label.trim().length > 40 || (label.match(/:/g) ?? []).length > 1 || /:\s*\S/.test(label))
+    return `"${label}" is not one label: name the control by its own label, as the picture draws it`;
+  if (same(listed, label)) return names;
+  const drawn = names[listed] ?? [];
+  const other = drawn.find((d) => !same(d, label));
+  if (other)
+    return `the guard's "${listed}" is already drawn here as "${other}", so "${label}" is another control: say which allowed control it is`;
+  return { ...names, [listed]: drawn.some((d) => same(d, label)) ? drawn : [...drawn, label] };
+}

@@ -8,7 +8,7 @@
 // action before the next one. The server types the sign-in and a person's code; the model never
 // sees either. It never presses a control that could send money.
 import type { Answer, At, Goal, Row, Step, Table } from '@gb/crawler';
-import { LISTED, judge, pressesOn, refusals, SCREEN_KINDS } from './guard.js';
+import { LISTED, judge, nameFor, pressesOn, refusals, SCREEN_KINDS } from './guard.js';
 import {
   accountsIn,
   actionOf,
@@ -524,8 +524,8 @@ export function scout(deps: ScoutDeps, task: Task) {
         "name this screen with name_page first, with its kind: the guard judges every step by the screen's kind, as it will in service",
       );
     const label = 'press' in st ? st.press : 'choose' in st ? st.choose : st.type;
-    const names = { ...(t.names ?? {}) };
-    if (listed && listed !== label) names[listed] = [...new Set([...(names[listed] ?? []), label])];
+    const names = listed ? nameFor(t.names ?? {}, listed, label) : (t.names ?? {});
+    if (typeof names === 'string') throw new ToolRefusal(names);
     const v = judge({ names }, task.goal, actionOf(row.screen ?? row.page, st));
     if (!v.allowed)
       throw new ToolRefusal(

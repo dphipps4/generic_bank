@@ -2,7 +2,7 @@
 // screen's kind, and the guard's name for each control the bank draws with other words.
 import { bank1, type Table } from '@gb/crawler';
 import { describe, expect, it } from 'vitest';
-import { refusals, SCREEN_KINDS } from '../src/guard.js';
+import { nameFor, refusals, SCREEN_KINDS } from '../src/guard.js';
 
 /** A learned route in the Scout's own words: screens without a kind, controls by their drawn names. */
 const learned = (): Table => ({
@@ -70,5 +70,32 @@ describe("a learned route, against the guard's words", () => {
       expect.arrayContaining(['sign_in', 'member.summary', 'transfer.review']),
     );
     expect(SCREEN_KINDS).not.toContain('any');
+  });
+});
+
+describe("the guard's names, as a route keeps them", () => {
+  it('take one label per allowed name, whatever its case or colon', () => {
+    let names: Record<string, string[]> | string = {};
+    names = nameFor(names as Record<string, string[]>, 'Password', 'SECRET WORD');
+    names = nameFor(names as Record<string, string[]>, 'Password', 'Secret word:');
+    expect(names).toEqual({ Password: ['SECRET WORD'] });
+  });
+
+  it("refuse a second control for one name (run 28's Member Search stood for five)", () => {
+    const names = { 'Member Search': ['Locate'] };
+    expect(nameFor(names, 'Member Search', 'Open')).toMatch(
+      /already drawn here as "Locate", so "Open" is another control/,
+    );
+  });
+
+  it('refuse run-on text as a label', () => {
+    expect(nameFor({}, 'Amount', 'Account: Sum: Note: Go')).toMatch(/is not one label/);
+    expect(nameFor({}, 'Password', 'SECRET WORD: Hello again, the branch console')).toMatch(
+      /is not one label/,
+    );
+  });
+
+  it("need no name when the label is the guard's own", () => {
+    expect(nameFor({}, 'Sign In', 'Sign In')).toEqual({});
   });
 });

@@ -105,6 +105,16 @@ export function compacted(messages: AgentMessage[], keep: number): AgentMessage[
   }) as AgentMessage[];
 }
 
+/** A turn's message: the picture first, then the close-ups, then the words, as the agents are told they see it. */
+export const contentOf = (i: { say: string; image?: Buffer | null; images?: Buffer[] }) =>
+  i.image || i.images?.length
+    ? [
+        ...(i.image ? [png(i.image)] : []),
+        ...(i.images ?? []).map(png),
+        { type: 'text' as const, text: i.say },
+      ]
+    : i.say;
+
 const png = (b: Buffer): ImageContent => ({
   type: 'image',
   data: b.toString('base64'),
@@ -236,18 +246,7 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
   if (i.signal?.aborted) throw new Ended(String(i.signal.reason ?? 'ended'));
   i.signal?.addEventListener('abort', () => session.abort(), { once: true });
   const before = session.state.messages.length;
-  await session.prompt({
-    role: 'user',
-    content:
-      i.image || i.images?.length
-        ? [
-            ...(i.image ? [png(i.image)] : []),
-            ...(i.images ?? []).map(png),
-            { type: 'text', text: i.say },
-          ]
-        : i.say,
-    timestamp: Date.now(),
-  });
+  await session.prompt({ role: 'user', content: contentOf(i), timestamp: Date.now() });
   // A provider's passing failure (a 5xx, a timeout, a rate limit) is not the agent's: the failed
   // reply is dropped and the same conversation carries on, a few times at most. A long turn of many
   // calls would otherwise end on one bad call.
