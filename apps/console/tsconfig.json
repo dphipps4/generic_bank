@@ -19,7 +19,7 @@
       "path": "../../packages/contracts"
     },
     {
-      "path": "../../packages/evidence"
+      "path": "../../packages/runs"
     }
   ]
 }

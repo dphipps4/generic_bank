@@ -12,7 +12,6 @@ import {
   type Table,
   TABLES,
 } from '@gb/crawler';
-import type { FrameStore } from '@gb/evidence';
 import { GuardError, JOBS } from '@gb/guardrails';
 import {
   addFrame,
@@ -21,6 +20,7 @@ import {
   driverFault,
   type Ending,
   forcedHazardsOf,
+  type FrameStore,
   inputsOf,
   loadRun,
   openHumanTask,

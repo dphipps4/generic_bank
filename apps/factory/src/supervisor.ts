@@ -5,8 +5,7 @@
 // run. It keeps the whole run in one conversation, can reopen any frame of this run or an earlier
 // one, and on a failure diagnoses from the frames where the run stopped and why.
 import { leaf, type Table } from '@gb/crawler';
-import type { FrameStore } from '@gb/evidence';
-import type { Sql } from '@gb/runs';
+import type { FrameStore, Sql } from '@gb/runs';
 import { z } from 'zod';
 import { type Agent, type Conversation, ThoughtTooLong, turn } from './agent.js';
 import type { Entry, Judging, Judgment } from './scout.js';

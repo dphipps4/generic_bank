@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { gate } from '../../apps/factory/src/gate.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
 import { bank1, type Table } from '../../packages/crawler/src/index.js';
-import { memoryStore } from '../../packages/evidence/src/index.js';
+import { memoryStore } from '../../packages/runs/src/index.js';
 import { controlDb } from '../../packages/oauth/test/control.js';
 import { type Browser, launch } from '../../packages/runtime/src/index.js';
 import { HMAC, type LiveBank, liveBank, PASSWORDS } from '../support/banks.js';

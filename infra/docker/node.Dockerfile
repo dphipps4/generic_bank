@@ -8,7 +8,6 @@ COPY package.json package-lock.json ./
 COPY packages/config/package.json packages/config/
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/db/package.json packages/db/
-COPY packages/evidence/package.json packages/evidence/
 COPY packages/guardrails/package.json packages/guardrails/
 COPY packages/oauth/package.json packages/oauth/
 COPY packages/runs/package.json packages/runs/

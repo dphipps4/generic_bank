@@ -5,8 +5,7 @@
 // opens a repair case with that run's frames, as a break in service would. A table that passes
 // both waits in the Console for a person's approval: nothing promotes it but that.
 import { checkBalance, prepareTransfer, Stop, type Table } from '@gb/crawler';
-import type { FrameStore } from '@gb/evidence';
-import { driverFault, hazardHeader, type Sql } from '@gb/runs';
+import { driverFault, type FrameStore, hazardHeader, type Sql } from '@gb/runs';
 import { type Browser, newPage } from '@gb/runtime';
 import { openTrail } from './trail.js';
 

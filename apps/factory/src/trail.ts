@@ -2,8 +2,7 @@
 // masked frame for every page reached, at most 60. It is kept under a task run with the factory
 // run's own id, so the Console's run page and its Frames button show it.
 import { leaf } from '@gb/crawler';
-import type { FrameStore } from '@gb/evidence';
-import { addFrame, addStep, type Sql } from '@gb/runs';
+import { addFrame, addStep, type FrameStore, type Sql } from '@gb/runs';
 import { type Frame, maskText } from '@gb/runtime';
 
 const MAX_FRAMES = 60;

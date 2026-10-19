@@ -5,8 +5,7 @@ import Fastify from 'fastify';
 import { z } from 'zod';
 import { loadConfig, port, secret } from '@gb/config';
 import { sql } from '@gb/db';
-import { fileStore } from '@gb/evidence';
-import { WORKFLOW } from '@gb/runs';
+import { fileStore, WORKFLOW } from '@gb/runs';
 import { registerTaskWorkflow } from './workflow.js';
 
 const cfg = loadConfig(

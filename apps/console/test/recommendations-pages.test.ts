@@ -1,7 +1,6 @@
 import Fastify from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { memoryStore } from '@gb/evidence';
-import { addFrame, addStep } from '@gb/runs';
+import { addFrame, addStep, memoryStore } from '@gb/runs';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import type { Viewer } from '../src/pages/layout.js';
 import { recommendationPages } from '../src/pages/recommendations.js';

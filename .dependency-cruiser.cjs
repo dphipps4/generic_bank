@@ -45,9 +45,9 @@ module.exports = {
     },
     {
       name: 'guards-and-evals-stay-independent',
-      comment: 'Guardrails, evidence, evals and lint never import the runner or the factory.',
+      comment: 'Guardrails, evals and lint never import the runner or the factory.',
       severity: 'error',
-      from: { path: '^packages/(guardrails|evidence|evals|lint)/' },
+      from: { path: '^packages/(guardrails|evals|lint)/' },
       to: { path: '^apps/(runner|factory)/' },
     },
     {

@@ -6,8 +6,7 @@
 // included, the run's lessons go to memory. A table that reached every goal waits for the gate.
 import { randomBytes } from 'node:crypto';
 import type { Goal, Table } from '@gb/crawler';
-import type { FrameStore } from '@gb/evidence';
-import type { Sql } from '@gb/runs';
+import type { FrameStore, Sql } from '@gb/runs';
 import { maskText, newPage, type Browser } from '@gb/runtime';
 import { type Agent, type Conversation, Ended, ThoughtTooLong, turn } from './agent.js';
 import {

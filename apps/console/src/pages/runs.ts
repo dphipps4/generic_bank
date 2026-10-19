@@ -2,7 +2,7 @@
 // its masked frames (plan, §9). Nothing here is unmasked: the frames were masked before they were
 // stored, and the inputs were stored masked.
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import type { FrameStore } from '@gb/evidence';
+import type { FrameStore } from '@gb/runs';
 import { messageFor, type ResultCode } from '@gb/contracts';
 import { waitingTooLong } from './inbox.js';
 import { esc, page, type Sql, type Viewer } from './layout.js';
