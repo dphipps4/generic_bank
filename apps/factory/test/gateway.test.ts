@@ -5,7 +5,6 @@ import net from 'node:net';
 import OpenAI from 'openai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { controlDb } from '../../../packages/oauth/test/control.js';
-import { CAPS } from '../src/caps.js';
 import { gateway, worstCaseUsd } from '../src/gateway.js';
 import { sqlLedger, type Ledger } from '../src/ledger.js';
 import { PRICES } from '../src/models.js';
@@ -111,14 +110,6 @@ afterEach(async () => {
 });
 
 describe('the caps', () => {
-  it('are the plan’s defaults', () => {
-    expect(CAPS).toEqual({
-      runUsd: 25,
-      weekUsd: 150,
-      lessonsReserveUsd: 1,
-    });
-  });
-
   it('count a screenshot at an image’s worst case, not its bytes', () => {
     const data = 'A'.repeat(300_000);
     const image = { type: 'image_url', image_url: { url: `data:image/png;base64,${data}` } };

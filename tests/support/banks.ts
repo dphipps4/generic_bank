@@ -1,15 +1,13 @@
 // The banks as the outside world, for browser tests: each bank runs in-process on real ports with
 // its own in-process Postgres, and the tests reach it only over HTTP, through a real browser. The
 // test harness may start a bank; nothing in apps/ or packages/ may import one.
-import { createHmac } from 'node:crypto';
 import type { AddressInfo } from 'node:net';
 import { buildAdmin } from '../../apps/bank/src/admin.js';
 import { connectInProcess, type Db, migrate } from '../../apps/bank/src/db.js';
 import { hazards, type HazardName, signHazards } from '../../apps/bank/src/hazards.js';
-import { OPERATORS, seed } from '../../apps/bank/src/seed.js';
+import { seed } from '../../apps/bank/src/seed.js';
 import { buildServer } from '../../apps/bank/src/server.js';
 import { redesigned, TENANTS, type TenantId } from '../../apps/bank/src/tenants.js';
-import { MAC_CHROME } from '../../apps/bank/test/browser.js';
 
 export const PASSWORDS = {
   service: 'service-password-for-tests',
@@ -85,60 +83,4 @@ export async function liveBank(
       await db.close();
     },
   };
-}
-
-/**
- * Signs the service account in over plain HTTP, the way a person's browser would and with its
- * headers, so bank 2 lets it in, and returns the cookies. For tests that need a signed-in
- * console before the crawler can type for itself.
- */
-export async function signedInCookies(b: LiveBank): Promise<{ name: string; value: string }[]> {
-  const jar = new Map<string, string>();
-  const at = (path: string) => `${b.url}${path}`;
-  const keep = (r: Response) => {
-    for (const c of r.headers.getSetCookie()) {
-      const [kv] = c.split(';');
-      const i = kv!.indexOf('=');
-      jar.set(kv!.slice(0, i), kv!.slice(i + 1));
-    }
-  };
-  const headers = () => ({
-    ...MAC_CHROME,
-    cookie: [...jar].map(([k, v]) => `${k}=${v}`).join('; '),
-  });
-  const name = (logical: string) =>
-    `f${createHmac('sha256', jar.get('CLFORM') ?? '')
-      .update(logical)
-      .digest('hex')
-      .slice(0, 8)}`;
-  const post = async (path: string, fields: Record<string, string>) => {
-    const r = await fetch(at(path), {
-      method: 'POST',
-      redirect: 'manual',
-      headers: { ...headers(), 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(Object.entries(fields).map(([k, v]) => [name(k), v])),
-    });
-    keep(r);
-    return r;
-  };
-  const code = async () => {
-    const r = await b.db.query<{ body: string }>(
-      `SELECT m.body FROM messages m JOIN operators o ON m.address IN (o.phone, o.email) WHERE o.operator_id = $1 ORDER BY m.id DESC LIMIT 1`,
-      [OPERATORS.service.id],
-    );
-    return /(\d{6})/.exec(r.rows[0]!.body)![1]!;
-  };
-  keep(await fetch(at('signin'), { headers: headers() }));
-  await post('signin', { operator: OPERATORS.service.id, password: PASSWORDS.service });
-  keep(await fetch(at('code'), { headers: headers(), redirect: 'manual' }));
-  await post('code', { channel: 'text' });
-  const r = await post('code/enter', { code: await code() });
-  const handoff = new URL(r.headers.get('location') ?? '', b.url).searchParams.get('code') ?? '';
-  keep(
-    await fetch(at(`auth/complete?code=${encodeURIComponent(handoff)}`), {
-      headers: headers(),
-      redirect: 'manual',
-    }),
-  );
-  return [...jar].map(([n, value]) => ({ name: n, value }));
 }

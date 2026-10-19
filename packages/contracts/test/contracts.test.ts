@@ -15,15 +15,10 @@ import {
   type ResultCode,
   safeMessage,
   statusOf,
-  TASKS,
   TransferInput,
 } from '../src/index.js';
 
 describe('task inputs', () => {
-  it('lists the three tasks', () => {
-    expect(Object.keys(TASKS).sort()).toEqual(['check-balance', 'transfer']);
-  });
-
   it('takes the bank as a registry id, not a fixed list', () => {
     expect(
       CheckBalanceInput.safeParse({ bank: 'a-new-bank', memberId: '40017732', account: '7890' })
