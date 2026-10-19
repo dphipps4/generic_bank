@@ -48,16 +48,21 @@ export const pressesOn = (goal: Goal, screen?: string) => [
   ),
 ];
 
-/** Each step of a route the guard would refuse in service, goal by goal, with its rule. */
+/**
+ * Each step of a route the guard would refuse in service, goal by goal, with its rule. A goal the
+ * route has no end for is not served, so there is nothing of it to judge.
+ */
 export function refusals(t: Table, goals: Goal[] = ['balance', 'transfer', 'history']) {
   const seen = new Set<string>();
-  return goals.flatMap((goal) =>
-    routeActions(t, goal).flatMap((a) => {
-      const v = judge(t, goal, a);
-      const said = v.allowed ? '' : `${a.page}: ${v.rule}`;
-      if (v.allowed || seen.has(said)) return [];
-      seen.add(said);
-      return [{ goal, page: a.page, rule: v.rule }];
-    }),
-  );
+  return goals
+    .filter((goal) => t.ends[goal])
+    .flatMap((goal) =>
+      routeActions(t, goal).flatMap((a) => {
+        const v = judge(t, goal, a);
+        const said = v.allowed ? '' : `${a.page}: ${v.rule}`;
+        if (v.allowed || seen.has(said)) return [];
+        seen.add(said);
+        return [{ goal, page: a.page, rule: v.rule }];
+      }),
+    );
 }
