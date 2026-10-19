@@ -1,4 +1,4 @@
-// The Memory service for tests that reach it as the factory and the Runner do, over HTTP: the real
+// The Memory service for tests that reach it as the factory does, over HTTP: the real
 // server and every real migration, on an in-process Postgres with pgvector, and the test embedder
 // in place of the model. It starts empty, as memory does.
 // It can be stopped and started again on the same address and database, as when memory restarts.
