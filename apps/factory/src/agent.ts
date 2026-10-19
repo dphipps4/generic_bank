@@ -67,8 +67,6 @@ export interface TurnOutput {
   /** The model's thinking in this turn, every reply's, in order. */
   thinking: string;
   conversation: Conversation;
-  /** Calls refused before they reached the tool (no such tool, or input that does not fit). */
-  refused: { name: string; why: string }[];
 }
 
 /** The longest one model call may take: a profile drafted at high effort can think for many minutes. */
@@ -204,7 +202,6 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
   // One thing at a time: once a call in a reply is refused, the reply's later calls are not run, so
   // nothing acts before the refusal is read (run 21: a refused naming, then a press that left the page).
   let refusedInReply = false;
-  const ran = new Set<string>();
   const tools: AgentTool[] = (i.tools ?? []).map((t) => {
     const { $schema: _s, ...schema } = z.toJSONSchema(t.input) as Record<string, unknown>;
     return {
@@ -213,7 +210,6 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
       description: t.description,
       parameters: schema as never,
       async execute(id, input) {
-        ran.add(id);
         if (refusedInReply)
           throw new ToolRefusal(
             'not run: an earlier call in this reply was refused. Read why, then act again, one call at a time',
@@ -312,16 +308,6 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
     throw new ThoughtTooLong(
       `the ${a.model.provider} model used all ${i.maxTokens} tokens thinking and gave no answer`,
     );
-  const refused = added.flatMap((m) =>
-    m.role === 'toolResult' && m.isError && !ran.has(m.toolCallId)
-      ? [
-          {
-            name: m.toolName,
-            why: m.content.flatMap((c) => (c.type === 'text' ? [c.text] : [])).join('\n'),
-          },
-        ]
-      : [],
-  );
   const text = last.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n');
   return {
     text: i.answer ? unwrapped(text) : text,
@@ -330,6 +316,5 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
       .filter(Boolean)
       .join('\n'),
     conversation: [...messages],
-    refused,
   };
 }

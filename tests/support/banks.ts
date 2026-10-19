@@ -50,7 +50,6 @@ export async function liveBank(
     t,
     db,
     now,
-    uiVersion: 1,
     ports: { main: 0 },
     hazards: hazards({
       profile: o.profile ?? 'none',

@@ -16,6 +16,7 @@ export {
   leaf,
   leaves,
   namesIn,
+  pagesOf,
   prepareTransfer,
   readReview,
   type Review,

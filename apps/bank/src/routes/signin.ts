@@ -52,7 +52,7 @@ export function signInPage(
   const c = ctxOf(bank, req);
   const L = bank.t.labels;
   if (o.trusted) {
-    const d = dialect(bank.t, bank.uiVersion, 'signin-welcome');
+    const d = dialect(bank.t, 'signin-welcome');
     const rows =
       row(c, d, L.password, input(c, 'password', { type: 'password', size: 16, disabled: true })) +
       row(c, d, L.operatorId, `${font(c, `<B>${esc(o.trusted.id)}</B>`)}`);
@@ -65,7 +65,7 @@ ${form(c, d, `${c.base}signin`, rows, submit(c, d, L.signIn), '_top')}
     );
     return doc(c, d, { title: L.signIn, body, script: hydrate(randomInt(150, 400)) });
   }
-  const d = dialect(bank.t, bank.uiVersion, 'signin');
+  const d = dialect(bank.t, 'signin');
   const rows =
     row(c, d, L.operatorId, input(c, 'operator', { size: 12, disabled: true })) +
     row(c, d, L.password, input(c, 'password', { type: 'password', size: 16, disabled: true }));
@@ -112,7 +112,7 @@ async function handOff(bank: Bank, reply: FastifyReply, sessionToken: string) {
 }
 
 function codePage(c: Ctx, bank: Bank, o: { error?: string }) {
-  const d = dialect(bank.t, bank.uiVersion, 'code-enter');
+  const d = dialect(bank.t, 'code-enter');
   const rows =
     row(c, d, 'Code', input(c, 'code', { size: 8 })) +
     `<TR><TD COLSPAN="2"></TD><TD>${input(c, 'trust', { type: 'checkbox', value: '1', checked: true })} ${font(c, `Trust this workstation for ${WORKSTATION_DAYS} days`)}</TD></TR>`;
@@ -137,7 +137,7 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
   // Entry: a blank "Loading..." shell; a script moves on to the sign-in page after a delay.
   app.get(base, async (req, reply) => {
     const c = ctxOf(bank, req);
-    const d = dialect(bank.t, bank.uiVersion, 'shell');
+    const d = dialect(bank.t, 'shell');
     return html(
       reply,
       doc(c, d, {
@@ -196,7 +196,7 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
       return reply.redirect(`${base}code/enter`);
     }
     const c = ctxOf(bank, req);
-    const d = dialect(bank.t, bank.uiVersion, 'code');
+    const d = dialect(bank.t, 'code');
     const choice = (channel: 'text' | 'email', text: string, first: boolean) =>
       `<TR><TD COLSPAN="2"></TD><TD>${input(c, 'channel', { type: 'radio', value: channel, checked: first })} ${font(c, esc(text))}</TD></TR>`;
     const rows =
@@ -251,7 +251,7 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
   // The hand-off: a blank page that holds for a moment. Mid-sign-in, not signed in.
   app.get<{ Querystring: { code?: string } }>(`${base}auth/callback`, async (req, reply) => {
     const c = ctxOf(bank, req);
-    const d = dialect(bank.t, bank.uiVersion, 'callback');
+    const d = dialect(bank.t, 'callback');
     const wait = c.hz.on('slow-handoff') ? randomInt(2000, 3001) : randomInt(200, 500);
     const next = `${base}auth/complete?code=${encodeURIComponent(String(req.query.code ?? ''))}`;
     return html(
@@ -287,7 +287,7 @@ export function signInRoutes(app: FastifyInstance, bank: Bank) {
     app.get(`${base}refreshed`, async (req, reply) => {
       if (!(await current(bank, req))) return reply.redirect(`${base}signin`);
       const c = ctxOf(bank, req);
-      const d = dialect(bank.t, bank.uiVersion, 'refreshed');
+      const d = dialect(bank.t, 'refreshed');
       return html(
         reply,
         doc(c, d, {
@@ -315,7 +315,7 @@ ${form(c, d, `${base}refreshed`, '', submit(c, d, 'Continue to Online Banking'),
     if (t) await endSession(bank.db, t);
     reply.clearCookie(COOKIE.session, { path: base });
     const c = ctxOf(bank, req);
-    const d = dialect(bank.t, bank.uiVersion, 'signout');
+    const d = dialect(bank.t, 'signout');
     return html(
       reply,
       doc(c, d, {

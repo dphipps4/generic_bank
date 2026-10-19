@@ -15,8 +15,6 @@ export interface Bank {
   db: Db;
   hazards: Hazards;
   now: () => Date;
-  /** BANK_UI_VERSION: bumping it relabels and moves things, for the repair loop. */
-  uiVersion: number;
   /** The ports the bank answers on. A different port is a different origin. */
   ports?: { main: number };
 }
@@ -33,7 +31,6 @@ export const COOKIE = { session: 'CLSESS', form: 'CLFORM', workstation: 'CLWS' }
 export const ctxOf = (bank: Bank, req: FastifyRequest): Ctx => ({
   t: bank.t,
   base: bank.t.basePath,
-  uiVersion: bank.uiVersion,
   nonce: req.nonce,
   hz: req.hz,
 });

@@ -15,7 +15,6 @@ export const js = (s: string) => JSON.stringify(s).replace(/</g, '\\u003c');
 export interface Ctx {
   t: Tenant;
   base: string;
-  uiVersion: number;
   /** The session's form nonce: field names are derived from it. */
   nonce: string;
   hz: RequestHazards;

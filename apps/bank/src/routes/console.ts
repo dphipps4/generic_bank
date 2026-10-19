@@ -40,7 +40,7 @@ export function consoleRoutes(app: FastifyInstance, bank: Bank) {
   app.get(`${base}frame/banner`, async (req, reply) => {
     const cur = await current(bank, req);
     const c = ctxOf(bank, req);
-    const d = dialect(bank.t, bank.uiVersion, 'banner');
+    const d = dialect(bank.t, 'banner');
     const h = bank.now().getUTCHours();
     const greeting = `${h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'}, ${cur?.operator.displayName ?? 'Operator'}`;
     const marquee =
@@ -376,10 +376,4 @@ ${confirm ? `setTimeout(function () { if (window.confirm("This member has 2 unre
       ),
     );
   }
-}
-
-export function monthsBack(now: Date, n: number): string[] {
-  return Array.from({ length: n }, (_, i) =>
-    new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1)).toISOString().slice(0, 7),
-  );
 }

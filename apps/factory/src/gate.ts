@@ -43,8 +43,6 @@ async function checkRun(
     member: string;
     from: string;
     to: string;
-    /** The factory run's cookies, so the check starts signed in and trusted, as the run ended. */
-    session?: string;
   },
   hazard: string | null,
 ): Promise<CheckRun> {
@@ -57,10 +55,8 @@ async function checkRun(
     known: [],
   });
   const headers = hazard && d.hazardKey ? hazardHeader([hazard as never], d.hazardKey) : undefined;
-  const page = await newPage(d.browser, {
-    ...(headers ? { headers } : {}),
-    ...(o.session ? { session: o.session } : {}),
-  });
+  // From a browser that has never signed in, as the service's first run will.
+  const page = await newPage(d.browser, headers ? { headers } : {});
   const session = {
     page,
     url: o.url,
@@ -114,8 +110,6 @@ export async function gate(
     member: string;
     from: string;
     to: string;
-    /** The factory run's cookies, so the check starts signed in and trusted, as the run ended. */
-    session?: string;
   },
 ): Promise<{ recommendationId: string | null; runs: CheckRun[] }> {
   const runs = [await checkRun(d, { ...o, runId: `${o.factoryRunId}-check` }, null)];

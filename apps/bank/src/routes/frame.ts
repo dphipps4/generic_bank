@@ -56,7 +56,7 @@ export async function mainFrame(
       await signInEntry(bank, req, { other: true, note: 'Your session has ended. Sign in again.' }),
     );
   const c = ctxOf(bank, req);
-  const d = dialect(bank.t, bank.uiVersion, o.page);
+  const d = dialect(bank.t, o.page);
   const page = (body: string, script?: string) =>
     html(reply, doc(c, d, { title: o.title, body, script, main: true }));
 

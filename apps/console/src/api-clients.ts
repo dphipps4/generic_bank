@@ -23,9 +23,6 @@ type Shown = { record?: { id?: string; params?: Record<string, unknown> } };
 
 const ONCE_MS = 5 * 60_000;
 
-/** The fields shown once on a client's page, the next time it is shown, within five minutes. */
-export const ONCE_FIELDS = ['clientSecretOnce', 'codeOnce'] as const;
-
 export function onceStore(now: () => number = Date.now) {
   const items = new Map<string, { fields: Record<string, string>; until: number }>();
   return {

@@ -85,9 +85,6 @@ describe.each([DEFAULT_ROLES.scout.provider] as const)('a turn on %s', (provider
     });
     expect(t.text).toBe('Echoed.');
     expect(ran).toEqual(['one']);
-    // The refusal reached the tool; the other two never did.
-    expect(t.refused.map((r) => r.name)).toEqual(['nope', 'echo']);
-    expect(t.refused[1]!.why).toMatch(/text/);
 
     // The conversation goes on in the next turn, and the limit ends a turn that would not.
     replies = [

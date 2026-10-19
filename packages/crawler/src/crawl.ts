@@ -126,12 +126,6 @@ const stop = (code: ResultCode, note?: string, retryable?: boolean): never => {
 };
 
 /**
- * An account as an option holds it: its name, or its last four digits, whatever words a bank puts
- * around them ("ending in 1234", "Acct ****1234"). Exactly one option must hold it.
- */
-const account = (ref = '') => ref;
-
-/**
  * Whether one account, read off a page, is the one asked for: its last four digits anywhere in its
  * number as the page draws it, or its name, ignoring case. Exactly one account must match; the
  * caller stops on any other count.
@@ -163,9 +157,9 @@ async function value(s: Session, task: Task, v: string): Promise<string> {
     case '$member':
       return task.member;
     case '$from':
-      return account(task.from);
+      return task.from ?? '';
     case '$to':
-      return account(task.to);
+      return task.to ?? '';
     case '$amount':
       return ((task.amountCents ?? 0) / 100).toFixed(2);
     case '$memo':
@@ -240,11 +234,19 @@ async function look(s: Session, task: Task): Promise<Frame> {
  * The sign-in joins what is hidden whole, before the first page is seen. The member's number is an
  * identifier, and the masking rule keeps its last four, like any other.
  */
-async function knowTask(s: Session, task: Task) {
+async function knowTask(s: Session) {
   const { operatorId, password } = await s.credentials();
   for (const v of [operatorId, password]) if (v && !s.known.includes(v)) s.known.push(v);
-  void task;
 }
+
+/** A table's pages, as `knows` tells them apart. */
+export const pagesOf = (t: Pick<Table, 'rows'>) =>
+  t.rows.map((r) => ({
+    name: r.page,
+    shows: r.shows,
+    never: r.never ?? [],
+    looks: r.looks ?? [],
+  }));
 
 /** Runs the table from home until the goal's page, and returns that page. */
 export async function crawl(
@@ -254,13 +256,8 @@ export async function crawl(
   o: { submitted?: boolean } = {},
 ): Promise<Frame> {
   const t = s.table;
-  await knowTask(s, task);
-  const pages = t.rows.map((r) => ({
-    name: r.page,
-    shows: r.shows,
-    never: r.never ?? [],
-    looks: r.looks ?? [],
-  }));
+  await knowTask(s);
+  const pages = pagesOf(t);
   const again = new Map<string, number>();
   const home = async (why: string) => {
     // Never a reload after Submit: the console's home is a fresh request, and sends nothing.
@@ -422,7 +419,7 @@ export async function submitTransfer(
   task: Task & { memo: string },
   approve: (shown: Review) => Promise<void>,
 ) {
-  await knowTask(s, task);
+  await knowTask(s);
   await approve(await readReview(s));
   const t = s.table;
   s.guard?.({ screen: screenOf(t, t.ends.transfer), verb: 'press', control: t.submit.press });
@@ -433,12 +430,7 @@ export async function submitTransfer(
   let confirmation: string | undefined;
   try {
     const f = await look(s, task);
-    const pages = t.rows.map((r) => ({
-      name: r.page,
-      shows: r.shows,
-      never: r.never ?? [],
-      looks: r.looks ?? [],
-    }));
+    const pages = pagesOf(t);
     const at = (() => {
       try {
         return knows(f, pages);

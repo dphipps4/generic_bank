@@ -119,7 +119,7 @@ export function transferRoutes(app: FastifyInstance, bank: Bank) {
 
   function approvalPage(a: MainArgs, p: Pending, error?: string) {
     const { c, d } = a;
-    const dd = dialect(bank.t, bank.uiVersion, 'approve');
+    const dd = dialect(bank.t, 'approve');
     const rows =
       row(c, dd, 'Supervisor ID', input(c, 'supervisor', { size: 8 })) +
       row(c, dd, 'Approval code', input(c, 'code', { size: 8 }));

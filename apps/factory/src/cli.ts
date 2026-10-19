@@ -90,6 +90,16 @@ async function repairOf(): Promise<{ table: Table; diagnosis: string } | undefin
   };
 }
 
+/** A run's steps, in order. */
+async function stepsOf(runId: string) {
+  return (
+    await sql.query<{ name: string; action: string | null; outcome: string | null }>(
+      `SELECT name, action, outcome FROM "Step" WHERE "runId" = $1 ORDER BY seq`,
+      [runId],
+    )
+  ).rows;
+}
+
 /** The run's report: its cost, the actions targeting confirmed or refused, the corrections, the lessons. */
 async function report(runId: string) {
   const spend = (
@@ -98,12 +108,7 @@ async function report(runId: string) {
       [runId],
     )
   ).rows[0]?.usd;
-  const steps = (
-    await sql.query<{ name: string; action: string | null; outcome: string | null }>(
-      `SELECT name, action, outcome FROM "Step" WHERE "runId" = $1 ORDER BY seq`,
-      [runId],
-    )
-  ).rows;
+  const steps = await stepsOf(runId);
   const sup = steps.filter((s) => s.name === 'supervisor');
   log(`cost: $${Number(spend ?? 0).toFixed(2)}`);
   log(`actions: ${sup.length} judged, ${steps.filter((s) => s.name === 'refused').length} refused`);
@@ -137,16 +142,9 @@ async function report(runId: string) {
     log(`slow judgment at ${s.action}: ${s.outcome}`);
 }
 
-/** The lessons the run sent to memory. */
-
-/** The lessons the run sent to memory. */
+/** The lessons the run sent to memory: after `finish`, so after the report. */
 async function lessonsLine(runId: string) {
-  const steps = (
-    await sql.query<{ name: string; action: string | null; outcome: string | null }>(
-      `SELECT name, action, outcome FROM "Step" WHERE "runId" = $1 ORDER BY seq`,
-      [runId],
-    )
-  ).rows;
+  const steps = await stepsOf(runId);
   log(
     `lessons: ${
       steps
@@ -208,8 +206,6 @@ try {
         member,
         from,
         to,
-        // From a browser that has never signed in, as the service's first run will: a saved
-        // session met a sign-in the route never learned (run 16).
       },
     );
     for (const r of g.runs)

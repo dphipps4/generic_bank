@@ -57,7 +57,6 @@ export async function testBank(
     t,
     db,
     now: () => clock.now,
-    uiVersion: 1,
     ports: PORTS[id],
     hazards: hazards({
       profile: 'none',
