@@ -7,6 +7,18 @@ The target app is two local banks, both deliberately unfriendly: 2003-style cons
 - **Bank 1's route was built ahead of time.** AI wrote it from a recorded walk through the bank's pages, and a person reviewed it. This is the system the brief asks for.
 - **Bank 2's route is built by a factory,** the one extension. Two AI agents learn the live site and produce the route, and a person approves it before it's used.
 
+## Gotchas
+
+The demo assumes a Mac with Chrome installed. It hasn't been tested on Windows yet.
+
+`just show` opens every browser page you need, ACCESS.md among them, with the URLs and credentials. When you sign in to Bank 1, it asks for a sign-in code (a PIN). You'll find the code in the "Simulated phone and email inbox", one of the pages `just show` opens.
+
+The factory needs an OpenRouter API key, and `just setup` reminds you if it's missing. Bank 2's sign-in asks for a PIN too.
+
+`just setup` installs the dependencies, and most of them live in Docker. If you already have `brew`, you can skip the bootstrap script and just run `brew install just`.
+
+You'll sign in to the Console (AdminJS) to view runs, check the inbox and approve transfers. Approving a transfer asks for a note. Anything works, as long as it's ten characters or more.
+
 ## Run it
 
 You need macOS 14 or newer, [Docker Desktop](https://www.docker.com/products/docker-desktop/) and git. An 8 GB Mac is enough.
