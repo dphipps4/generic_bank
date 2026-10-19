@@ -91,7 +91,7 @@ const routeText = (t: Table) =>
   t.rows
     .map(
       (r, n) =>
-        `${n + 1}. "${r.page}", recognized by: ${r.shows.join('; ')}. Steps: ${
+        `${n + 1}. "${r.page}" (${r.screen ? `a ${r.screen} screen` : 'no kind'}), recognized by: ${r.shows.join('; ')}. Steps: ${
           Object.entries(r.do)
             .map(
               ([k, steps]) =>
@@ -99,6 +99,11 @@ const routeText = (t: Table) =>
             )
             .join(' | ') || 'none'
         }`,
+    )
+    .concat(
+      Object.entries(t.names ?? {}).map(
+        ([listed, drawn]) => `The guard's "${listed}" is drawn here as: ${drawn.join('; ')}`,
+      ),
     )
     .join('\n');
 

@@ -8,7 +8,8 @@
 // action before the next one. The server types the sign-in and a person's code; the model never
 // sees either. It never presses a control that could move money.
 import type { Answer, At, Goal, Row, Step, Table } from '@gb/crawler';
-import { accountsIn, cents, leaf, leaves, namesIn, pagesOf, readOf } from '@gb/crawler';
+import { LISTED, judge, pressesOn, refusals, SCREEN_KINDS } from './guard.js';
+import { accountsIn, actionOf, cents, leaf, leaves, namesIn, pagesOf, readOf } from '@gb/crawler';
 import {
   type Box,
   choose,
@@ -480,17 +481,24 @@ export function scout(deps: ScoutDeps, task: Task) {
     return text;
   };
   /**
-   * The sign-in and the code go into fields the allowlists know by their own names: the bank's
-   * name for each is kept, so the guard knows them when the table runs.
+   * The guard, while learning, as it will be in service: each step is judged by the kind of screen
+   * it is taken on and the control's name in the guard's words. `listed` is the guard's name for
+   * the control, kept in the route's names once the step is allowed.
    */
-  const nameField = (v: Value, label: string) => {
-    const listed = { user_id: 'Operator ID', password: 'Password', code: 'Code' }[
-      v as 'user_id' | 'password' | 'code'
-    ];
-    if (listed && listed !== label) {
-      t.names ??= {};
-      t.names[listed] = [...new Set([...(t.names[listed] ?? []), label])];
-    }
+  const allow = (st: Step, listed?: string) => {
+    if (!row)
+      throw new ToolRefusal(
+        "name this screen with name_page first, with its kind: the guard judges every step by the screen's kind, as it will in service",
+      );
+    const label = 'press' in st ? st.press : 'choose' in st ? st.choose : st.type;
+    const names = { ...(t.names ?? {}) };
+    if (listed && listed !== label) names[listed] = [...new Set([...(names[listed] ?? []), label])];
+    const v = judge({ names }, task.goal, actionOf(row.screen ?? row.page, st));
+    if (!v.allowed)
+      throw new ToolRefusal(
+        `the guard refuses this, as it would in service: ${v.rule}. ${row.screen ? '' : 'This screen has no kind: give it one with name_page. '}${'press' in st ? `Say which allowed control this press is with \`as\`; on this kind of screen: ${pressesOn(task.goal, row.screen).join(', ')}.` : ''}`,
+      );
+    t.names = names;
   };
   /** Whether the page's own words hold a label, colon or not: then structure can find it. */
   const inWords = (label: string) => {
@@ -584,6 +592,14 @@ export function scout(deps: ScoutDeps, task: Task) {
     w: z.number().positive(),
     h: z.number().positive(),
   });
+  /** Which control the guard allows a press is, in the guard's words. */
+  const AS = z
+    .string()
+    .max(40)
+    .optional()
+    .describe(
+      "Which control the guard allows this press is, in the guard's words, when the bank draws it with other words: kept in the route, so the guard knows it in service",
+    );
   const which = z
     .object({
       id: z
@@ -631,12 +647,20 @@ export function scout(deps: ScoutDeps, task: Task) {
     browser_press: {
       description:
         'Presses a button or a link, or text drawn like one. `near` is words drawn close to it, when two share a name.',
-      input: which.extend({ near: z.string().max(80).optional() }),
-      async run(i: { id?: string; x?: number; y?: number; near?: string; why: string }) {
+      input: which.extend({ near: z.string().max(80).optional(), as: AS }),
+      async run(i: {
+        id?: string;
+        x?: number;
+        y?: number;
+        near?: string;
+        as?: string;
+        why: string;
+      }) {
         await mayAct();
         const c = chosen(i);
         if (MONEY.test(c.name))
           throw new ToolRefusal(`"${c.name}" could move money or change an account: never pressed`);
+        allow({ press: c.name || 'Submit' }, i.as);
         // By its name when the name finds it alone; otherwise (no name, or a name two controls share)
         // by its position, with an anchor the crawler finds it by again.
         const found = c.name ? await control(page, c.name, i.near).catch(() => null) : null;
@@ -691,6 +715,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         const label = i.label;
         const text = await textOf(i.value);
         const token = TOKEN[i.value];
+        allow({ type: label, value: token }, LISTED[i.value]);
         // Structure first: the label's words, when the page's words hold them. Otherwise sight, in
         // the same call: the field the id names, typed at its position, with an anchor of it and the
         // label drawn beside it. A failed lookup costs milliseconds, not a refusal and a judgment.
@@ -714,7 +739,6 @@ export function scout(deps: ScoutDeps, task: Task) {
           visit.push({ type: label, value: token, at: anchor });
           how = `${i.id ?? 'the field'}, by its position (the label "${label}" is not in the page's words)`;
         }
-        nameField(i.value, label);
         const held = await holds(at, secretValue(i.value));
         return look(`typed the ${i.value.replace('_', ' ')} into ${how}${held}`, i.why);
       },
@@ -791,12 +815,12 @@ export function scout(deps: ScoutDeps, task: Task) {
           throw new ToolRefusal(
             `${it.id} has no label box: list the page again with its label's box`,
           );
+        const token = TOKEN[i.value];
+        allow({ type: it.label, value: token }, LISTED[i.value]);
         const at = await anchorOf(it, it.labelBox);
         const text = await textOf(i.value);
         const p = centre(it.box);
         await typeAt(page, p, text);
-        nameField(i.value, it.label);
-        const token = TOKEN[i.value];
         visit.push({ type: it.label, value: token, at });
         const held = await holds(p, secretValue(i.value));
         return look(
@@ -810,15 +834,17 @@ export function scout(deps: ScoutDeps, task: Task) {
         'Presses a button, link or checkbox from your list_page, by its position: the mouse moves to the middle of its box and clicks.',
       input: z.object({
         item: z.string().regex(/^i\d{1,3}$/),
+        as: AS,
         why: z.string().min(3).max(200),
       }),
-      async run(i: { item: string; why: string }) {
+      async run(i: { item: string; as?: string; why: string }) {
         await mayAct();
         const it = itemOf(i.item, ['button', 'link', 'checkbox']);
         if (MONEY.test(it.label))
           throw new ToolRefusal(
             `"${it.label}" could move money or change an account: never pressed`,
           );
+        allow({ press: it.label }, i.as);
         const at = await anchorOf(it, it.labelBox ?? it.box);
         const p = centre(it.box);
         await clickAt(page, p);
@@ -844,6 +870,10 @@ export function scout(deps: ScoutDeps, task: Task) {
           throw new ToolRefusal(
             `${it.id} has no label box: list the page again with its label's box`,
           );
+        allow(
+          { choose: it.label, containing: i.account === 'from' ? '$from' : '$to' },
+          LISTED[i.account],
+        );
         const at = await anchorOf(it, it.labelBox);
         const p = centre(it.box);
         await chooseAt(page, p, (i.account === 'from' ? task.from : task.to) ?? '').catch(
@@ -886,6 +916,7 @@ export function scout(deps: ScoutDeps, task: Task) {
           throw e;
         };
         const containing = i.account === 'from' ? '$from' : '$to';
+        allow({ choose: i.label, containing }, LISTED[i.account]);
         // Structure first, sight in the same call, as browser_type.
         const f = inWords(i.label) ? await field(page, i.label).catch(() => null) : null;
         if (f) {
@@ -909,9 +940,12 @@ export function scout(deps: ScoutDeps, task: Task) {
     },
     name_page: {
       description:
-        'Names the screen now, for your route, by what tells it apart from every other screen: words it shows as text (`shows`), and words drawn as pictures (`pictures`: each with its box on the picture, the words alone). Name each screen as soon as you arrive, before you act on it: the steps you take here are filed under it. Leave `never` out: the tool adds words of your other screens that this one does not show.',
+        'Names the screen now, for your route, by what tells it apart from every other screen: words it shows as text (`shows`), and words drawn as pictures (`pictures`: each with its box on the picture, the words alone). Name each screen as soon as you arrive, before you act on it: the steps you take here are filed under it. Leave `never` out: the tool adds words of your other screens that this one does not show. `kind` is what kind of screen it is, in the words of the guard, which judges every step by it, here and in service.',
       input: z.object({
         name: z.string().min(2).max(40),
+        kind: z
+          .enum([...SCREEN_KINDS, 'other'])
+          .describe("The kind of screen this is, in the guard's words; other when none fits"),
         shows: z.array(z.string().min(2).max(80)).max(4).default([]),
         pictures: z
           .array(
@@ -926,6 +960,7 @@ export function scout(deps: ScoutDeps, task: Task) {
       }),
       async run(i: {
         name: string;
+        kind: string;
         shows: string[];
         pictures?: { words: string; box: Box }[];
         never?: string[];
@@ -983,6 +1018,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         const old = t.rows.find((r) => r.page === i.name);
         const next: Row = {
           page: i.name,
+          ...(i.kind !== 'other' ? { screen: i.kind } : {}),
           shows: i.shows,
           ...(looks.length ? { looks } : {}),
           ...(never.length ? { never } : {}),
@@ -1261,6 +1297,17 @@ export function scout(deps: ScoutDeps, task: Task) {
         // did (run 24: a press of Edit, filed on the review, would have left the goal's page).
         visit = [];
         delete row.do[task.goal];
+        // The route must pass the guard as it will in service, before the Supervisor sees it.
+        const refused = refusals({ ...t, ends: { ...t.ends, [task.goal]: row.page } }, [task.goal]);
+        if (refused.length)
+          throw new ToolRefusal(
+            `the guard would refuse this route in service: ${refused
+              .slice(0, 3)
+              .map((r) => `on "${r.page}", ${r.rule}`)
+              .join(
+                '; ',
+              )}. Give each screen its kind with name_page, and each press its allowed name with \`as\``,
+          );
         // The Supervisor checks the route before the goal counts: every screen named, each with its
         // own steps. A "wait" sends the Scout back to fix it.
         const j = await deps.judge({

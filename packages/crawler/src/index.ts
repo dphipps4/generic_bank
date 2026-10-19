@@ -7,6 +7,7 @@ export const TABLES: Readonly<Record<string, Table>> = { generic: bank1 };
 export {
   accountsIn,
   type Action,
+  actionOf,
   cents,
   checkBalance,
   crawl,
@@ -20,6 +21,7 @@ export {
   prepareTransfer,
   readReview,
   type Review,
+  routeActions,
   type Seen,
   type Session,
   Stop,

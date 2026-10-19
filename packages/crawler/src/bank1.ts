@@ -48,7 +48,7 @@ export const bank1: Table = {
       frame: 'happy/05',
     },
     {
-      // A code typed after its five minutes: a fresh one is sent, and the code page runs again.
+      // A code typed after its seven minutes: a fresh one is sent, and the code page runs again.
       page: 'code expired',
       screen: 'staff_code',
       shows: ['That code has expired.'],

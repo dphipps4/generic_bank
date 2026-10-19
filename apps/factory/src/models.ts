@@ -25,7 +25,7 @@ export const ROLE_SETTINGS = {
   FACTORY_SCOUT_EFFORT: z.enum(EFFORTS).default('low'),
   FACTORY_SUPERVISOR_PROVIDER: z.enum(PROVIDERS).default('openrouter'),
   FACTORY_SUPERVISOR_MODEL: z.string().min(1),
-  FACTORY_SUPERVISOR_EFFORT: z.enum(EFFORTS).default('high'),
+  FACTORY_SUPERVISOR_EFFORT: z.enum(EFFORTS).default('low'),
 };
 type Settings = z.infer<z.ZodObject<typeof ROLE_SETTINGS>>;
 

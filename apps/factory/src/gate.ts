@@ -4,9 +4,17 @@
 // fails the first run is not recommended; one that breaks under the hazard is kept as broken and
 // opens a repair case with that run's frames, as a break in service would. A table that passes
 // both waits in the Console for a person's approval: nothing promotes it but that.
-import { checkBalance, prepareTransfer, Stop, type Table } from '@gb/crawler';
+import {
+  type Action,
+  checkBalance,
+  type Goal,
+  prepareTransfer,
+  Stop,
+  type Table,
+} from '@gb/crawler';
 import { driverFault, type FrameStore, hazardHeader, type Sql } from '@gb/runs';
 import { type Browser, newPage } from '@gb/runtime';
+import { judge, refusals } from './guard.js';
 import { openTrail } from './trail.js';
 
 /** The one hazard a learned table is checked against. */
@@ -54,9 +62,15 @@ async function checkRun(
     known: [],
   });
   const headers = hazard && d.hazardKey ? hazardHeader([hazard as never], d.hazardKey) : undefined;
-  // From a browser that has never signed in, as the service's first run will.
+  // From a browser that has never signed in, as the service's first run will, and judged by the
+  // guard as service judges it.
   const page = await newPage(d.browser, headers ? { headers } : {});
+  let goal: Goal = 'balance';
   const session = {
+    guard: (a: Action) => {
+      const v = judge(o.table, goal, a);
+      if (!v.allowed) throw new Error(`the guard refused: ${v.rule}`);
+    },
     page,
     url: o.url,
     table: o.table,
@@ -69,6 +83,7 @@ async function checkRun(
   };
   try {
     const b = await checkBalance(session, { member: o.member, account: o.from });
+    goal = 'transfer';
     const r = await prepareTransfer(session, {
       member: o.member,
       from: o.from,
@@ -111,7 +126,21 @@ export async function gate(
     to: string;
   },
 ): Promise<{ recommendationId: string | null; runs: CheckRun[] }> {
-  const runs = [await checkRun(d, { ...o, runId: `${o.factoryRunId}-check` }, null)];
+  // A route the guard would refuse in service is not run at all.
+  const refused = refusals(o.table);
+  const runs: CheckRun[] = refused.length
+    ? [
+        {
+          runId: `${o.factoryRunId}-check`,
+          hazard: null,
+          ok: false,
+          said: `the guard would refuse it in service: ${refused
+            .slice(0, 3)
+            .map((r) => `on "${r.page}", ${r.rule}`)
+            .join('; ')}`,
+        },
+      ]
+    : [await checkRun(d, { ...o, runId: `${o.factoryRunId}-check` }, null)];
   if (runs[0]!.ok && d.hazardKey)
     runs.push(await checkRun(d, { ...o, runId: `${o.factoryRunId}-${GATE_HAZARD}` }, GATE_HAZARD));
   const passed = runs.every((r) => r.ok);
