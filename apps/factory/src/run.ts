@@ -92,7 +92,7 @@ After each action the Supervisor judges it, and its words come back with the pag
 const SCOUT_CALLS = 60;
 
 /** Each goal's clock: a demo learns a bank in minutes, or stops and says why. */
-const GOAL_MS = Number(process.env.FACTORY_GOAL_MINUTES ?? 3) * 60_000;
+const GOAL_MS = Number(process.env.FACTORY_GOAL_MINUTES ?? 7) * 60_000;
 
 /**
  * What memory knows, as the agents read it. A proposed lesson has never been confirmed by a run, so
