@@ -1,7 +1,7 @@
 // A factory run's intake: with no knowledge pack from memory there is no run, and no browser page
 // is opened.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { memoryStore } from '../../../packages/evidence/src/index.js';
+import { memoryStore } from '../../../packages/runs/src/index.js';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import { memoryClient } from '../src/memory.js';
 import { factoryRun } from '../src/run.js';

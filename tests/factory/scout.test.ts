@@ -7,7 +7,7 @@ import { openTrail } from '../../apps/factory/src/trail.js';
 import { scout, type Judging } from '../../apps/factory/src/scout.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
 import { checkBalance } from '../../packages/crawler/src/index.js';
-import { memoryStore } from '../../packages/evidence/src/index.js';
+import { memoryStore } from '../../packages/runs/src/index.js';
 import { controlDb } from '../../packages/oauth/test/control.js';
 import { type Browser, launch, newPage } from '../../packages/runtime/src/index.js';
 import { type LiveBank, liveBank, PASSWORDS } from '../support/banks.js';

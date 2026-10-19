@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildServer } from '../../apps/api/src/server.js';
 import { inboxPages } from '../../apps/console/src/pages/inbox.js';
 import { executeRun } from '../../apps/runner/src/execute.js';
-import { memoryStore } from '../../packages/evidence/src/index.js';
+import { memoryStore } from '../../packages/runs/src/index.js';
 import { oauth } from '../../packages/oauth/src/index.js';
 import { controlDb } from '../../packages/oauth/test/control.js';
 import { accountsOf } from '../../apps/bank/src/ledger.js';

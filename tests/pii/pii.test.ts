@@ -7,7 +7,7 @@ import { accountsOf } from '../../apps/bank/src/ledger.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
 import type { TaskName } from '../../packages/contracts/src/index.js';
 import { createHash } from 'node:crypto';
-import { memoryStore } from '../../packages/evidence/src/index.js';
+import { memoryStore } from '../../packages/runs/src/index.js';
 import { oauth } from '../../packages/oauth/src/index.js';
 import { controlDb } from '../../packages/oauth/test/control.js';
 import type { Box } from '../../packages/runtime/src/index.js';

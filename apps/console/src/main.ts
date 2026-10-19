@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { loadConfig, port, secret } from '@gb/config';
 import { db, sql } from '@gb/db';
 import { oauth } from '@gb/oauth';
-import { WORKFLOW } from '@gb/runs';
+import { fileStore, WORKFLOW } from '@gb/runs';
 import { apiClientActions, onceStore } from './api-clients.js';
 import { ADMIN_BAR_JS, showLabInNav } from './pages/layout.js';
 import { dashboardPages, landOnDashboard } from './pages/dashboard.js';
@@ -18,7 +18,6 @@ import { inboxPages } from './pages/inbox.js';
 import { labPages, throughTheApi } from './pages/lab.js';
 import { recommendationPages } from './pages/recommendations.js';
 import { runPages, type Viewer } from './pages/runs.js';
-import { fileStore } from '@gb/evidence';
 import { resources } from './resources.js';
 
 const cfg = loadConfig(

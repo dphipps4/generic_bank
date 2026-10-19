@@ -12,7 +12,6 @@
     "@gb/config": "*",
     "@gb/crawler": "*",
     "@gb/db": "*",
-    "@gb/evidence": "*",
     "@gb/guardrails": "*",
     "@gb/runs": "*",
     "@gb/runtime": "*",

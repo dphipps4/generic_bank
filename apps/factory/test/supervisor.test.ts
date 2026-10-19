@@ -4,7 +4,7 @@
 import type { AddressInfo } from 'node:net';
 import { PNG } from 'pngjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { memoryStore } from '../../../packages/evidence/src/index.js';
+import { memoryStore } from '../../../packages/runs/src/index.js';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import type { Frame } from '../../../packages/runtime/src/index.js';
 import type { Agent } from '../src/agent.js';

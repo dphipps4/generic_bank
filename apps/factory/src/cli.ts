@@ -8,8 +8,7 @@
 import { TABLES, type Table } from '@gb/crawler';
 import { loadConfig, secret } from '@gb/config';
 import { sql as connect } from '@gb/db';
-import { fileStore } from '@gb/evidence';
-import { openRepairCase, tableOf } from '@gb/runs';
+import { fileStore, openRepairCase, tableOf } from '@gb/runs';
 import { launch } from '@gb/runtime';
 import { Agent as Dispatcher, setGlobalDispatcher } from 'undici';
 import { z } from 'zod';
