@@ -19,6 +19,13 @@ export const SCREEN_KINDS = [
   ),
 ].sort() as [string, ...string[]];
 
+/**
+ * The screens a task meets because of the browser's state or the bank's, not because of the task:
+ * signing in, its code, a notice. Which of them a run meets depends on whether the bank trusts the
+ * browser, so their steps serve every goal, as bank 1's route files them.
+ */
+export const EVERY_GOAL = new Set(['sign_in', 'staff_code', 'notice', 'promo', 'session_warning']);
+
 /** The value each typed field holds, and each list's account, by the guard's name for it. */
 export const LISTED = {
   user_id: 'Operator ID',

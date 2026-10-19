@@ -8,7 +8,7 @@
 // action before the next one. The server types the sign-in and a person's code; the model never
 // sees either. It never presses a control that could send money.
 import type { Answer, At, Goal, Row, Step, Table } from '@gb/crawler';
-import { LISTED, judge, nameFor, pressesOn, refusals, SCREEN_KINDS } from './guard.js';
+import { EVERY_GOAL, LISTED, judge, nameFor, pressesOn, refusals, SCREEN_KINDS } from './guard.js';
 import {
   accountsIn,
   actionOf,
@@ -338,10 +338,16 @@ export function scout(deps: ScoutDeps, task: Task) {
   };
   /**
    * A visit's steps become the steps of the page it was on, for the goal: the latest visit to a
-   * page that got somewhere wins. Steps on a page not yet named are kept until it is.
+   * page that got somewhere wins. Steps on a page not yet named are kept until it is. On a screen
+   * any task can meet, such as a sign-in, they are every goal's (run 29: the returning sign-in,
+   * met only by the transfer, held nothing for the balance).
    */
   const fileVisit = (on: Row | null) => {
-    if (on && visit.length) on.do[task.goal] = visit;
+    if (on && visit.length) {
+      const goal = EVERY_GOAL.has(on.screen ?? '') ? 'any' : task.goal;
+      if (goal === 'any') for (const k of Object.keys(on.do)) delete on.do[k as Goal];
+      on.do[goal] = visit;
+    }
     visit = [];
   };
 

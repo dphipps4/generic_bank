@@ -259,10 +259,13 @@ describe("the Scout, scripted, across a run's three goals", () => {
     const row = (page: string) => route.rows.find((r) => r.page === page)!;
     // The returning sign-in is its own screen, and the first never takes it for itself.
     expect(row('sign-in').never).toContain('Welcome back');
-    expect(row('welcome back').do.transfer).toEqual([
-      { type: 'Password', value: '$password' },
-      { press: 'Sign In' },
-    ]);
+    // Signing in and its code serve every goal: which sign-in a task meets depends on the browser,
+    // not the task.
+    expect(row('welcome back').do).toEqual({
+      any: [{ type: 'Password', value: '$password' }, { press: 'Sign In' }],
+    });
+    for (const r of route.rows.filter((r) => r.screen === 'sign_in' || r.screen === 'staff_code'))
+      expect(Object.keys(r.do)).toEqual(['any']);
     // The summary holds each goal's own way on, by the task's account where it is the task's.
     expect(row('summary').do.transfer).toEqual([
       { press: 'Transfer Funds', near: 'Member Summary' },
@@ -319,6 +322,14 @@ describe("the Scout, scripted, across a run's three goals", () => {
       await crawl(session, task, 'history');
       expect(visited.history.at(-1)).toBe('activity');
       expect((await leaves(page)).join('\n')).toMatch(/Activity: Everyday Checking/);
+
+      // The balance again, from the browser the bank now trusts, as every balance in service after
+      // the first: welcomed back, and the route knows that screen for the balance too.
+      goal = 'balance';
+      visited.balance = [];
+      const again = await checkBalance(session, { ...task, account: input.from });
+      expect(visited.balance[0]).toBe('welcome back');
+      expect(again.availableCents).toBe(b.availableCents);
     } finally {
       await page
         .context()
