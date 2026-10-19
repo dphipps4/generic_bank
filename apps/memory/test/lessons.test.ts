@@ -1,5 +1,4 @@
-// Episodes and lessons (plan §8, §A.6): runs and their attempts, hypotheses, proposals that
-// cite their frames, and near-duplicates that grow a held lesson. Each write is read back from the
+// Episodes and lessons (plan §8, §A.6): runs, proposals that cite their frames, and near-duplicates that grow a held lesson. Each write is read back from the
 // tables and the change log it leaves.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { episodes } from '../src/episodes.js';
@@ -31,7 +30,7 @@ const lastChange = async () =>
 
 /** The write is refused with `status`, and nothing at all is written. */
 async function refused(write: string, body: unknown, status: number, role: Role = 'factory') {
-  const tables = ['Run', 'Attempt', 'Hypothesis', 'Lesson', 'LessonVersion', 'Reliance'];
+  const tables = ['Run', 'Lesson', 'LessonVersion', 'Reliance'];
   const before = await Promise.all([...tables, 'ChangeLog'].map(count));
   const r = await post(write, body, role);
   expect(r.statusCode, JSON.stringify(r.json())).toBe(status);
@@ -98,42 +97,6 @@ describe('episodes', () => {
     });
     const e = await refused('episodes/runs', run('run-1'), 409, 'runner');
     expect(e).toMatchObject({ error: 'run_exists' });
-  });
-
-  it('refuses an attempt with no run, 409, and records one of a run', async () => {
-    const attempt = {
-      runId: 'run-none',
-      n: 1,
-      outcome: 'failed',
-      failure: 'code_never_arrived',
-      frames: ['run-none/001'],
-      at: '2026-03-04T05:07:00.000Z',
-    };
-    expect(await refused('episodes/attempts', attempt, 409)).toMatchObject({ error: 'no_run' });
-
-    const r = await post('episodes/attempts', { ...attempt, runId: 'run-1' });
-    expect(r.statusCode).toBe(201);
-    const row = (await db.query(`SELECT * FROM "Attempt" WHERE "runId" = 'run-1'`)).rows;
-    expect(row).toEqual([
-      expect.objectContaining({ n: 1, failure: 'code_never_arrived', frames: ['run-none/001'] }),
-    ]);
-    expect(await lastChange()).toMatchObject({ entity: 'Attempt', entityId: 'run-1/1' });
-    expect(await refused('episodes/attempts', { ...attempt, runId: 'run-1' }, 409)).toMatchObject({
-      error: 'attempt_exists',
-    });
-  });
-
-  it('records a hypothesis of a run, at the run’s bank, and none without a run', async () => {
-    const h = { runId: 'run-1', text: 'This bank probably needs a wait after the staff code.' };
-    const r = await post('hypotheses', h);
-    expect(r.statusCode).toBe(201);
-    const { hypothesis } = r.json() as { hypothesis: string };
-    expect(
-      (await db.query(`SELECT bank, text FROM "Hypothesis" WHERE id = $1`, [hypothesis])).rows,
-    ).toEqual([{ bank: 'generic', text: h.text }]);
-    expect(await refused('hypotheses', { ...h, runId: 'run-none' }, 409)).toMatchObject({
-      error: 'no_run',
-    });
   });
 });
 

@@ -9,17 +9,10 @@ import { memoryDb, SIGNING_KEY, testDoor, TOKENS } from './db.js';
 
 // The writes each role is given, as §A.6 states them.
 const GIVEN: Record<Role, Write[]> = {
-  runner: ['episodes/runs', 'episodes/attempts', 'lessons/proposals', 'lessons/relied-on'],
-  factory: [
-    'episodes/runs',
-    'episodes/attempts',
-    'hypotheses',
-    'lessons/proposals',
-    'lessons/relied-on',
-    'facts/invalidate',
-  ],
-  curator: ['facts/invalidate', 'lessons/retire', 'curated', 'curated/approve'],
-  system: ['facts', 'facts/invalidate', 'lessons/confirm', 'lessons/retire'],
+  runner: ['episodes/runs', 'lessons/proposals', 'lessons/relied-on'],
+  factory: ['episodes/runs', 'lessons/proposals', 'lessons/relied-on', 'facts/invalidate'],
+  curator: ['facts/invalidate', 'lessons/retire'],
+  system: ['facts/invalidate', 'lessons/retire'],
 };
 
 let db: Awaited<ReturnType<typeof memoryDb>>;
