@@ -6,7 +6,11 @@
 //      "████5678".
 //   2. Money is hidden whole: "$1,000.00" is "█████████", and so is a plain "1,000.00".
 //   3. A name or a secret the run knows (the member's name, a staff name, the sign-in, a code) is
-//      hidden whole, in any case.
+//      hidden whole, in any case. A name (letters, with spaces, periods or apostrophes between) is
+//      hidden where it stands as a word, never inside another word: the surname "Doe" is hidden in
+//      "Doe," and "DOE", and "does" stays readable. Anything else the run knows (a password, a code,
+//      a value with a digit or a symbol in it) is a secret, hidden wherever it shows, even inside
+//      other text.
 //   4. What a bank already hides stays as the bank drew it: its "****" is never hidden again, and a
 //      number of four digits or fewer (a last four, a year) is never hidden.
 //   5. Each hidden character becomes "█", one for one, so the text keeps the page's shape.
@@ -21,6 +25,16 @@ const ALREADY = /[*•●█]/;
 const NUMBER = /\d{3,}(?:[ .-]\d{3,})*|\d+/g;
 const MONEY = /\$\s?\d[\d,]*(?:\.\d\d)?|(?<![\d.,$])\d{1,3}(?:,\d{3})*\.\d\d(?![\d])/g;
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** A name: letters, with spaces, periods or apostrophes between. A hyphen or a digit makes a secret. */
+const NAME = /^[\p{L}\p{M}][\p{L}\p{M}\s.'’]*$/u;
+/**
+ * Where a known value is hidden: a name only as a word of its own (no letter just before or after
+ * it, so a digit beside it still leaves it hidden), anything else wherever it shows.
+ */
+const findOf = (k: string) =>
+  NAME.test(k)
+    ? new RegExp(`(?<![\\p{L}\\p{M}])${escape(k)}(?![\\p{L}\\p{M}])`, 'giu')
+    : new RegExp(escape(k), 'gi');
 
 /** Which characters of `text` the rule hides, as ranges: every view hides exactly these. */
 export function spans(text: string, known: string[] = []): [number, number][] {
@@ -35,7 +49,7 @@ export function spans(text: string, known: string[] = []): [number, number][] {
   }
   for (const m of text.matchAll(MONEY)) all(m.index, m.index + m[0].length);
   for (const k of known.filter((v) => v.trim().length >= 2))
-    for (const m of text.matchAll(new RegExp(escape(k), 'gi'))) all(m.index, m.index + m[0].length);
+    for (const m of text.matchAll(findOf(k))) all(m.index, m.index + m[0].length);
   // As ranges, in order.
   const out: [number, number][] = [];
   for (const i of [...hide].sort((a, b) => a - b)) {
