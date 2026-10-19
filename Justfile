@@ -215,6 +215,16 @@ factory bank member from to: factory-up
     pkill -P "$watchdog" 2>/dev/null; kill "$watchdog" 2>/dev/null
     exit "$status"
 
+# Bank 2's vendor redesign, which breaks its learned crawler on purpose: just redesign on (`just up` turns it off)
+[group('Factory')]
+redesign state:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    case "{{state}}" in on) v=1 ;; off) v=0 ;; *) echo "the state is on or off" >&2; exit 2 ;; esac
+    printf 'services:\n  bank-example:\n    environment:\n      BANK_REDESIGN: "%s"\n' "$v" \
+      | {{compose}} -f - up -d --no-deps --wait bank-example
+    echo "  bank 2's redesign is {{state}}"
+
 # A one-frame experiment: the real Scout or Supervisor on one kept frame of a run, a few cents a sample:
 # just frame <run> <frame> <scout|supervisor> <samples> <variant.json> (the variant names the run's member and accounts)
 [group('Factory')]
