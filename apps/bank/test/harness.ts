@@ -134,20 +134,6 @@ export class Client {
     };
   }
 
-  /** The raw response, bytes and all, for images and PDFs. */
-  async raw(path: string) {
-    const r = await this.app.inject({
-      method: 'GET',
-      url: this.url(path),
-      headers: this.headers(),
-    });
-    return {
-      status: r.statusCode,
-      type: String(r.headers['content-type'] ?? ''),
-      bytes: r.rawPayload,
-    };
-  }
-
   /** Posts a form by field meaning: the client maps each meaning to this session's field name. */
   async post(path: string, fields: Record<string, string>): Promise<Res> {
     const nonce = this.cookies.get('CLFORM') ?? '';

@@ -35,8 +35,8 @@ networks:
 
 volumes:
   postgres-data: {}
-  # Masked screenshots, screen models and statements, as files: the Runner and a factory run
-  # write them, the Console and the API read them.
+  # Masked screenshots and screen models, as files: the Runner and a factory run write them, the
+  # Console and the API read them.
   evidence: {}
   bank-db-data: {}
   memory-models: {}

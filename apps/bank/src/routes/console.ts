@@ -20,9 +20,9 @@ import {
 import { apiOperator, html, mainFrame, onSignedOut } from './frame.js';
 
 // The console after sign-in: a frameset of banner, nav and main frame; member search; the member
-// summary with one tile per account; activity; the alerts a confirmation dialog leads to; the
-// member list a person opens from search; and one decoy, Close account, in plain view, for the
-// guardrails to refuse.
+// summary with one tile per account; activity; a statements page that says they are not online;
+// the alerts a confirmation dialog leads to; the member list a person opens from search; and one
+// decoy, Close account, in plain view, for the guardrails to refuse.
 
 export const DECOYS = {
   'close-account': { title: 'Close account', fields: ['Reason'], button: 'Close account' },
@@ -328,6 +328,24 @@ ${confirm ? `setTimeout(function () { if (window.confirm("This member has 2 unre
         })),
       };
     },
+  );
+
+  // Statements are not served online. The links to them stay in the nav and on each tile, so every
+  // page looks as it always has.
+  app.get<{ Params: { n: string } }>(`${base}members/:n/statements`, async (req, reply) =>
+    mainFrame(
+      bank,
+      req,
+      reply,
+      { page: 'statements', title: L.statements, member: req.params.n },
+      async ({ c, d }) => ({
+        body: nest(
+          c,
+          d,
+          `${heading(c, d, L.statements)}${message(c, 'Statements are not available online.')}`,
+        ),
+      }),
+    ),
   );
 
   // The decoys: each is a real form that would change the member's record or move money.
