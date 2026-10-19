@@ -5,7 +5,8 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Write } from './door.js';
 import { asVector, type Embed } from './embed.js';
-import { Refused, type Memory } from './memory.js';
+import type { Db } from './db.js';
+import { Refused } from './memory.js';
 import { contradict, retire, runOf } from './rules.js';
 import type { WriteHandler } from './server.js';
 import { addVersion, currentOf, SAME_LESSON } from './versions.js';
@@ -73,11 +74,11 @@ const Retire = z.strictObject({ lessonId: Id, reason: Reason, bank: Id.optional(
 
 const json = (v: unknown) => (v === undefined ? null : JSON.stringify(v));
 
-export function episodes(memory: Memory, embed: Embed): Partial<Record<Write, WriteHandler>> {
+export function episodes(db: Db, embed: Embed): Partial<Record<Write, WriteHandler>> {
   return {
-    async 'episodes/runs'(body, role) {
+    async 'episodes/runs'(body) {
       const r = Run.parse(body);
-      const c = await memory.write(role, 'episodes/runs', async (tx) => {
+      await db.serializable(async (tx) => {
         const added = await tx.query(
           `INSERT INTO "Run" (id, kind, bank, vendor, task, driver, outcome, "startedAt", "endedAt", model, prompts, "evidenceHash")
            VALUES ($1, $2::"RunKind", $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12)
@@ -98,9 +99,8 @@ export function episodes(memory: Memory, embed: Embed): Partial<Record<Write, Wr
           ],
         );
         if (!added.rows.length) throw new Refused(409, 'run_exists', `run ${r.id} is recorded`);
-        return { entity: 'Run', entityId: r.id, runId: r.id, data: r };
       });
-      return { run: r.id, seq: c.seq };
+      return { run: r.id };
     },
 
     // A near-duplicate in the same scope (the same bank, for a tenant lesson; the same vendor, for
@@ -110,7 +110,7 @@ export function episodes(memory: Memory, embed: Embed): Partial<Record<Write, Wr
       const vector = asVector(await embed(p.text));
       const citation = { run: p.runId, frames: p.frames, hash: p.evidenceHash, seen: p.seen };
       const out = { lesson: '', version: 1, merged: false };
-      const c = await memory.write(role, 'lessons/proposals', async (tx) => {
+      await db.serializable(async (tx) => {
         const run = await runOf(tx, p.runId);
         if (p.scope === 'vendor' && !run.vendor)
           throw new Refused(409, 'no_vendor', `run ${p.runId} names no vendor`);
@@ -145,13 +145,7 @@ export function episodes(memory: Memory, embed: Embed): Partial<Record<Write, Wr
             evidenceHash: p.evidenceHash,
           });
           Object.assign(out, { lesson: near.lessonId, version, merged: true });
-          const similarity = Math.round(near.similarity * 1e4) / 1e4;
-          return {
-            entity: 'Lesson',
-            entityId: near.lessonId,
-            runId: p.runId,
-            data: { version, merged: true, similarity, citation, text: p.text },
-          };
+          return;
         }
 
         const id = randomUUID();
@@ -177,37 +171,15 @@ export function episodes(memory: Memory, embed: Embed): Partial<Record<Write, Wr
           ],
         );
         out.lesson = id;
-        const { text, area, scenario, scope, confidence, seen, model, prompts } = p;
-        return {
-          entity: 'Lesson',
-          entityId: id,
-          runId: p.runId,
-          data: {
-            version: 1,
-            merged: false,
-            state: 'proposed',
-            text,
-            area,
-            scenario,
-            scope,
-            bank,
-            vendor,
-            confidence,
-            seen,
-            citation,
-            model,
-            prompts,
-          },
-        };
       });
-      return { ...out, seq: c.seq };
+      return out;
     },
 
     // A lesson a run relied on is recorded once, at its current version; saying so again writes
     // nothing.
-    async 'lessons/relied-on'(body, role) {
+    async 'lessons/relied-on'(body) {
       const r = ReliedOn.parse(body);
-      const c = await memory.writeIf(role, 'lessons/relied-on', async (tx) => {
+      const written = await db.serializable(async (tx) => {
         await runOf(tx, r.runId);
         const served = (
           await tx.query<{ id: string }>(
@@ -219,32 +191,31 @@ export function episodes(memory: Memory, embed: Embed): Partial<Record<Write, Wr
         if (unknown.length)
           throw new Refused(409, 'no_lesson', `memory serves no lesson ${unknown.join(', ')}`);
         const added = (
-          await tx.query<{ lessonId: string; version: number }>(
+          await tx.query(
             `INSERT INTO "Reliance" ("runId", "lessonId", version)
              SELECT $1, id, current FROM "Lesson" WHERE id = ANY($2)
-             ON CONFLICT DO NOTHING RETURNING "lessonId", version`,
+             ON CONFLICT DO NOTHING RETURNING "lessonId"`,
             [r.runId, r.lessonIds],
           )
         ).rows;
-        if (!added.length) return null;
-        return { entity: 'Run', entityId: r.runId, runId: r.runId, data: { reliedOn: added } };
+        return added.length > 0;
       });
-      return c ? { run: r.runId, written: true, seq: c.seq } : { run: r.runId, written: false };
+      return { run: r.runId, written };
     },
 
     // A run says, citing its frames, that a lesson does not hold; the rules decide what that does.
     async 'facts/invalidate'(body, role) {
       const w = Contradiction.parse(body);
-      const c = await memory.writeIf(role, 'facts/invalidate', (tx) => contradict(tx, role, w));
+      const c = await db.serializable((tx) => contradict(tx, role, w));
       return c
-        ? { lesson: w.lessonId, written: true, seq: c.seq, ...(c.data as object) }
+        ? { lesson: w.lessonId, written: true, ...c }
         : { lesson: w.lessonId, written: false };
     },
 
     async 'lessons/retire'(body, role) {
       const w = Retire.parse(body);
-      const c = await memory.writeIf(role, 'lessons/retire', (tx) => retire(tx, role, w));
-      return { lesson: w.lessonId, written: !!c, ...(c && { seq: c.seq }) };
+      const written = await db.serializable((tx) => retire(tx, role, w));
+      return { lesson: w.lessonId, written };
     },
   };
 }

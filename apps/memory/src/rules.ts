@@ -6,7 +6,7 @@
 //   are there and the lesson is not that bank's own.
 // - A person retires a lesson by hand, everywhere or at one bank.
 import type { Query } from './db.js';
-import { Refused, type Entry, type Role } from './memory.js';
+import { Refused, type Role } from './memory.js';
 import { addVersion, currentOf, type Citation } from './versions.js';
 
 /** A run as the rules read it. */
@@ -29,7 +29,7 @@ export async function contradict(
   tx: Query,
   role: Role,
   c: { lessonId: string; runId: string; frames: string[]; evidenceHash: string; reason: string },
-): Promise<Entry | null> {
+): Promise<{ rule: string; version: number; state: string; against: number } | null> {
   const run = await runOf(tx, c.runId);
   const cur = await currentOf(tx, c.lessonId);
   if (!cur) throw new Refused(409, 'no_lesson', `memory serves no lesson ${c.lessonId}`);
@@ -69,31 +69,23 @@ export async function contradict(
     runId: run.id,
     evidenceHash: c.evidenceHash,
   });
-  return {
-    entity: 'Lesson',
-    entityId: cur.lessonId,
-    runId: run.id,
-    data: { rule, ...v, state: change.state ?? cur.state, citation, against: against.length },
-  };
+  return { rule, ...v, state: change.state ?? cur.state, against: against.length };
 }
 
-/** Retire a lesson by hand, everywhere or at one bank. Already retired there, it changes nothing. */
+/** Retire a lesson by hand, everywhere or at one bank. Already retired there, it changes nothing,
+ *  and says so. */
 export async function retire(
   tx: Query,
   role: Role,
   r: { lessonId: string; reason: string; bank?: string },
-): Promise<Entry | null> {
+): Promise<boolean> {
   const cur = await currentOf(tx, r.lessonId);
   if (!cur) throw new Refused(409, 'no_lesson', `memory serves no lesson ${r.lessonId}`);
-  if (cur.state === 'retired' || (r.bank && cur.retiredAtBanks.includes(r.bank))) return null;
-  const v = await addVersion(tx, cur, {
+  if (cur.state === 'retired' || (r.bank && cur.retiredAtBanks.includes(r.bank))) return false;
+  await addVersion(tx, cur, {
     ...(r.bank ? { retiredAtBanks: [...cur.retiredAtBanks, r.bank] } : { state: 'retired' }),
     reason: r.reason,
     role,
   });
-  return {
-    entity: 'Lesson',
-    entityId: cur.lessonId,
-    data: { rule: r.bank ? 'retire at the bank' : 'retire', ...v, bank: r.bank, reason: r.reason },
-  };
+  return true;
 }

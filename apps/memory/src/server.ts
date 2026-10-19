@@ -4,7 +4,7 @@ import Fastify from 'fastify';
 import { z } from 'zod';
 import type { Db } from './db.js';
 import { SIGNATURE, type Door, type Write } from './door.js';
-import { ReadOnly, Refused, type Memory, type Role } from './memory.js';
+import { Refused, type Role } from './memory.js';
 import { screen } from './screen.js';
 
 declare module 'fastify' {
@@ -18,19 +18,10 @@ declare module 'fastify' {
  *  when it says `written: false`. */
 export type WriteHandler = (body: unknown, role: Role) => Promise<unknown>;
 
-const History = z.object({
-  entity: z.string().min(1).optional(),
-  id: z.string().min(1).optional(),
-  run: z.string().min(1).optional(),
-  since: z.coerce.date().optional(),
-  limit: z.coerce.number().int().min(1).max(1000).optional(),
-});
-
 const forbidden = (message: string) => ({ error: 'role_forbidden', message });
 
 export function buildServer(opts: {
   db: Db;
-  memory: Memory;
   door: Door;
   writes?: Partial<Record<Write, WriteHandler>>;
   logger?: boolean;
@@ -54,7 +45,6 @@ export function buildServer(opts: {
   });
 
   app.setErrorHandler((err, _req, reply) => {
-    if (err instanceof ReadOnly) return reply.code(503).send({ error: 'read_only' });
     if (err instanceof Refused)
       return reply.code(err.status).send({ error: err.code, message: err.message });
     if (err instanceof z.ZodError)
@@ -65,19 +55,11 @@ export function buildServer(opts: {
   app.get('/healthz', async (_req, reply) => {
     try {
       await opts.db.query('SELECT 1');
-      return { ok: true, service: 'memory', database: 'up', readOnly: opts.memory.readOnly };
+      return { ok: true, service: 'memory', database: 'up' };
     } catch {
       return reply.code(503).send({ ok: false, service: 'memory', database: 'down' });
     }
   });
-
-  app.get('/history', async (req, reply) => {
-    const q = History.safeParse(req.query);
-    if (!q.success) return reply.code(400).send({ error: 'bad_query', issues: q.error.issues });
-    return { changes: await opts.memory.history(q.data) };
-  });
-
-  app.get('/history/verify', async () => opts.memory.verify());
 
   for (const [write, handler] of Object.entries(opts.writes ?? {}) as [Write, WriteHandler][]) {
     app.post(`/${write}`, async (req, reply) => {

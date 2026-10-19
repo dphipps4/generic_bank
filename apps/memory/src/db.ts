@@ -13,12 +13,9 @@ export interface Db extends Query {
 
 const TRIES = 5;
 
-// Two writes that read the same chain head: Postgres refuses one, either as a serialization
-// failure or on the change log's key. Run it again on the new head.
-const conflict = (e: unknown) => {
-  const { code, constraint } = e as { code?: string; constraint?: string };
-  return code === '40001' || (code === '23505' && constraint === 'ChangeLog_pkey');
-};
+// Two writes that read and change the same rows: Postgres refuses one as a serialization failure.
+// Run it again on what the other wrote.
+const conflict = (e: unknown) => (e as { code?: string }).code === '40001';
 
 export function pgDb(url: string): Db {
   const pool = new pg.Pool({ connectionString: url, max: 4 });

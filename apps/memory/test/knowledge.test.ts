@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { asVector } from '../src/embed.js';
 import { episodes } from '../src/episodes.js';
 import { knowledgeRoutes, QUERY_ITEMS, TIERS } from '../src/knowledge.js';
-import { openMemory, type Role } from '../src/memory.js';
+import type { Role } from '../src/memory.js';
 import { fuse } from '../src/search.js';
 import { buildServer } from '../src/server.js';
 import { memoryDb, signedPost, testDoor, testEmbed, TOKENS } from './db.js';
@@ -103,8 +103,7 @@ const ids: Record<string, string> = {};
 
 beforeAll(async () => {
   db = await memoryDb();
-  const memory = openMemory(db);
-  app = buildServer({ db, memory, door: testDoor(), writes: episodes(memory, testEmbed) });
+  app = buildServer({ db, door: testDoor(), writes: episodes(db, testEmbed) });
   knowledgeRoutes(app, db, testEmbed);
 
   // Bank 1 (generic) and bank 2 (example), both CoreLink.
