@@ -28,7 +28,7 @@ All of it lives in one Postgres database, with Prisma migrations. Memory keeps i
 - **Personal data.** One masking rule, applied before anything is kept or shown to a model, and followed by every view: the picture, the page text, field and list values, the address, run inputs and the Console.
   1. A number of five or more digits is an identifier: every digit but its last four is hidden (`40017732` becomes `████7732`). Digits joined by spaces, dashes or dots in groups of three or more count as one number.
   2. Money is hidden whole, with or without a dollar sign.
-  3. A name or a secret the run knows (the member's name, a staff name, the sign-in, a code) is hidden whole, in any case.
+  3. A name the run knows (the member's name, a staff name) is hidden as a whole word, in any case, so a word that merely contains it stays readable. A secret the run knows (the sign-in, a code) is hidden wherever it appears.
   4. What a bank already hides stays as the bank drew it: its `****8176` is never hidden again. A number of four digits or fewer is never hidden.
   5. Each hidden character becomes `█`, one for one, so the text keeps the page's shape, and the picture paints exactly those characters.
 

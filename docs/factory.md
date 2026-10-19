@@ -16,13 +16,13 @@ The run reads what memory knows about the site, then works through three goals i
 2. a transfer between the two accounts, up to the bank's review page and never sent;
 3. the account's activity, where a finished transfer would show.
 
-Each goal starts from the bank's start page, because that is where the code replaying the route will start every task. Each goal has its own clock, 7 minutes by default, which the Supervisor keeps. The whole run has 20 minutes of the agents' own time, and every goal ends early enough to leave room for the gate and the lessons. When the bank asks for a sign-in code, a person gives it through the Console's inbox. A person's time counts against no clock: while they find the code, every clock waits. `just factory` also stops the run from outside if it ever passes a hard limit: the agents' 20 minutes, plus 9 for a person's codes.
+Each goal starts from the bank's start page, because that is where the code replaying the route will start every task. For each goal after the first, the Scout is given the route so far, each screen with its steps, so it follows the screens it already knows and spends its thinking on what is new. Each goal has its own clock, 7 minutes by default, which the Supervisor keeps. The whole run has 20 minutes of the agents' own time, and every goal ends early enough to leave room for the gate and the lessons. When the bank asks for a sign-in code, a person gives it through the Console's inbox. A person's time counts against no clock: while they find the code, every clock waits. `just factory` also stops the run from outside if it ever passes a hard limit: the agents' 20 minutes, plus 9 for a person's codes.
 
 If the run reached at least the balance, its route goes to the gate (below). A route serves only the tasks its goals cover. Then the Scout and the Supervisor each write down what the run taught them, for memory.
 
 ## The Scout: it acts, and writes the route as it goes
 
-The Scout works the bank's console the way a person at the desk would. After every action it gets the page back once it's ready: a masked picture of the page, the controls it can see (each with an id and a box), and the visible words.
+The Scout works the bank's console the way a person at the desk would. After every action it gets the page back once it's ready: a masked picture of the page, the controls it can see (each with an id and a box), and the words a person sees there: a closed list shows only its chosen option, and each list in the controls says what it shows.
 
 It takes one action at a time, each with a one-line reason. It can act on a control by its id. Many of bank 2's labels and buttons are drawn as pictures, with no words behind them. For those, the Scout lists what it sees, with a box around each item, and acts on an item by its position. The runtime has to find the same control at that point, or the action is refused and the Scout is told why.
 
@@ -63,7 +63,7 @@ Each lesson belongs to an agent. Memory serves each agent its own lessons and th
 
 ## The gate, and a person's approval
 
-A route must work before a person sees it. First, code checks every step against the guard, with no browser, and a route the guard would refuse is not run at all. Then the gate replays the route live through the crawler's own code, from a browser that has never signed in, as the service's first run will, with the guard judging every step as it does in service. It checks the balance, then a transfer up to its review. Then it runs once more with a surprise dialog forced.
+A route must work before a person sees it. First, code checks every step against the guard, with no browser, and a route the guard would refuse is not run at all. Then the gate replays the route live through the crawler's own code, from a browser that has never signed in, as the service's first run will, with the guard judging every step as it does in service. It checks exactly what an approval would promote: the balance, if the route covers it, and, if the route covers the transfer, a transfer up to its review and then the account's activity, never pressing Submit. Then it runs once more with a surprise dialog forced.
 
 - **A route that fails the plain run** is never shown to a person.
 - **A route that breaks under the forced dialog** is kept as broken, and a repair case opens.

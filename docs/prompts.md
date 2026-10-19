@@ -146,7 +146,7 @@ The factory prompts never mention bank 2's screens, labels or flows. Bank 2 is t
 
 ## 12. The gate, a person's approval, and repair
 
-> - **The gate:** a route the guard would refuse is not run at all. Code runs the new route through the crawler's own loop, live, **from a browser that has never signed in**, as the service's first run will, with the guard judging every step. It checks the balance, then a transfer up to its review. Then it runs once more with the confirmation dialog forced. A route that fails the plain run never reaches a person. One that breaks under the hazard opens a repair case.
+> - **The gate:** a route the guard would refuse is not run at all. Code runs the new route through the crawler's own loop, live, **from a browser that has never signed in**, as the service's first run will, with the guard judging every step. It checks exactly what an approval would promote: the balance, and, for the transfer, its review and then the activity, never pressing Submit. Then it runs once more with the confirmation dialog forced. A route that fails the plain run never reaches a person. One that breaks under the hazard opens a repair case.
 > - **Approval:** a route that passes waits in the Console, each screen shown beside the frame it cites. Only a person's approval promotes it, for the tasks its goals cover, and then `GET /banks` lists them. Approving a repair is the same step.
 > - **Repair:** in service, an unknown screen or a missing control takes the route out of service and opens a case with its frames. A repair is the same crawl. It starts from the broken route, the bank's lessons, and the failing frames with the Supervisor's diagnosis, and it changes only what moved.
 
