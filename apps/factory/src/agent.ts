@@ -201,6 +201,9 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
   const send = API[api].send as typeof anthropicStream;
   // A tool that fails for any reason but a refusal stops the turn, and the error is the turn's.
   let failure: unknown;
+  // One thing at a time: once a call in a reply is refused, the reply's later calls are not run, so
+  // nothing acts before the refusal is read (run 21: a refused naming, then a press that left the page).
+  let refusedInReply = false;
   const ran = new Set<string>();
   const tools: AgentTool[] = (i.tools ?? []).map((t) => {
     const { $schema: _s, ...schema } = z.toJSONSchema(t.input) as Record<string, unknown>;
@@ -211,6 +214,10 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
       parameters: schema as never,
       async execute(id, input) {
         ran.add(id);
+        if (refusedInReply)
+          throw new ToolRefusal(
+            'not run: an earlier call in this reply was refused. Read why, then act again, one call at a time',
+          );
         try {
           const r = await t.run(input);
           const text: TextContent = { type: 'text', text: r.text };
@@ -219,7 +226,7 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
           if (!(e instanceof ToolRefusal)) {
             failure ??= e;
             session.abort();
-          }
+          } else refusedInReply = true;
           throw e;
         }
       },
@@ -244,6 +251,8 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
     // One browser: its tools run one at a time.
     toolExecution: 'sequential',
     transformContext: async (messages) => {
+      // A new reply is about to be asked for: its calls run until one is refused.
+      refusedInReply = false;
       await report(messages);
       return i.keep === undefined ? messages : compacted(messages, i.keep);
     },

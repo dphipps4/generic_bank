@@ -23,6 +23,8 @@ export const TEST_PRICE = { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 0 
 export type Reply =
   | { text: string }
   | { tool: string; input: object }
+  /** Several calls in one reply, in order. */
+  | { calls: { tool: string; input: object }[] }
   /** The provider fails the request with this status and message. */
   | { fail: number; message: string };
 
@@ -59,14 +61,20 @@ export function seen(provider: Provider, body: Record<string, unknown>): Seen {
 const USAGE = { input: 2000, output: 50 };
 
 function anthropicSse(n: number, model: string, reply: Reply): string {
-  const [block, delta, stop] =
+  const calls = 'calls' in reply ? reply.calls : 'tool' in reply ? [reply] : [];
+  const blocks: [object, object][] =
     'text' in reply
-      ? [{ type: 'text', text: '' }, { type: 'text_delta', text: reply.text }, 'end_turn']
-      : [
-          { type: 'tool_use', id: `toolu_${n}`, name: reply.tool, input: {} },
-          { type: 'input_json_delta', partial_json: JSON.stringify(reply.input) },
-          'tool_use',
-        ];
+      ? [
+          [
+            { type: 'text', text: '' },
+            { type: 'text_delta', text: reply.text },
+          ],
+        ]
+      : calls.map((c, k) => [
+          { type: 'tool_use', id: `toolu_${n}_${k}`, name: c.tool, input: {} },
+          { type: 'input_json_delta', partial_json: JSON.stringify(c.input) },
+        ]);
+  const stop = 'text' in reply ? 'end_turn' : 'tool_use';
   return [
     {
       type: 'message_start',
@@ -81,9 +89,11 @@ function anthropicSse(n: number, model: string, reply: Reply): string {
         usage: { input_tokens: USAGE.input, output_tokens: 1 },
       },
     },
-    { type: 'content_block_start', index: 0, content_block: block },
-    { type: 'content_block_delta', index: 0, delta },
-    { type: 'content_block_stop', index: 0 },
+    ...blocks.flatMap(([block, delta], index) => [
+      { type: 'content_block_start', index, content_block: block },
+      { type: 'content_block_delta', index, delta },
+      { type: 'content_block_stop', index },
+    ]),
     {
       type: 'message_delta',
       delta: { stop_reason: stop, stop_sequence: null },
@@ -101,14 +111,12 @@ function openaiSse(n: number, model: string, reply: Reply): string {
       ? { role: 'assistant', content: reply.text }
       : {
           role: 'assistant',
-          tool_calls: [
-            {
-              index: 0,
-              id: `call_${n}`,
-              type: 'function',
-              function: { name: reply.tool, arguments: JSON.stringify(reply.input) },
-            },
-          ],
+          tool_calls: ('calls' in reply ? reply.calls : [reply]).map((c, index) => ({
+            index,
+            id: `call_${n}_${index}`,
+            type: 'function',
+            function: { name: c.tool, arguments: JSON.stringify(c.input) },
+          })),
         };
   const finish = 'text' in reply ? 'stop' : 'tool_calls';
   const chunks = [

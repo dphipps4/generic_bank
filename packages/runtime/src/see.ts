@@ -4,6 +4,7 @@
 // evidence is kept: the masked picture, the rendered page (what is visible, by role and name) and
 // the masked address.
 import type { Page } from 'playwright-core';
+import { findCrop } from './match.js';
 import { PNG } from 'pngjs';
 import { dialogsSince } from './browser.js';
 import { type Box, maskAddress, maskBoxes, maskText, paint } from './mask.js';
@@ -235,8 +236,14 @@ export async function see(
 /** A page the crawler expects, known by the words visible on it. */
 export interface Expected {
   name: string;
+  /** Words the page shows as text. */
   shows: string[];
   never?: string[];
+  /**
+   * Pictures the page shows: cut-outs (PNG, base64) of words drawn as images, such as a label. Each
+   * must be found on the page's picture, so a page whose marks are pictures is known by sight.
+   */
+  looks?: string[];
 }
 
 export class UnknownPage extends Error {
@@ -252,10 +259,22 @@ export class UnknownPage extends Error {
 export function knows(frame: Frame, pages: Expected[]): string {
   const text = frame.tree.toLowerCase();
   const has = (w: string) => text.includes(w.toLowerCase());
-  const hits = pages.filter((p) => p.shows.every(has) && !(p.never ?? []).some(has));
+  const seen = new Map<string, boolean>();
+  const sees = (crop: string) => {
+    if (!seen.has(crop))
+      seen.set(crop, findCrop(frame.picture, Buffer.from(crop, 'base64')) !== null);
+    return seen.get(crop)!;
+  };
+  const hits = pages.filter(
+    (p) => p.shows.every(has) && !(p.never ?? []).some(has) && (p.looks ?? []).every(sees),
+  );
   if (hits.length === 1) return hits[0]!.name;
   const closest = [...pages]
-    .map((p) => ({ name: p.name, share: p.shows.filter(has).length / p.shows.length }))
+    .map((p) => {
+      const marks = p.shows.length + (p.looks ?? []).length;
+      const met = p.shows.filter(has).length + (p.looks ?? []).filter(sees).length;
+      return { name: p.name, share: marks ? met / marks : 0 };
+    })
     .filter((p) => p.share > 0)
     .sort((a, b) => b.share - a.share)
     .slice(0, 3)

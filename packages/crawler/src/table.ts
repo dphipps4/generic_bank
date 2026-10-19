@@ -35,6 +35,8 @@ export interface Row {
   screen?: string;
   shows: string[];
   never?: string[];
+  /** Pictures the page shows (words drawn as images), as cut-outs: it is known by sight too. */
+  looks?: string[];
   /** The steps, per goal; `any` for every goal. A row with none for a goal is where it ends. */
   do: Partial<Record<Goal | 'any', Step[]>>;
   frame: string;
