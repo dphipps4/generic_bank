@@ -37,7 +37,7 @@
   <rect class="box core" x="240" y="190" width="170" height="130"/>
   <text class="t" x="325" y="216" text-anchor="middle">Runner</text>
   <text class="s" x="325" y="238" text-anchor="middle">durable run per task</text>
-  <text class="s" x="325" y="256" text-anchor="middle">crawler: table + loop</text>
+  <text class="s" x="325" y="256" text-anchor="middle">crawler: route + code</text>
   <text class="s" x="325" y="274" text-anchor="middle">allowlist guard, grant</text>
   <text class="s" x="325" y="292" text-anchor="middle">runtime: see, then click</text>
   <text class="s" x="325" y="310" text-anchor="middle">masked frames</text>
@@ -56,12 +56,12 @@
   <text class="s" x="815" y="220" text-anchor="middle">enters the bank's sign-in codes</text>
   <text class="s" x="815" y="238" text-anchor="middle">takes over a stopped run</text>
   <text class="s" x="815" y="256" text-anchor="middle">sees every run, page by page</text>
-  <text class="s" x="815" y="274" text-anchor="middle">approves a learned table</text>
+  <text class="s" x="815" y="274" text-anchor="middle">approves a learned route</text>
   <text class="s" x="815" y="292" text-anchor="middle">clears a freeze</text>
 
   <rect class="box agentic" x="40" y="410" width="250" height="110"/>
   <text class="t" x="165" y="438" text-anchor="middle">Scout and Supervisor</text>
-  <text class="s" x="165" y="460" text-anchor="middle">the Scout acts and writes the table</text>
+  <text class="s" x="165" y="460" text-anchor="middle">the Scout acts and writes the route</text>
   <text class="s" x="165" y="478" text-anchor="middle">the Supervisor judges each picture</text>
   <text class="s" x="165" y="496" text-anchor="middle">metered gateway, $25 a run</text>
 
@@ -73,7 +73,7 @@
 
   <rect class="box core" x="700" y="410" width="230" height="110"/>
   <text class="t" x="815" y="438" text-anchor="middle">Registry</text>
-  <text class="s" x="815" y="460" text-anchor="middle">which table serves each bank</text>
+  <text class="s" x="815" y="460" text-anchor="middle">which route serves each bank</text>
   <text class="s" x="815" y="478" text-anchor="middle">a fault demotes it</text>
   <text class="s" x="815" y="496" text-anchor="middle">and opens a repair case</text>
 
@@ -86,9 +86,9 @@
   <text class="s" x="556" y="352">the Scout works bank 2 live</text>
   <path class="line" d="M290,465 L338,465"/>
   <path class="line dash" d="M290,508 C500,560 660,520 712,322"/>
-  <text class="s" x="420" y="548">a learned table waits for approval</text>
+  <text class="s" x="420" y="548">a learned route waits for approval</text>
   <path class="line" d="M815,320 L815,408"/>
   <text class="s" x="822" y="370">approve promotes</text>
   <path class="line dash" d="M700,478 C600,470 400,430 345,322"/>
-  <text class="s" x="560" y="490">serves the table</text>
+  <text class="s" x="560" y="490">serves the route</text>
 </svg>
