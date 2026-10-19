@@ -1,10 +1,10 @@
 # Bank 1: the evidence, and the crawler written from it
 
-A person walked Generic Bank's staff console through its web UI, looking at each page before touching anything. Every page they saw is kept here: the masked picture, plus the page as text. None of it came from the bank's code. The crawler is plain code written from these pages, and every row of it points back at the frame it came from.
+Generic Bank's staff console was walked through its web UI, one step at a time, looking at each page before touching anything. Every page the walk saw is kept here: the masked picture, plus the page as text. None of it came from the bank's code. Bank 1's route, the data its crawler replays, was written from these pages, and every row of it points back at the frame it came from.
 
 **How it was made.** The frames were captured once, by a browser walk of bank 1. It went one scenario at a time, each step written after looking at the page before it, and kept a frame after every step. A teller's sign-in, code and member number were handed to the walk and never read off a page, and every seeded name and secret was masked. A step that failed is evidence too: the page shown instead is kept. Each walk is a file, `<walk>.json`, with its pictures in the folder of the same name.
 
-**How a page is seen and acted on** is the runtime's job: [`packages/runtime`](../../../packages/runtime/README.md). It waits until the page holds still, masks money, long numbers and every seeded name, finds a field by its drawn label and a button by its drawn name, and clicks with the real mouse.
+**How a page is seen and acted on** is the runtime's job. It waits until the page holds still, masks money, long numbers and every seeded name, finds a field by its drawn label and a button by its drawn name, and clicks with the real mouse.
 
 Frame NN is the page as it stood after step NN.
 
@@ -17,8 +17,8 @@ Frame NN is the page as it stood after step NN.
 | [04](happy/04.png) | Where to send the code | "Where should we send your code?" | Presses "Send code" ("Text message" is already chosen) |
 | [05](happy/05.png) | The code | "Enter the 6-digit code we sent" | Asks a person for the code the staff phone got, types it, presses "Verify" |
 | [07](happy/07.png) | Home | "Use Member Search to begin." | Presses "Member Search" |
-| [08](happy/08.png) | Member search | "Member number:", and no "Open" | Types the member's number, presses "Search" (styled text, not a button) |
-| [10](happy/10.png) | A member found | "Member number:" and "Open" | Presses "Open" |
+| [08](happy/08.png) | Member search | "Member number:", and no "Status" | Types the member's number, presses "Search" (styled text, not a button) |
+| [10](happy/10.png) | A member found | "Member number:" and "Status" | Presses "Open" |
 | [11](happy/11.png) | Member summary | "Member Summary" and "Available balance:" | Reads the account's tile: "Available balance:" and "Current balance:" |
 
 The runner keeps each bank's cookies between runs, so a person enters a code once, and the bank remembers the workstation for 30 days.
@@ -35,7 +35,7 @@ The same pages up to the summary, then:
 | [18](transfer/18.png) | Posted | "Transfer posted" | Reads the confirmation number |
 | [20](transfer/20.png) | Activity | "Activity:" and "Description" | Finds the transfer by its memo token |
 
-"Submit transfer" is pressed only after a person approves, and only once. The summary also offers "Close account" ([happy/11](happy/11.png)); the crawler never presses it, because it presses only the names in these tables, and the allowlist would refuse it anyway.
+"Submit transfer" is pressed only after a person approves, and only once. The summary also offers "Close account" ([happy/11](happy/11.png)); the crawler never presses it, because it presses only the names in its route, and the allowlist would refuse it anyway.
 
 **The memo.** The crawler types the member's memo after a short token minted for the run: `GBX 7K2Q rent`. The bank shows it on review, on the posted page and in the activity, beside "TRANSFER OUT" ([transfer/20](transfer/20.png)). That's what makes a hung Submit safe. Pressing again could move the money twice, so the crawler never does: it opens the activity and looks for the token. One row means it went through, none means it didn't, two means a person checks.
 
@@ -76,16 +76,16 @@ Each hazard was forced on the whole walk. None of this needs an agent: a few wor
 | `js-error-harmless`, `validation-error` | Nothing visible on this walk | Nothing more |
 | `early-expiry` | Never seen on a walk: it fires on time, not on a page | Not shown here |
 
-## The crawler: a table and a loop
+## The crawler: a route and a loop
 
-**The table**, [`bank1.ts`](../../../packages/crawler/src/bank1.ts), is the rows above as data: the words that show each page, and the steps to take there (type, choose, press, read). The task supplies the member and the amount; a person supplies the code.
+**The route** is the rows above as data: the words that identify each page, and the steps to take there (type, choose, press, read). The task supplies the member and the amount; a person supplies the code.
 
-**The loop**, [`crawl()`](../../../packages/crawler/src/crawl.ts), runs any table. It looks at the page ([`see()`](../../../packages/runtime/src/see.ts)), returns the bank's answer if there is one, starts again from home on trouble, and otherwise does the one row whose words show ([`knows()`](../../../packages/runtime/src/see.ts)). No row: `unknown_screen`. The same page three times: stuck, for a person. It goes by what's on screen, not by the order it expects, so a promo or a swallowed click needs no special code. Starting again opens home afresh, never a reload, so nothing is sent twice.
+**The loop** replays any route. It looks at the page, returns the bank's answer if there is one, starts again from home on trouble, and otherwise does the steps of the one row whose words show. No row matches: `unknown_screen`. The same page three times: stuck, for a person. It goes by what's on screen, not by the order it expects, so a promo or a swallowed click needs no special code. Starting again opens home afresh, never a reload, so nothing is sent twice.
 
-**Submit is outside the table.** [`prepareTransfer()`](../../../packages/crawler/src/crawl.ts) stops at review; once a person approves, [`submitTransfer()`](../../../packages/crawler/src/crawl.ts) presses once, then reads the activity.
+**Submit is outside the route.** The crawler stops at review. Once a person approves, it presses once, then reads the activity.
 
-**The runner** ([`executeRun()`](../../../apps/runner/src/execute.ts)) turns every page into a step and a stored frame, gets the code from a person through the Console, and passes every action through the job's allowlist ([`runGuard()`](../../../apps/runner/src/guard.ts)) first: the first refusal freezes the bank. A transfer ([`runTransfer()`](../../../apps/runner/src/transfer.ts)) consumes its grant against what the review page shows, just before the one press.
+**The runner** turns every page into a step and a stored frame, gets the code from a person through the Console, and passes every action through the job's allowlist first: the first refusal freezes the bank. A transfer spends its grant against what the review page shows, just before the one press.
 
-**Its tests.** [`table.test.ts`](../../../packages/crawler/test/table.test.ts) checks every row against its frame and every step against the allowlist, with no browser. [`tests/crawler/bank1.test.ts`](../../../tests/crawler/bank1.test.ts) runs the crawler in a browser against bank 1's ledger.
+**Its tests** check every row against the words of its frame and every step against the allowlist, with no browser, then run the crawler in a browser against bank 1's ledger.
 
-When the bank changes a page, the repair is a row, not code. The factory's Scout writes the same kind of table for a bank it's learning.
+When bank 1 changes a page, its route is fixed by hand, one row at a time. The factory writes the same kind of route for a bank it learns. [The code walkthrough](../../code.md) shows where each part lives.

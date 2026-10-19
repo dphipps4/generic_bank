@@ -4,27 +4,27 @@
 
 ## The boundaries, and why they sit there
 
-- **The API knows no bank's UI.** A caller gives typed inputs (a bank, a member, an account) and gets a typed result. Which bank serves which task is the registry's answer (`GET /banks`), so a newly approved table appears there with no new endpoint.
+- **The API knows no bank's UI.** A caller gives typed inputs (a bank, a member, an account) and gets a typed result. Which bank serves which task is the registry's answer (`GET /banks`), so a newly approved route appears there with no new endpoint.
 - **The runner holds the browser, and nothing else does.** One durable run per task: its inputs are sealed in our own table, its steps and frames are recorded as it goes, and it settles exactly one result. A run that resumes after a crash starts a fresh browser and signs in again; a transfer resumes from what it wrote down, never from memory.
-- **The crawler knows a bank only by its table.** The loop is the same for every bank, and a bank is data: its pages, their words, and what a teller does there. An import rule keeps the crawler from the bank's code, and the runtime from everything but the browser.
-- **No model runs a customer's task.** Models only ever work in the factory, behind a metering gateway, and all they produce is a table. A person approves it before it serves.
-- **People act through the Console, and the Console only.** Codes, approvals, takeovers, freezes and learned tables are all decided there, and each decision is also an API call, so the tests take the same path a person does.
+- **The crawler knows a bank only by its route.** The loop is the same for every bank, and a bank is data: its pages, the words and pictures that identify each one, and what a teller does there. An import rule keeps the crawler from the bank's code, and the runtime from everything but the browser.
+- **No model runs a customer's task.** Models only ever work in the factory, behind a metering gateway. What they produce is a route: data that ordinary code replays with no model. A person approves it before it serves.
+- **People act through the Console, and the Console only.** Codes, approvals, takeovers, freezes and learned routes are all decided there, and each decision is also an API call, so the tests take the same path a person does.
 
 ## The data
 
-All of it lives in one Postgres database, with migrations in [`packages/db`](../packages/db/prisma/schema.prisma). The pictures go on a shared volume.
+All of it lives in one Postgres database, with Prisma migrations. Memory keeps its own. The pictures go on a shared volume.
 
 - **A task run** (`TaskRun`): its inputs, sealed; its status and result; its steps (`Step`), one per page the crawler saw; and its frames (`TrailFrame`), each a masked picture with the page's visible tree and controls.
 - **A person's part** (`HumanTask`): a code to enter, a transfer to approve, or a stopped run to take over. Each has a deadline, and a person's answer is sealed until the run reads it. An approval issues one `ApprovalGrant`, which the single press of Submit spends.
-- **The registry** (`Driver`, `DriverVersion`, `RegistryEvent`): which version of a bank's crawler serves each task. A learned version holds its table; a fault demotes it, and a `RepairCase` opens. A guard trip freezes the bank (`Freeze`) until a person clears it.
-- **The factory** (`FactoryRun`, `ModelCall`, `Recommendation`): each run, each model call with its cost, and the table waiting for a person, with the gate's runs beside it.
-- **Memory**, a service of its own: runs, and lessons citing their frames.
+- **The registry** (`Driver`, `DriverVersion`, `RegistryEvent`): which version of a bank's crawler serves each task. A learned version holds its route. When a run meets a page its route doesn't know, that version is taken out of service: the version before it serves again if there is one, and a `RepairCase` opens. A guard trip freezes the bank (`Freeze`) until a person clears it. Every person's decision and every change to the registry is written to the audit log (`AuditEntry`).
+- **The factory** (`FactoryRun`, `ModelCall`, `Recommendation`): each run, each model call with its cost, and the route waiting for a person, with the gate's runs beside it.
+- **Memory**, a service of its own: runs, and lessons citing their frames. It starts with thirteen base lessons, written by a migration and served from the very first start: six for the Scout, five for the Supervisor and two for both, all confirmed patterns. A run can dispute a base lesson but never retire it; only a person can. Each lesson belongs to an agent, and memory serves each agent its own lessons and those for both.
 - **The API's own security** (`ApiClient`, `TokenFamily`, `ApiToken`): OAuth2 client credentials and rotating refresh tokens. Only hashes are stored.
 
 ## Where the risky parts live
 
-- **The press that moves money.** It's never in a table row, and it's pressed once, only under a grant a person's approval issued, which binds the values the review page showed. Its intent is written to the trail before the press, so a run that stops after it reads the account's history and never presses again ([`transfer.ts`](../apps/runner/src/transfer.ts)).
-- **Every other action.** Each passes the job's allowlist before it reaches the browser, judged by the page's name in the table and the control's drawn name, and never by anything the page says. Words that change an account ("Close account", "Waive fee") are refused on every page ([`allowlist.ts`](../packages/guardrails/src/allowlist.ts)).
+- **The press that moves money.** It's never in a route's rows, and it's pressed once, only under a grant a person's approval issued, which binds the values the review page showed. Its intent is written to the trail before the press, so a run that stops after it reads the account's history and never presses again.
+- **Every other action.** Each passes the job's allowlist before it reaches the browser, judged by the kind of screen the route says the page is and the control's name in the allowlist's words, and never by anything the page says. A learned route speaks those words too: the guard judges each of the Scout's steps while it learns, and again at the gate. Words that change an account ("Close account", "Waive fee") are refused on every page.
 - **Personal data.** One masking rule, applied before anything is kept or shown to a model, and followed by every view: the picture, the page text, field and list values, the address, run inputs and the Console.
   1. A number of five or more digits is an identifier: every digit but its last four is hidden (`40017732` becomes `████7732`). Digits joined by spaces, dashes or dots in groups of three or more count as one number.
   2. Money is hidden whole, with or without a dollar sign.
