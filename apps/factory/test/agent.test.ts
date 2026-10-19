@@ -147,3 +147,12 @@ describe('an answer a model fenced or listed', () => {
     expect(unwrapped('not an answer')).toBe('not an answer');
   });
 });
+
+describe("a turn's message", () => {
+  it('gives the picture first, then the close-ups, then the words', async () => {
+    const { contentOf } = await import('../src/agent.js');
+    const c = contentOf({ say: 'the words', image: Buffer.from('p'), images: [Buffer.from('c')] });
+    expect(Array.isArray(c) && c.map((x) => x.type)).toEqual(['image', 'image', 'text']);
+    expect(contentOf({ say: 'only words' })).toBe('only words');
+  });
+});
