@@ -381,6 +381,32 @@ export function leaf(line: string): string | null {
   return named ? named[1]! : null;
 }
 
+/**
+ * The words a person sees on a page, one per line of its tree. A closed list shows only its chosen
+ * option, so its other options are left out: run 28 read a list's first option as its value.
+ */
+export function seen(tree: string): string[] {
+  return tree.split('\n').flatMap((line) => {
+    if (/^\s*- option /.test(line) && !line.includes('[selected]')) return [];
+    const w = leaf(line);
+    return w ? [w] : [];
+  });
+}
+
+/** Each list's chosen option, in the order the page shows its lists ('' when none is chosen). */
+export function chosenIn(tree: string): string[] {
+  const lines = tree.split('\n');
+  return lines.flatMap((line, i) => {
+    if (!/^\s*- combobox\b/.test(line)) return [];
+    const indent = line.search(/\S/);
+    let pick = '';
+    for (let k = i + 1; k < lines.length && lines[k]!.search(/\S/) > indent; k++)
+      if (/^\s*- option /.test(lines[k]!) && lines[k]!.includes('[selected]'))
+        pick = leaf(lines[k]!) ?? '';
+    return [pick];
+  });
+}
+
 /** The visible words, one leaf per line, unmasked: for reading a value, never kept. */
 export const leaves = async (page: Page) =>
   (await read(page))

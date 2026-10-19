@@ -4,7 +4,7 @@
 // frame. Code enforces the verdict; an unreadable answer counts as wait, and three in a row stop the
 // run. It keeps the whole run in one conversation, can reopen any frame of this run or an earlier
 // one, and on a failure diagnoses from the frames where the run stopped and why.
-import { leaf, type Table } from '@gb/crawler';
+import { chosenIn, seen, type Table } from '@gb/crawler';
 import type { FrameStore, Sql } from '@gb/runs';
 import { z } from 'zod';
 import { type Agent, type Conversation, ThoughtTooLong, turn } from './agent.js';
@@ -302,11 +302,16 @@ export function supervisor(o: {
     async judge(j: Judging): Promise<Judgment> {
       const view = {
         frame: j.ref,
-        words: j.frame.tree
-          .split('\n')
-          .map(leaf)
-          .filter((t): t is string => !!t),
-        controls: j.frame.controls.map((c, k) => `c${k + 1} ${c.role} "${c.name}"`),
+        // What a person sees: a closed list shows only its chosen option.
+        words: seen(j.frame.tree),
+        controls: (() => {
+          const lists = chosenIn(j.frame.tree);
+          let list = 0;
+          return j.frame.controls.map(
+            (c, k) =>
+              `c${k + 1} ${c.role} "${c.name}"${c.role === 'select' ? `, showing "${lists[list++] || 'nothing chosen'}"` : ''}`,
+          );
+        })(),
         ...(j.frame.dialogs.length ? { dialogs: j.frame.dialogs } : {}),
       };
       const checking = j.action.startsWith('goal reached');
