@@ -325,6 +325,16 @@ all:
     @just build-nc
     @echo "Rebuilt from nothing. Next: just up"
 
+# Start the data again: stops the stack, deletes the databases, ledgers, evidence and sessions; keeps the images and memory models; asks first
+[group('Housekeeping')]
+[confirm('This deletes the control and memory databases, the bank ledgers, the evidence and the sessions. Continue?')]
+reset:
+    @{{compose}} --profile '*' down --remove-orphans
+    @for v in postgres-data bank-db-data evidence sessions; do \
+      n="{{project}}_$v"; if docker volume inspect "$n" >/dev/null 2>&1; then docker volume rm "$n" >/dev/null; fi; \
+    done
+    @echo "Data deleted; images and memory models kept. Next: just up"
+
 # Each group's services, for down, logs and rebuild.
 [private]
 _services +groups:
