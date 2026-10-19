@@ -576,12 +576,16 @@ export function scout(deps: ScoutDeps, task: Task) {
    */
   const anchorOf = async (it: Item, from: Box): Promise<At> => {
     const pad = 2;
-    const box = { x: from.x - pad, y: from.y - pad, w: from.w + 2 * pad, h: from.h + 2 * pad };
+    // Kept on the picture: a box past its left or top edge is cropped at the edge, and the crop is
+    // compared where it really is (a menu near the edge was refused as "not unique").
+    const x = Math.max(0, from.x - pad);
+    const y = Math.max(0, from.y - pad);
+    const box = { x, y, w: from.x + from.w + pad - x, h: from.y + from.h + pad - y };
     const crop = cropOf(latest!.frame.picture, box);
     const found = findCrop(latest!.frame.picture, crop);
     if (!found || Math.abs(found.box.x - box.x) > 3 || Math.abs(found.box.y - box.y) > 3)
       throw new ToolRefusal(
-        `the label of ${it.id} is not unique on the page, so it cannot be found again: give a box that holds more of it`,
+        `the label of ${it.id} looks like another on the page, so it cannot be found again by its picture: choose it with words drawn near it, or list it with a box that holds more of it`,
       );
     // What the Supervisor sees: the label and the control together, close up.
     const near = {
