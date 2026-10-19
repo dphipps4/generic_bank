@@ -86,7 +86,7 @@ Keep going until the goal is reached or the Supervisor ends you. A refusal or a 
 - when a tool's answer contradicts what you see, say so in your reason, then use another way;
 - when the Supervisor corrects a kind of mistake, say in your next reason how you are avoiding it.
 Your route, as you go:
-- name each screen with name_page before you leave it, by words it shows as text; leave never out;
+- name each screen with name_page as soon as you arrive, before you act on it: by words it shows as text, and by words drawn as pictures, each with its box; leave never out;
 - note the bank's own answers with note_answer, and a page that gets in the way and goes away on its own (a notice, a promotion) with note_trouble;
 - note how a value is read with note_read by pointing: each placeholder after the label you see before it. The tool writes the pattern, reads the page with the crawler's own code, and tells you what it read;
 - before goal_reached, check your route: every screen from the first one to here is named and holds its own steps. The Supervisor checks it too.

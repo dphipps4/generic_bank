@@ -115,6 +115,23 @@ describe.each([DEFAULT_ROLES.scout.provider] as const)('a turn on %s', (provider
     ).rejects.toThrow(/model failed/);
   });
 
+  it('runs nothing more of a reply once one of its calls is refused', async () => {
+    ran.length = 0;
+    replies = [
+      {
+        calls: [
+          { tool: 'echo', input: { text: 'refuse' } },
+          { tool: 'echo', input: { text: 'after' } },
+        ],
+      },
+      { tool: 'echo', input: { text: 'next reply' } },
+      { text: 'Done.' },
+    ];
+    await turn(agent(), { system: 'You echo.', say: 'Go.', tools: [echo], maxTokens: 1000 });
+    // The call after the refusal never ran; the next reply's did.
+    expect(ran).toEqual(['next reply']);
+  });
+
   it('stops when a tool breaks, with the tool’s error', async () => {
     replies = [{ tool: 'echo', input: { text: 'break' } }];
     await expect(

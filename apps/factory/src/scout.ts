@@ -284,13 +284,21 @@ export function scout(deps: ScoutDeps, task: Task) {
         reads: {} as Table['reads'],
       };
   let latest: { frame: Frame; ref: string | null; controls: Control[] } | null = null;
+  /** The page this goal began on: for the balance, the site's sign-in, which the route must know. */
+  let began: { frame: Frame; ref: string | null } | null = null;
   let previous: Buffer | null = null;
   let row: Row | null = null;
   let visit: Step[] = [];
   let waiting = false;
   let stopped = false;
 
-  const pages = () => t.rows.map((r) => ({ name: r.page, shows: r.shows, never: r.never ?? [] }));
+  const pages = () =>
+    t.rows.map((r) => ({
+      name: r.page,
+      shows: r.shows,
+      never: r.never ?? [],
+      looks: r.looks ?? [],
+    }));
   /** Which named page this is, if one. */
   const rowOf = (f: Frame): Row | null => {
     try {
@@ -352,6 +360,7 @@ export function scout(deps: ScoutDeps, task: Task) {
     if (layout !== lastLayout) inventory = null;
     lastLayout = layout;
     latest = { frame: f, ref, controls };
+    began ??= { frame: f, ref };
     // The close-up the Supervisor judges by is taken after the action, from the new picture.
     if (current && closeUp) current.image = cropOf(f.picture, closeUp);
     closeUp = null;
@@ -914,13 +923,29 @@ export function scout(deps: ScoutDeps, task: Task) {
     },
     name_page: {
       description:
-        'Names the screen now, for your route, by words it shows as text that tell it apart from every other screen. Name each screen before you leave it: the steps you take here are filed under it. Leave `never` out: the tool adds words of your other screens that this one does not show.',
+        'Names the screen now, for your route, by what tells it apart from every other screen: words it shows as text (`shows`), and words drawn as pictures (`pictures`: each with its box on the picture, the words alone). Name each screen as soon as you arrive, before you act on it: the steps you take here are filed under it. Leave `never` out: the tool adds words of your other screens that this one does not show.',
       input: z.object({
         name: z.string().min(2).max(40),
-        shows: z.array(z.string().min(2).max(80)).min(1).max(4),
+        shows: z.array(z.string().min(2).max(80)).max(4).default([]),
+        pictures: z
+          .array(
+            z.object({
+              words: z.string().min(1).max(60).describe('The words the picture shows'),
+              box: BOX.describe('Their box on the picture, in its pixels: the words alone'),
+            }),
+          )
+          .max(3)
+          .optional(),
         never: z.array(z.string().min(2).max(80)).max(4).optional(),
       }),
-      async run(i: { name: string; shows: string[]; never?: string[] }) {
+      async run(i: {
+        name: string;
+        shows: string[];
+        pictures?: { words: string; box: Box }[];
+        never?: string[];
+      }) {
+        if (!i.shows.length && !i.pictures?.length)
+          throw new ToolRefusal('name it by words it shows as text, or by words drawn as pictures');
         if (nameFirst)
           throw new ToolRefusal(
             "this page shows the member's number: note_read name first, then name the page",
@@ -936,9 +961,16 @@ export function scout(deps: ScoutDeps, task: Task) {
             .filter((w): w is string => !!w && w.length >= 3)
             .slice(0, 15);
           throw new ToolRefusal(
-            `the page does not show as text: ${missing.join('; ')}. Words it does show as text include: ${text.join('; ')}`,
+            `the page does not show as text: ${missing.join('; ')}. Words drawn as pictures go in pictures, each with its box on the picture. Words it does show as text include: ${text.join('; ')}`,
           );
         }
+        // Words drawn as pictures: cut from this picture, and found on it again, as the crawler will.
+        const looks = (i.pictures ?? []).map((p) => {
+          const crop = cropOf(f.picture, p.box);
+          if (!findCrop(f.picture, crop))
+            throw new ToolRefusal(`"${p.words}" at that box can't be found again on the picture`);
+          return crop.toString('base64');
+        });
         const wrong = (i.never ?? []).filter((w) => shows(f, w));
         if (wrong.length)
           throw new ToolRefusal(
@@ -957,6 +989,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         const next: Row = {
           page: i.name,
           shows: i.shows,
+          ...(looks.length ? { looks } : {}),
           ...(never.length ? { never } : {}),
           do: old?.do ?? {},
           frame: latest.ref,
@@ -978,7 +1011,12 @@ export function scout(deps: ScoutDeps, task: Task) {
           if (
             knows(
               f,
-              rows.map((r) => ({ name: r.page, shows: r.shows, never: r.never ?? [] })),
+              rows.map((r) => ({
+                name: r.page,
+                shows: r.shows,
+                never: r.never ?? [],
+                looks: r.looks ?? [],
+              })),
             ) !== i.name
           )
             throw new ToolRefusal('those words also show another named page');
@@ -997,7 +1035,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         await trail.step(
           {
             name: 'name page',
-            action: `${i.name}: ${i.shows.join('; ')}`,
+            action: `${i.name}: ${[...i.shows, ...(i.pictures ?? []).map((p) => `[picture] ${p.words}`)].join('; ')}`,
             ...(fixed ? { outcome: fixed.trim() } : {}),
           },
           null,
@@ -1200,6 +1238,11 @@ export function scout(deps: ScoutDeps, task: Task) {
       input: z.object({ submit: z.string().max(60).optional() }),
       async run(i: { submit?: string }) {
         if (!latest?.ref || !row) throw new ToolRefusal('name this page first');
+        // Code follows the route from the site's first page: a route that doesn't know it can't sign in.
+        if (task.goal === 'balance' && began && !rowOf(began.frame))
+          throw new ToolRefusal(
+            `the route doesn't recognize the page this goal began on (${began.ref ?? 'the first page'}): code following it could not sign in. Name that screen, by its words or its pictures`,
+          );
         if (task.goal === 'transfer') {
           const s = i.submit?.trim() ?? '';
           // By id or by name; a send button drawn as a picture has a place, and the crawler finds it

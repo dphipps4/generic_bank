@@ -255,7 +255,12 @@ export async function crawl(
 ): Promise<Frame> {
   const t = s.table;
   await knowTask(s, task);
-  const pages = t.rows.map((r) => ({ name: r.page, shows: r.shows, never: r.never ?? [] }));
+  const pages = t.rows.map((r) => ({
+    name: r.page,
+    shows: r.shows,
+    never: r.never ?? [],
+    looks: r.looks ?? [],
+  }));
   const again = new Map<string, number>();
   const home = async (why: string) => {
     // Never a reload after Submit: the console's home is a fresh request, and sends nothing.
@@ -428,7 +433,12 @@ export async function submitTransfer(
   let confirmation: string | undefined;
   try {
     const f = await look(s, task);
-    const pages = t.rows.map((r) => ({ name: r.page, shows: r.shows, never: r.never ?? [] }));
+    const pages = t.rows.map((r) => ({
+      name: r.page,
+      shows: r.shows,
+      never: r.never ?? [],
+      looks: r.looks ?? [],
+    }));
     const at = (() => {
       try {
         return knows(f, pages);
