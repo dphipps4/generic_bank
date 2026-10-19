@@ -9,11 +9,15 @@ The target app is two local banks, both deliberately unfriendly: 2003-style cons
 
 ## Gotchas
 
-The demo assumes you're running on a Mac with Chrome installed, and has not yet been tested on Windows. Necessary browser pages are brought up when you run `just show`: they include ACCESS.md, with URLs and credentials. When you log into Bank 1, you'll be asked to enter a PIN code; this code is shown in the 'Simulated phone and email inbox', one of those browser pages. 
+The demo assumes a Mac with Chrome installed. It hasn't been tested on Windows yet.
 
-To run the factory, you'll need an OpenRouter API key to run the factory; you'll get a reminder during `just setup`. Bank 2 login also requires a PIN. Dependencies are installed via `just setup`; most are contained in docker; you can bypass bootstrap if you have `brew` installed and run `brew install just`.
+`just show` opens every browser page you need, ACCESS.md among them, with the URLs and credentials. When you sign in to Bank 1, it asks for a sign-in code (a PIN). You'll find the code in the "Simulated phone and email inbox", one of the pages `just show` opens.
 
-You'll need to log into `adminJS` to view runs, check the inbox, and approve transfers. Approving a transfer requires you to enter a note, which can be random as long as it is ten characters or more.
+The factory needs an OpenRouter API key, and `just setup` reminds you if it's missing. Bank 2's sign-in asks for a PIN too.
+
+`just setup` installs the dependencies, and most of them live in Docker. If you already have `brew`, you can skip the bootstrap script and just run `brew install just`.
+
+You'll sign in to the Console (AdminJS) to view runs, check the inbox and approve transfers. Approving a transfer asks for a note. Anything works, as long as it's ten characters or more.
 
 ## Run it
 
