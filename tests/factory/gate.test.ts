@@ -1,6 +1,7 @@
 // The gate against bank 1, with no model: a table runs live through the crawler's loop before a
-// person sees it. One that fails never reaches a person's approval; one that passes the plain run
-// and the run with the confirmation dialog forced waits for it.
+// person sees it, on exactly what an approval would promote. One that fails never reaches a
+// person's approval; one that passes the plain run and the run with the confirmation dialog forced
+// waits for it.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { gate } from '../../apps/factory/src/gate.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
@@ -72,7 +73,59 @@ describe('the gate', () => {
       [null, true],
       ['confirm-dialog', true],
     ]);
+    // The balance, the review and the activity, each checked.
+    for (const r of g.runs)
+      expect(r.said).toMatch(
+        /^the balance read \d+ cents; the review read \$1\.00; the activity opened/,
+      );
     expect(g.recommendationId).not.toBeNull();
     expect(await statusOf(id)).toBe('open');
   }, 240_000);
+
+  it('passes a route that covers only the balance on the balance alone', async () => {
+    const t: Table = structuredClone(bank1);
+    const ends = t.ends as Partial<Table['ends']>;
+    delete ends.transfer;
+    delete ends.history;
+    t.rows = t.rows.filter(
+      (r) => !['transfer form', 'review', 'posted', 'activity'].includes(r.page),
+    );
+    for (const r of t.rows) {
+      delete r.do.transfer;
+      delete r.do.history;
+    }
+    const id = await aRun();
+    const g = await gate(deps(), { factoryRunId: id, url: bank.url, table: t, ...input });
+    expect(g.runs.map((r) => [r.hazard, r.ok])).toEqual([
+      [null, true],
+      ['confirm-dialog', true],
+    ]);
+    for (const r of g.runs) expect(r.said).toMatch(/^the balance read \d+ cents$/);
+    expect(g.recommendationId).not.toBeNull();
+  }, 240_000);
+
+  it('fails a route whose activity end is not the activity', async () => {
+    const t: Table = structuredClone(bank1);
+    t.ends.history = 'posted';
+    const id = await aRun();
+    const g = await gate(deps(), { factoryRunId: id, url: bank.url, table: t, ...input });
+    expect(g.recommendationId).toBeNull();
+    expect(g.runs).toHaveLength(1);
+    expect(g.runs[0]!.ok).toBe(false);
+    expect(g.runs[0]!.said).toMatch(/stuck \(nothing to do on the activity page\)/);
+    expect(await statusOf(id)).toBe('failed');
+  }, 240_000);
+
+  it('fails a route that covers nothing an approval would promote, without running it', async () => {
+    const t: Table = structuredClone(bank1);
+    const ends = t.ends as Partial<Table['ends']>;
+    delete ends.balance;
+    delete ends.history;
+    const id = await aRun();
+    const g = await gate(deps(), { factoryRunId: id, url: bank.url, table: t, ...input });
+    expect(g.recommendationId).toBeNull();
+    expect(g.runs).toHaveLength(1);
+    expect(g.runs[0]!.said).toMatch(/covers nothing a person could approve/);
+    expect(await statusOf(id)).toBe('failed');
+  });
 });
