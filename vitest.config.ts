@@ -23,7 +23,7 @@ export default defineConfig({
     include: ['apps/*/test/**/*.test.ts', 'packages/*/test/**/*.test.ts', 'tests/**/*.test.ts'],
     exclude: ['**/node_modules/**'],
     // With --changed, a change to any of these runs everything: tests read them as files (the
-    // migrations, the seeds, the compose and secrets files), not through imports.
+    // migrations, the compose and secrets files), not through imports.
     forceRerunTriggers: [
       '**/package.json',
       'package-lock.json',
@@ -31,11 +31,9 @@ export default defineConfig({
       'tsconfig*.json',
       'packages/db/prisma/**',
       'apps/memory/prisma/**',
-      'seeds/**',
       // config/app.env is not here: only the factory's tests read it, and CI runs them when it
       // changes. Compose, scripts and CI are the fresh-clone check's.
       'tests/support/**',
-      'tests/fixtures/**',
     ],
     environment: 'node',
     // The bank's tests start an in-process Postgres per file; on a small laptop running every

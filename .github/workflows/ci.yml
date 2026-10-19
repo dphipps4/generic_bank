@@ -112,7 +112,7 @@ jobs:
           [ -n "$dirs" ] || { echo "no tests in $UNITS"; exit 0; }
           echo "$dirs"
           # shellcheck disable=SC2086 # one argument per directory
-          npx vitest run $dirs --bail=1 --passWithNoTests --exclude '**/node_modules/**' --exclude 'packages/runtime/test/**' --exclude tests/crawler/bank1.test.ts --exclude 'tests/factory/**'
+          npx vitest run $dirs --bail=1 --passWithNoTests --exclude '**/node_modules/**' --exclude 'packages/runtime/test/**'
 
   # On master, the whole suite, in four parts at once.
   suite:
