@@ -20,7 +20,7 @@ import {
 } from './memory.js';
 import type { Role, Roles } from './models.js';
 import { scout, type Task } from './scout.js';
-import { goalClock, openFrameTool, supervisor } from './supervisor.js';
+import { goalClock, openFrameTool, routeText, supervisor } from './supervisor.js';
 import { toolsOf } from './tools.js';
 import { openTrail } from './trail.js';
 
@@ -85,7 +85,11 @@ Your route, as you go:
 - every step you take is judged by the guard, as it will be in service: by the screen's kind, which you give in name_page, and by the control's name in the guard's words. When the bank draws a control with other words, say which allowed control a press is with \`as\`; the tools name typed fields and lists for you;
 - note the bank's own answers with note_answer, and a page that gets in the way and goes away on its own (a notice, a promotion) with note_trouble;
 - note how a value is read with note_read by pointing: each placeholder after the label you see before it. The tool writes the pattern, reads the page with the crawler's own code, and tells you what it read;
-- before goal_reached, check your route: every screen from the first one to here is named and holds its own steps. The Supervisor checks it too.
+- before goal_reached, check your route: every screen from the first one to here is named and holds its own steps. The guard checks every step of it as it will in service, and the Supervisor checks it too.
+How the factory works around you:
+- a page that shows the member's number is kept only once their name is hidden: on such a page, note_read the name first, anchored on the member's number;
+- each goal has its own clock, and the Supervisor keeps it; a person's wait for a code does not count against it;
+- your lessons are your own: memory_query asks yours and those for both, and at the run's end you write your own.
 How to work well and fast:
 - Before your first action toward a goal, write a short plan: the screens you expect to cross, from the route so far and what memory knows, and the fewest actions that reach the goal. Each action costs about fifteen seconds, because it is judged before the next.
 - The picture is the page. The words are a transcription of it: they can hold what a person does not see, such as every option of a closed list, and miss what is drawn as a picture. When they disagree, believe the picture, and match the words to it by their boxes: the same box is the same control, whatever each calls it.
@@ -392,9 +396,10 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
                   `This run repairs a table that broke; change only what moved. Where it broke: ${input.repair.diagnosis}`,
                 ]
               : []),
+            // The route so far, steps and all: on a screen it knows, follow its steps; think about what is new.
             ...(table?.rows.length
               ? [
-                  `The pages named so far: ${table.rows.map((r) => `"${r.page}" (${r.shows.join('; ')})`).join(', ')}`,
+                  `The route so far, each screen with its steps for each goal: on a screen it knows, follow those steps, and spend your thinking on what is new.\n${routeText(table)}`,
                 ]
               : []),
             first ? `The page now:\n${first.text}` : 'Begin by looking at the page.',

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { LESSONS } from '../src/memory.js';
 import { SCOUT } from '../src/run.js';
-import { SYSTEM } from '../src/supervisor.js';
+import { DIAGNOSE, MECHANICS, SYSTEM } from '../src/supervisor.js';
 
 const SQL = readFileSync(
   join(import.meta.dirname, '../../memory/prisma/migrations/0005_base_lessons/migration.sql'),
@@ -46,6 +46,8 @@ describe("the agents' instructions", () => {
   it('are whole: each ends on its own last sentence', () => {
     expect(SCOUT.endsWith('a lesson is advice to test in this run, not a fact.')).toBe(true);
     expect(SYSTEM.endsWith('a transfer ends at its review page.')).toBe(true);
+    expect(MECHANICS.endsWith('the Scout keeps its own.')).toBe(true);
+    expect(DIAGNOSE.endsWith('Mark anything you did not test as a guess.')).toBe(true);
     for (const who of ['scout', 'supervisor'] as const)
       expect(
         LESSONS(who).endsWith('each with why in one line and the frames of this run that show it.'),
