@@ -10,9 +10,7 @@ import type {
   Model,
   TextContent,
 } from '@earendil-works/pi-ai';
-import { streamSimple as anthropicStream } from '@earendil-works/pi-ai/api/anthropic-messages';
 import { streamSimple as openaiStream } from '@earendil-works/pi-ai/api/openai-completions';
-import { ANTHROPIC_MODELS } from '@earendil-works/pi-ai/providers/anthropic.models';
 import { OPENAI_MODELS } from '@earendil-works/pi-ai/providers/openai.models';
 import { OPENROUTER_MODELS } from '@earendil-works/pi-ai/providers/openrouter.models';
 import { z } from 'zod';
@@ -115,32 +113,18 @@ const png = (b: Buffer): ImageContent => ({
   mimeType: 'image/png',
 });
 
-// Each provider's wire protocol in pi. OpenAI is spoken as Chat Completions, which most
-// OpenAI-compatible servers speak too. OpenRouter speaks both; its Anthropic models use Anthropic
-// Messages, the rest use OpenAI Completions. The gateway path for OpenRouter is /openrouter so the
-// gateway routes the request to the OpenRouter client, not to Anthropic's or OpenAI's.
-const API = {
-  'anthropic-messages': { path: '', send: anthropicStream },
-  'openai-completions': { path: '/v1', send: openaiStream },
-} as const;
+// Every provider is spoken as OpenAI's Chat Completions, which OpenRouter and most
+// OpenAI-compatible servers speak too, whatever API pi's catalog lists for the model. The gateway
+// path for OpenRouter is /openrouter so the gateway routes the request to the OpenRouter client,
+// not to OpenAI's.
 const PROVIDER = {
-  anthropic: { api: 'anthropic-messages' as const, prefix: '', models: ANTHROPIC_MODELS },
-  openai: { api: 'openai-completions' as const, prefix: '', models: OPENAI_MODELS },
-  openrouter: { api: null, prefix: '/openrouter', models: OPENROUTER_MODELS },
+  openai: { prefix: '', models: OPENAI_MODELS },
+  openrouter: { prefix: '/openrouter', models: OPENROUTER_MODELS },
 };
-
-/** Which wire format a model speaks: from its provider, or from the model's own catalog entry. */
-export function apiOf(m: RoleModel): keyof typeof API {
-  const p = PROVIDER[m.provider];
-  if (p.api) return p.api;
-  const known = (p.models as Record<string, Model<Api>>)[m.model];
-  return (known?.api as keyof typeof API) ?? 'openai-completions';
-}
 
 /** The role's model as pi knows it, pointed at the gateway. A model pi does not list still runs. */
 function modelOf(a: Agent): Model<Api> {
   const p = PROVIDER[a.model.provider];
-  const api = apiOf(a.model);
   const id = a.model.model;
   const known = (p.models as Record<string, Model<Api>>)[id];
   return {
@@ -153,9 +137,9 @@ function modelOf(a: Agent): Model<Api> {
       contextWindow: 200_000,
       maxTokens: 32_000,
     }),
-    api,
+    api: 'openai-completions',
     provider: a.model.provider,
-    baseUrl: `${a.url}${p.prefix}${API[api].path}`,
+    baseUrl: `${a.url}${p.prefix}/v1`,
   } as Model<Api>;
 }
 
@@ -171,23 +155,12 @@ export function unwrapped(text: string): string {
   }
 }
 
-/** The answer's schema in the request, in the provider's own form. */
-function withAnswer(api: keyof typeof API, schema: Record<string, unknown>) {
-  return (payload: unknown) => {
-    const p = payload as Record<string, unknown>;
-    if (api === 'anthropic-messages')
-      return {
-        ...p,
-        output_config: { ...(p.output_config as object), format: { type: 'json_schema', schema } },
-      };
-    return {
-      ...p,
-      response_format: {
-        type: 'json_schema',
-        json_schema: { name: 'answer', schema, strict: true },
-      },
-    };
-  };
+/** The answer's schema in the request. */
+function withAnswer(schema: Record<string, unknown>) {
+  return (payload: unknown) => ({
+    ...(payload as Record<string, unknown>),
+    response_format: { type: 'json_schema', json_schema: { name: 'answer', schema, strict: true } },
+  });
 }
 
 /** A provider's error that passes: tried again, in the same conversation. */
@@ -197,8 +170,6 @@ const TRANSIENT_TRIES = 3;
 
 export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
   const model = modelOf(a);
-  const api = apiOf(a.model);
-  const send = API[api].send as typeof anthropicStream;
   // A tool that fails for any reason but a refusal stops the turn, and the error is the turn's.
   let failure: unknown;
   // One thing at a time: once a call in a reply is refused, the reply's later calls are not run, so
@@ -257,12 +228,12 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
       return i.keep === undefined ? messages : compacted(messages, i.keep);
     },
     streamFn: (m, context, options) =>
-      send(m as never, context, {
+      openaiStream(m as never, context, {
         ...options,
         apiKey: a.token,
         maxTokens: i.maxTokens,
         timeoutMs: TURN_MS,
-        ...(i.answer ? { onPayload: withAnswer(api, i.answer) } : {}),
+        ...(i.answer ? { onPayload: withAnswer(i.answer) } : {}),
       }),
     finishTurn: () => (i.calls !== undefined && ++calls >= i.calls ? { action: 'end' } : undefined),
   });

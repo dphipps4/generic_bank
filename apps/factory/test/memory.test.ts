@@ -57,7 +57,7 @@ beforeAll(async () => {
     [RUN],
   );
   const models = fakeModels(
-    (_p, seen) => script(seen, seen.items.filter((i) => 'result' in i).length),
+    (seen) => script(seen, seen.items.filter((i) => 'result' in i).length),
     sent,
   );
   app = buildServer({

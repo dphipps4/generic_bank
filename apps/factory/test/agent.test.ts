@@ -47,7 +47,7 @@ afterEach(async () => {
 describe.each([DEFAULT_ROLES.scout.provider] as const)('a turn on %s', (provider: Provider) => {
   const agent = (): Agent => ({
     model:
-      provider === 'anthropic' || provider === 'openrouter'
+      provider === 'openrouter'
         ? DEFAULT_ROLES.scout
         : { ...DEFAULT_ROLES.scout, provider, model: OPENAI_TEST_MODEL },
     url: `http://127.0.0.1:${(app.server.address() as AddressInfo).port}/gateway/run1/scout`,

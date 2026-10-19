@@ -1,6 +1,5 @@
-// The factory's HTTP surface. An agent's base URL is /gateway/<run>/<role>, where Anthropic's
-// Messages API and OpenAI's Chat Completions API both answer; its API key is the gateway token,
-// never a real key.
+// The factory's HTTP surface. An agent's base URL is /gateway/<run>/<role>, where OpenAI's Chat
+// Completions API answers; its API key is the gateway token, never a real key.
 import { createHash, timingSafeEqual } from 'node:crypto';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import { isRole, type Provider } from './models.js';
@@ -23,9 +22,7 @@ export function buildServer(opts: {
   app.get('/healthz', async () => ({ ok: true, service: 'factory' }));
 
   const route = (provider: Provider) => async (req: Req, reply: FastifyReply) => {
-    // Anthropic's SDK sends the key as x-api-key, OpenAI's as a bearer token.
-    const bearer = /^Bearer (.+)$/.exec(req.headers.authorization ?? '')?.[1];
-    const key = req.headers['x-api-key'] ?? bearer;
+    const key = /^Bearer (.+)$/.exec(req.headers.authorization ?? '')?.[1];
     if (typeof key !== 'string' || !timingSafeEqual(digest(key), token))
       return reply.code(401).send(error('authentication_error', 'invalid gateway token'));
     const { runId, role } = req.params;
@@ -33,20 +30,10 @@ export function buildServer(opts: {
       return reply.code(404).send(error('not_found_error', 'no such run or role'));
     if (typeof req.body !== 'object' || req.body === null || Array.isArray(req.body))
       return reply.code(400).send(error('invalid_request_error', 'a JSON object is required'));
-    // Anthropic's betas travel as a header; the request carries them on to the model.
-    const betas = req.headers['anthropic-beta'];
-    const body = req.body as Record<string, unknown>;
-    const request =
-      provider === 'anthropic' && typeof betas === 'string'
-        ? { ...body, betas: betas.split(',').map((b) => b.trim()) }
-        : body;
-    const r = await opts.gateway.call(provider, runId, role, request);
+    const r = await opts.gateway.call(provider, runId, role, req.body as Record<string, unknown>);
     return reply.code(r.status).type(r.contentType).send(r.body);
   };
-  app.post('/gateway/:runId/:role/v1/messages', route('anthropic'));
   app.post('/gateway/:runId/:role/v1/chat/completions', route('openai'));
-  // OpenRouter models use whichever API fits: Anthropic Messages or OpenAI Completions.
-  app.post('/gateway/:runId/:role/openrouter/v1/messages', route('openrouter'));
   app.post('/gateway/:runId/:role/openrouter/v1/chat/completions', route('openrouter'));
   return app;
 }

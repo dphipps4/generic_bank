@@ -1,11 +1,10 @@
-// Each provider's model as a fake fetch behind its real SDK, for the gateway's live upstream.
+// Each provider's model as a fake fetch behind OpenAI's real SDK, for the gateway's live upstream.
 // Nothing leaves the process and the key is not one. The test's answer function sees each request
 // in one form, whichever provider it was sent to, and answers with text or one tool call.
-import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
-import { type Provider, ROLE_SETTINGS, type Roles, rolesOf } from '../src/models.js';
+import { ROLE_SETTINGS, type Roles, rolesOf } from '../src/models.js';
 
 /** Each role's model as config/app.env sets it: the one place a model is named. */
 const appEnv = Object.fromEntries(
@@ -40,70 +39,23 @@ const textOf = (c: unknown): string =>
     ? c
     : ((c ?? []) as Block[]).flatMap((b) => (b.type === 'text' ? [b.text!] : [])).join('\n');
 
-export function seen(provider: Provider, body: Record<string, unknown>): Seen {
+export function seen(body: Record<string, unknown>): Seen {
   const out: Seen = { system: '', items: [] };
   const messages = body.messages as { role: string; content: unknown }[];
-  if (provider !== 'openai') out.system = textOf(body.system);
   for (const m of messages) {
     if (m.role === 'system' || m.role === 'developer') {
-      if (provider === 'openai' && !out.system) out.system = textOf(m.content);
+      if (!out.system) out.system = textOf(m.content);
     } else if (m.role === 'tool') out.items.push({ result: textOf(m.content) });
     else if (m.role === 'user')
       for (const b of typeof m.content === 'string'
         ? [{ type: 'text', text: m.content }]
         : (m.content as Block[]))
         if (b.type === 'text') out.items.push({ user: b.text! });
-        else if (b.type === 'tool_result') out.items.push({ result: textOf(b.content) });
   }
   return out;
 }
 
 const USAGE = { input: 2000, output: 50 };
-
-function anthropicSse(n: number, model: string, reply: Reply): string {
-  const calls = 'calls' in reply ? reply.calls : 'tool' in reply ? [reply] : [];
-  const blocks: [object, object][] =
-    'text' in reply
-      ? [
-          [
-            { type: 'text', text: '' },
-            { type: 'text_delta', text: reply.text },
-          ],
-        ]
-      : calls.map((c, k) => [
-          { type: 'tool_use', id: `toolu_${n}_${k}`, name: c.tool, input: {} },
-          { type: 'input_json_delta', partial_json: JSON.stringify(c.input) },
-        ]);
-  const stop = 'text' in reply ? 'end_turn' : 'tool_use';
-  return [
-    {
-      type: 'message_start',
-      message: {
-        id: `msg_${n}`,
-        type: 'message',
-        role: 'assistant',
-        model,
-        content: [],
-        stop_reason: null,
-        stop_sequence: null,
-        usage: { input_tokens: USAGE.input, output_tokens: 1 },
-      },
-    },
-    ...blocks.flatMap(([block, delta], index) => [
-      { type: 'content_block_start', index, content_block: block },
-      { type: 'content_block_delta', index, delta },
-      { type: 'content_block_stop', index },
-    ]),
-    {
-      type: 'message_delta',
-      delta: { stop_reason: stop, stop_sequence: null },
-      usage: { output_tokens: USAGE.output },
-    },
-    { type: 'message_stop' },
-  ]
-    .map((e) => `event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`)
-    .join('');
-}
 
 function openaiSse(n: number, model: string, reply: Reply): string {
   const delta =
@@ -139,47 +91,23 @@ function openaiSse(n: number, model: string, reply: Reply): string {
  * is kept in `sent`, in order.
  */
 export function fakeModels(
-  script: (provider: Provider, request: Seen, body: Record<string, unknown>) => Reply,
+  script: (request: Seen, body: Record<string, unknown>) => Reply,
   sent: Record<string, unknown>[] = [],
-): { anthropic: Anthropic; openai: OpenAI; openrouter: { anthropic: Anthropic; openai: OpenAI } } {
-  const fetch =
-    (apiProvider: 'anthropic' | 'openai') => async (_url: unknown, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
-      sent.push(body);
-      const reply = script(apiProvider, seen(apiProvider, body), body);
-      if ('fail' in reply)
-        return new Response(JSON.stringify({ error: { message: reply.message } }), {
-          status: reply.fail,
-          headers: { 'content-type': 'application/json' },
-        });
-      const model = String(body.model);
-      const sse = apiProvider === 'anthropic' ? anthropicSse : openaiSse;
-      return new Response(sse(sent.length, model, reply), {
-        headers: { 'content-type': 'text/event-stream' },
+): { openai: OpenAI; openrouter: OpenAI } {
+  const fetch = async (_url: unknown, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    sent.push(body);
+    const reply = script(seen(body), body);
+    if ('fail' in reply)
+      return new Response(JSON.stringify({ error: { message: reply.message } }), {
+        status: reply.fail,
+        headers: { 'content-type': 'application/json' },
       });
-    };
-  return {
-    anthropic: new Anthropic({
-      apiKey: 'not-a-real-key',
-      fetch: fetch('anthropic') as never,
-      maxRetries: 0,
-    }),
-    openai: new OpenAI({
-      apiKey: 'not-a-real-key',
-      fetch: fetch('openai') as never,
-      maxRetries: 0,
-    }),
-    openrouter: {
-      anthropic: new Anthropic({
-        apiKey: 'not-a-real-key',
-        fetch: fetch('anthropic') as never,
-        maxRetries: 0,
-      }),
-      openai: new OpenAI({
-        apiKey: 'not-a-real-key',
-        fetch: fetch('openai') as never,
-        maxRetries: 0,
-      }),
-    },
+    return new Response(openaiSse(sent.length, String(body.model), reply), {
+      headers: { 'content-type': 'text/event-stream' },
+    });
   };
+  const client = () =>
+    new OpenAI({ apiKey: 'not-a-real-key', fetch: fetch as never, maxRetries: 0 });
+  return { openai: client(), openrouter: client() };
 }

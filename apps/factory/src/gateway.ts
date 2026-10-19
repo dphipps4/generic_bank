@@ -1,4 +1,4 @@
-// The model gateway (plan §7): the agents' only route to the model, Anthropic's or OpenAI's.
+// The model gateway (plan §7): the agents' only route to the model, through OpenRouter or OpenAI.
 // Before every request it checks the run's and the week's spend against the caps at the request's
 // worst case; after, it records what the call cost, per run and role. It fails closed.
 import { CAPS, type Caps } from './caps.js';
@@ -19,7 +19,7 @@ const IMAGE_TOKENS = 5_000;
 // model as a fallback, another service tier.
 const UNPRICED = ['speed', 'fallbacks', 'service_tier', 'web_search_options'];
 
-/** The most output a request allows, in either provider's field. */
+/** The most output a request allows, in either of its fields. */
 const maxTokensOf = (r: Request) => r.max_tokens ?? r.max_completion_tokens;
 
 /**

@@ -64,7 +64,7 @@ info "Secrets you enter"
 # A value someone else issues (an API key) cannot be generated. Each is explained here and entered
 # by a person with just secret-set; setup does not go on while a required one is blank.
 # The model keys are one choice: whichever is set is reported, a blank one is not.
-MODEL_KEYS=" ANTHROPIC_API_KEY OPENAI_API_KEY OPENROUTER_API_KEY "
+MODEL_KEYS=" OPENAI_API_KEY OPENROUTER_API_KEY "
 missing=0 any=0 model=0
 while IFS= read -r line; do
   read -r f key how _ <<<"$line"

@@ -17,7 +17,7 @@ FILE="${1:-}" KEY="${2:-}" FROM="${3:-}"
 [[ "$KEY" =~ ^[A-Z][A-Z0-9_]*$ ]] || die "KEY must look like AN_ENV_NAME"
 target="$(secret_path "$FILE")"
 [[ -f "$target" ]] || die "$target does not exist; run just setup"
-if [[ "$FILE" == "local" && "$KEY" =~ ^(ANTHROPIC_API_KEY|OPENAI_API_KEY|OPENROUTER_API_KEY|FACTORY_[A-Z_]+)$ ]]; then
+if [[ "$FILE" == "local" && "$KEY" =~ ^(OPENAI_API_KEY|OPENROUTER_API_KEY|FACTORY_[A-Z_]+)$ ]]; then
   die "$KEY must never be in the local file; use the factory file"
 fi
 from_clipboard=0
@@ -35,7 +35,6 @@ value="${value%$'\n'}"
 [[ -n "$value" ]] || die "the value is empty; nothing was changed"
 # A model key has a known shape; anything else is a slip (a copied command, a stray word).
 case "$KEY" in
-  ANTHROPIC_API_KEY) shape='^sk-ant-[A-Za-z0-9_-]{20,}$' name='an Anthropic key (sk-ant-…)' ;;
   OPENAI_API_KEY) shape='^sk-[A-Za-z0-9_-]{20,}$' name='an OpenAI key (sk-…)' ;;
   OPENROUTER_API_KEY) shape='^sk-or-[A-Za-z0-9_-]{20,}$' name='an OpenRouter key (sk-or-…)' ;;
   *) shape='' ;;

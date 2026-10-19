@@ -7,7 +7,7 @@ export const ROLE_NAMES = ['scout', 'supervisor', 'lessons'] as const;
 export type Role = (typeof ROLE_NAMES)[number];
 export const isRole = (r: string): r is Role => (ROLE_NAMES as readonly string[]).includes(r);
 
-export const PROVIDERS = ['anthropic', 'openai', 'openrouter'] as const;
+export const PROVIDERS = ['openai', 'openrouter'] as const;
 export type Provider = (typeof PROVIDERS)[number];
 export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 
@@ -52,10 +52,8 @@ export interface Price {
   cacheWrite: number;
 }
 
-// Cache writes are charged at the one-hour rate, the dearer of the two, so the meter never
-// counts low. A model of another provider (OpenAI, for one) goes here the same way, at its
-// maker's prices, before a role is set to it. Every OpenRouter model is priced from pi's catalog,
-// at its dearest tier.
+// An OpenAI model goes here at its maker's prices before a role is set to it. Every OpenRouter
+// model is priced from pi's catalog, at its dearest tier, so the meter never counts low.
 type Rates = Price & { tiers?: Price[] };
 const dearest = (c: Rates): Price => {
   const all = [c, ...(c.tiers ?? [])];
@@ -75,8 +73,6 @@ export const PRICES: Readonly<Record<string, Price>> = {
   // Not in pi's catalog: OpenRouter's published rates, per million tokens. A model the meter
   // can't price counts as free, so the run's budget cap would not hold.
   'meta/muse-spark-1.3': { input: 1.25, output: 4.25, cacheRead: 0.15, cacheWrite: 1.25 },
-  'claude-opus-5-5': { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 8 },
-  'claude-sonnet-5-5': { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 4 },
 };
 
 export const priceOf = (model: unknown, prices: Readonly<Record<string, Price>> = PRICES): Price =>
