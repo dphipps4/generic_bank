@@ -474,12 +474,10 @@ export function scout(deps: ScoutDeps, task: Task) {
   const sightAnchor = async (c: Control, label: string): Promise<At> => {
     const kind = (await whatIsAt(page, centre(c.box))).kind;
     const it: Item = { id: 'c', kind, label, labelFrom: 'image', box: c.box };
-    const region = {
-      x: Math.max(0, c.box.x - 140),
-      y: c.box.y - 4,
-      w: c.box.w + Math.min(140, c.box.x) + 8,
-      h: c.box.h + 8,
-    };
+    // The label alone, beside the field, never the field: what a field holds changes (run 25: a cut
+    // taken with an amount already typed was never found on an empty form).
+    const left = Math.min(140, c.box.x);
+    const region = { x: c.box.x - left, y: c.box.y - 4, w: Math.max(8, left - 4), h: c.box.h + 8 };
     return anchorOf(it, region);
   };
   const taken = () => {
@@ -1009,6 +1007,9 @@ export function scout(deps: ScoutDeps, task: Task) {
             .flatMap((r) => r.shows)
             .filter((w, k, all) => !shows(f, w) && all.indexOf(w) === k)
             .slice(0, 3);
+        // The steps waiting to be filed were taken on the screen the Scout was on until now: filed
+        // there before this one is named (run 25: a review taken for the form lost the form's steps).
+        if (row && row.page !== i.name) fileVisit(row);
         const old = t.rows.find((r) => r.page === i.name);
         const next: Row = {
           page: i.name,
