@@ -1,6 +1,5 @@
 // Where the gateway's answers come from: the model itself, through its provider's SDK. With no
 // key for a provider, a call to it is refused and names the key; nothing stands in for the model.
-import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { TURN_MS } from './agent.js';
 import type { Provider, Usage } from './models.js';
@@ -18,7 +17,7 @@ export interface Upstream {
   answer(provider: Provider, request: Request): Promise<Answer>;
 }
 
-/** A request the gateway turns away, as an Anthropic error body (OpenAI's SDK reads it too). */
+/** A request the gateway turns away, as an error body OpenAI's SDK reads. */
 export class Refusal extends Error {
   constructor(
     readonly status: number,
@@ -32,40 +31,8 @@ export class Refusal extends Error {
   }
 }
 
-/** A picture in a request, in either provider's form. */
-export const isPicture = (v: unknown) => {
-  const type = (v as { type?: unknown } | null)?.type;
-  return type === 'image' || type === 'image_url';
-};
-
-async function anthropic(client: Anthropic, request: Request): Promise<Answer> {
-  const { stream: streamed, ...params } = request;
-  try {
-    // Always streamed upstream, so a long answer cannot time out the request. Betas the agent
-    // asked for travel as `betas`, which the SDK sends as the header.
-    const stream = client.beta.messages.stream(params as never);
-    // Each event is written down as it arrives: the SDK goes on to build the final message
-    // inside the first event's object.
-    const events: string[] = [];
-    for await (const e of stream) events.push(`event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`);
-    const m = await stream.finalMessage();
-    const u = m.usage;
-    return {
-      status: 200,
-      body: streamed ? events.join('') : JSON.stringify(m),
-      usage: {
-        input: u.input_tokens,
-        output: u.output_tokens,
-        cacheRead: u.cache_read_input_tokens ?? 0,
-        cacheWrite: u.cache_creation_input_tokens ?? 0,
-      },
-    };
-  } catch (e) {
-    if (!(e instanceof Anthropic.APIError)) throw e;
-    const error = e.error ?? { type: 'error', error: { type: 'api_error', message: e.message } };
-    return { status: e.status ?? 502, body: JSON.stringify(error) };
-  }
-}
+/** A picture in a request. */
+export const isPicture = (v: unknown) => (v as { type?: unknown } | null)?.type === 'image_url';
 
 const usageOf = (u: OpenAI.CompletionUsage): Usage => {
   const cached = u.prompt_tokens_details?.cached_tokens ?? 0;
@@ -108,69 +75,34 @@ async function openai(client: OpenAI, request: Request): Promise<Answer> {
 }
 
 const KEYS = {
-  anthropic: 'ANTHROPIC_API_KEY',
   openai: 'OPENAI_API_KEY',
   openrouter: 'OPENROUTER_API_KEY',
 } as const;
 
-/** Each provider's model, through its SDK. */
-export function live(clients: {
-  anthropic?: Anthropic;
-  openai?: OpenAI;
-  openrouter?: { anthropic: Anthropic; openai: OpenAI };
-}): Upstream {
+/** Each provider's model, through OpenAI's SDK. */
+export function live(clients: { openai?: OpenAI; openrouter?: OpenAI }): Upstream {
   return {
     async answer(provider, request) {
-      if (provider === 'openrouter') {
-        const or = clients.openrouter;
-        if (!or)
-          return {
-            status: 401,
-            body: new Refusal(401, 'authentication_error', `${KEYS[provider]} is not set`).body,
-          };
-        // pi puts the system prompt at the top level only in Anthropic Messages.
-        return 'system' in request ? anthropic(or.anthropic, request) : openai(or.openai, request);
-      }
       const client = clients[provider];
       if (!client)
         return {
           status: 401,
           body: new Refusal(401, 'authentication_error', `${KEYS[provider]} is not set`).body,
         };
-      return provider === 'anthropic'
-        ? anthropic(client as Anthropic, request)
-        : openai(client as OpenAI, request);
+      return openai(client, request);
     },
   };
 }
 
-/** OpenRouter's base URL, with two API surfaces: /api for Anthropic Messages, /api/v1 for OpenAI. */
-const OPENROUTER_BASE_URL = 'https://openrouter.ai/api';
+/** OpenRouter's OpenAI-compatible base URL. */
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
 /** A client for each provider whose key is set; a call to any other is refused. */
-export function upstreamFor(keys: {
-  anthropic?: string;
-  openai?: string;
-  openrouter?: string;
-}): Upstream {
+export function upstreamFor(keys: { openai?: string; openrouter?: string }): Upstream {
   return live({
-    anthropic: keys.anthropic
-      ? new Anthropic({ apiKey: keys.anthropic, timeout: TURN_MS })
-      : undefined,
     openai: keys.openai ? new OpenAI({ apiKey: keys.openai, timeout: TURN_MS }) : undefined,
     openrouter: keys.openrouter
-      ? {
-          anthropic: new Anthropic({
-            apiKey: keys.openrouter,
-            baseURL: OPENROUTER_BASE_URL,
-            timeout: TURN_MS,
-          }),
-          openai: new OpenAI({
-            apiKey: keys.openrouter,
-            baseURL: `${OPENROUTER_BASE_URL}/v1`,
-            timeout: TURN_MS,
-          }),
-        }
+      ? new OpenAI({ apiKey: keys.openrouter, baseURL: OPENROUTER_BASE_URL, timeout: TURN_MS })
       : undefined,
   });
 }
