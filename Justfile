@@ -285,11 +285,6 @@ test-changed:
 test-pii:
     @npx vitest run tests/pii
 
-# Hazards forced on bank 1's crawler, each against the lab's expected result: a random fifth, or every one with `just hazards all`
-[group('Quality')]
-hazards which="1":
-    @MATRIX={{which}} npx vitest run tests/outcomes/matrix.test.ts
-
 # TypeScript, every package
 [private]
 typecheck:
