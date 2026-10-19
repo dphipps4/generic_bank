@@ -3,7 +3,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { episodes } from '../src/episodes.js';
 import { knowledgeRoutes } from '../src/knowledge.js';
-import { openMemory, type Role } from '../src/memory.js';
+import type { Role } from '../src/memory.js';
 import { buildServer } from '../src/server.js';
 import { memoryDb, signedPost, testDoor, testEmbed, TOKENS } from './db.js';
 
@@ -12,8 +12,7 @@ let app: ReturnType<typeof buildServer>;
 
 beforeAll(async () => {
   db = await memoryDb();
-  const memory = openMemory(db);
-  app = buildServer({ db, memory, door: testDoor(), writes: episodes(memory, testEmbed) });
+  app = buildServer({ db, door: testDoor(), writes: episodes(db, testEmbed) });
   knowledgeRoutes(app, db, testEmbed);
 });
 afterAll(async () => {
@@ -33,9 +32,6 @@ const get = async (url: string) =>
   (
     await app.inject({ url, headers: { authorization: `Bearer ${TOKENS.runner}` } })
   ).json() as Record<string, unknown>;
-
-const count = async (table: string) =>
-  (await db.query<{ n: number }>(`SELECT count(*)::int AS n FROM "${table}"`)).rows[0]!.n;
 
 /** A run, recorded now. */
 const run = async (id: string, bank: string, extra: Record<string, unknown> = {}) =>
@@ -127,11 +123,10 @@ describe('contradictions', () => {
       expect.objectContaining({ id: ids.tenant, label: 'disputed: the list sorted the other way' }),
     );
 
-    const before = await count('ChangeLog');
     const again = await send('facts/invalidate', contradiction(ids.tenant!, 'x1'), 'factory');
     expect(again.statusCode).toBe(200);
     expect(again.json()).toMatchObject({ written: false });
-    expect(await count('ChangeLog')).toBe(before);
+    expect(await versions(ids.tenant!)).toHaveLength(2);
 
     expect(await post('facts/invalidate', contradiction(ids.tenant!, 'x2'))).toMatchObject({
       rule: 'retire',
@@ -206,11 +201,5 @@ describe('a person', () => {
     expect(
       (await send('lessons/retire', { lessonId: 'L-none', reason: 'x' }, 'curator')).statusCode,
     ).toBe(409);
-  });
-});
-
-describe('the change log', () => {
-  it('verifies after every rule', async () => {
-    expect(await get('/history/verify')).toMatchObject({ ok: true });
   });
 });

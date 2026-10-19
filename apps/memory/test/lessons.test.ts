@@ -1,18 +1,17 @@
 // Episodes and lessons (plan §8, §A.6): runs, proposals that cite their frames, and near-duplicates that grow a held lesson. Each write is read back from the
-// tables and the change log it leaves.
+// tables it leaves.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { episodes } from '../src/episodes.js';
-import { openMemory, type Role } from '../src/memory.js';
+import type { Role } from '../src/memory.js';
 import { buildServer } from '../src/server.js';
-import { memoryDb, signedPost, testDoor, testEmbed, TOKENS } from './db.js';
+import { memoryDb, signedPost, testDoor, testEmbed } from './db.js';
 
 let db: Awaited<ReturnType<typeof memoryDb>>;
 let app: ReturnType<typeof buildServer>;
 
 beforeAll(async () => {
   db = await memoryDb();
-  const memory = openMemory(db);
-  app = buildServer({ db, memory, door: testDoor(), writes: episodes(memory, testEmbed) });
+  app = buildServer({ db, door: testDoor(), writes: episodes(db, testEmbed) });
 });
 afterAll(async () => {
   await app.close();
@@ -25,16 +24,13 @@ const post = (write: string, body: unknown, role: Role = 'factory') =>
 const count = async (table: string) =>
   (await db.query<{ n: number }>(`SELECT count(*)::int AS n FROM "${table}"`)).rows[0]!.n;
 
-const lastChange = async () =>
-  (await db.query(`SELECT * FROM "ChangeLog" ORDER BY seq DESC LIMIT 1`)).rows[0];
-
 /** The write is refused with `status`, and nothing at all is written. */
 async function refused(write: string, body: unknown, status: number, role: Role = 'factory') {
   const tables = ['Run', 'Lesson', 'LessonVersion', 'Reliance'];
-  const before = await Promise.all([...tables, 'ChangeLog'].map(count));
+  const before = await Promise.all(tables.map(count));
   const r = await post(write, body, role);
   expect(r.statusCode, JSON.stringify(r.json())).toBe(status);
-  expect(await Promise.all([...tables, 'ChangeLog'].map(count))).toEqual(before);
+  expect(await Promise.all(tables.map(count))).toEqual(before);
   return r.json() as Record<string, unknown>;
 }
 
@@ -83,18 +79,15 @@ const current = async (lessonId: string) =>
     .rows[0]!.current;
 
 describe('episodes', () => {
-  it('records a run once, with its change-log row', async () => {
+  it('records a run once', async () => {
     const r = await post('episodes/runs', run('run-1'), 'runner');
     expect(r.statusCode).toBe(201);
-    expect(r.json()).toMatchObject({ run: 'run-1' });
-    expect(await lastChange()).toMatchObject({
-      role: 'runner',
-      action: 'episodes/runs',
-      entity: 'Run',
-      entityId: 'run-1',
-      runId: 'run-1',
-      data: { bank: 'generic', vendor: 'corelink', outcome: 'succeeded' },
-    });
+    expect(r.json()).toEqual({ run: 'run-1' });
+    expect(
+      (await db.query(`SELECT bank, vendor, outcome, model FROM "Run" WHERE id = 'run-1'`)).rows,
+    ).toEqual([
+      { bank: 'generic', vendor: 'corelink', outcome: 'succeeded', model: 'claude-sonnet-4-5' },
+    ]);
     const e = await refused('episodes/runs', run('run-1'), 409, 'runner');
     expect(e).toMatchObject({ error: 'run_exists' });
   });
@@ -160,14 +153,6 @@ describe('lessons', () => {
         embedded: true,
       }),
     ]);
-    expect(await lastChange()).toMatchObject({
-      role: 'factory',
-      action: 'lessons/proposals',
-      entity: 'Lesson',
-      entityId: held,
-      runId: 'run-2',
-      data: { version: 1, merged: false, state: 'proposed', seen: false },
-    });
   });
 
   it('grows the held lesson’s evidence with a near-duplicate, and adds no lesson', async () => {
@@ -194,12 +179,6 @@ describe('lessons', () => {
         { run: 'run-2', seen: false },
         { run: 'run-3', frames: ['run-3/003', 'run-3/004'], hash: HASH, seen: true },
       ],
-    });
-    expect(await lastChange()).toMatchObject({
-      entity: 'Lesson',
-      entityId: held,
-      runId: 'run-3',
-      data: { version: 2, merged: true, similarity: 1 },
     });
   });
 
@@ -247,18 +226,11 @@ describe('lessons', () => {
     expect((await db.query(`SELECT "runId", "lessonId", version FROM "Reliance"`)).rows).toEqual([
       { runId: 'run-4', lessonId: held, version: 3 },
     ]);
-    expect(await lastChange()).toMatchObject({
-      action: 'lessons/relied-on',
-      entity: 'Run',
-      entityId: 'run-4',
-      data: { reliedOn: [{ lessonId: held, version: 3 }] },
-    });
 
-    const changes = await count('ChangeLog');
     const again = await post('lessons/relied-on', { runId: 'run-4', lessonIds: [held] });
     expect(again.statusCode).toBe(200);
     expect(again.json()).toMatchObject({ written: false });
-    expect(await count('ChangeLog')).toBe(changes);
+    expect(await count('Reliance')).toBe(1);
 
     expect(
       await refused('lessons/relied-on', { runId: 'run-4', lessonIds: [held, 'L-none'] }, 409),
@@ -266,13 +238,5 @@ describe('lessons', () => {
     expect(
       await refused('lessons/relied-on', { runId: 'run-none', lessonIds: [held] }, 409),
     ).toMatchObject({ error: 'no_run' });
-  });
-
-  it('leaves a change log that verifies', async () => {
-    const v = await app.inject({
-      url: '/history/verify',
-      headers: { authorization: `Bearer ${TOKENS.curator}` },
-    });
-    expect(v.json()).toMatchObject({ ok: true });
   });
 });

@@ -2,10 +2,11 @@
 // on every write, and the privacy screen. A refused write leaves nothing behind.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { sign, SIGNATURE, WRITES, type Write } from '../src/door.js';
-import { openMemory, ROLES, type Role } from '../src/memory.js';
+import { ROLES, type Role } from '../src/memory.js';
+import { knowledgeRoutes } from '../src/knowledge.js';
 import { screen } from '../src/screen.js';
 import { buildServer, type WriteHandler } from '../src/server.js';
-import { memoryDb, SIGNING_KEY, testDoor, TOKENS } from './db.js';
+import { memoryDb, SIGNING_KEY, testDoor, testEmbed, TOKENS } from './db.js';
 
 // The writes each role is given, as §A.6 states them.
 const GIVEN: Record<Role, Write[]> = {
@@ -18,30 +19,25 @@ const GIVEN: Record<Role, Write[]> = {
 let db: Awaited<ReturnType<typeof memoryDb>>;
 let app: ReturnType<typeof buildServer>;
 
+/** How many writes the door let through to their handlers. */
+let ran = 0;
+
 beforeAll(async () => {
   db = await memoryDb();
-  const memory = openMemory(db);
-  // Each write, for now, only records that it ran: its change-log row.
+  // Each write, for now, only counts that it ran.
   const writes = Object.fromEntries(
     (Object.keys(WRITES) as Write[]).map((w) => [
       w,
-      ((body, role) =>
-        memory.write(role, w, async () => ({
-          entity: 'Probe',
-          entityId: w,
-          data: body,
-        }))) satisfies WriteHandler,
+      (async (body, role) => (ran++, { role, write: w, body })) satisfies WriteHandler,
     ]),
   );
-  app = buildServer({ db, memory, door: testDoor(), writes });
+  app = buildServer({ db, door: testDoor(), writes });
+  knowledgeRoutes(app, db, testEmbed);
 });
 afterAll(async () => {
   await app.close();
   await db.close();
 });
-
-const changes = async () =>
-  (await db.query<{ n: number }>(`SELECT count(*)::int AS n FROM "ChangeLog"`)).rows[0]!.n;
 
 function post(
   write: string,
@@ -64,10 +60,10 @@ function post(
 
 /** The write is refused with `status` and nothing is written. */
 async function refused(res: Promise<{ statusCode: number; json(): unknown }>, status: number) {
-  const before = await changes();
+  const before = ran;
   const r = await res;
   expect(r.statusCode).toBe(status);
-  expect(await changes()).toBe(before);
+  expect(ran).toBe(before);
   return r.json() as Record<string, unknown>;
 }
 
@@ -77,11 +73,11 @@ describe('the door', () => {
       for (const write of Object.keys(WRITES) as Write[]) {
         const body = { note: `${role} ${write}` };
         if (GIVEN[role].includes(write)) {
-          const before = await changes();
+          const before = ran;
           const r = await post(write, body, { role });
           expect(r.statusCode, `${role} ${write}`).toBe(201);
-          expect(r.json()).toMatchObject({ role, action: write, data: body });
-          expect(await changes()).toBe(before + 1);
+          expect(r.json()).toEqual({ role, write, body });
+          expect(ran).toBe(before + 1);
         } else {
           const e = await refused(post(write, body, { role }), 403);
           expect(e, `${role} ${write}`).toMatchObject({ error: 'role_forbidden' });
@@ -93,9 +89,9 @@ describe('the door', () => {
   it('is 401 without a token or with an unknown one, for reads and writes', async () => {
     await refused(post('episodes/runs', {}, { role: null }), 401);
     await refused(post('episodes/runs', {}, { token: 'not-a-token-of-any-role-0123456789' }), 401);
-    expect((await app.inject({ url: '/history' })).statusCode).toBe(401);
+    expect((await app.inject({ url: '/knowledge/pack?bank=example' })).statusCode).toBe(401);
     const read = await app.inject({
-      url: '/history',
+      url: '/knowledge/pack?bank=example',
       headers: { authorization: `Bearer ${TOKENS.runner}` },
     });
     expect(read.statusCode).toBe(200);
@@ -143,18 +139,6 @@ describe('the door', () => {
     const e = await refused(post('lessons/proposals', { evidence: [], ...body }), 422);
     expect(e).toMatchObject({ error: 'privacy_screen', reason });
     expect(JSON.stringify(e)).not.toMatch(/Hunter2|482913|abcdef0123|1234 5678|jane/);
-  });
-
-  // Last: it breaks the shared change log.
-  it('is 503 for every write once the change log fails verification', async () => {
-    await db.query(`UPDATE "ChangeLog" SET role = 'system' WHERE seq = 1`);
-    const verify = await app.inject({
-      url: '/history/verify',
-      headers: { authorization: `Bearer ${TOKENS.curator}` },
-    });
-    expect(verify.json()).toMatchObject({ ok: false, brokenAt: 1 });
-    const e = await refused(post('episodes/runs', {}, { role: 'runner' }), 503);
-    expect(e).toEqual({ error: 'read_only' });
   });
 });
 

@@ -1,6 +1,5 @@
-// The Memory service: the only process that opens the memory database. It verifies the change
-// log and loads its embedding model before it serves, and stays read-only if the chain does not
-// hold.
+// The Memory service: the only process that opens the memory database. It loads its embedding
+// model before it serves.
 import { z } from 'zod';
 import { loadConfig, port, secret } from '@gb/config';
 import { pgDb } from './db.js';
@@ -8,7 +7,6 @@ import { door } from './door.js';
 import { localEmbedder } from './embed.js';
 import { episodes } from './episodes.js';
 import { knowledgeRoutes } from './knowledge.js';
-import { openMemory } from './memory.js';
 import { buildServer } from './server.js';
 
 const cfg = loadConfig(
@@ -32,13 +30,9 @@ const cfg = loadConfig(
   ],
 );
 const db = pgDb(cfg.MEMORY_DATABASE_URL);
-const memory = openMemory(db, {
-  onBroken: (v) => app.log.error(v, 'the change log failed verification; memory is read-only'),
-});
 const embed = localEmbedder({ cacheDir: cfg.MEMORY_MODEL_DIR });
 const app = buildServer({
   db,
-  memory,
   door: door({
     tokens: {
       runner: cfg.MEMORY_TOKEN_RUNNER,
@@ -48,10 +42,9 @@ const app = buildServer({
     },
     signingKey: cfg.MEMORY_SIGNING_KEY,
   }),
-  writes: episodes(memory, embed),
+  writes: episodes(db, embed),
   logger: true,
 });
 knowledgeRoutes(app, db, embed);
-await memory.verify();
 await embed('ready');
 await app.listen({ host: '0.0.0.0', port: cfg.MEMORY_PORT });

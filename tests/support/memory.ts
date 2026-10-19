@@ -5,7 +5,6 @@
 import type { AddressInfo } from 'node:net';
 import { episodes } from '../../apps/memory/src/episodes.js';
 import { knowledgeRoutes } from '../../apps/memory/src/knowledge.js';
-import { openMemory } from '../../apps/memory/src/memory.js';
 import { buildServer } from '../../apps/memory/src/server.js';
 import { memoryDb, SIGNING_KEY, testDoor, testEmbed, TOKENS } from '../../apps/memory/test/db.js';
 
@@ -16,18 +15,10 @@ export async function memoryService() {
   let app: ReturnType<typeof buildServer> | null = null;
   let port = 0;
   async function start() {
-    // Each start reads the change log afresh, as the service does when it starts.
-    const memory = openMemory(db);
-    app = buildServer({
-      db,
-      memory,
-      door: testDoor(),
-      writes: episodes(memory, testEmbed),
-    });
+    app = buildServer({ db, door: testDoor(), writes: episodes(db, testEmbed) });
     knowledgeRoutes(app, db, testEmbed);
     await app.listen({ host: '127.0.0.1', port });
     port = (app.server.address() as AddressInfo).port;
-    await memory.verify();
   }
   await start();
   const url = `http://127.0.0.1:${port}`;
