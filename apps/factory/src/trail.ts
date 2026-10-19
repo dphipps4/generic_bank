@@ -1,7 +1,7 @@
 // A factory run's trail, kept as the Runner keeps a task run's: a step for every tool call and a
 // masked frame for every page reached, at most 60. It is kept under a task run with the factory
 // run's own id, so the Console's run page and its Frames button show it.
-import { leaf } from '@gb/crawler';
+import { seen } from '@gb/crawler';
 import { addFrame, addStep, type FrameStore, type Sql } from '@gb/runs';
 import { type Frame, maskText } from '@gb/runtime';
 
@@ -158,10 +158,7 @@ async function shownAt(sql: Sql, store: FrameStore, runId: string, seq: number) 
   return {
     page: `${f.host}${f.path}`,
     controls: m.controls.map((c) => c.name).filter(Boolean),
-    texts: m.tree
-      .split('\n')
-      .map(leaf)
-      .filter((t): t is string => !!t),
+    texts: seen(m.tree),
   } satisfies Shown;
 }
 

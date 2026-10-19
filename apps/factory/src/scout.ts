@@ -9,7 +9,18 @@
 // sees either. It never presses a control that could send money.
 import type { Answer, At, Goal, Row, Step, Table } from '@gb/crawler';
 import { LISTED, judge, pressesOn, refusals, SCREEN_KINDS } from './guard.js';
-import { accountsIn, actionOf, cents, leaf, leaves, namesIn, pagesOf, readOf } from '@gb/crawler';
+import {
+  accountsIn,
+  actionOf,
+  cents,
+  chosenIn,
+  leaf,
+  leaves,
+  namesIn,
+  pagesOf,
+  readOf,
+  seen,
+} from '@gb/crawler';
 import {
   type Box,
   choose,
@@ -115,11 +126,8 @@ const MONEY =
 const centre = (b: Box) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
 const within = (p: { x: number; y: number }, b: Box) =>
   p.x >= b.x && p.y >= b.y && p.x <= b.x + b.w && p.y <= b.y + b.h;
-const words = (f: Frame) =>
-  f.tree
-    .split('\n')
-    .map(leaf)
-    .filter((t): t is string => !!t);
+/** The words a person sees: a closed list shows only its chosen option. */
+const words = (f: Frame) => seen(f.tree);
 const shows = (f: Frame, w: string) => f.tree.toLowerCase().includes(w.toLowerCase());
 
 /** A value the Scout types, and the token its step keeps in the table. */
@@ -389,6 +397,9 @@ export function scout(deps: ScoutDeps, task: Task) {
         : await deps.judge({ action, why, frame: f, ref, record: taken(), route: t });
     if (j?.verdict === 'stop') stopped = true;
     waiting = j?.verdict === 'wait';
+    // A list's chosen option, as the picture shows it: its words alone would list every option.
+    const lists = chosenIn(f.tree);
+    let list = 0;
     const view = {
       frame: ref,
       page: row?.page ?? null,
@@ -397,6 +408,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         role: c.role,
         name: c.name,
         box: c.box,
+        ...(c.role === 'select' ? { chosen: lists[list++] || 'nothing chosen' } : {}),
         // A field the words don't name: structure can't find it by a label, sight can by its id.
         ...(!c.name && ['textbox', 'password', 'select'].includes(c.role)
           ? {
