@@ -200,6 +200,33 @@ describe('the Scout, scripted', () => {
     await expect(go('browser_open', { why: 'the browser lost its place' })).resolves.toBeDefined();
   }, 120_000);
 
+  it("refuses to type at a point whose field another label owns (run 28's amount went into the field below)", async () => {
+    const { go, s } = await aScout();
+    await go('browser_open', { why: 'to start' });
+    await go('name_page', {
+      name: 'sign-in',
+      kind: 'sign_in',
+      shows: ['Operator ID:', 'Password:'],
+    });
+    const box = (role: string) => s.latest()!.controls.find((c) => c.role === role)!.box;
+    // The operator's field, listed where the picture draws the password's: one field too low.
+    await go('list_page', {
+      items: [
+        {
+          id: 'i1',
+          kind: 'password field',
+          label: 'Operator ID:',
+          labelFrom: 'text',
+          box: box('password'),
+          labelBox: { ...box('password'), x: box('password').x - 120, w: 100 },
+        },
+      ],
+    });
+    await expect(go('type_item', { item: 'i1', value: 'user_id', why: 'sign in' })).rejects.toThrow(
+      /is on the field the page's words label "Password:", not "Operator ID:"/,
+    );
+  }, 120_000);
+
   it('refuses a target the runtime finds elsewhere', async () => {
     const { id, go } = await aScout();
     await go('browser_open', { why: 'to start' });

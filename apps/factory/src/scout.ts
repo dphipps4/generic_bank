@@ -466,6 +466,27 @@ export function scout(deps: ScoutDeps, task: Task) {
   let lastLayout = '';
   /** The region an action works on, cut again from the picture after it, for the Supervisor. */
   let closeUp: Box | null = null;
+  /**
+   * The label the page's own words give the field at a point, if any: the page's structure says so.
+   * Acting at a point on a field another label owns is refused (run 28 put an amount into the field
+   * below the one listed, and the tool reported it filled).
+   */
+  const ownerAt = async (p: { x: number; y: number }) => {
+    for (const w of words(latest!.frame).filter((x) => x.length <= 40 && /:\s*$/.test(x))) {
+      const f = await field(page, w).catch(() => null);
+      if (f && within(p, f.box)) return w;
+    }
+    return null;
+  };
+  const sameLabel = (a: string, b: string) =>
+    a.trim().replace(/:$/, '').toLowerCase() === b.trim().replace(/:$/, '').toLowerCase();
+  const mustOwn = async (it: Item, p: { x: number; y: number }) => {
+    const owner = await ownerAt(p);
+    if (owner && !sameLabel(owner, it.label))
+      throw new ToolRefusal(
+        `${Math.round(p.x)},${Math.round(p.y)} is on the field the page's words label "${owner}", not "${it.label}": list the page again with "${it.label}"'s field where the picture draws it, or act on it by its id`,
+      );
+  };
   /** What a field holds after typing, by length only: the typing is confirmed, the value unseen. */
   const holds = async (p: { x: number; y: number }, secret = false) => {
     const v = await valueAt(page, p).catch(() => '');
@@ -840,9 +861,10 @@ export function scout(deps: ScoutDeps, task: Task) {
           );
         const token = TOKEN[i.value];
         allow({ type: it.label, value: token }, LISTED[i.value]);
+        const p = centre(it.box);
+        await mustOwn(it, p);
         const at = await anchorOf(it, it.labelBox);
         const text = await textOf(i.value);
-        const p = centre(it.box);
         await typeAt(page, p, text);
         visit.push({ type: it.label, value: token, at });
         const held = await holds(p, secretValue(i.value));
@@ -897,8 +919,9 @@ export function scout(deps: ScoutDeps, task: Task) {
           { choose: it.label, containing: i.account === 'from' ? '$from' : '$to' },
           LISTED[i.account],
         );
-        const at = await anchorOf(it, it.labelBox);
         const p = centre(it.box);
+        await mustOwn(it, p);
+        const at = await anchorOf(it, it.labelBox);
         await chooseAt(page, p, (i.account === 'from' ? task.from : task.to) ?? '').catch(
           (e: Error) => {
             if (e instanceof TargetError) throw new ToolRefusal(e.message);
