@@ -3,6 +3,7 @@
 // elsewhere is refused, and the table the Scout writes as it goes runs under the same loop as bank
 // 1's own, with the balance the ledger holds.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { judge, refusals } from '../../apps/factory/src/guard.js';
 import { openTrail } from '../../apps/factory/src/trail.js';
 import { scout, type Judging } from '../../apps/factory/src/scout.js';
 import { MEMBERS, OPERATORS } from '../../apps/bank/src/seed.js';
@@ -98,25 +99,54 @@ describe('the Scout, scripted', () => {
     const { s, id, go } = await aScout(judged);
     const why = 'the next step';
     await go('browser_open');
-    await go('name_page', { name: 'sign-in', shows: ['Operator ID:', 'Password:'] });
+    await go('name_page', {
+      name: 'sign-in',
+      kind: 'sign_in',
+      shows: ['Operator ID:', 'Password:'],
+    });
     await go('browser_type', { id: id('textbox'), label: 'Operator ID', value: 'user_id', why });
     await go('browser_type', { id: id('password'), label: 'Password', value: 'password', why });
     await go('browser_press', { id: id('button', 'Sign In'), why });
-    await go('name_page', { name: 'code chooser', shows: ['Where should we send your code?'] });
+    await go('name_page', {
+      name: 'code chooser',
+      kind: 'staff_code',
+      shows: ['Where should we send your code?'],
+    });
     await go('browser_press', { id: id('button', 'Send code'), why });
-    await go('name_page', { name: 'code', shows: ['Enter the 6-digit code we sent'] });
+    await go('name_page', {
+      name: 'code',
+      kind: 'staff_code',
+      shows: ['Enter the 6-digit code we sent'],
+    });
     await go('browser_type', { id: id('textbox'), label: 'Code', value: 'code', why });
     await go('browser_press', { id: id('link', 'Verify'), why });
-    await go('name_page', { name: 'home', shows: ['Use Member Search to begin.'] });
+    await go('name_page', { name: 'home', kind: 'home', shows: ['Use Member Search to begin.'] });
     await go('browser_press', { id: id('link', 'Member Search'), why });
-    await go('name_page', { name: 'search', shows: ['Member number:'], never: ['Status'] });
+    await go('name_page', {
+      name: 'search',
+      kind: 'member.search',
+      shows: ['Member number:'],
+      never: ['Status'],
+    });
     await go('browser_type', { id: id('textbox'), label: 'Member number', value: 'member', why });
     await go('browser_press', { id: id('clickable', 'Search'), why });
     // A page showing the member's number is kept once a name read hides their name: that read first.
     await go('note_read', { what: 'name', text: '$member\n{name}\n{status}' });
-    await go('name_page', { name: 'found', shows: ['Member number:', 'Status'] });
-    await go('browser_press', { id: id('link', 'Open'), why });
-    await go('name_page', { name: 'summary', shows: ['Member Summary', 'Available balance:'] });
+    await go('name_page', {
+      name: 'found',
+      kind: 'member.search',
+      shows: ['Member number:', 'Status'],
+    });
+    await go('browser_press', { id: id('link', 'Open'), as: 'Matching member', why });
+    await go('name_page', {
+      name: 'summary',
+      kind: 'member.summary',
+      shows: ['Member Summary', 'Available balance:'],
+    });
+    // A press the guard refuses in service is refused while learning: the balance never opens the activity.
+    await expect(go('browser_press', { id: id('link', 'Activity'), why })).rejects.toThrow(
+      /the guard refuses this, as it would in service: check-balance does not press "Activity"/,
+    );
     await go('note_read', {
       what: 'balance',
       text: '{name} Account ending in {last4} Available balance: {available} Current balance: {current}',
@@ -136,6 +166,8 @@ describe('the Scout, scripted', () => {
       { press: 'Sign In' },
     ]);
     expect(t.rows.every((r) => /^f\d+$/.test(r.frame))).toBe(true);
+    // The guard would let every step through in service, and does as the crawler replays it.
+    expect(refusals(t, ['balance'])).toEqual([]);
 
     // It runs under the crawler's loop, as bank 1's own table does.
     const [checking] = (
@@ -145,7 +177,15 @@ describe('the Scout, scripted', () => {
     ).filter((a) => a.nickname === 'Everyday Checking');
     const page = await newPage(browser);
     const b = await checkBalance(
-      { page, url: bank.url, table: t, known: [], credentials: async () => credentials, code },
+      {
+        page,
+        url: bank.url,
+        table: t,
+        known: [],
+        credentials: async () => credentials,
+        code,
+        guard: (a) => expect(judge(t, 'balance', a)).toEqual({ allowed: true }),
+      },
       { member: MEMBERS.demo, account: 'Everyday Checking' },
     );
     expect(b.availableCents).toBe(checking!.availableCents);
@@ -154,6 +194,11 @@ describe('the Scout, scripted', () => {
   it('refuses a target the runtime finds elsewhere', async () => {
     const { id, go } = await aScout();
     await go('browser_open');
+    await go('name_page', {
+      name: 'sign-in',
+      kind: 'sign_in',
+      shows: ['Operator ID:', 'Password:'],
+    });
     // The password box, named by the operator ID's label: the runtime lands on another field.
     await expect(
       go('browser_type', {

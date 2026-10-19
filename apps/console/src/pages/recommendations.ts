@@ -23,6 +23,8 @@ export interface RecommendationDeps {
 interface Table {
   rows: {
     page: string;
+    /** The guard's kind for this screen. */
+    screen?: string;
     shows: string[];
     never?: string[];
     do: Record<string, unknown[]>;
@@ -30,6 +32,8 @@ interface Table {
   }[];
   answers: { says: string; code: string; frame: string }[];
   reads: Record<string, string | string[]>;
+  /** The guard's name for each control the bank draws with other words. */
+  names?: Record<string, string[]>;
   ends: Record<string, string>;
   submit: { press: string; frame: string };
 }
@@ -81,7 +85,7 @@ async function card(sql: Sql, r: Row, who: Viewer): Promise<string> {
   const rows = (t?.rows ?? [])
     .map(
       (row, i) =>
-        `<tr><td>${i + 1}</td><td>${esc(row.page)}</td><td>${row.shows.map((w) => `"${esc(w)}"`).join(', ')}${row.never?.length ? `<br><span class="soft">never ${row.never.map((w) => `"${esc(w)}"`).join(', ')}</span>` : ''}</td><td>${
+        `<tr><td>${i + 1}</td><td>${esc(row.page)}<br><span class="soft">${row.screen ? `the guard's ${esc(row.screen)}` : 'no kind: the guard refuses its steps'}</span></td><td>${row.shows.map((w) => `"${esc(w)}"`).join(', ')}${row.never?.length ? `<br><span class="soft">never ${row.never.map((w) => `"${esc(w)}"`).join(', ')}</span>` : ''}</td><td>${
           Object.entries(row.do)
             .map(
               ([goal, steps]) =>
@@ -98,6 +102,12 @@ async function card(sql: Sql, r: Row, who: Viewer): Promise<string> {
           .flat()
           .map((x) => `<code>${esc(x)}</code>`)
           .join(', ')}</li>`,
+    )
+    .join('');
+  const names = Object.entries(t?.names ?? {})
+    .map(
+      ([listed, drawn]) =>
+        `<li>"${esc(listed)}" is drawn ${drawn.map((d) => `"${esc(d)}"`).join(' or ')}</li>`,
     )
     .join('');
   const answers = (t?.answers ?? [])
@@ -121,7 +131,7 @@ async function card(sql: Sql, r: Row, who: Viewer): Promise<string> {
   return `<section class="card"><h2>${esc(r.tenant)} · <a href="/runs/${esc(r.factoryRunId)}"><code>${esc(r.factoryRunId)}</code></a> · ${when(r.createdAt)}</h2>
 <p>The gate's runs:</p><ul>${check || '<li class="soft">none</li>'}</ul>
 <table><tr><th>#</th><th>Page</th><th>Shown by</th><th>Steps</th><th>Evidence</th></tr>${rows}</table>
-${reads ? `<p>Values are read as:</p><ul>${reads}</ul>` : ''}${answers ? `<p>The bank's answers:</p><ul>${answers}</ul>` : ''}${t?.submit?.press ? `<p>The transfer is sent by "${esc(t.submit.press)}", pressed only under a person's approval of each transfer. ${button(t.submit.frame)}</p>` : ''}${decide}</section>`;
+${reads ? `<p>Values are read as:</p><ul>${reads}</ul>` : ''}${names ? `<p>The guard knows these controls by the bank's words:</p><ul>${names}</ul>` : ''}${answers ? `<p>The bank's answers:</p><ul>${answers}</ul>` : ''}${t?.submit?.press ? `<p>The transfer is sent by "${esc(t.submit.press)}", pressed only under a person's approval of each transfer. ${button(t.submit.frame)}</p>` : ''}${decide}</section>`;
 }
 
 export function recommendationPages(app: FastifyInstance, deps: RecommendationDeps) {

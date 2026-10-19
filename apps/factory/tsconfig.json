@@ -16,6 +16,9 @@
       "path": "../../packages/db"
     },
     {
+      "path": "../../packages/guardrails"
+    },
+    {
       "path": "../../packages/runs"
     },
     {

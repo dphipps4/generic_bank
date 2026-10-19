@@ -172,25 +172,50 @@ async function value(s: Session, task: Task, v: string): Promise<string> {
 const SECRETS = new Set(['$operator', '$password']);
 const screenOf = (t: Table, page: string) => t.rows.find((r) => r.page === page)?.screen ?? page;
 
+/** The action a step asks the guard for: what is typed as plain text is `typed`, once known. */
+export function actionOf(screen: string, st: Step, typed = ''): Action {
+  if ('type' in st)
+    return SECRETS.has(st.value)
+      ? { screen, verb: 'type', control: st.type, secret: true }
+      : { screen, verb: 'type', control: st.type, typed };
+  if ('choose' in st) return { screen, verb: 'choose', control: st.choose };
+  return { screen, verb: 'press', control: st.press };
+}
+
+/**
+ * Every action a route asks the guard for on one goal, before any value is known: each row's
+ * steps, then the read where the goal ends. Submit is not among them: only a person's grant
+ * lets it through.
+ */
+export function routeActions(t: Table, goal: Goal): (Action & { page: string })[] {
+  const steps = t.rows.flatMap((r) =>
+    [...(r.do.any ?? []), ...(r.do[goal] ?? [])].map((st) => ({
+      ...actionOf(r.screen ?? r.page, st),
+      page: r.page,
+    })),
+  );
+  const end = t.ends[goal];
+  return [...steps, { screen: screenOf(t, end), verb: 'read', control: 'Page', page: end }];
+}
+
 /** Does one step, once the guard allows it; says what was done, never with the value. */
 async function step(s: Session, task: Task, screen: string, st: Step): Promise<string> {
   if ('type' in st) {
     const v = await value(s, task, st.value);
-    const secret = SECRETS.has(st.value);
-    s.guard?.({ screen, verb: 'type', control: st.type, ...(secret ? { secret } : { typed: v }) });
+    s.guard?.(actionOf(screen, st, v));
     if (st.at) await typeAt(s.page, await pointOf(s.page, st.at), v);
     else await type(s.page, st.type, v);
     return `type ${st.value} into "${st.type}"`;
   }
   if ('choose' in st) {
-    s.guard?.({ screen, verb: 'choose', control: st.choose });
+    s.guard?.(actionOf(screen, st));
     const v = await value(s, task, st.containing);
     if (st.at) await chooseAt(s.page, await pointOf(s.page, st.at), v);
     else await choose(s.page, st.choose, v);
     return `choose ${st.containing} in "${st.choose}"`;
   }
   const near = st.near && (await value(s, task, st.near));
-  s.guard?.({ screen, verb: 'press', control: st.press });
+  s.guard?.(actionOf(screen, st));
   if (st.at) await clickAt(s.page, await pointOf(s.page, st.at));
   else await press(s.page, st.press, near ? { near } : {});
   return `press "${st.press}"`;
