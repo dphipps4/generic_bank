@@ -29,7 +29,7 @@ It takes one action at a time, each with a one-line reason. It can act on a cont
 While it works, it writes the route:
 
 - **It names each screen as soon as it arrives,** before acting on it. A name lists words the screen shows as text, and words it shows as pictures, each with its box. A picture is kept as a small cut-out, so code can find it on the screen again. Code checks that the words are really there, that no other screen matches the same words, and that no word holds this task's own values, such as the member's number, which another task's page would not show.
-- **Code files each step under the screen it was taken on.** A field the Scout found by position is found again by the cut-out of its label alone, never by the field, because what a field holds changes.
+- **Code files each step under the screen it was taken on.** On a screen any task can meet, such as a sign-in, its code or a notice, the steps serve every goal, because which of them a task meets depends on whether the bank trusts the browser, not on the task. A field the Scout found by position is found again by the cut-out of its label alone, never by the field, because what a field holds changes.
 - **It notes the bank's own answers,** such as "no member found", and trouble: a page that gets in the way, like a notice, which code answers by starting again from home.
 - **It notes how each value is read** by pointing at the label before it. The tool writes the pattern, then reads the live page with the crawler's own code, and keeps the read only if it reads this task's accounts correctly.
 - **It says when a goal is reached.** The screen where a goal ends holds no steps for that goal. For a transfer, it names the Submit button without ever pressing it.
@@ -63,11 +63,11 @@ Each lesson belongs to an agent. Memory serves each agent its own lessons and th
 
 ## The gate, and a person's approval
 
-A route must work before a person sees it. First, code checks every step against the guard, with no browser, and a route the guard would refuse is not run at all. Then the gate replays the route live through the crawler's own code, from a browser that has never signed in, as the service's first run will, with the guard judging every step as it does in service. It checks exactly what an approval would promote: the balance, if the route covers it, and, if the route covers the transfer, a transfer up to its review and then the account's activity, never pressing Submit. Then it runs once more with a surprise dialog forced.
+A route must work before a person sees it. First, code checks every step against the guard, with no browser, and a route the guard would refuse is not run at all. Then the gate replays the route live through the crawler's own code, from a browser that has never signed in, as the service's first run will, with the guard judging every step as it does in service. It checks exactly what an approval would promote: the balance, if the route covers it, and, if the route covers the transfer, a transfer up to its review and then the account's activity, never pressing Submit. Then it runs each task again from a browser the bank trusts, started from the cookies the first run left, as the service keeps them between runs. A route starts at the bank's start page, so this run meets the sign-in that welcomes the operator back. Then it runs once more with a surprise dialog forced.
 
-- **A route that fails the plain run** is never shown to a person.
+- **A route that fails the plain run, or the run from a trusted browser,** is never shown to a person.
 - **A route that breaks under the forced dialog** is kept as broken, and a repair case opens.
-- **A route that passes both** waits on the Console's Recommendations page, each screen shown beside the picture it came from. Approving it promotes it for the tasks it covers: the balance alone serves check-balance, and a transfer also needs the account's activity. Then `GET /banks` lists them. Nothing else promotes a route.
+- **A route that passes all three** waits on the Console's Recommendations page, each screen shown beside the picture it came from. Approving it promotes it for the tasks it covers: the balance alone serves check-balance, and a transfer also needs the account's activity. Then `GET /banks` lists them. Nothing else promotes a route.
 
 ## Repair
 
