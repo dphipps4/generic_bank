@@ -1,13 +1,17 @@
 // The gate (prompts, part 2, §5): a learned table must work before a person sees it. Code runs it
-// live through the crawler's own loop: the balance, and a transfer up to its review (never sent).
-// Then once more with one hazard forced, the confirmation dialog the brief names. A table that
-// fails the first run is not recommended; one that breaks under the hazard is kept as broken and
-// opens a repair case with that run's frames, as a break in service would. A table that passes
-// both waits in the Console for a person's approval: nothing promotes it but that.
+// live through the crawler's own loop, exactly what an approval would promote: the balance, if the
+// route ends there; and, if it ends at both the review and the activity, a transfer up to its
+// review (never sent) and the activity the transfer's Submit is confirmed by. Then once more with
+// one hazard forced, the confirmation dialog the brief names. A table that fails the first run is
+// not recommended; one that breaks under the hazard is kept as broken and opens a repair case with
+// that run's frames, as a break in service would. A table that passes both waits in the Console
+// for a person's approval: nothing promotes it but that.
 import {
   type Action,
   checkBalance,
+  crawl,
   type Goal,
+  leaves,
   prepareTransfer,
   Stop,
   type Table,
@@ -39,7 +43,19 @@ export interface CheckRun {
   said: string;
 }
 
-/** One live run of the table: the balance, then a transfer to its review, its pages kept. */
+/**
+ * What an approval would promote, as the registry decides it: the balance needs its end; the
+ * transfer needs its review and the activity it is checked against.
+ */
+export function covered(t: Table) {
+  const ends = t.ends as Partial<Table['ends']>;
+  return { balance: !!ends.balance, transfer: !!ends.transfer && !!ends.history };
+}
+
+/**
+ * One live run of what the table covers, its pages kept: the balance; a transfer to its review;
+ * the activity, opened and read, with nothing submitted.
+ */
 async function checkRun(
   d: GateDeps,
   o: {
@@ -81,25 +97,40 @@ async function checkRun(
     keep: async (seen: { did: string; page: string | null }, f: Parameters<typeof trail.step>[1]) =>
       void (await trail.step({ name: seen.page ?? 'unknown page', action: seen.did }, f)),
   };
+  const covers = covered(o.table);
+  const task = { member: o.member, from: o.from, to: o.to, amountCents: 100, memo: 'GBX GATE' };
+  const checked: string[] = [];
   try {
-    const b = await checkBalance(session, { member: o.member, account: o.from });
-    goal = 'transfer';
-    const r = await prepareTransfer(session, {
-      member: o.member,
-      from: o.from,
-      to: o.to,
-      amountCents: 100,
-      memo: 'GBX GATE',
-    });
-    const ok = r.amountCents === 100;
-    return {
-      runId: o.runId,
-      hazard,
-      ok,
-      said: ok
-        ? `the balance read ${b.availableCents} cents; the review read $1.00`
-        : `the review read ${r.amountCents} cents, not 100`,
-    };
+    if (covers.balance) {
+      const b = await checkBalance(session, { ...task, account: o.from });
+      checked.push(`the balance read ${b.availableCents} cents`);
+    }
+    if (covers.transfer) {
+      goal = 'transfer';
+      const r = await prepareTransfer(session, task);
+      if (r.amountCents !== 100)
+        return {
+          runId: o.runId,
+          hazard,
+          ok: false,
+          said: `the review read ${r.amountCents} cents, not 100`,
+        };
+      checked.push('the review read $1.00');
+      // The activity a Submit is confirmed by, reached as service reaches it, under the transfer's
+      // job. The crawl ends only on the page the route names for it; nothing was sent, so there is
+      // no transfer to find, and reading its lines is enough.
+      goal = 'history';
+      await crawl(session, task, 'history');
+      session.guard({
+        screen:
+          o.table.rows.find((r) => r.page === o.table.ends.history)?.screen ?? o.table.ends.history,
+        verb: 'read',
+        control: 'Page',
+      });
+      const lines = await leaves(page);
+      checked.push(`the activity opened (${lines.length} lines)`);
+    }
+    return { runId: o.runId, hazard, ok: true, said: checked.join('; ') };
   } catch (e) {
     return { runId: o.runId, hazard, ok: false, said: e instanceof Stop ? e.message : String(e) };
   } finally {
@@ -126,21 +157,33 @@ export async function gate(
     to: string;
   },
 ): Promise<{ recommendationId: string | null; runs: CheckRun[] }> {
-  // A route the guard would refuse in service is not run at all.
+  // A route that covers nothing an approval would promote, or one the guard would refuse in
+  // service, is not run at all.
+  const covers = covered(o.table);
   const refused = refusals(o.table);
-  const runs: CheckRun[] = refused.length
-    ? [
-        {
-          runId: `${o.factoryRunId}-check`,
-          hazard: null,
-          ok: false,
-          said: `the guard would refuse it in service: ${refused
-            .slice(0, 3)
-            .map((r) => `on "${r.page}", ${r.rule}`)
-            .join('; ')}`,
-        },
-      ]
-    : [await checkRun(d, { ...o, runId: `${o.factoryRunId}-check` }, null)];
+  const runs: CheckRun[] =
+    !covers.balance && !covers.transfer
+      ? [
+          {
+            runId: `${o.factoryRunId}-check`,
+            hazard: null,
+            ok: false,
+            said: 'the route covers nothing a person could approve: no end for the balance, and no transfer with both its review and its activity',
+          },
+        ]
+      : refused.length
+        ? [
+            {
+              runId: `${o.factoryRunId}-check`,
+              hazard: null,
+              ok: false,
+              said: `the guard would refuse it in service: ${refused
+                .slice(0, 3)
+                .map((r) => `on "${r.page}", ${r.rule}`)
+                .join('; ')}`,
+            },
+          ]
+        : [await checkRun(d, { ...o, runId: `${o.factoryRunId}-check` }, null)];
   if (runs[0]!.ok && d.hazardKey)
     runs.push(await checkRun(d, { ...o, runId: `${o.factoryRunId}-${GATE_HAZARD}` }, GATE_HAZARD));
   const passed = runs.every((r) => r.ok);
