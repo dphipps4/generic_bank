@@ -64,7 +64,7 @@ The Supervisor thinks briefly. It runs at low effort, and its whole output per j
 ## Around it
 
 - **The model gateway** (`gateway.ts`, `upstream.ts`, `ledger.ts`): every model call goes through it. It meters each call, refuses one that would pass $25 a run or $150 a week before sending it, and keeps $1 of each run for the lessons.
-- **The agent** (`agent.ts`): one pi session per role. Each role's provider, model and effort come from `config/app.env`, so the Scout and the Supervisor can run different models. The default for both is `qwen/qwen3.8-max-prime` through OpenRouter, which is strong on pictures and reasoning.
+- **The agent** (`agent.ts`): one pi session per role. Each role's provider, model and effort come from `config/app.env`, so the Scout and the Supervisor can run different models. The default for both is `meta/muse-spark-1.3` through OpenRouter, which reads pictures and calls tools.
 - **Tests with no model:**
   - [`tests/factory/scout.test.ts`](../tests/factory/scout.test.ts): scripted tools write a table that reads bank 1's ledger, and a mismatched target is refused;
   - [`apps/factory/test/supervisor.test.ts`](../apps/factory/test/supervisor.test.ts): every judgment carries its picture, and an earlier frame opens;
