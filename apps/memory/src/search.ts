@@ -17,15 +17,12 @@ export function fuse(...rankings: string[][]): string[] {
 /** A question as a full-text query matching any of its words. Stop words drop out. */
 export const anyWord = (q: string) => (q.toLowerCase().match(/[a-z0-9]+/g) ?? []).join(' | ');
 
-/** A fact's words: `has_screen` and `statements.list` read as words. */
-export const FACT_TEXT = `to_tsvector('english', translate(predicate || ' ' || object, '._', '  '))`;
-
 /** How far down each list is read before fusing. */
 const DEPTH = 100;
 
 /** The lessons memory serves a bank ($1) of a vendor ($2): each at its current version, never
  *  retired there, and a pattern only once confirmed (a confirmed pattern since disputed is served,
- *  with its reason). A version waiting for approval is not served. */
+ *  with its reason). */
 export const SERVED = `FROM "Lesson" l JOIN "LessonVersion" v ON v."lessonId" = l.id AND v.version = l.current
   WHERE v.state <> 'retired' AND NOT ($1 = ANY(COALESCE(v."retiredAtBanks", '{}')))
     AND CASE v.scope WHEN 'pattern' THEN v.state = 'confirmed' OR (v.state = 'disputed' AND EXISTS (
@@ -59,31 +56,4 @@ export async function searchLessons(
     ),
   ]);
   return fuse(byText, byVector);
-}
-
-/** Failure signatures as vectors, embedded once each. */
-export function failureSearch(embed: Embed) {
-  const vectors = new Map<string, Promise<number[]>>();
-  const vectorOf = (failure: string) => {
-    let v = vectors.get(failure);
-    if (!v) vectors.set(failure, (v = embed(failure.replace(/[_-]+/g, ' '))));
-    return v;
-  };
-  /** The failures most like a question, best first, by full-text rank and similarity fused. */
-  return async <R extends { failure: string; rank: number }>(rows: R[], q: string) => {
-    const query = await embed(q);
-    const similarity = await Promise.all(
-      rows.map(async (r) => (await vectorOf(r.failure)).reduce((s, x, i) => s + x * query[i]!, 0)),
-    );
-    const byText = rows.filter((r) => r.rank > 0).sort((a, b) => b.rank - a.rank);
-    const byVector = rows
-      .map((r, i) => [r, similarity[i]!] as const)
-      .sort((a, b) => b[1] - a[1])
-      .map(([r]) => r);
-    const order = fuse(
-      byText.map((r) => r.failure),
-      byVector.map((r) => r.failure),
-    );
-    return order.map((f) => rows.find((r) => r.failure === f)!);
-  };
 }

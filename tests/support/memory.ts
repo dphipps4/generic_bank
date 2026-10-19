@@ -3,9 +3,7 @@
 // in place of the model. It starts empty, as memory does.
 // It can be stopped and started again on the same address and database, as when memory restarts.
 import type { AddressInfo } from 'node:net';
-import { catalogRoutes, curated } from '../../apps/memory/src/curated.js';
 import { episodes } from '../../apps/memory/src/episodes.js';
-import { factRoutes, facts } from '../../apps/memory/src/facts.js';
 import { knowledgeRoutes } from '../../apps/memory/src/knowledge.js';
 import { openMemory } from '../../apps/memory/src/memory.js';
 import { buildServer } from '../../apps/memory/src/server.js';
@@ -24,11 +22,9 @@ export async function memoryService() {
       db,
       memory,
       door: testDoor(),
-      writes: { ...episodes(memory, testEmbed), ...curated(memory, testEmbed), ...facts(memory) },
+      writes: episodes(memory, testEmbed),
     });
-    catalogRoutes(app, db);
     knowledgeRoutes(app, db, testEmbed);
-    factRoutes(app, db);
     await app.listen({ host: '127.0.0.1', port });
     port = (app.server.address() as AddressInfo).port;
     await memory.verify();

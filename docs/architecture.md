@@ -18,7 +18,7 @@ All of it lives in one Postgres database, with migrations in [`packages/db`](../
 - **A person's part** (`HumanTask`): a code to enter, a transfer to approve, or a stopped run to take over. Each has a deadline, and a person's answer is sealed until the run reads it. An approval issues one `ApprovalGrant`, which the single press of Submit spends.
 - **The registry** (`Driver`, `DriverVersion`, `RegistryEvent`): which version of a bank's crawler serves each task. A learned version holds its table; a fault demotes it, and a `RepairCase` opens. A guard trip freezes the bank (`Freeze`) until a person clears it.
 - **The factory** (`FactoryRun`, `ModelCall`, `Recommendation`): each run, each model call with its cost, and the table waiting for a person, with the gate's runs beside it.
-- **Memory**, a service of its own: runs and attempts with their frames, lessons citing those frames, and the facts a promotion proves.
+- **Memory**, a service of its own: runs, and lessons citing their frames.
 - **The API's own security** (`ApiClient`, `TokenFamily`, `ApiToken`): OAuth2 client credentials and rotating refresh tokens. Only hashes are stored.
 
 ## Where the risky parts live

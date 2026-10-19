@@ -35,9 +35,9 @@ After each of the Scout's actions, it sees the page that action led to, picture 
 
 **Decision:** the Scout drives and the Supervisor judges. **Not chosen:** the Supervisor dictating each step, which is how the first factory worked. That doubled the model calls per action, and the Scout ended up following orders instead of looking at the page.
 
-## 4. Memory's loop: `apps/factory/src/memory.ts` (490 lines) and `apps/memory`
+## 4. Memory's loop: `apps/factory/src/memory.ts` (450 lines) and `apps/memory`
 
-Memory saves evidence, retrieves it, and writes new evidence. Every run is saved with its frames. Both agents get the same knowledge pack: lessons with the frames they cite, and recent attempts. At the end, the Supervisor turns what the run checked into lessons, each citing a frame of this run, and marks which served lessons were relied on or contradicted. A proposed lesson reaches the agents as untested, and a lesson about hidden values is refused: the factory hides them, not the site. Memory's rules decide what that means, with no model: one contradiction disputes a lesson, two retire it, and a promotion confirms it. A lesson says how a site works ("member search sits behind a link on the home page"), never what it calls things. Memory starts empty.
+Memory saves evidence, retrieves it, and writes new evidence. Every run is saved with its frames. Both agents get the same knowledge pack: lessons with the frames they cite. At the end, the Supervisor turns what the run checked into lessons, each citing a frame of this run, and marks which served lessons were relied on or contradicted. A proposed lesson reaches the agents as untested, and a lesson about hidden values is refused: the factory hides them, not the site. Memory's rules decide what that means, with no model: one contradiction disputes a lesson, and two retire it. A person can retire one too. A lesson says how a site works ("member search sits behind a link on the home page"), never what it calls things. Memory starts empty.
 
 **Decision:** fixed rules over stored evidence decide what memory believes. **Not chosen:** a model judging its own lessons.
 

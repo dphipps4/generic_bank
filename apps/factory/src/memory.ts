@@ -16,7 +16,7 @@ export interface At {
   vendor: string | null;
 }
 
-/** The knowledge pack, as memory serves it: lessons, facts and episodes in tiers, best first. */
+/** The knowledge pack, as memory serves it: lessons in tiers, best first. */
 export interface Pack {
   bank: string;
   vendor: string | null;
@@ -54,7 +54,7 @@ export function memoryClient(o: { url: string; token: string; signingKey: string
     pack: (at: At, q: string) =>
       get<Pack>('/knowledge/pack', { bank: at.bank, vendor: at.vendor, q, budget: PACK_BUDGET }),
     query: (at: At, q: string) =>
-      get<{ items: Record<string, unknown>[]; facts: unknown[] }>('/knowledge/query', {
+      get<{ items: Record<string, unknown>[] }>('/knowledge/query', {
         bank: at.bank,
         vendor: at.vendor,
         q,
@@ -97,8 +97,8 @@ export function servedBy(pack: Pack): Map<string, string> {
   return out;
 }
 
-/** `memory_query`: read-only, at most eight lessons and scenarios and three facts. A lesson it
- *  serves can be named as relied on or contradicted. */
+/** `memory_query`: read-only, at most eight lessons. A lesson it serves can be named as relied on
+ *  or contradicted. */
 export function memoryQueryTool(memory: Memory, at: At, served: Map<string, string>): Tool {
   const Input = z.object({
     question: z.string().trim().min(3).max(500).describe('What to ask, in a few words'),
@@ -106,7 +106,7 @@ export function memoryQueryTool(memory: Memory, at: At, served: Map<string, stri
   return {
     name: 'memory_query',
     description:
-      'Asks memory what the factory knows: at most eight lessons and scenarios, and three facts about this site. Read-only.',
+      'Asks memory what the factory knows: at most eight lessons for this site. Read-only.',
     input: Input,
     async run(input) {
       const { question } = Input.parse(input);
@@ -447,44 +447,4 @@ export async function sendLearned(
       }),
     );
   return refused;
-}
-
-/**
- * A promotion, as memory's rules read it: the version's clean probation runs, each a run of the
- * task by the promoted driver at its bank, the last marked promoted. Memory holds each run once, so
- * sending them again is harmless. Returns why memory did not take it, or null.
- */
-export async function sendPromotion(
-  memory: Memory,
-  sql: Sql,
-  v: { id: string; tenant: string; task: string },
-  clean: number,
-): Promise<string | null> {
-  const runs = (
-    await sql.query<{ id: string; at: Date }>(
-      `SELECT id, at FROM "EvalResult" WHERE "driverVersionId" = $1 AND rung = 'E5'
-        ORDER BY (details->>'n')::int DESC LIMIT $2`,
-      [v.id, clean],
-    )
-  ).rows.reverse();
-  const vendor = await vendorOf(sql, v.tenant);
-  try {
-    for (const [i, r] of runs.entries()) {
-      const w = await memory.write('episodes/runs', {
-        id: r.id,
-        kind: 'task',
-        bank: v.tenant,
-        ...(vendor ? { vendor } : {}),
-        task: v.task,
-        driver: v.id,
-        outcome: 'succeeded',
-        ...(i === runs.length - 1 ? { mark: 'promoted' } : {}),
-        startedAt: r.at,
-      });
-      if (w.status >= 300 && w.body.error !== 'run_exists') return why(w);
-    }
-    return null;
-  } catch (e) {
-    return `memory did not answer: ${(e as Error).message}`;
-  }
 }
