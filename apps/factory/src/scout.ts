@@ -247,6 +247,24 @@ export function neverRepairs(
   return { rows, repaired };
 }
 
+/** The words that hold one of the task's own values, each with what it holds. */
+export function taskValuesIn(
+  words: string[],
+  task: { member: string; from?: string; to?: string; memo?: string },
+): [string, string][] {
+  const values: [string, string][] = [
+    [task.member, "member's number"],
+    [task.member.slice(-4), "member's number"],
+    [task.from ?? '', 'account'],
+    [task.to ?? '', 'account'],
+    [task.memo ?? '', 'memo'],
+  ];
+  return words.flatMap((w) => {
+    const v = values.find(([x]) => x.length >= 4 && w.toLowerCase().includes(x.toLowerCase()));
+    return v ? [[w, v[1]] as [string, string]] : [];
+  });
+}
+
 export function scout(deps: ScoutDeps, task: Task) {
   const { page, trail } = deps;
   const known = trail.known;
@@ -946,6 +964,12 @@ export function scout(deps: ScoutDeps, task: Task) {
       }) {
         if (!i.shows.length && !i.pictures?.length)
           throw new ToolRefusal('name it by words it shows as text, or by words drawn as pictures');
+        // A screen's words are ones every visit shows: not this task's member, accounts or memo.
+        const held = taskValuesIn([...i.shows, ...(i.pictures ?? []).map((p) => p.words)], task);
+        if (held.length)
+          throw new ToolRefusal(
+            `${held.map(([w, v]) => `"${w}" holds this task's own ${v}`).join('; ')}: another task's page shows another. Name the screen by words every such page shows`,
+          );
         if (nameFirst)
           throw new ToolRefusal(
             "this page shows the member's number: note_read name first, then name the page",
@@ -1272,7 +1296,10 @@ export function scout(deps: ScoutDeps, task: Task) {
           const at = await anchorOf(item, box).catch(() => anchorOf(item, wide));
           t.submit = { press: c?.name || it?.label || 'Submit', frame: latest.ref, at };
         }
-        fileVisit(row);
+        // The goal ends on this page: it holds no steps for the goal, whatever an earlier visit here
+        // did (run 24: a press of Edit, filed on the review, would have left the goal's page).
+        visit = [];
+        delete row.do[task.goal];
         // The Supervisor checks the route before the goal counts: every screen named, each with its
         // own steps. A "wait" sends the Scout back to fix it.
         const j = await deps.judge({

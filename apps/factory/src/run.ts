@@ -320,6 +320,9 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
       log(`${runId}: ${goal}`);
       // The goal starts from the page as it is now: the Scout sees it before its first call (run 16:
       // a press made before looking was refused).
+      // Each goal is learned from where code following the route will start it: the site's start
+      // page, which a browser already signed in may show differently (run 24's gate met one).
+      if (reached.length) await page.goto(bank.url).catch(() => undefined);
       const first = await s.call('scout', 'browser_look', {}).catch(() => null);
       // The Supervisor times this goal, so it is told this goal.
       sup.goalNow(GOALS[goal](input));
