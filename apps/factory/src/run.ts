@@ -117,11 +117,28 @@ const packText = (p: Pack) =>
   );
 
 /**
- * The run's hard limit (the Justfile stops its container then), less what the gate and the lessons
- * need after the goals: every goal's clock, extensions too, ends before this.
+ * The run's limit in the agents' own time, less what the gate and the lessons need after the goals:
+ * every goal's clock, extensions too, ends before this. A person's time does not count: the end
+ * moves out by every wait for one.
  */
-const RUN_MS = Number(process.env.FACTORY_RUN_LIMIT_MINUTES ?? 15) * 60_000;
+const RUN_MS = Number(process.env.FACTORY_RUN_LIMIT_MINUTES ?? 20) * 60_000;
 const AFTER_GOALS_MS = 3.5 * 60_000;
+
+/** A run's end in the agents' own time: it moves out by every wait for a person. */
+export function runBudget(start: number, ms: number) {
+  let waited = 0;
+  return {
+    end: () => start + ms + waited,
+    async person<T>(wait: () => Promise<T>): Promise<T> {
+      const from = Date.now();
+      try {
+        return await wait();
+      } finally {
+        waited += Date.now() - from;
+      }
+    },
+  };
+}
 
 export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<RunOutput> {
   const { sql, store } = deps;
@@ -147,6 +164,8 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
   const knowledge = packText(pack);
   const runId = `${mode}-${input.bank}-${randomBytes(4).toString('hex')}`;
   const startedAt = new Date();
+  const budget = runBudget(startedAt.getTime(), RUN_MS - AFTER_GOALS_MS);
+  const deadlineAt = budget.end;
   /** The current goal's clock, which the Supervisor keeps. */
   let clock: ReturnType<typeof goalClock> | null = null;
   await sql.query(
@@ -269,40 +288,47 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
       };
       // Each goal has its own minutes, and every goal ends before the run's: the gate and the
       // lessons still fit inside the run's hard limit.
-      const deadline = startedAt.getTime() + RUN_MS - AFTER_GOALS_MS;
-      if (deadline - Date.now() < 30_000) {
+      if (deadlineAt() - Date.now() < 30_000) {
         diagnosis = `the run's ${RUN_MS / 60_000} minutes leave no time for the ${goal} goal`;
         outcome = `${goal} not reached`;
         break;
       }
-      const goalMs = Math.min(GOAL_MS, deadline - Date.now());
+      const goalMs = Math.min(GOAL_MS, deadlineAt() - Date.now());
       clock = goalClock(goalMs, () =>
         end(`out of time: the ${goal} goal's ${Math.round(goalMs / 6_000) / 10} minutes ran out`),
       );
-      const runOut = setTimeout(
-        () =>
-          end(`out of time: the run's ${RUN_MS / 60_000} minutes leave none for the ${goal} goal`),
-        Math.max(0, deadline - Date.now()),
-      );
+      let runOut: ReturnType<typeof setTimeout> | undefined;
+      const untilRunOut = () => {
+        clearTimeout(runOut);
+        runOut = setTimeout(
+          () =>
+            end(
+              `out of time: the run's ${RUN_MS / 60_000} minutes leave none for the ${goal} goal`,
+            ),
+          Math.max(0, deadlineAt() - Date.now()),
+        );
+      };
+      untilRunOut();
       const s = scout(
         {
           page,
           start: bank.url,
           trail,
           credentials: deps.credentials,
-          // A person's time does not count against the goal.
+          // A person's time does not count against the goal, or the run.
           code: async () => {
             clock?.pause();
             try {
-              return await deps.code(runId);
+              return await budget.person(() => deps.code(runId));
             } finally {
               clock?.resume();
+              untilRunOut();
             }
           },
           judge: async (j) => {
             const v = await sup.judge(j);
             // An extension never reaches past the run's own end.
-            const room = deadline - Date.now() - (clock?.leftMs() ?? 0);
+            const room = deadlineAt() - Date.now() - (clock?.leftMs() ?? 0);
             const add = Math.min((v.extendSeconds ?? 0) * 1000, room);
             if (add > 0 && clock?.extend(add))
               log(`${runId}: the Supervisor added ${Math.round(add / 1000)} s to the ${goal} goal`);

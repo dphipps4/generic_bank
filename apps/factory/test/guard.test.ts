@@ -52,6 +52,15 @@ describe("a learned route, against the guard's words", () => {
     expect(refusals(t, ['balance'])).toEqual([]);
   });
 
+  it('judges only the goals the route has an end for', () => {
+    const t = learned();
+    t.rows[0]!.screen = 'sign_in';
+    t.rows[1]!.screen = 'member.summary';
+    t.names = { 'Operator ID': ['Staff name'], Password: ['Secret word'], 'Sign In': ['Go'] };
+    t.ends = { balance: 'totals' } as Table['ends'];
+    expect(refusals(t)).toEqual([]);
+  });
+
   it("holds for bank 1's own route, every goal", () => {
     expect(refusals(bank1)).toEqual([]);
   });

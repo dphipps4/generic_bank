@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { memoryStore } from '../../../packages/runs/src/index.js';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import { memoryClient } from '../src/memory.js';
-import { factoryRun } from '../src/run.js';
+import { factoryRun, runBudget } from '../src/run.js';
 import { DEFAULT_ROLES } from './fakes.js';
 
 let db: Awaited<ReturnType<typeof controlDb>>;
@@ -40,5 +40,21 @@ describe('intake', () => {
       ),
     ).rejects.toThrow(/^no knowledge pack, no run: /);
     expect((await runs()).rows).toEqual(before);
+  });
+});
+
+describe("a run's budget", () => {
+  it("moves the run's end out by a person's time, and only by that", async () => {
+    const start = Date.now();
+    const b = runBudget(start, 60_000);
+    expect(b.end()).toBe(start + 60_000);
+    await b.person(() => new Promise((r) => setTimeout(r, 80)));
+    expect(b.end() - (start + 60_000)).toBeGreaterThanOrEqual(75);
+    // A wait that fails still counts as a person's.
+    const before = b.end();
+    await b
+      .person(() => new Promise((_, no) => setTimeout(() => no(new Error('expired')), 40)))
+      .catch(() => undefined);
+    expect(b.end() - before).toBeGreaterThanOrEqual(35);
   });
 });
