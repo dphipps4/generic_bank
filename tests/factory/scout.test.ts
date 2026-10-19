@@ -169,7 +169,7 @@ describe('the Scout, scripted', () => {
     // The table, in the step language bank 1's uses, citing the Scout's own frames.
     const t = s.table();
     expect(t.ends.balance).toBe('summary');
-    expect(t.rows.find((r) => r.page === 'sign-in')!.do.balance).toEqual([
+    expect(t.rows.find((r) => r.page === 'sign-in')!.do.any).toEqual([
       { type: 'Operator ID', value: '$operator' },
       { type: 'Password', value: '$password' },
       { press: 'Sign In' },
