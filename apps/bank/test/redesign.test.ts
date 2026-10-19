@@ -102,7 +102,6 @@ describe('with BANK_REDESIGN on', () => {
           'members/search',
           `members/${MEMBERS.demo}`,
           `members/${MEMBERS.demo}/transfer`,
-          `members/${MEMBERS.demo}/statements?account=${acct}`,
           `members/${MEMBERS.demo}/activity?account=${acct}`,
         ].map(async (p) => (await c.get(p)).body),
       );
@@ -120,7 +119,7 @@ describe('with BANK_REDESIGN on', () => {
       );
     });
 
-    it(`${id}: a balance, a transfer and a statement, by hand through the new pages`, async () => {
+    it(`${id}: a balance and a transfer, by hand through the new pages`, async () => {
       const { b, c } = on[id];
       const n = MEMBERS.demo;
       // The Menu leads to the member search; the search finds the member.
@@ -156,16 +155,6 @@ describe('with BANK_REDESIGN on', () => {
       const after = await accountsOf(b.db, n);
       expect(after[0]!.currentCents).toBe(from!.currentCents - 2_500);
       expect(after[1]!.currentCents).toBe(to!.currentCents + 2_500);
-
-      // A statement, from the tile's link: the bank's own PDF.
-      expect((await c.get(`members/${n}/statements?account=${from!.id}`)).status).toBe(200);
-      const rows = JSON.parse(
-        (await c.get(`api/members/${n}/accounts/${from!.id}/statements`)).body,
-      ).rows;
-      const pdf = rows.find((x: { balance: number | null }) => x.balance !== null).url as string;
-      const file = await c.raw(pdf);
-      expect(file.type).toBe('application/pdf');
-      expect(file.bytes.subarray(0, 5).toString()).toBe('%PDF-');
     });
   }
 });

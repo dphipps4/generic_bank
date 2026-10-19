@@ -24,7 +24,8 @@ const SUBMITS: SubmitStyle[] = ['image', 'button', 'jslink', 'cell'];
 /**
  * The product's pages, in a fixed order. Their submit dialects rotate through all four styles, so
  * every bank uses every style; the rotation's starting point is fixed per tenant.
- * Hashing each page on its own could leave a style unused.
+ * Hashing each page on its own could leave a style unused. Each page keeps its place, so a page's
+ * style never moves when another page changes.
  */
 export const PAGES = [
   'signin',

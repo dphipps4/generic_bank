@@ -9,7 +9,6 @@ import { pixelImage } from './markup/pixels.js';
 import { consoleRoutes } from './routes/console.js';
 import { layoutRoutes } from './routes/layout.js';
 import { signInRoutes } from './routes/signin.js';
-import { statementRoutes } from './routes/statements.js';
 import { transferRoutes } from './routes/transfer.js';
 
 export type { Bank } from './context.js';
@@ -103,7 +102,6 @@ export async function buildServer(bank: Bank, logger = false): Promise<FastifyIn
   signInRoutes(app, bank);
   layoutRoutes(app, bank);
   consoleRoutes(app, bank);
-  statementRoutes(app, bank);
   transferRoutes(app, bank);
   return app;
 }

@@ -98,14 +98,6 @@ export async function activity(
   }));
 }
 
-export async function balanceAt(db: Db, accountId: number, at: Date): Promise<number> {
-  const r = await db.query<{ b: number }>(
-    'SELECT COALESCE(SUM(amount_cents), 0)::bigint AS b FROM ledger_entries WHERE account_id = $1 AND NOT pending AND posted_at < $2',
-    [accountId, at],
-  );
-  return r.rows[0]?.b ?? 0;
-}
-
 export type TransferRefusal =
   | 'insufficient-funds'
   | 'not-permitted'
