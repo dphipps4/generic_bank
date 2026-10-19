@@ -29,7 +29,7 @@ const credentials = { operatorId: OPERATORS.service.id, password: PASSWORDS.serv
 const code = async () =>
   (await bank.admin<{ code: string }>(`/operators/${OPERATORS.service.id}/code`)).code;
 
-async function aScout(judged: Judging[] = []) {
+async function aScout(judged: Judging[] = [], goal: 'balance' | 'transfer' = 'balance') {
   const page = await newPage(browser);
   const trail = await openTrail({
     sql: db,
@@ -49,7 +49,16 @@ async function aScout(judged: Judging[] = []) {
       judge: async (j) => (judged.push(j), { verdict: 'continue', says: 'Fine.' }),
     },
     // The account the gate checks, as a run is always given it.
-    { goal: 'balance', member: MEMBERS.demo, from: 'Everyday Checking' },
+    goal === 'balance'
+      ? { goal, member: MEMBERS.demo, from: 'Everyday Checking' }
+      : {
+          goal,
+          member: MEMBERS.demo,
+          from: 'Everyday Checking',
+          to: 'Rainy Day Savings',
+          amountCents: 100,
+          memo: 'GBX EDGE',
+        },
   );
   /** The id of the latest page's control with this role and, if given, this name. */
   const id = (role: string, name?: string) => {
@@ -226,6 +235,64 @@ describe('the Scout, scripted', () => {
       /is on the field the page's words label "Password:", not "Operator ID:"/,
     );
   }, 120_000);
+
+  it("presses a control near the picture's edge whose name repeats, by its position", async () => {
+    const { go, id, s } = await aScout([], 'transfer');
+    const why = 'the next step';
+    await go('browser_open', { why: 'to start' });
+    await go('name_page', {
+      name: 'sign-in',
+      kind: 'sign_in',
+      shows: ['Operator ID:', 'Password:'],
+    });
+    await go('browser_type', { id: id('textbox'), label: 'Operator ID', value: 'user_id', why });
+    await go('browser_type', { id: id('password'), label: 'Password', value: 'password', why });
+    await go('browser_press', { id: id('button', 'Sign In'), why });
+    await go('name_page', {
+      name: 'code chooser',
+      kind: 'staff_code',
+      shows: ['Where should we send your code?'],
+    });
+    await go('browser_press', { id: id('button', 'Send code'), why });
+    await go('name_page', {
+      name: 'code',
+      kind: 'staff_code',
+      shows: ['Enter the 6-digit code we sent'],
+    });
+    await go('browser_type', { id: id('textbox'), label: 'Code', value: 'code', why });
+    await go('browser_press', { id: id('link', 'Verify'), why });
+    await go('name_page', { name: 'home', kind: 'home', shows: ['Use Member Search to begin.'] });
+    await go('browser_press', { id: id('link', 'Member Search'), why });
+    await go('name_page', {
+      name: 'search',
+      kind: 'member.search',
+      shows: ['Member number:'],
+      never: ['Status'],
+    });
+    await go('browser_type', { id: id('textbox'), label: 'Member number', value: 'member', why });
+    await go('browser_press', { id: id('clickable', 'Search'), why });
+    await go('note_read', { what: 'name', text: '$member\n{name}\n{status}' });
+    await go('name_page', {
+      name: 'found',
+      kind: 'member.search',
+      shows: ['Member number:', 'Status'],
+    });
+    await go('browser_press', { id: id('link', 'Open'), as: 'Matching member', why });
+    await go('note_read', { what: 'name', text: 'Member $member · {name}' });
+    await go('name_page', {
+      name: 'summary',
+      kind: 'member.summary',
+      shows: ['Member Summary', 'Available balance:'],
+    });
+    // The menu's "Transfer Funds", near the picture's left edge; the summary has another.
+    const controls = s.latest()!.controls;
+    const menu = controls
+      .map((c, i) => ({ c, i }))
+      .filter(({ c }) => c.role === 'link' && c.name === 'Transfer Funds')
+      .sort((a, b) => a.c.box.x - b.c.box.x)[0]!;
+    expect(menu.c.box.x).toBeLessThan(40);
+    await expect(go('browser_press', { id: `c${menu.i + 1}`, why })).resolves.toBeDefined();
+  }, 180_000);
 
   it('refuses a target the runtime finds elsewhere', async () => {
     const { id, go } = await aScout();
