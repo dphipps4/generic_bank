@@ -43,7 +43,7 @@ interface Row {
   factoryRunId: string;
   tenant: string;
   table: Table | null;
-  check: { hazard: string | null; ok: boolean; said: string }[] | null;
+  check: { hazard: string | null; trusted?: true; ok: boolean; said: string }[] | null;
   status: string;
   createdAt: Date;
   decidedBy: string | null;
@@ -116,7 +116,7 @@ async function card(sql: Sql, r: Row, who: Viewer): Promise<string> {
   const check = (r.check ?? [])
     .map(
       (c) =>
-        `<li>${c.hazard ? `with ${esc(c.hazard)} forced` : 'plain'}: <span class="pill ${c.ok ? 'succeeded' : 'failed'}">${c.ok ? 'passed' : 'failed'}</span> ${esc(c.said)}</li>`,
+        `<li>${c.hazard ? `with ${esc(c.hazard)} forced` : c.trusted ? 'from a trusted browser' : 'plain'}: <span class="pill ${c.ok ? 'succeeded' : 'failed'}">${c.ok ? 'passed' : 'failed'}</span> ${esc(c.said)}</li>`,
     )
     .join('');
   const open = r.status === 'open' && mayAct(who);

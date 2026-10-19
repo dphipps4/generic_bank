@@ -208,7 +208,9 @@ try {
       },
     );
     for (const r of g.runs)
-      log(`gate ${r.hazard ?? 'plain'}: ${r.ok ? 'passed' : 'failed'}: ${r.said}`);
+      log(
+        `gate ${r.hazard ?? (r.trusted ? 'trusted' : 'plain')}: ${r.ok ? 'passed' : 'failed'}: ${r.said}`,
+      );
     log(
       g.recommendationId
         ? `Approve or reject it in the Console: http://localhost:${cfg.CONSOLE_PORT}/recommendations`
