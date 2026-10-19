@@ -45,6 +45,8 @@ export const LessonText = z
 
 const Proposal = z.strictObject({
   runId: Id,
+  /** The agent that wrote it, and the only one it is served to: both, when none is named. */
+  audience: z.enum(['scout', 'supervisor', 'both']).default('both'),
   text: LessonText,
   area: Id,
   scenario: Id.optional(),
@@ -120,10 +122,10 @@ export function episodes(db: Db, embed: Embed): Partial<Record<Write, WriteHandl
           await tx.query<{ lessonId: string; version: number; similarity: number }>(
             `SELECT v."lessonId", v.version, 1 - (v.embedding <=> $1::vector) AS similarity
              FROM "LessonVersion" v JOIN "Lesson" l ON l.id = v."lessonId" AND l.current = v.version
-             WHERE v.scope = $2::"Scope" AND v.embedding IS NOT NULL
+             WHERE v.scope = $2::"Scope" AND v.embedding IS NOT NULL AND v.audience = $5::"Audience"
                AND (v.scope <> 'tenant' OR v.bank = $3) AND (v.scope <> 'vendor' OR v.vendor = $4)
              ORDER BY v.embedding <=> $1::vector LIMIT 1`,
-            [vector, p.scope, bank, vendor],
+            [vector, p.scope, bank, vendor, p.audience],
           )
         ).rows[0];
         const provenance = [role, p.runId, p.model ?? null, json(p.prompts), p.evidenceHash];
@@ -152,9 +154,9 @@ export function episodes(db: Db, embed: Embed): Partial<Record<Write, WriteHandl
         await tx.query(`INSERT INTO "Lesson" (id, current) VALUES ($1, 1)`, [id]);
         await tx.query(
           `INSERT INTO "LessonVersion" ("lessonId", version, text, signals, area, scenario, scope, bank, vendor, state,
-             "retiredAtBanks", confidence, seen, evidence, role, "runId", model, prompts, "evidenceHash", embedding)
+             "retiredAtBanks", confidence, seen, evidence, role, "runId", model, prompts, "evidenceHash", embedding, audience)
            VALUES ($1, 1, $2, '{}', $3, $4, $5::"Scope", $6, $7, 'proposed', '{}', $8::"Confidence", $9, $10::jsonb,
-             $11::"Role", $12, $13, $14::jsonb, $15, $16::vector)`,
+             $11::"Role", $12, $13, $14::jsonb, $15, $16::vector, $17::"Audience")`,
           [
             id,
             p.text,
@@ -168,6 +170,7 @@ export function episodes(db: Db, embed: Embed): Partial<Record<Write, WriteHandl
             JSON.stringify([citation]),
             ...provenance,
             vector,
+            p.audience,
           ],
         );
         out.lesson = id;

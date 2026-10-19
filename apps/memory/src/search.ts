@@ -23,8 +23,14 @@ const DEPTH = 100;
 /** The lessons memory serves a bank ($1) of a vendor ($2): each at its current version, never
  *  retired there, and a pattern only once confirmed (a confirmed pattern since disputed is served,
  *  with its reason). */
-export const SERVED = `FROM "Lesson" l JOIN "LessonVersion" v ON v."lessonId" = l.id AND v.version = l.current
-  WHERE v.state <> 'retired' AND NOT ($1 = ANY(COALESCE(v."retiredAtBanks", '{}')))
+/** The agent a lesson is served to; 'both' asks for every lesson. */
+export type Audience = 'scout' | 'supervisor' | 'both';
+
+/** The lessons served to one agent ($n names it): its own, and those for both. */
+export const servedTo = (
+  n: number,
+) => `FROM "Lesson" l JOIN "LessonVersion" v ON v."lessonId" = l.id AND v.version = l.current
+  WHERE ($${n}::"Audience" = 'both' OR v.audience IN ('both', $${n}::"Audience")) AND v.state <> 'retired' AND NOT ($1 = ANY(COALESCE(v."retiredAtBanks", '{}')))
     AND CASE v.scope WHEN 'pattern' THEN v.state = 'confirmed' OR (v.state = 'disputed' AND EXISTS (
                        SELECT 1 FROM "LessonVersion" p WHERE p."lessonId" = l.id AND p.version < l.current
                          AND p.scope = 'pattern' AND p.state = 'confirmed'))
@@ -40,17 +46,18 @@ export async function searchLessons(
   embed: Embed,
   at: { bank: string; vendor: string | null },
   q: string,
+  who: Audience,
 ): Promise<string[]> {
   const ids = async (sql: string, extra: unknown) =>
-    (await db.query<{ id: string }>(sql, [at.bank, at.vendor, extra])).rows.map((r) => r.id);
+    (await db.query<{ id: string }>(sql, [at.bank, at.vendor, extra, who])).rows.map((r) => r.id);
   const [byText, byVector] = await Promise.all([
     ids(
-      `SELECT l.id ${SERVED} AND ${LESSON_TEXT} @@ to_tsquery('english', $3)
+      `SELECT l.id ${servedTo(4)} AND ${LESSON_TEXT} @@ to_tsquery('english', $3)
        ORDER BY ts_rank_cd(${LESSON_TEXT}, to_tsquery('english', $3)) DESC, l.id LIMIT ${DEPTH}`,
       anyWord(q),
     ),
     ids(
-      `SELECT l.id ${SERVED} AND v.embedding IS NOT NULL
+      `SELECT l.id ${servedTo(4)} AND v.embedding IS NOT NULL
        ORDER BY v.embedding <=> $3::vector, l.id LIMIT ${DEPTH}`,
       asVector(await embed(q)),
     ),

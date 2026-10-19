@@ -63,7 +63,7 @@ export interface RunOutput {
 /** Each goal, as the Scout and the Supervisor are told it. */
 export const GOALS: Record<Goal, (i: RunInput) => string> = {
   balance: (i) =>
-    `Sign in, find member ${i.member}, and reach the page that shows the member's account balances. There, note how one account's balance is read, and where the member's name shows.`,
+    `Sign in, locate member ${i.member}, and reach the page that shows the member's account balances. There, note how one account's balance is read, and where the member's name shows.`,
   transfer: (i) =>
     `Prepare a transfer of $1.00 for member ${i.member} from their account ${i.from} to their account ${i.to}, with the memo given, up to its review page. There, note how the review is read, and name the control that would send it. Never send it.`,
   history: (i) =>
@@ -95,6 +95,14 @@ const SCOUT_CALLS = 60;
 
 /** Each goal's clock: a demo learns a bank in minutes, or stops and says why. */
 const GOAL_MS = Number(process.env.FACTORY_GOAL_MINUTES ?? 7) * 60_000;
+
+/** The base lessons of a pack, each a line: true of working any such console, from the first start. */
+export const baseText = (p: Pack) =>
+  Object.values(p.tiers)
+    .flat()
+    .filter((i) => i.base === true && typeof i.text === 'string')
+    .map((i) => `- ${String(i.text)}`)
+    .join('\n');
 
 /**
  * What memory knows, as the agents read it. A proposed lesson has never been confirmed by a run, so
@@ -149,19 +157,19 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
   if (!bank) throw new Error(`no bank ${input.bank} in the registry`);
   const mode = input.repair ? 'repair' : 'build';
   const at = { bank: input.bank, vendor: await vendorOf(sql, input.bank) };
-  // Intake: what memory knows. A run never reasons from nothing.
-  const pack = await deps.memory
-    .pack(
-      at,
-      Object.values(GOALS)
-        .map((g) => g(input))
-        .join(' '),
-    )
-    .catch((e: Error) => {
-      throw new Error(`no knowledge pack, no run: ${e.message}`);
-    });
-  const served = servedBy(pack);
-  const knowledge = packText(pack);
+  // Intake: what memory knows, for each agent its own lessons. A run never reasons from nothing.
+  const about = Object.values(GOALS)
+    .map((g) => g(input))
+    .join(' ');
+  const [scoutPack, supervisorPack] = await Promise.all(
+    (['scout', 'supervisor'] as const).map((who) => deps.memory.pack(at, about, who)),
+  ).catch((e: Error) => {
+    throw new Error(`no knowledge pack, no run: ${e.message}`);
+  });
+  const served = { scout: servedBy(scoutPack!), supervisor: servedBy(supervisorPack!) };
+  const knowledge = { scout: packText(scoutPack!), supervisor: packText(supervisorPack!) };
+  /** The Scout's base lessons, given again at the start of every goal. */
+  const scoutBase = baseText(scoutPack!);
   const runId = `${mode}-${input.bank}-${randomBytes(4).toString('hex')}`;
   const startedAt = new Date();
   const budget = runBudget(startedAt.getTime(), RUN_MS - AFTER_GOALS_MS);
@@ -185,7 +193,10 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
     bank: input.bank,
     known: [],
   });
-  const queryTool = memoryQueryTool(deps.memory, at, served);
+  const queryTool = {
+    scout: memoryQueryTool(deps.memory, at, served.scout, 'scout'),
+    supervisor: memoryQueryTool(deps.memory, at, served.supervisor, 'supervisor'),
+  };
   const memo = `GBX ${randomBytes(2).toString('hex').toUpperCase()}`;
   const page = await newPage(deps.browser);
   // The bank is open before the Scout first looks: no clock is spent on a blank page.
@@ -201,17 +212,26 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
     finished = true;
     // Only a run that reached a goal writes lessons: one that reached none has nothing proven to
     // teach, and its guesses about why became false lessons the next runs trusted.
+    // Each agent writes its own lessons, for itself.
+    const ended = [outcome, ...(diagnosis ? [`diagnosis: ${diagnosis}`] : [])];
+    const write = (who: 'scout' | 'supervisor') =>
+      writeLessons({
+        who,
+        agent: agent(who === 'scout' ? 'scout' : 'lessons'),
+        memory: deps.memory,
+        at,
+        trail,
+        ended,
+        served: served[who],
+      }).catch(() => null);
     const learned =
       reached.length === 0
         ? null
-        : await writeLessons({
-            agent: agent('lessons'),
-            memory: deps.memory,
-            at,
-            trail,
-            ended: [outcome, ...(diagnosis ? [`diagnosis: ${diagnosis}`] : [])],
-            served,
-          }).catch(() => null);
+        : Object.fromEntries(
+            (await Promise.all([write('scout'), write('supervisor')]))
+              .map((l, i) => [i === 0 ? 'scout' : 'supervisor', l] as const)
+              .filter(([, l]) => l),
+          );
     if (learned)
       await sendLearned(
         deps.memory,
@@ -249,7 +269,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
         },
         { goal: 'balance', member: input.member },
       ).tools('scout'),
-      ...toolsOf('scout', [queryTool]),
+      ...toolsOf('scout', [queryTool.scout]),
     ].map((t) => ({ name: t.name, description: t.description }));
     const sup = supervisor({
       agent: agent('supervisor'),
@@ -257,12 +277,12 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
       trail,
       goal: GOALS.balance(input),
       knowledge: [
-        knowledge,
+        knowledge.supervisor,
         ...(input.repair
           ? [`This run repairs a table that broke. Where it broke: ${input.repair.diagnosis}`]
           : []),
       ].join('\n\n'),
-      tools: [openFrameTool({ sql, store, trail }), queryTool],
+      tools: [openFrameTool({ sql, store, trail }), queryTool.supervisor],
       clock: { text: () => clock?.text() ?? 'no clock running' },
     });
     let conversation: Conversation = [];
@@ -354,7 +374,13 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
           conversation,
           say: [
             `Goal: ${GOALS[goal](input)}`,
-            ...(reached.length === 0 && knowledge ? [`What memory knows:\n${knowledge}`] : []),
+            ...(reached.length === 0 && knowledge.scout
+              ? [`What memory knows:\n${knowledge.scout}`]
+              : []),
+            // The base lessons, again at every later goal, so they never fall behind the rest.
+            ...(reached.length > 0 && scoutBase
+              ? [`The base lessons, true of working any such console:\n${scoutBase}`]
+              : []),
             ...(input.repair && reached.length === 0
               ? [
                   `This run repairs a table that broke; change only what moved. Where it broke: ${input.repair.diagnosis}`,
@@ -369,7 +395,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
             ...(nudge ? [nudge] : []),
           ].join('\n\n'),
           ...(first?.image ? { image: first.image } : {}),
-          tools: [...s.tools('scout'), ...toolsOf('scout', [queryTool])],
+          tools: [...s.tools('scout'), ...toolsOf('scout', [queryTool.scout])],
           calls: SCOUT_CALLS,
           maxTokens: 8000,
           signal: ctrl.signal,

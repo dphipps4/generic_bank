@@ -33,6 +33,8 @@ export interface Current {
   seen: boolean;
   evidence: Citation[];
   reason: string | null;
+  /** A base lesson: a run may dispute it, never retire it. */
+  base: boolean;
 }
 
 /** What a new version changes, and who made it. */
@@ -56,7 +58,7 @@ export async function currentOf(tx: Query, lessonId: string): Promise<Current | 
   return (
     await tx.query<Current>(
       `SELECT v."lessonId", v.version, v.text, v.area, v.scope::text AS scope, v.bank, v.vendor, v.state::text AS state,
-         COALESCE(v."retiredAtBanks", '{}') AS "retiredAtBanks", v.seen, v.evidence, v.reason
+         COALESCE(v."retiredAtBanks", '{}') AS "retiredAtBanks", v.seen, v.evidence, v.reason, l.base
        FROM "Lesson" l JOIN "LessonVersion" v ON v."lessonId" = l.id AND v.version = l.current
        WHERE l.id = $1`,
       [lessonId],
@@ -68,9 +70,9 @@ export async function currentOf(tx: Query, lessonId: string): Promise<Current | 
 export async function addVersion(tx: Query, cur: Current, c: Change): Promise<{ version: number }> {
   const version = cur.version + 1;
   await tx.query(
-    `INSERT INTO "LessonVersion" ("lessonId", version, text, why, signals, area, scenario, confidence, embedding,
+    `INSERT INTO "LessonVersion" ("lessonId", version, text, why, signals, area, scenario, confidence, embedding, audience,
        scope, bank, vendor, state, "retiredAtBanks", seen, evidence, reason, role, "runId", model, prompts, "evidenceHash")
-     SELECT "lessonId", $3, text, why, signals, area, scenario, confidence, embedding,
+     SELECT "lessonId", $3, text, why, signals, area, scenario, confidence, embedding, audience,
        $4::"Scope", $5, $6, $7::"LessonState", $8, $9, $10::jsonb, $11, $12::"Role", $13, $14, $15::jsonb, $16
      FROM "LessonVersion" WHERE "lessonId" = $1 AND version = $2`,
     [

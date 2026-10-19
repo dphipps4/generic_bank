@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { memoryStore } from '../../../packages/runs/src/index.js';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import { memoryClient } from '../src/memory.js';
-import { factoryRun, runBudget } from '../src/run.js';
+import { baseText, factoryRun, runBudget } from '../src/run.js';
 import { DEFAULT_ROLES } from './fakes.js';
 
 let db: Awaited<ReturnType<typeof controlDb>>;
@@ -56,5 +56,25 @@ describe("a run's budget", () => {
       .person(() => new Promise((_, no) => setTimeout(() => no(new Error('expired')), 40)))
       .catch(() => undefined);
     expect(b.end() - before).toBeGreaterThanOrEqual(35);
+  });
+});
+
+describe('the base lessons each goal starts with', () => {
+  it('are the base lessons of the pack, one per line, and nothing else', () => {
+    const pack = {
+      bank: 'example',
+      vendor: null,
+      budget: 12_000,
+      size: 0,
+      omitted: {},
+      tiers: {
+        patterns: [
+          { id: 'base-a', base: true, text: 'The picture is the page.' },
+          { id: 'p-1', text: 'A confirmed pattern a run proved.' },
+        ],
+        proposed: [{ id: 'r-1', text: 'A lesson a run proposed.' }],
+      },
+    };
+    expect(baseText(pack)).toBe('- The picture is the page.');
   });
 });
