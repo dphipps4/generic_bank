@@ -32,6 +32,8 @@ just show                       # Swagger UI, the Console, both banks and the si
 
 `just up` writes ACCESS.md, the one place with every page, login and member number. Then follow the demos: [Demo 1](docs/demo-1.md) runs both tasks on bank 1 and throws trouble at it, and [Demo 2](docs/demo-2.md) has the factory build bank 2's crawler from nothing.
 
+Bank 2's crawler is built from the terminal, not the Console: run `just factory example 40017732 8176 9433`. [Demo 2](docs/demo-2.md) walks you through it, including the sign-in codes it asks for and approving the route.
+
 | Recipe | What it does |
 |---|---|
 | `just setup` | Once, after cloning: checks the Mac, creates the secrets, builds the images |
