@@ -32,6 +32,8 @@ just show                       # Swagger UI, the Console, both banks and the si
 
 `just up` writes ACCESS.md, the one place with every page, login and member number. Then follow the demos: [Demo 1](docs/demo-1.md) runs both tasks on bank 1 and throws trouble at it, and [Demo 2](docs/demo-2.md) has the factory build bank 2's crawler from nothing.
 
+Bank 2's crawler is built from the terminal, not the Console, with `just factory example <member> <from> <to>`. ACCESS.md has the line ready to copy, with John Doe's numbers filled in. [Demo 2](docs/demo-2.md) walks you through the run, the sign-in codes it asks for and approving the route.
+
 | Recipe | What it does |
 |---|---|
 | `just setup` | Once, after cloning: checks the Mac, creates the secrets, builds the images |
@@ -103,7 +105,7 @@ AI wrote nearly all of this code, and a person set the requirements, reviewed th
 | `just access` | Writes ACCESS.md afresh |
 | `just all` | Starts again from nothing: deletes every volume and rebuilds the images; asks first |
 | `just secret-set <file> <key>` | Sets one secret unseen, for example `just secret-set factory OPENROUTER_API_KEY` |
-| `just factory <bank> <member> <from> <to>` | The factory learns a bank, or repairs its route, then the gate, for example `just factory example 40017732 8176 9433` |
+| `just factory <bank> <member> <from> <to>` | The factory learns a bank, or repairs its route, then the gate; ACCESS.md has the line filled in |
 | `just redesign on\|off` | Turns bank 2's vendor redesign on or off, which breaks its learned route on purpose |
 | `just frame <run> <frame> <role> <samples> <variant>` | Gives one kept frame to the real Scout or Supervisor, to test a change to its instructions |
 | `just dev` | To develop: Node, the dependencies, Chromium and every CI check |
