@@ -11,6 +11,12 @@ set -a; source config/app.env; [[ -f config/local.env ]] && source config/local.
 local_env="$(decrypt local)"
 get() { grep "^$1=" <<<"$2" | head -1 | cut -d= -f2-; }
 members="$(cat .run/members.md 2>/dev/null || echo '_The banks were not up: run just access once they are._')"
+# The demo's member and two of their accounts at bank 2, read from the banks, never written here.
+row="$(sed -n '/^\*\*Bank 2/,$p' .run/members.md 2>/dev/null | grep -m1 '^| `' || true)"
+member="$(cut -d'|' -f2 <<<"$row" | tr -dc '0-9' || true)"
+fours="$(cut -d'|' -f4 <<<"$row" | grep -oE '[0-9]{4}' | head -2 | tr '\n' ' ' || true)"
+factory="just factory example ${member:-<member>} ${fours:-<from> <to>}"
+factory="${factory% }"
 
 A=http://localhost:${API_PORT:-8000}
 C=http://localhost:${CONSOLE_PORT:-8080}
@@ -54,10 +60,10 @@ $members
 
 ## The demo, short
 
-1. **Swagger UI:** Authorize, then \`POST /tasks/check-balance\` with \`{"bank":"generic","memberId":"40017732","account":"Everyday Checking"}\`. The first time, copy the code from the simulated inbox into the Console's Inbox. The balance comes back in the same call.
+1. **Swagger UI:** Authorize, then \`POST /tasks/check-balance\` with \`{"bank":"generic","memberId":"${member:-<member>}","account":"Everyday Checking"}\`. The first time, copy the code from the simulated inbox into the Console's Inbox. The balance comes back in the same call.
 2. **Transfer:** \`POST /tasks/transfer\` on bank 1; approve it in the Console's Inbox; \`GET /tasks/{runId}\`; the run's Frames in the Console.
 3. **Hazards:** the Console's Hazard lab, Copy arguments beside \`promo\`, \`confirm-dialog\` or \`swallowed-click\`, added to the end of a bank 1 address.
-4. **Bank 2:** \`GET /banks\` says \`"stub": true\`. \`just factory example 40017732 <from> <to>\`, with two of the member's last fours above; approve the table on the Console's Recommendations; then a balance on bank 2.
+4. **Bank 2:** \`GET /banks\` says \`"stub": true\`. \`$factory\`, the first member's checking and savings; approve the table on the Console's Recommendations; then a balance on bank 2.
 
 ## Internal
 
