@@ -144,6 +144,23 @@ const RUN_MS = Number(process.env.FACTORY_RUN_LIMIT_MINUTES ?? 30) * 60_000;
 const AFTER_GOALS_MS = 3.5 * 60_000;
 
 /** A run's end in the agents' own time: it moves out by every wait for a person. */
+/**
+ * What a goal that was not reached leaves the route: every screen it named, and the never-words
+ * that keep them apart, but none of its own steps. A screen any task can meet, such as the sign-in
+ * a known browser gets, may first show up in a later goal, and serves every goal (run b2b5a536:
+ * the transfer goal ran out of time, and the trusted gate met a sign-in the route had dropped).
+ */
+export function withoutGoal(t: Table, goal: Goal): Table {
+  return {
+    ...t,
+    rows: t.rows.map((r) => ({
+      ...r,
+      do: Object.fromEntries(Object.entries(r.do).filter(([g]) => g !== goal)),
+    })),
+    ends: Object.fromEntries(Object.entries(t.ends).filter(([g]) => g !== goal)) as Table['ends'],
+  };
+}
+
 export function runBudget(start: number, ms: number) {
   let waited = 0;
   return {
@@ -440,6 +457,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
         // Ended by the Supervisor or its clock, no answer twice, or the sign-in refused twice.
         clock.stop();
         clearTimeout(runOut);
+        table = withoutGoal(s.table(), goal);
         diagnosis =
           e instanceof Ended || ctrl.signal.aborted
             ? String(ctrl.signal.reason ?? (e as Error).message)
@@ -452,6 +470,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
       conversation = said.conversation;
       table = s.table();
       if (!table.ends[goal]) {
+        table = withoutGoal(table, goal);
         diagnosis = ctrl.signal.aborted ? String(ctrl.signal.reason) : await sup.diagnose();
         outcome = `${goal} not reached`;
         break;

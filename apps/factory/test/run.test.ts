@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { memoryStore } from '../../../packages/runs/src/index.js';
 import { controlDb } from '../../../packages/oauth/test/control.js';
 import { memoryClient } from '../src/memory.js';
-import { baseText, factoryRun, runBudget } from '../src/run.js';
+import { baseText, factoryRun, runBudget, withoutGoal } from '../src/run.js';
 import { DEFAULT_ROLES } from './fakes.js';
 
 let db: Awaited<ReturnType<typeof controlDb>>;
@@ -76,5 +76,40 @@ describe('the base lessons each goal starts with', () => {
       },
     };
     expect(baseText(pack)).toBe('- The picture is the page.');
+  });
+});
+
+describe('a goal that was not reached', () => {
+  it('leaves its screens and their never-words in the route, but none of its steps', () => {
+    const route = {
+      bank: 'b',
+      home: '',
+      rows: [
+        { page: 'Sign in', shows: ['Log In'], do: { any: [{ press: 'Log In' }] }, frame: 'f1' },
+        {
+          page: 'Short sign in',
+          shows: ['Welcome back,'],
+          never: ['Code:'],
+          do: { any: [{ press: 'Log In' }] },
+          frame: 'f9',
+        },
+        {
+          page: 'Summary',
+          shows: ['Member Summary'],
+          do: { transfer: [{ press: 'Move Money' }] },
+          frame: 'f5',
+        },
+      ],
+      ends: { balance: 'Summary', transfer: 'Review' },
+      answers: [],
+      trouble: [],
+      submit: { press: '', frame: '' },
+      reads: { balance: '', review: '', name: [] },
+    } as unknown as Parameters<typeof withoutGoal>[0];
+    const kept = withoutGoal(route, 'transfer');
+    expect(kept.rows.map((r) => r.page)).toEqual(['Sign in', 'Short sign in', 'Summary']);
+    expect(kept.rows[1]).toMatchObject({ never: ['Code:'], do: { any: [{ press: 'Log In' }] } });
+    expect(kept.rows[2]!.do).toEqual({});
+    expect(kept.ends).toEqual({ balance: 'Summary' });
   });
 });
