@@ -60,6 +60,7 @@ const SCOUT = [
   'base-scout-ids',
   'base-scout-picture',
   'base-scout-plan',
+  'base-scout-sign-in-name',
   'base-scout-start-page',
 ];
 const SUPERVISOR = [
@@ -68,11 +69,12 @@ const SUPERVISOR = [
   'base-supervisor-goal-start',
   'base-supervisor-picture-first',
   'base-supervisor-same-box',
+  'base-supervisor-sign-in-name',
 ];
 const BOTH = ['base-lessons-behavior', 'base-lessons-start-page'];
 
 describe('the base lessons, from an empty start', () => {
-  it('are all thirteen there, with no run, for any bank', async () => {
+  it('are all fifteen there, with no run, for any bank', async () => {
     for (const bank of ['example', 'generic', 'a-bank-never-seen'])
       expect(baseIds(await pack(`bank=${bank}`))).toEqual(
         [...SCOUT, ...SUPERVISOR, ...BOTH].sort(),
@@ -96,7 +98,7 @@ describe('the base lessons, from an empty start', () => {
   });
 
   it('are embedded at start, so search finds them by meaning', async () => {
-    expect(await embedMissing(db, testEmbed)).toBeGreaterThanOrEqual(13);
+    expect(await embedMissing(db, testEmbed)).toBeGreaterThanOrEqual(15);
     expect(await embedMissing(db, testEmbed)).toBe(0);
   });
 });
