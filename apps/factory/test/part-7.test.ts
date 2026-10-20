@@ -7,18 +7,22 @@ import { LESSONS } from '../src/memory.js';
 import { SCOUT } from '../src/run.js';
 import { DIAGNOSE, MECHANICS, SYSTEM } from '../src/supervisor.js';
 
-const SQL = readFileSync(
-  join(import.meta.dirname, '../../memory/prisma/migrations/0005_base_lessons/migration.sql'),
-  'utf8',
-);
+const SQL = ['0005_base_lessons', '0006_sign_in_lessons']
+  .map((m) =>
+    readFileSync(
+      join(import.meta.dirname, `../../memory/prisma/migrations/${m}/migration.sql`),
+      'utf8',
+    ),
+  )
+  .join('\n');
 /** Each base lesson's id, text and audience, as the migration writes it. */
 const BASE = [
   ...SQL.matchAll(/\('(base-[a-z-]+)', 1, '((?:[^']|'')*)'.*'curator', '(\w+)'\)/g),
 ].map(([, id, text, audience]) => ({ id: id!, text: text!.replace(/''/g, "'"), audience }));
 
 describe("Part 7, in the agents' instructions", () => {
-  it('has all thirteen base lessons to check', () => {
-    expect(BASE).toHaveLength(13);
+  it('has all fifteen base lessons to check', () => {
+    expect(BASE).toHaveLength(15);
   });
 
   it("puts every base lesson in the instructions of the agent it's for", () => {
