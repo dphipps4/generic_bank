@@ -139,7 +139,7 @@ const packText = (p: Pack) =>
  * every goal's clock, extensions too, ends before this. A person's time does not count: the end
  * moves out by every wait for one.
  */
-const RUN_MS = Number(process.env.FACTORY_RUN_LIMIT_MINUTES ?? 20) * 60_000;
+const RUN_MS = Number(process.env.FACTORY_RUN_LIMIT_MINUTES ?? 30) * 60_000;
 const AFTER_GOALS_MS = 3.5 * 60_000;
 
 /** A run's end in the agents' own time: it moves out by every wait for a person. */
