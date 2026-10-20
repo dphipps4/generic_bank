@@ -199,13 +199,13 @@ bank: env image
 factory-up: env image
     @{{compose}} --profile factory up -d --wait {{factory}}
 
-# The factory learns a bank (or repairs it), then the gate, in FACTORY_RUN_LIMIT_MINUTES of the agents' own time (20): just factory example 40017732 1234 5678
+# The factory learns a bank (or repairs it), then the gate, in FACTORY_RUN_LIMIT_MINUTES of the agents' own time (30): just factory example 40017732 1234 5678
 [group('Factory')]
 factory bank member from to: factory-up
     #!/usr/bin/env bash
     set -uo pipefail
     # The hard stop: the agents' minutes, plus a person's three codes at three minutes each.
-    limit=$(( (${FACTORY_RUN_LIMIT_MINUTES:-20} + 9) * 60 ))
+    limit=$(( (${FACTORY_RUN_LIMIT_MINUTES:-30} + 9) * 60 ))
     name="gb-factory-run-$$"
     echo "  the run's hard limit: $(( limit / 60 )) minutes"
     ( sleep "$limit"; docker stop -t 5 "$name" >/dev/null 2>&1 && echo "  ✗ stopped at the run's hard limit of $(( limit / 60 )) minutes" ) &
