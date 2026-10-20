@@ -140,7 +140,7 @@ The factory prompts never mention bank 2's screens, labels or flows. Bank 2 is t
 >
 > - **What it keeps:** runs with their frames, and lessons. Each lesson cites the frames it came from.
 > - **A lesson says how a site works** ("member search sits behind a link on the home page"), never what the site calls things. No glossary and no word lists.
-> - **Base lessons:** memory starts with them, written by a migration and served from the very first start, with no run: each for the Scout, the Supervisor or both, all confirmed patterns. A run can dispute one but never retire it; only a person can.
+> - **Base lessons:** memory starts with thirteen, written by a migration and served from the very first start, with no run: six for the Scout, five for the Supervisor and two for both, all confirmed patterns. A run can dispute one but never retire it; only a person can.
 > - **Each lesson belongs to an agent.** Memory serves each agent its own lessons and those for both. A lesson no run has confirmed reaches the agents as untested, with no confidence, to check in this run. A lesson about masked values is refused.
 > - **Only a run that reached a goal writes lessons.** At its end, the Scout and the Supervisor each write their own, kept for themselves. Each served lesson the run relied on is marked relied on, or contradicted, citing this run's frame. Fixed rules decide the rest: one contradiction disputes a lesson, two retire it, and a person can retire one in the Console. No model judges its own lessons.
 

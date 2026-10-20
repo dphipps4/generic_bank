@@ -57,7 +57,7 @@ Its answer has three parts: the verdict, what it says to the Scout (at most 700 
 
 Memory keeps every run with its frames, and lessons. A lesson says how a site works ("member search sits behind a link on the home page"), never what the site calls things, and it cites the frames it came from.
 
-Memory doesn't start empty. It starts with fifteen base lessons, written by a migration and served from the very first start, before any run. Seven are for the Scout, six are for the Supervisor, and two are for both. All of them are confirmed patterns, true of working any such console. A run can dispute a base lesson, but never retire it; only a person can.
+Memory doesn't start empty. It starts with thirteen base lessons, written by a migration and served from the very first start, before any run. Six are for the Scout, five are for the Supervisor, and two are for both. All of them are confirmed patterns, true of working any such console. A run can dispute a base lesson, but never retire it; only a person can.
 
 Each lesson belongs to an agent. Memory serves each agent its own lessons and those for both, at the start of a run and whenever it asks. A lesson no run has confirmed yet reaches the agents marked untested, for them to check in this run. At the end of a run that reached a goal, the Scout and the Supervisor each write their own lessons, kept for themselves, and say which served lessons the run relied on or contradicted. Fixed rules decide the rest, with no model: one contradiction disputes a lesson, two retire it, and a person can retire one in the Console. A lesson about hidden values is refused, because the factory hides them, not the site.
 

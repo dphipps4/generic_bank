@@ -73,6 +73,8 @@ export interface ScoutDeps {
   judge(j: Judging): Promise<Judgment>;
   /** The table so far: an empty one for a bank never learned, the broken one for a repair. */
   table?: Table;
+  /** In a repair, the screens of the table that broke: only these may be named again with new words. */
+  repairs?: string[];
 }
 
 export interface Judging {
@@ -1068,10 +1070,24 @@ export function scout(deps: ScoutDeps, task: Task) {
             .flatMap((r) => r.shows)
             .filter((w, k, all) => !shows(f, w) && all.indexOf(w) === k)
             .slice(0, 3);
+        // A name already given to a screen this page doesn't match is another screen's: naming this
+        // one so would replace it, and its steps (a returning sign-in took the first sign-in's name,
+        // and a new browser met a sign-in no row knew). A repair renames the broken table's screens.
+        const old = t.rows.find((r) => r.page === i.name);
+        if (
+          old &&
+          !(deps.repairs ?? []).includes(i.name) &&
+          !(
+            old.shows.every((w) => shows(f, w)) &&
+            (old.looks ?? []).every((c) => findCrop(f.picture, Buffer.from(c, 'base64')))
+          )
+        )
+          throw new ToolRefusal(
+            `"${i.name}" already names another screen (${old.frame}), and this page doesn't show its words: ${old.shows.join('; ')}. Give this screen a name of its own; each screen keeps its own steps`,
+          );
         // The steps waiting to be filed were taken on the screen the Scout was on until now: filed
         // there before this one is named (run 25: a review taken for the form lost the form's steps).
         if (row && row.page !== i.name) fileVisit(row);
-        const old = t.rows.find((r) => r.page === i.name);
         const next: Row = {
           page: i.name,
           ...(i.kind !== 'other' ? { screen: i.kind } : {}),

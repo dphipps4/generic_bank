@@ -367,6 +367,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
             return v;
           },
           ...(table ? { table } : {}),
+          ...(input.repair ? { repairs: input.repair.table.rows.map((r) => r.page) } : {}),
         },
         task,
       );
