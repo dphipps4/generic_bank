@@ -39,7 +39,13 @@ export interface Shown {
   page: string;
   controls: string[];
   texts: string[];
+  /** Its fields and buttons, each by role and name: what a person can do there. */
+  form: string[];
 }
+
+/** A page's fields and buttons, each by role and name, in order: what a person can do there. */
+export const formOf = (controls: { role: string; name: string }[]) =>
+  controls.map((c) => `${c.role} ${c.name}`.trim()).sort();
 
 /** A frame's reference, or null when it was not stored. */
 export interface Seen {
@@ -171,6 +177,7 @@ async function shownAt(sql: Sql, store: FrameStore, runId: string, seq: number) 
     page: `${f.host}${f.path}`,
     controls: m.controls.map((c) => c.name).filter(Boolean),
     texts: seen(m.tree),
+    form: formOf(m.controls),
   } satisfies Shown;
 }
 

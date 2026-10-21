@@ -49,7 +49,7 @@ import {
 import { z } from 'zod';
 import type { Role } from './models.js';
 import { refusal, type Tool, ToolRefusal, type ToolResult } from './tools.js';
-import type { Trail } from './trail.js';
+import { formOf, type Trail } from './trail.js';
 
 /** What a run is for, and the values a teller is given for it. */
 export interface Task {
@@ -242,6 +242,27 @@ export function pointed(
 }
 
 /**
+ * Whether a page is a named screen met again, though it lacks words the screen was named by: its
+ * earlier name took words that change, such as a greeting (run build-example-914e6720 named the
+ * returning sign-in by "Welcome back", met it again without one, and could neither name it again
+ * nor give it a name of its own). It is that screen when the screen's own frame shows every word
+ * it is named by now, and both pages hold the same fields and buttons: a different screen, such as
+ * the full sign-in beside the returning one, holds others.
+ */
+export function sameScreen(
+  was: { texts: string[]; form: string[] },
+  now: { form: string[] },
+  words: string[],
+) {
+  const its = was.texts.join('\n').toLowerCase();
+  return (
+    words.length > 0 &&
+    words.every((w) => its.includes(w.toLowerCase())) &&
+    was.form.join('\n') === now.form.join('\n')
+  );
+}
+
+/**
  * A screen's never-words. Those it has already stay while its page still doesn't show them: naming
  * a known screen again keeps what tells it apart (run repair-example-14d72a47: the returning
  * sign-in, named again, lost the word that told it from the full sign-in, and a new browser's
@@ -274,7 +295,7 @@ export function neverRepairs(
     const word = names.find((w) => !its.includes(w.toLowerCase()));
     if (!word)
       throw new ToolRefusal(
-        `"${r.page}" shows every word you named this screen by: name it by words "${r.page}" doesn't show`,
+        `"${r.page}" shows every word you named this screen by: name it by words "${r.page}" doesn't show. If it is that same screen met again, name it "${r.page}" again by words both its pages show as text`,
       );
     repaired.push(`"${r.page}" now never shows "${word}"`);
     return { ...r, never: [...(r.never ?? []), word] };
@@ -1093,16 +1114,19 @@ export function scout(deps: ScoutDeps, task: Task) {
         // one so would replace it, and its steps (a returning sign-in took the first sign-in's name,
         // and a new browser met a sign-in no row knew). A repair renames the broken table's screens.
         const old = t.rows.find((r) => r.page === i.name);
+        const was = old && (await trail.shown(old.frame));
         if (
           old &&
           !(deps.repairs ?? []).includes(i.name) &&
           !(
             old.shows.every((w) => shows(f, w)) &&
             (old.looks ?? []).every((c) => findCrop(f.picture, Buffer.from(c, 'base64')))
-          )
+          ) &&
+          // The same screen, named again by words that hold, keeps its steps under its new words.
+          !(was && sameScreen(was, { form: formOf(f.controls) }, i.shows))
         )
           throw new ToolRefusal(
-            `"${i.name}" already names another screen (${old.frame}), and this page doesn't show its words: ${old.shows.join('; ')}. Give this screen a name of its own; each screen keeps its own steps`,
+            `"${i.name}" already names another screen (${old.frame}), and this page doesn't show its words: ${old.shows.join('; ')}. Give this screen a name of its own; each screen keeps its own steps. If it is that same screen and those words change (a greeting), name it "${i.name}" again by words both its pages show as text`,
           );
         // The steps waiting to be filed were taken on the screen the Scout was on until now: filed
         // there before this one is named (run 25: a review taken for the form lost the form's steps).
