@@ -22,7 +22,7 @@ import type { Role, Roles } from './models.js';
 import { scout, type Task } from './scout.js';
 import { goalClock, openFrameTool, routeText, supervisor } from './supervisor.js';
 import { toolsOf } from './tools.js';
-import { openTrail } from './trail.js';
+import { openTrail, type Trail } from './trail.js';
 
 export interface FactoryDeps {
   sql: Sql;
@@ -161,6 +161,16 @@ export function withoutGoal(t: Table, goal: Goal): Table {
   };
 }
 
+/**
+ * How the run ended, on its trail, where the Console shows it: the outcome, and why (a refused
+ * model call by its status and the provider's words; run 1cb48685's 403 was only in the terminal).
+ */
+export const recordEnd = (trail: Trail, outcome: string, diagnosis: string | null) =>
+  trail.step(
+    { name: 'run ended', action: outcome, ...(diagnosis ? { outcome: diagnosis } : {}) },
+    null,
+  );
+
 export function runBudget(start: number, ms: number) {
   let waited = 0;
   return {
@@ -238,6 +248,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
   const finish = async () => {
     if (finished) return;
     finished = true;
+    await recordEnd(trail, outcome, diagnosis).catch(() => undefined);
     // Only a run that reached a goal writes lessons: one that reached none has nothing proven to
     // teach, and its guesses about why became false lessons the next runs trusted.
     // Each agent writes its own lessons, for itself.
@@ -480,6 +491,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
     }
     if (reached.length === 3) outcome = 'every goal reached';
   } catch (e) {
+    diagnosis ??= (e as Error).message;
     // A crash still writes its lessons, before the error reaches the caller.
     await page
       .context()
