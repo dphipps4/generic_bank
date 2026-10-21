@@ -55,6 +55,13 @@ const replaysOf = async (id: string) =>
       [`${id}-%`],
     )
   ).rows.map((r) => [r.id.slice(id.length + 1), r.status, r.settled]);
+/** The run the bank's open repair case names: where the table last broke. */
+const caseRun = async () =>
+  (
+    await db.query<{ runId: string }>(
+      `SELECT "runId" FROM "RepairCase" WHERE tenant = 'generic' AND task = 'check-balance' AND status = 'open'`,
+    )
+  ).rows[0]?.runId;
 const input = {
   bank: 'generic',
   member: MEMBERS.demo,
@@ -72,6 +79,7 @@ describe('the gate', () => {
     expect(g.runs).toHaveLength(1);
     expect(g.runs[0]!.said).toMatch(/unknown_screen/);
     expect(await statusOf(id)).toBe('failed');
+    expect(await caseRun()).toBe(`${id}-check`);
     expect(await replaysOf(id)).toEqual([['check', 'failed', true]]);
   }, 240_000);
 
@@ -114,6 +122,8 @@ describe('the gate', () => {
     ]);
     expect(g.runs[1]!.said).toMatch(/stuck \(nothing to do on the welcome back page\)/);
     expect(g.recommendationId).toBeNull();
+    // The case names the replay that failed, so a repair starts there.
+    expect(await caseRun()).toBe(`${id}-trusted`);
     expect(await statusOf(id)).toBe('failed');
   }, 240_000);
 

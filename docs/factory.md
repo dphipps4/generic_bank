@@ -65,13 +65,12 @@ Each lesson belongs to an agent. Memory serves each agent its own lessons and th
 
 A route must work before a person sees it. First, code checks every step against the guard, with no browser, and a route the guard would refuse is not run at all. Then the gate replays the route live through the crawler's own code, from a browser that has never signed in, as the service's first run will, with the guard judging every step as it does in service. It checks exactly what an approval would promote: the balance, if the route covers it, and, if the route covers the transfer, a transfer up to its review and then the account's activity, never pressing Submit. Then it runs each task again from a browser the bank trusts, started from the cookies the first run left, as the service keeps them between runs. A route starts at the bank's start page, so this run meets the sign-in that welcomes the operator back. Then it runs once more with a surprise dialog forced.
 
-- **A route that fails the plain run, or the run from a trusted browser,** is never shown to a person.
-- **A route that breaks under the forced dialog** is kept as broken, and a repair case opens.
+- **A route that fails any of the three runs** is never shown to a person. A repair case opens, naming the run that failed, and the same `just factory` repairs the route from there while time is left in its hour.
 - **A route that passes all three** waits on the Console's Recommendations page, each screen shown beside the picture it came from. Approving it promotes it for the tasks it covers: the balance alone serves check-balance, and a transfer also needs the account's activity. Then `GET /banks` lists them. Nothing else promotes a route.
 
 ## Repair
 
-In service, a run that meets a page its route doesn't know stops and goes to a person. That version of the route is taken out of service, and a repair case opens. The next `just factory` run sees the open case and starts from the broken route, with a note of where it broke and what that page showed. It changes only what moved. It ends the same way: the gate, then a person's approval.
+In service, a run that meets a page its route doesn't know stops and goes to a person. That version of the route is taken out of service, and a repair case opens. The next `just factory` run sees the open case and starts from the broken route, with a note of where it broke and what that page showed. It changes only what moved, then runs the gate. If the gate fails, the same command repairs again, from that route and the run where the gate stopped, with the lessons each pass wrote, until a route passes or less than 10 minutes of its hour are left. It ends with a person's approval.
 
 `just redesign on` turns on bank 2's vendor redesign, which renames and moves things, to break the route on purpose and see this happen. `just redesign off`, or the next `just up`, puts the site back.
 

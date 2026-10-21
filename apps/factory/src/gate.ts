@@ -243,13 +243,18 @@ export async function gate(
       JSON.stringify(runs),
     ],
   );
-  if (broken)
+  // A table that failed any replay has a repair case, which names the replay that failed: the next
+  // repair starts from this table, where it broke.
+  const failed = runs.find((r) => !r.ok);
+  if (failed)
     await driverFault(d.sql, {
       tenant: o.bank,
       task: 'check-balance',
       versionId: null,
-      runId: runs.at(-1)!.runId,
-      why: `the learned table broke under ${GATE_HAZARD}: ${runs.at(-1)!.said}`,
+      runId: failed.runId,
+      why: broken
+        ? `the learned table broke under ${GATE_HAZARD}: ${failed.said}`
+        : `the learned table failed the gate: ${failed.said}`,
     });
   return { recommendationId: passed ? rec.rows[0]!.id : null, runs };
 }
