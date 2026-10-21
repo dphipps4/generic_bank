@@ -128,6 +128,9 @@ After each action the Supervisor judges it, and its words come back with the pag
 /** Model calls the Scout may make toward one goal: more than its minutes allow, so the clock ends a goal. */
 const SCOUT_CALLS = 150;
 
+/** Whether a run writes lessons: off until a person turns them back on. Base lessons are served either way. */
+const LESSONS = process.env.FACTORY_LESSONS === 'on';
+
 /** Each goal's clock: a goal is reached in minutes, or stops and says why. */
 const GOAL_MS = Number(process.env.FACTORY_GOAL_MINUTES ?? 15) * 60_000;
 
@@ -291,7 +294,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
         served: served[who],
       }).catch(() => null);
     const learned =
-      reached.length === 0
+      !LESSONS || reached.length === 0
         ? null
         : Object.fromEntries(
             (await Promise.all([write('scout'), write('supervisor')]))
