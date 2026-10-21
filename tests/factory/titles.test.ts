@@ -6,7 +6,7 @@ import { judge, refusals } from '../../apps/factory/src/guard.js';
 import { openTrail } from '../../apps/factory/src/trail.js';
 import { scout, type Judging, type Task } from '../../apps/factory/src/scout.js';
 import { checkBalance, type Table } from '../../packages/crawler/src/index.js';
-import { memoryStore } from '../../packages/runs/src/index.js';
+import { hazardHeader, memoryStore } from '../../packages/runs/src/index.js';
 import { controlDb } from '../../packages/oauth/test/control.js';
 import {
   type Browser,
@@ -33,7 +33,7 @@ afterAll(async () => {
 const credentials = { operatorId: 'teller0001', password: 'a-password-for-tests' };
 const task: Task = { goal: 'balance', member: SITE.member, from: SITE.account };
 
-async function aScout(page: Page, judged: Judging[], table?: Table) {
+async function aScout(page: Page, judged: Judging[], table?: Table, learn = true) {
   const trail = await openTrail({
     sql: db,
     store: memoryStore(),
@@ -51,6 +51,7 @@ async function aScout(page: Page, judged: Judging[], table?: Table) {
       code: async () => '',
       judge: async (j) => (judged.push(j), { verdict: 'continue', says: 'Fine.' }),
       ...(table ? { table } : {}),
+      learn,
     },
     task,
   );
@@ -188,4 +189,123 @@ describe('a site learned by its pages’ own titles', () => {
     // Every call, in order, in exactly one judgment's record.
     expect(judged.flatMap((j) => j.record.map((e) => e.tool))).toEqual(made);
   }, 120_000);
+  it("notes the site's own answers to forced hazards in the hazard pass, and the crawler then gets past them", async () => {
+    // The route, learned as above.
+    const known = await newPage(browser);
+    const { s, id, go } = await aScout(known, []);
+    await go('browser_open', { why: 'to start' });
+    await go('page_kind', { kind: 'sign_in' });
+    await go('browser_type', { id: id('textbox'), label: 'Operator ID', value: 'user_id', why });
+    await go('browser_type', { id: id('password'), label: 'Password', value: 'password', why });
+    await go('browser_press', { id: id('button', 'Sign In'), why });
+    await go('page_kind', { kind: 'home' });
+    await go('browser_press', { id: id('link', 'Member Search'), why });
+    await go('page_kind', { kind: 'member.search' });
+    await go('browser_type', { id: id('textbox'), label: 'Member number', value: 'member', why });
+    await go('browser_press', { id: id('button', 'Search'), why });
+    await go('note_read', { what: 'name', text: '$member\n{name}\nActive' });
+    await go('browser_press', { id: id('link', 'Open'), as: 'Matching member', why });
+    await go('page_kind', { kind: 'member.summary' });
+    await go('note_read', {
+      what: 'balance',
+      text: '{name} Account ending in {last4} Available balance: {available} Current balance: {current}',
+    });
+    await go('note_read', { what: 'name', text: 'Member $member · {name}' });
+    await go('goal_reached');
+    // The next goal starts from the start page in this browser, which the site knows: the shorter
+    // sign-in joins the route, as it does in a run.
+    const next = await aScout(known, [], s.table());
+    await next.go('browser_open', { why: 'the next goal, from the start page' });
+    await next.go('page_kind', { kind: 'sign_in' });
+    await next.go('browser_type', {
+      id: next.id('password'),
+      label: 'Password',
+      value: 'password',
+      why,
+    });
+    await next.go('browser_press', { id: next.id('button', 'Sign In'), why });
+    const learned = next.s.table();
+    const key = 'a-hazard-key-for-tests';
+    const under = (hazard: string) =>
+      newPage(browser, { headers: hazardHeader([hazard as never], key) });
+    const ended = (p: Page, t: Table) =>
+      checkBalance(crawlerSession(p, t), { member: SITE.member, account: SITE.account }).then(
+        () => null,
+        (e: { ended?: { code: string } }) => e.ended ?? { code: String(e) },
+      );
+    // Before the hazard pass, a promotion in place of a page stops the crawler.
+    expect(await ended(await under('promo'), learned)).not.toBeNull();
+
+    // The hazard pass: a promotion, then a record in use. Each is noted in the site's own words,
+    // and the route's steps don't change.
+    const steps = JSON.stringify(learned.rows);
+    const p1 = await aScout(await under('promo'), [], learned, false);
+    await p1.go('browser_open', { why: 'the goal again, by the route' });
+    await p1.go('page_kind', { kind: 'sign_in' });
+    await p1.go('browser_type', {
+      id: p1.id('textbox'),
+      label: 'Operator ID',
+      value: 'user_id',
+      why,
+    });
+    await p1.go('browser_type', {
+      id: p1.id('password'),
+      label: 'Password',
+      value: 'password',
+      why,
+    });
+    await p1.go('browser_press', { id: p1.id('button', 'Sign In'), why });
+    const promo = await p1.go('note_trouble', {
+      says: 'Have a look at what is new',
+      means: 'app_error',
+      press: 'Not now',
+      kind: 'promo',
+    });
+    expect(promo.text).toMatch(/stop now/);
+    await expect(p1.go('goal_reached')).rejects.toThrow(/changes nothing in the route/);
+    const afterPromo = p1.s.table();
+    expect(JSON.stringify(afterPromo.rows)).toBe(steps);
+    expect(afterPromo.trouble.map((t) => [t.says, t.press, t.screen])).toEqual([
+      ['Have a look at what is new', 'Not now', 'promo'],
+    ]);
+
+    await known.setExtraHTTPHeaders(hazardHeader(['record-in-use' as never], key));
+    const p2 = await aScout(known, [], afterPromo, false);
+    await p2.go('browser_open', { why: 'the goal again, by the route' });
+    // A browser the site knows meets the shorter sign-in.
+    await p2.go('browser_type', {
+      id: p2.id('password'),
+      label: 'Password',
+      value: 'password',
+      why,
+    });
+    await p2.go('browser_press', { id: p2.id('button', 'Sign In'), why });
+    await p2.go('browser_press', { id: p2.id('link', 'Member Search'), why });
+    await p2.go('browser_type', {
+      id: p2.id('textbox'),
+      label: 'Member number',
+      value: 'member',
+      why,
+    });
+    await p2.go('browser_press', { id: p2.id('button', 'Search'), why });
+    await p2.go('note_answer', {
+      says: 'This record is in use by another operator.',
+      means: 'record_in_use',
+    });
+    await known.setExtraHTTPHeaders({});
+    const taught = p2.s.table();
+    expect(JSON.stringify(taught.rows)).toBe(steps);
+    expect(taught.answers.map((a) => [a.says, a.code])).toEqual([
+      ['This record is in use by another operator.', 'record_in_use'],
+    ]);
+
+    // The crawler, with what the pass noted: past the promotion to the balance, and the right
+    // result when the record is in use.
+    const b = await checkBalance(crawlerSession(await under('promo'), taught), {
+      member: SITE.member,
+      account: SITE.account,
+    });
+    expect(b.availableCents).toBe(SITE.availableCents);
+    expect((await ended(await under('record-in-use'), taught))?.code).toBe('record_in_use');
+  }, 300_000);
 });

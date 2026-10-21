@@ -89,7 +89,7 @@ describe('the gate', () => {
     expect(g.runs.map((r) => [r.hazard, !!r.trusted, r.ok])).toEqual([
       [null, false, true],
       [null, true, true],
-      ['confirm-dialog', false, true],
+      ['confirm-dialog and promo', false, true],
     ]);
     // The balance, the review and the activity, each checked.
     for (const r of g.runs)
@@ -101,7 +101,7 @@ describe('the gate', () => {
     expect(await replaysOf(id)).toEqual([
       ['check', 'succeeded', true],
       ['trusted', 'succeeded', true],
-      ['confirm-dialog', 'succeeded', true],
+      ['hazards', 'succeeded', true],
     ]);
   }, 240_000);
 
@@ -144,7 +144,7 @@ describe('the gate', () => {
     expect(g.runs.map((r) => [r.hazard, !!r.trusted, r.ok])).toEqual([
       [null, false, true],
       [null, true, true],
-      ['confirm-dialog', false, true],
+      ['confirm-dialog and promo', false, true],
     ]);
     for (const r of g.runs) expect(r.said).toMatch(/^the balance read \d+ cents$/);
     expect(g.recommendationId).not.toBeNull();

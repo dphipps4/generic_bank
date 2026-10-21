@@ -192,7 +192,8 @@ export const MECHANICS = `How it works:
 - Values hidden by us show as █ in the words and as dark blocks in the picture: the value is there, hidden. A number keeps its last four digits; money and names are hidden whole.
 - A route is the pages, each known by its own title as the site gives it, each with its steps; code follows it with no model. Pages that share a title are told apart by the fields each holds. The Scout never names a page. A read is a pattern the crawler applies to the page's words; note_read checks it with the crawler's own code before keeping it.
 - A page that shows the member's number is kept only once a name read hides their name: on such a page the Scout's next step is note_read name, anchored on the member's number, and other actions are refused until then.
-- note_trouble notes a page that gets in the way and goes away on its own (a notice, a promotion); the crawler starts again from home when it shows.
+- note_trouble notes a page that gets in the way and goes away on its own (a notice, a promotion); when the page has its own control to get past it, the crawler presses that, and otherwise starts again from home when it shows.
+- After the goals comes the hazard pass: each hazard forced on its own, the goal done again by the route, and what the bank shows noted in its own words, with note_answer or note_trouble. Nothing in that pass changes the route's steps.
 - The guard judges each of the Scout's steps as it will in service: by the kind of page it is on, given with page_kind, and by the control's name in the guard's words, given with \`as\` for a press. A step it would refuse is refused now, with its rule. The route must pass the guard before a goal counts.
 - The Scout acts one call at a time: once a call in a reply is refused, the reply's later calls are not run.
 - The words show what a person sees: a closed list shows only its chosen option, and each list in the controls says what it shows.
