@@ -25,6 +25,9 @@ interface Table {
     page: string;
     /** The guard's kind for this screen. */
     screen?: string;
+    /** A learned page's own title, and the fields that tell it from another with that title. */
+    title?: string;
+    fields?: string[];
     shows: string[];
     never?: string[];
     do: Record<string, unknown[]>;
@@ -85,7 +88,7 @@ async function card(sql: Sql, r: Row, who: Viewer): Promise<string> {
   const rows = (t?.rows ?? [])
     .map(
       (row, i) =>
-        `<tr><td>${i + 1}</td><td>${esc(row.page)}<br><span class="soft">${row.screen ? `the guard's ${esc(row.screen)}` : 'no kind: the guard refuses its steps'}</span></td><td>${row.shows.map((w) => `"${esc(w)}"`).join(', ')}${row.never?.length ? `<br><span class="soft">never ${row.never.map((w) => `"${esc(w)}"`).join(', ')}</span>` : ''}</td><td>${
+        `<tr><td>${i + 1}</td><td>${esc(row.page)}<br><span class="soft">${row.screen ? `the guard's ${esc(row.screen)}` : 'no kind: the guard refuses its steps'}</span></td><td>${row.title !== undefined ? `its title "${esc(row.title)}"${row.fields?.length ? `<br><span class="soft">fields: ${esc(row.fields.join(', '))}</span>` : ''}` : row.shows.map((w) => `"${esc(w)}"`).join(', ')}${row.never?.length ? `<br><span class="soft">never ${row.never.map((w) => `"${esc(w)}"`).join(', ')}</span>` : ''}</td><td>${
           Object.entries(row.do)
             .map(
               ([goal, steps]) =>

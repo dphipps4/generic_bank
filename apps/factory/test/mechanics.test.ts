@@ -21,7 +21,7 @@ const MECHANICS_TOLD: [string, RegExp][] = [
   ['█ is our masking', /█/],
   ["a person's wait does not count against the clock", /clock pauses|does not count against/i],
   ['one call at a time', /one (thing|call) at a time/i],
-  ['the tool adds never-words', /never-word|leave never out/i],
+  ['a page is known by its own title, never named by the Scout', /own title/i],
   ['each goal has its own clock', /clock/i],
   ["each agent's lessons are its own", /lessons are your own/i],
   ['a list shows its chosen option', /closed list/i],
@@ -40,7 +40,7 @@ describe('the route, as both agents read it', () => {
     const { bank1 } = await import('@gb/crawler');
     const { routeText } = await import('../src/supervisor.js');
     const text = routeText(bank1);
-    expect(text).toMatch(/"sign-in" \(a sign_in screen\), recognized by: Operator ID:; Password:/);
+    expect(text).toMatch(/"sign-in" \(a sign_in page\), recognized by: Operator ID:; Password:/);
     expect(text).toMatch(/"Operator ID".*"\$operator"/);
     expect(text).toMatch(/The guard's "Matching member" is drawn here as: Open/);
     expect(text).toMatch(/Read kept, the balance: \{name\} Account ending in \{last4\}/);

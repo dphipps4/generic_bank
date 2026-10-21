@@ -14,7 +14,6 @@ import {
   actionOf,
   cents,
   chosenIn,
-  leaf,
   leaves,
   namesIn,
   oneCode,
@@ -31,6 +30,7 @@ import {
   clickAt,
   cropOf,
   field,
+  fieldsOf,
   findCrop,
   type Frame,
   knows,
@@ -49,7 +49,7 @@ import {
 import { z } from 'zod';
 import type { Role } from './models.js';
 import { refusal, type Tool, ToolRefusal, type ToolResult } from './tools.js';
-import { formOf, type Trail } from './trail.js';
+import type { Trail } from './trail.js';
 
 /** What a run is for, and the values a teller is given for it. */
 export interface Task {
@@ -74,8 +74,6 @@ export interface ScoutDeps {
   judge(j: Judging): Promise<Judgment>;
   /** The table so far: an empty one for a bank never learned, the broken one for a repair. */
   table?: Table;
-  /** In a repair, the screens of the table that broke: only these may be named again with new words. */
-  repairs?: string[];
 }
 
 export interface Judging {
@@ -241,74 +239,6 @@ export function pointed(
   return out.join('\n').split(task.member).join('$member');
 }
 
-/**
- * Whether a page is a named screen met again, though it lacks words the screen was named by: its
- * earlier name took words that change, such as a greeting (run build-example-914e6720 named the
- * returning sign-in by "Welcome back", met it again without one, and could neither name it again
- * nor give it a name of its own). It is that screen when the screen's own frame shows every word
- * it is named by now, and both pages hold the same fields and buttons: a different screen, such as
- * the full sign-in beside the returning one, holds others.
- */
-export function sameScreen(
-  was: { texts: string[]; form: string[] },
-  now: { form: string[] },
-  words: string[],
-) {
-  const its = was.texts.join('\n').toLowerCase();
-  return (
-    words.length > 0 &&
-    words.every((w) => its.includes(w.toLowerCase())) &&
-    was.form.join('\n') === now.form.join('\n')
-  );
-}
-
-/**
- * A screen's never-words. Those it has already stay while its page still doesn't show them: naming
- * a known screen again keeps what tells it apart (run repair-example-14d72a47: the returning
- * sign-in, named again, lost the word that told it from the full sign-in, and a new browser's
- * sign-in fit both). Then, up to three in all, the other screens' own words its page doesn't show,
- * so a menu that repeats on every screen is never one of them.
- */
-export function neverOf(old: Row | undefined, others: Row[], here: (w: string) => boolean) {
-  const kept = [...new Set((old?.never ?? []).filter((w) => !here(w)))];
-  const more = [...new Set(others.flatMap((r) => r.shows))].filter(
-    (w) => !here(w) && !kept.includes(w),
-  );
-  return [...kept, ...more.slice(0, Math.max(0, 3 - kept.length))];
-}
-
-/**
- * Earlier screens whose words all show on a new screen get one of the new screen's words that their
- * own page doesn't show, as a never-word; returns the screens and what changed, or refuses when an
- * earlier screen shows every word the new one is named by.
- */
-export function neverRepairs(
-  earlier: Row[],
-  here: (w: string) => boolean,
-  pageOf: (r: Row) => string,
-  names: string[],
-  /** Whether an earlier screen holds the same fields and buttons as this page: it may be the same. */
-  sameForm: (r: Row) => boolean = () => false,
-): { rows: Row[]; repaired: string[] } {
-  const repaired: string[] = [];
-  const rows = earlier.map((r) => {
-    if (!r.shows.every(here)) return r;
-    const its = pageOf(r).toLowerCase();
-    const word = names.find((w) => !its.includes(w.toLowerCase()));
-    if (!word)
-      throw new ToolRefusal(
-        `"${r.page}" shows every word you named this screen by: name it by words "${r.page}" doesn't show.${
-          sameForm(r)
-            ? ` If it is that same screen met again, name it "${r.page}" again by words both its pages show as text`
-            : ` It holds other fields and buttons than this page: it is another screen`
-        }`,
-      );
-    repaired.push(`"${r.page}" now never shows "${word}"`);
-    return { ...r, never: [...(r.never ?? []), word] };
-  });
-  return { rows, repaired };
-}
-
 /** The words that hold one of the task's own values, each with what it holds. */
 export function taskValuesIn(
   words: string[],
@@ -371,7 +301,36 @@ export function scout(deps: ScoutDeps, task: Task) {
   let waiting = false;
   let stopped = false;
 
-  /** Which named page this is, if one. */
+  const untitled =
+    'this page has no title of its own, so the route cannot know it: go another way, or stop and say so';
+  /**
+   * The page the browser is on, as the route knows it: by its own title, through the crawler's own
+   * function, so the two never read a page differently. A page the route doesn't know yet joins it
+   * under its title. One that shares a title with a page it knows but holds other fields is another
+   * page (a sign-in for a browser the site knows); from then on the two are told apart by their
+   * fields. A page with no title can't join the route.
+   */
+  const pageOf = (f: Frame, ref: string | null): Row | null => {
+    const title = f.title?.trim();
+    if (!title) return rowOf(f);
+    const fields = fieldsOf(f);
+    const same = t.rows.filter((r) => r.title?.trim().toLowerCase() === title.toLowerCase());
+    const known = same.find((r) => (r.fields ?? []).join(',') === fields.join(','));
+    if (known) return known;
+    // A new page is kept with the frame it was first seen in; one not kept joins at its next look.
+    if (!ref) return null;
+    const next: Row = {
+      page: same.length ? `${title} (${fields.join(', ') || 'no fields'})` : title,
+      title,
+      fields,
+      shows: [],
+      do: {},
+      frame: ref,
+    };
+    t.rows.push(next);
+    return next;
+  };
+  /** Which page of the route this is, if one. */
   const rowOf = (f: Frame): Row | null => {
     try {
       const name = knows(f, pagesOf(t));
@@ -425,7 +384,7 @@ export function scout(deps: ScoutDeps, task: Task) {
     );
     const ref = seen?.ref ?? null;
     const was = row;
-    row = rowOf(f);
+    row = pageOf(f, ref);
     if (row !== was) fileVisit(was);
     const controls = f.controls.filter((c) => c.name || c.role !== 'link');
     const before = previous;
@@ -572,9 +531,10 @@ export function scout(deps: ScoutDeps, task: Task) {
    * the control, kept in the route's names once the step is allowed.
    */
   const allow = (st: Step, listed?: string) => {
-    if (!row)
+    if (!row) throw new ToolRefusal(untitled);
+    if (!row.screen)
       throw new ToolRefusal(
-        "name this screen with name_page first, with its kind: the guard judges every step by the screen's kind, as it will in service",
+        "say this page's kind with page_kind first: the guard judges every step by it, as it will in service",
       );
     const label = 'press' in st ? st.press : 'choose' in st ? st.choose : st.type;
     const names = listed ? nameFor(t.names ?? {}, listed, label) : (t.names ?? {});
@@ -582,7 +542,7 @@ export function scout(deps: ScoutDeps, task: Task) {
     const v = judge({ names }, task.goal, actionOf(row.screen ?? row.page, st));
     if (!v.allowed)
       throw new ToolRefusal(
-        `the guard refuses this, as it would in service: ${v.rule}. ${row.screen ? '' : 'This screen has no kind: give it one with name_page. '}${'press' in st ? `Say which allowed control this press is with \`as\`; on this kind of screen: ${pressesOn(task.goal, row.screen).join(', ')}.` : ''}`,
+        `the guard refuses this, as it would in service: ${v.rule}. ${row.screen ? '' : 'This page has no kind: give it one with page_kind. '}${'press' in st ? `Say which allowed control this press is with \`as\`; on this kind of screen: ${pressesOn(task.goal, row.screen).join(', ')}.` : ''}`,
       );
     t.names = names;
   };
@@ -1044,157 +1004,20 @@ export function scout(deps: ScoutDeps, task: Task) {
         );
       },
     },
-    name_page: {
+    page_kind: {
       description:
-        'Names the screen now, for your route, by what tells it apart from every other screen: words it shows as text (`shows`), and words drawn as pictures (`pictures`: each with its box on the picture, the words alone). Name each screen as soon as you arrive, before you act on it: the steps you take here are filed under it. Leave `never` out: the tool adds words of your other screens that this one does not show. `kind` is what kind of screen it is, in the words of the guard, which judges every step by it, here and in service.',
+        "Says what kind of page this is, in the guard's words: the guard judges every step by it, here and in service. You never name a page: it is known by its own title. Say its kind once, before you act on it.",
       input: z.object({
-        name: z.string().min(2).max(40),
         kind: z
           .enum([...SCREEN_KINDS, 'other'])
-          .describe("The kind of screen this is, in the guard's words; other when none fits"),
-        shows: z.array(z.string().min(2).max(80)).max(4).default([]),
-        pictures: z
-          .array(
-            z.object({
-              words: z.string().min(1).max(60).describe('The words the picture shows'),
-              box: BOX.describe('Their box on the picture, in its pixels: the words alone'),
-            }),
-          )
-          .max(3)
-          .optional(),
-        never: z.array(z.string().min(2).max(80)).max(4).optional(),
+          .describe("The kind of page this is, in the guard's words; other when none fits"),
       }),
-      async run(i: {
-        name: string;
-        kind: string;
-        shows: string[];
-        pictures?: { words: string; box: Box }[];
-        never?: string[];
-      }) {
-        if (!i.shows.length && !i.pictures?.length)
-          throw new ToolRefusal('name it by words it shows as text, or by words drawn as pictures');
-        // A screen's words are ones every visit shows: not this task's member, accounts or memo.
-        const held = taskValuesIn([...i.shows, ...(i.pictures ?? []).map((p) => p.words)], task);
-        if (held.length)
-          throw new ToolRefusal(
-            `${held.map(([w, v]) => `"${w}" holds this task's own ${v}`).join('; ')}: another task's page shows another. Name the screen by words every such page shows`,
-          );
-        if (nameFirst)
-          throw new ToolRefusal(
-            "this page shows the member's number: note_read name first, then name the page",
-          );
-        if (!latest?.ref) throw new ToolRefusal('look at the page first');
-        const f = latest.frame;
-        const missing = i.shows.filter((w) => !shows(f, w));
-        if (missing.length) {
-          // Words drawn as pictures are not text the crawler can find: say which words are.
-          const text = f.tree
-            .split('\n')
-            .map(leaf)
-            .filter((w): w is string => !!w && w.length >= 3)
-            .slice(0, 15);
-          throw new ToolRefusal(
-            `the page does not show as text: ${missing.join('; ')}. Words drawn as pictures go in pictures, each with its box on the picture. Words it does show as text include: ${text.join('; ')}`,
-          );
-        }
-        // Words drawn as pictures: cut from this picture, and found on it again, as the crawler will.
-        const looks = (i.pictures ?? []).map((p) => {
-          const crop = cropOf(f.picture, p.box);
-          if (!findCrop(f.picture, crop))
-            throw new ToolRefusal(`"${p.words}" at that box can't be found again on the picture`);
-          return crop.toString('base64');
-        });
-        const wrong = (i.never ?? []).filter((w) => shows(f, w));
-        if (wrong.length)
-          throw new ToolRefusal(
-            `the page shows what you said it never does: ${wrong.join('; ')}. Leave never out: the tool adds it`,
-          );
-        const never =
-          i.never ??
-          neverOf(
-            t.rows.find((r) => r.page === i.name),
-            t.rows.filter((r) => r.page !== i.name),
-            (w) => shows(f, w),
-          );
-        // A name already given to a screen this page doesn't match is another screen's: naming this
-        // one so would replace it, and its steps (a returning sign-in took the first sign-in's name,
-        // and a new browser met a sign-in no row knew). A repair renames the broken table's screens.
-        const old = t.rows.find((r) => r.page === i.name);
-        const was = old && (await trail.shown(old.frame));
-        if (
-          old &&
-          !(deps.repairs ?? []).includes(i.name) &&
-          !(
-            old.shows.every((w) => shows(f, w)) &&
-            (old.looks ?? []).every((c) => findCrop(f.picture, Buffer.from(c, 'base64')))
-          ) &&
-          // The same screen, named again by words that hold, keeps its steps under its new words.
-          !(was && sameScreen(was, { form: formOf(f.controls) }, i.shows))
-        )
-          throw new ToolRefusal(
-            `"${i.name}" already names another screen (${old.frame}), and this page doesn't show its words: ${old.shows.join('; ')}. ${
-              // The way to name a screen again is offered only where the page could be that screen
-              // (run build-example-830a9104 was told it on another, and tried the other's name twice).
-              was?.form.join('\n') === formOf(f.controls).join('\n')
-                ? `Give this screen a name of its own; each screen keeps its own steps. If it is that same screen and those words change (a greeting), name it "${i.name}" again by words both its pages show as text`
-                : `This page holds other fields and buttons than ${old.frame}: it is another screen. Give it a name of its own; each screen keeps its own steps`
-            }`,
-          );
-        // The steps waiting to be filed were taken on the screen the Scout was on until now: filed
-        // there before this one is named (run 25: a review taken for the form lost the form's steps).
-        if (row && row.page !== i.name) fileVisit(row);
-        const next: Row = {
-          page: i.name,
-          ...(i.kind !== 'other' ? { screen: i.kind } : {}),
-          shows: i.shows,
-          ...(looks.length ? { looks } : {}),
-          ...(never.length ? { never } : {}),
-          do: old?.do ?? {},
-          frame: latest.ref,
-        };
-        // An earlier screen whose words all show here would be taken for this one: it gets a word of
-        // this screen that its own page doesn't show, as a never-word.
-        const pageOf = new Map<string, string>();
-        const formsOf = new Map<string, string>();
-        for (const r of t.rows)
-          if (r.page !== i.name && r.shows.every((w) => shows(f, w))) {
-            const s = await trail.shown(r.frame);
-            pageOf.set(r.page, (s?.texts ?? []).join('\n'));
-            formsOf.set(r.page, (s?.form ?? []).join('\n'));
-          }
-        const form = formOf(f.controls).join('\n');
-        const { rows: earlier, repaired } = neverRepairs(
-          t.rows.filter((r) => r.page !== i.name),
-          (w) => shows(f, w),
-          (r) => pageOf.get(r.page) ?? '',
-          i.shows,
-          (r) => formsOf.get(r.page) === form,
-        );
-        const rows = [...earlier, next];
-        try {
-          if (knows(f, pagesOf({ rows })) !== i.name)
-            throw new ToolRefusal('those words also show another named page');
-        } catch (e) {
-          if (e instanceof UnknownPage)
-            throw new ToolRefusal(
-              `those words fit more than one named page: ${e.closest.join(', ')}`,
-            );
-          throw e;
-        }
-        t.rows = rows;
-        row = next;
-        const fixed = repaired.length
-          ? ` ${repaired.join('; ')}, so it is not taken for this one.`
-          : '';
-        await trail.step(
-          {
-            name: 'name page',
-            action: `${i.name}: ${[...i.shows, ...(i.pictures ?? []).map((p) => `[picture] ${p.words}`)].join('; ')}`,
-            ...(fixed ? { outcome: fixed.trim() } : {}),
-          },
-          null,
-        );
-        return { text: `This page is "${i.name}", at ${latest.ref}.${fixed}` };
+      async run(i: { kind: string }) {
+        if (!latest?.ref || !row) throw new ToolRefusal(untitled);
+        if (i.kind === 'other') delete row.screen;
+        else row.screen = i.kind;
+        await trail.step({ name: 'page kind', action: `${row.page}: ${i.kind}` }, null);
+        return { text: `"${row.page}" is a ${i.kind} page, at ${latest.ref}.` };
       },
     },
     note_trouble: {
@@ -1388,14 +1211,14 @@ export function scout(deps: ScoutDeps, task: Task) {
     },
     goal_reached: {
       description:
-        "Says the goal is reached on the screen now (the balance shows; the transfer's review; the account's activity). The Supervisor checks your route first: every screen from the start named, each with its own steps. For a transfer, `submit` is the control that would send it, by its id (c3, or i2 from your list_page) or its name: named, never pressed.",
+        "Says the goal is reached on the page now (the balance shows; the transfer's review; the account's activity). The Supervisor checks your route first: every page from the start with its kind, each with its own steps. For a transfer, `submit` is the control that would send it, by its id (c3, or i2 from your list_page) or its name: named, never pressed.",
       input: z.object({ submit: z.string().max(60).optional() }),
       async run(i: { submit?: string }) {
-        if (!latest?.ref || !row) throw new ToolRefusal('name this page first');
+        if (!latest?.ref || !row) throw new ToolRefusal(untitled);
         // Code follows the route from the site's first page: a route that doesn't know it can't sign in.
         if (task.goal === 'balance' && began && !rowOf(began.frame))
           throw new ToolRefusal(
-            `the route doesn't recognize the page this goal began on (${began.ref ?? 'the first page'}): code following it could not sign in. Name that screen, by its words or its pictures`,
+            `the route doesn't know the page this goal began on (${began.ref ?? 'the first page'}): code following it could not sign in. Look at that page again so it joins the route`,
           );
         if (task.goal === 'transfer') {
           const s = i.submit?.trim() ?? '';
@@ -1439,7 +1262,7 @@ export function scout(deps: ScoutDeps, task: Task) {
               .map((r) => `on "${r.page}", ${r.rule}`)
               .join(
                 '; ',
-              )}. Give each screen its kind with name_page, and each press its allowed name with \`as\``,
+              )}. Give each page its kind with page_kind, and each press its allowed name with \`as\``,
           );
         // The Supervisor checks the route before the goal counts: every screen named, each with its
         // own steps. A "wait" sends the Scout back to fix it.

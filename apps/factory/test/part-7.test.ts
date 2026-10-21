@@ -15,14 +15,24 @@ const SQL = ['0005_base_lessons', '0006_sign_in_lessons']
     ),
   )
   .join('\n');
+const RETIRED = [
+  ...readFileSync(
+    join(
+      import.meta.dirname,
+      '../../memory/prisma/migrations/0007_retire_sign_in_name/migration.sql',
+    ),
+    'utf8',
+  ).matchAll(/'(base-[a-z-]+)'/g),
+].map(([, id]) => id!);
 /** Each base lesson's id, text and audience, as the migration writes it. */
-const BASE = [
-  ...SQL.matchAll(/\('(base-[a-z-]+)', 1, '((?:[^']|'')*)'.*'curator', '(\w+)'\)/g),
-].map(([, id, text, audience]) => ({ id: id!, text: text!.replace(/''/g, "'"), audience }));
+const BASE = [...SQL.matchAll(/\('(base-[a-z-]+)', 1, '((?:[^']|'')*)'.*'curator', '(\w+)'\)/g)]
+  .map(([, id, text, audience]) => ({ id: id!, text: text!.replace(/''/g, "'"), audience }))
+  // Lessons a later migration retired are no longer the agents' to read.
+  .filter(({ id }) => !RETIRED.includes(id));
 
 describe("Part 7, in the agents' instructions", () => {
-  it('has all fifteen base lessons to check', () => {
-    expect(BASE).toHaveLength(15);
+  it('has all thirteen base lessons in force to check', () => {
+    expect(BASE).toHaveLength(13);
   });
 
   it("puts every base lesson in the instructions of the agent it's for", () => {

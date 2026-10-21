@@ -31,6 +31,12 @@ export type Step =
 
 export interface Row {
   page: string;
+  /**
+   * A page the factory learned: its own title, and the kinds of field it held, which tell apart
+   * pages that share a title. Such a page is known by these; a page written by hand, by its words.
+   */
+  title?: string;
+  fields?: string[];
   /** The allowlist's name for this page, where it differs: the guard judges every step by it. */
   screen?: string;
   shows: string[];
