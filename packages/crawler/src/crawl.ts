@@ -292,6 +292,7 @@ async function knowTask(s: Session) {
 export const pagesOf = (t: Pick<Table, 'rows'>) =>
   t.rows.map((r) => ({
     name: r.page,
+    ...(r.title !== undefined ? { title: r.title, fields: r.fields ?? [] } : {}),
     shows: r.shows,
     never: r.never ?? [],
     looks: r.looks ?? [],

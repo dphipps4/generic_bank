@@ -9,7 +9,7 @@ import { ALLOWLISTS, ANY, decide, type Verdict } from '@gb/guardrails';
 /** The job each goal runs under in service: the activity is read by the transfer's run. */
 export const JOB = { balance: 'check-balance', transfer: 'transfer', history: 'transfer' } as const;
 
-/** The guard's kinds of screen, as name_page offers them. */
+/** The guard's kinds of screen, as page_kind offers them. */
 export const SCREEN_KINDS = [
   ...new Set(
     Object.values(ALLOWLISTS)
