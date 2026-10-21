@@ -123,6 +123,7 @@ const quiet: Trail = {
   shown: async () => null,
   keep: async () => null,
   remask: async () => 0,
+  settle: async () => undefined,
 };
 const scoutTools = () =>
   scout(

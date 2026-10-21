@@ -262,6 +262,26 @@ async function escalate(
   );
 }
 
+/**
+ * Ends a run its process left open, as failed, with any question it left a person: the net under
+ * every way a run can stop (an error no step caught, a signal), so none shows as running after.
+ * A run already settled is left as it is.
+ */
+export async function failIfOpen(sql: Sql, runId: string) {
+  const r = await sql.query<{ id: string }>(
+    `UPDATE "TaskRun" SET status = 'failed', "resultCode" = 'app_error', retryable = false,
+            "settledAt" = now(), "inputsSealed" = NULL
+      WHERE id = $1 AND "settledAt" IS NULL RETURNING id`,
+    [runId],
+  );
+  if (r.rows.length)
+    await sql.query(
+      `UPDATE "HumanTask" SET status = 'cancelled' WHERE "runId" = $1 AND status = 'open'`,
+      [runId],
+    );
+  return r.rows.length > 0;
+}
+
 export async function setStatus(
   sql: Sql,
   runId: string,
