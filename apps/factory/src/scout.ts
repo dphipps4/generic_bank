@@ -247,24 +247,6 @@ export function pointed(
   return out.join('\n').split(task.member).join('$member');
 }
 
-/** The words that hold one of the task's own values, each with what it holds. */
-export function taskValuesIn(
-  words: string[],
-  task: { member: string; from?: string; to?: string; memo?: string },
-): [string, string][] {
-  const values: [string, string][] = [
-    [task.member, "member's number"],
-    [task.member.slice(-4), "member's number"],
-    [task.from ?? '', 'account'],
-    [task.to ?? '', 'account'],
-    [task.memo ?? '', 'memo'],
-  ];
-  return words.flatMap((w) => {
-    const v = values.find(([x]) => x.length >= 4 && w.toLowerCase().includes(x.toLowerCase()));
-    return v ? [[w, v[1]] as [string, string]] : [];
-  });
-}
-
 export function scout(deps: ScoutDeps, task: Task) {
   const { page, trail } = deps;
   const known = trail.known;

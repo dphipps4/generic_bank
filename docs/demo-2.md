@@ -43,11 +43,13 @@ Bank 2 asks for a sign-in code by email, up to three times: once for the run, an
 
 The run has a hard limit of 60 minutes of the agents' own time. The time you spend fetching a code doesn't count.
 
-Before anyone sees the route, the gate replays it with no model, live: once from a new browser, once from a browser the bank trusts, and once with a surprise dialog forced. The run ends with a report: what it cost, how many actions the Supervisor judged and how many the tools refused, the corrections that cite a frame, the gate's three results, and the lessons saved to memory.
+After the three goals comes a hazard pass. The factory makes the bank misbehave on purpose, one hazard at a time, and the Scout notes what the bank shows in its own words, so the service later returns the right result instead of stopping. The pass doesn't change the route's steps.
+
+Before anyone sees the route, the gate replays it with no model, live: once from a new browser, once from a browser the bank trusts, and once with a surprise dialog and a promotion forced. The run ends with a report: what it cost, how many actions the Supervisor judged and how many the tools refused, the corrections that cite a frame, and the gate's three results.
 
 ## 3. Approve the route
 
-A route that passed the gate waits on the Console's [**Recommendations**](http://localhost:8080/recommendations) page. Each screen is shown with the words and pictures that identify it, the steps taken there, and the picture of the page it came from. Read it, and approve it with a reason of at least ten characters.
+A route that passed the gate waits on the Console's [**Recommendations**](http://localhost:8080/recommendations) page. Each page is shown by its own title, with the steps taken there and the picture of the page it came from. Read it, and approve it with a reason of at least ten characters.
 
 ## 4. Use bank 2
 
