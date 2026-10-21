@@ -17,9 +17,12 @@ import {
   leaves,
   namesIn,
   oneCode,
+  noteId,
   pagesOf,
   readOf,
+  saysIn,
   seen,
+  steadyWords,
 } from '@gb/crawler';
 import {
   type Box,
@@ -49,7 +52,7 @@ import {
 import { z } from 'zod';
 import type { Role } from './models.js';
 import { refusal, type Tool, ToolRefusal, type ToolResult } from './tools.js';
-import type { Trail } from './trail.js';
+import { MAX_FRAMES, type Trail } from './trail.js';
 
 /** What a run is for, and the values a teller is given for it. */
 export interface Task {
@@ -135,7 +138,6 @@ const within = (p: { x: number; y: number }, b: Box) =>
   p.x >= b.x && p.y >= b.y && p.x <= b.x + b.w && p.y <= b.y + b.h;
 /** The words a person sees: a closed list shows only its chosen option. */
 const words = (f: Frame) => seen(f.tree);
-const shows = (f: Frame, w: string) => f.tree.toLowerCase().includes(w.toLowerCase());
 
 /** A value the Scout types, and the token its step keeps in the table. */
 type Value = 'user_id' | 'password' | 'code' | 'member' | 'amount' | 'memo';
@@ -307,6 +309,26 @@ export function scout(deps: ScoutDeps, task: Task) {
   let waiting = false;
   let stopped = false;
   const learning = deps.learn !== false;
+  /**
+   * A note of the bank's own words, as the crawler will match it: its steady words, each changing
+   * value as {value}, found on this page, and its reliable id. Refused when the page's frame was
+   * not kept, saying why, or when nothing in the words stays the same.
+   */
+  const noteOf = (says: string) => {
+    if (!latest) throw new ToolRefusal('look at the page first');
+    if (!latest.ref)
+      throw new ToolRefusal(
+        nameFirst
+          ? "this page's frame isn't kept until the member's name is hidden: note_read the name first, then note this"
+          : `this page's frame wasn't kept: a run keeps at most ${MAX_FRAMES} frames, so a note can't cite it`,
+      );
+    const steady = steadyWords(says);
+    if (!/[a-z]{3}/i.test(steady.replace(/\{value\}/g, '')))
+      throw new ToolRefusal('those words are all changing values: note words that stay the same');
+    if (!saysIn(latest.frame.tree, steady))
+      throw new ToolRefusal('the page does not show those words');
+    return { says: steady, id: noteId(says), frame: latest.ref };
+  };
   /** In the hazard pass, a note ends the pass: what the bank showed is kept, and nothing else. */
   const noted = (text: string) => {
     if (learning) return text;
@@ -1050,12 +1072,12 @@ export function scout(deps: ScoutDeps, task: Task) {
         kind?: string;
         as?: string;
       }) {
-        if (!latest?.ref || !shows(latest.frame, i.says))
-          throw new ToolRefusal('the page does not show those words');
+        const n = noteOf(i.says);
         if (i.press) {
-          if (!latest.controls.some((c) => c.name === i.press))
+          const controls = latest!.controls;
+          if (!controls.some((c) => c.name === i.press))
             throw new ToolRefusal(
-              `the page has no control named "${i.press}"; its named controls: ${latest.controls
+              `the page has no control named "${i.press}"; its named controls: ${controls
                 .map((c) => c.name)
                 .filter(Boolean)
                 .slice(0, 12)
@@ -1072,25 +1094,26 @@ export function scout(deps: ScoutDeps, task: Task) {
           t.names = names;
         }
         t.trouble = [
-          ...t.trouble.filter((x) => x.says !== i.says),
+          ...t.trouble.filter((x) => (x.id ?? noteId(x.says)) !== n.id),
           {
-            says: i.says,
+            id: n.id,
+            says: n.says,
             code: i.means,
             again: 2,
-            frame: latest.ref,
+            frame: n.frame,
             ...(i.press ? { press: i.press, screen: i.kind ?? 'any' } : {}),
           },
         ];
         await trail.step(
           {
             name: 'note trouble',
-            action: `${i.means}: ${i.says}${i.press ? `; past it: ${i.press}` : ''}`,
+            action: `${i.means}: ${n.says} (${n.id})${i.press ? `; past it: ${i.press}` : ''}`,
           },
           null,
         );
         return {
           text: noted(
-            `Noted, citing ${latest.ref}.${i.press ? '' : ' Open the start page to go on.'}`,
+            `Noted as "${n.says}", id ${n.id}, citing ${n.frame}.${i.press ? '' : ' Open the start page to go on.'}`,
           ),
         };
       },
@@ -1113,19 +1136,19 @@ export function scout(deps: ScoutDeps, task: Task) {
         ]),
       }),
       async run(i: { says: string; means: Answer['code'] }) {
-        if (!latest?.ref || !shows(latest.frame, i.says))
-          throw new ToolRefusal('the page does not show those words');
+        const n = noteOf(i.says);
         t.answers = [
-          ...t.answers.filter((a) => a.says !== i.says),
+          ...t.answers.filter((a) => (a.id ?? noteId(a.says)) !== n.id),
           {
-            says: i.says,
+            id: n.id,
+            says: n.says,
             code: i.means,
-            frame: latest.ref,
+            frame: n.frame,
             ...(i.means === 'record_in_use' ? { retryable: true } : {}),
           },
         ];
-        await trail.step({ name: 'note answer', action: `${i.means}: ${i.says}` }, null);
-        return { text: noted(`Noted, citing ${latest.ref}.`) };
+        await trail.step({ name: 'note answer', action: `${i.means}: ${n.says} (${n.id})` }, null);
+        return { text: noted(`Noted as "${n.says}", id ${n.id}, citing ${n.frame}.`) };
       },
     },
     note_read: {

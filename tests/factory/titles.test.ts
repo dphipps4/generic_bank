@@ -307,5 +307,33 @@ describe('a site learned by its pages’ own titles', () => {
     });
     expect(b.availableCents).toBe(SITE.availableCents);
     expect((await ended(await under('record-in-use'), taught))?.code).toBe('record_in_use');
+
+    // An error page whose reference changes on every load: noted once, with the reference kept as
+    // {value}, and found again by the crawler under another reference.
+    expect((await ended(await under('js-error-fatal'), taught))?.code).not.toBe('app_error');
+    await known.setExtraHTTPHeaders(hazardHeader(['js-error-fatal' as never], key));
+    const p3 = await aScout(known, [], taught, false);
+    await p3.go('browser_open', { why: 'the goal again, by the route' });
+    await p3.go('browser_type', {
+      id: p3.id('password'),
+      label: 'Password',
+      value: 'password',
+      why,
+    });
+    await p3.go('browser_press', { id: p3.id('button', 'Sign In'), why });
+    const shown = /An unexpected error has occurred\. Reference ERR-\S+/.exec(
+      p3.s.latest()!.frame.tree,
+    )![0];
+    const noted = await p3.go('note_trouble', { says: shown, means: 'app_error' });
+    await known.setExtraHTTPHeaders({});
+    expect(noted.text).toMatch(
+      /Noted as "An unexpected error has occurred\. Reference \{value\}", id [0-9a-f-]{36}/,
+    );
+    const withError = p3.s.table();
+    expect(JSON.stringify(withError.rows)).toBe(steps);
+    expect(withError.trouble.at(-1)!.says).toBe(
+      'An unexpected error has occurred. Reference {value}',
+    );
+    expect((await ended(await under('js-error-fatal'), withError))?.code).toBe('app_error');
   }, 300_000);
 });
