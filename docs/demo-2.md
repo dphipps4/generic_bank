@@ -39,9 +39,9 @@ just factory example 40017732 8176 9433
 
 The Scout works the live site, one action at a time, and writes the route as it goes. The Supervisor looks at a picture of the page after each action, and allows the next one or corrects the Scout. They reach three goals in turn: the balance, a transfer up to its review page (never sent), and the account's activity.
 
-Bank 2 asks for a sign-in code by email, up to three times: once for the run, and once for each of the gate's two checks below, since each starts from a browser that has never signed in. Each time, copy the code from the [simulated inbox](http://localhost:8089) into the Console's [**Inbox**](http://localhost:8080/inbox) within three minutes.
+Bank 2 asks for a sign-in code by email, up to three times: once for the run, and once for each of the gate's two checks below, since each starts from a browser that has never signed in. Each time, copy the code from the [simulated inbox](http://localhost:8089) into the Console's [**Inbox**](http://localhost:8080/inbox) within five minutes.
 
-The run has a hard limit of 30 minutes of the agents' own time. The time you spend fetching a code doesn't count.
+The run has a hard limit of 60 minutes of the agents' own time. The time you spend fetching a code doesn't count.
 
 Before anyone sees the route, the gate replays it with no model, live: once from a new browser, once from a browser the bank trusts, and once with a surprise dialog forced. The run ends with a report: what it cost, how many actions the Supervisor judged and how many the tools refused, the corrections that cite a frame, the gate's three results, and the lessons saved to memory.
 

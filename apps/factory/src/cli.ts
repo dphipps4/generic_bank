@@ -62,9 +62,9 @@ if (TABLES[bank]) {
 const sql = connect(cfg.CONTROL_DATABASE_URL);
 const store = fileStore(cfg.EVIDENCE_DIR);
 const credentials = { operatorId: cfg.BANK_OPERATOR_ID, password: cfg.BANK_SERVICE_PASSWORD };
-// A person has 3 minutes to give a code; no wait in a factory run is long.
+// A person has 5 minutes to give a code; no wait in a factory run is long.
 const code = (runId: string) =>
-  personCode({ sql, runId, bank, answerKey: cfg.ANSWER_SEAL_KEY, deadlineMs: 3 * 60_000 })();
+  personCode({ sql, runId, bank, answerKey: cfg.ANSWER_SEAL_KEY, deadlineMs: 5 * 60_000 })();
 const log = (line: string) => console.log(line);
 const browser = await launch();
 
