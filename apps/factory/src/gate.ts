@@ -26,8 +26,13 @@ import { type Browser, newPage, type Page } from '@gb/runtime';
 import { judge, refusals } from './guard.js';
 import { openTrail } from './trail.js';
 
-/** The one hazard a learned table is checked against. */
-export const GATE_HAZARD = 'confirm-dialog';
+/**
+ * The hazards a learned table is checked against, forced together in one browser: a surprise
+ * dialog, and a promotion in place of the page asked for, which the hazard pass taught it.
+ */
+export const GATE_HAZARDS = ['confirm-dialog', 'promo'] as const;
+/** The forced run's name, as the Console shows it. */
+export const GATE_HAZARD = GATE_HAZARDS.join(' and ');
 
 export interface GateDeps {
   sql: Sql;
@@ -87,7 +92,7 @@ async function checkRun(
     bank: o.bank,
     known: [],
   });
-  const headers = hazard && d.hazardKey ? hazardHeader([hazard as never], d.hazardKey) : undefined;
+  const headers = hazard && d.hazardKey ? hazardHeader([...GATE_HAZARDS], d.hazardKey) : undefined;
   const trusted = !!cookies.from;
   const open = () =>
     newPage(d.browser, { ...(headers && { headers }), ...(trusted && { session: cookies.from }) });
@@ -226,7 +231,7 @@ export async function gate(
     }
   }
   if (runs.every((r) => r.ok) && d.hazardKey)
-    runs.push(await checkRun(d, { ...o, runId: `${o.factoryRunId}-${GATE_HAZARD}` }, GATE_HAZARD));
+    runs.push(await checkRun(d, { ...o, runId: `${o.factoryRunId}-hazards` }, GATE_HAZARD));
   const passed = runs.every((r) => r.ok);
   // A route that served both ways in and failed only with the hazard forced broke under it.
   const broken = runs.some((r) => r.hazard && !r.ok);

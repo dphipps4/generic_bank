@@ -74,6 +74,12 @@ export interface ScoutDeps {
   judge(j: Judging): Promise<Judgment>;
   /** The table so far: an empty one for a bank never learned, the broken one for a repair. */
   table?: Table;
+  /**
+   * False for the hazard pass: the goal is done again by the route with a hazard forced, and only
+   * what the bank shows is noted. No page joins the route and no step is filed: a page the bank
+   * shows in another's place may carry that page's title.
+   */
+  learn?: boolean;
 }
 
 export interface Judging {
@@ -300,6 +306,13 @@ export function scout(deps: ScoutDeps, task: Task) {
   let visit: Step[] = [];
   let waiting = false;
   let stopped = false;
+  const learning = deps.learn !== false;
+  /** In the hazard pass, a note ends the pass: what the bank showed is kept, and nothing else. */
+  const noted = (text: string) => {
+    if (learning) return text;
+    stopped = true;
+    return `${text} That is what this pass is for: stop now.`;
+  };
 
   const untitled =
     'this page has no title of its own, so the route cannot know it: go another way, or stop and say so';
@@ -384,8 +397,8 @@ export function scout(deps: ScoutDeps, task: Task) {
     );
     const ref = seen?.ref ?? null;
     const was = row;
-    row = pageOf(f, ref);
-    if (row !== was) fileVisit(was);
+    row = learning ? pageOf(f, ref) : rowOf(f);
+    if (learning && row !== was) fileVisit(was);
     const controls = f.controls.filter((c) => c.name || c.role !== 'link');
     const before = previous;
     previous = f.picture;
@@ -1022,20 +1035,64 @@ export function scout(deps: ScoutDeps, task: Task) {
     },
     note_trouble: {
       description:
-        'Notes a page that gets in the way and goes away on its own (a maintenance notice, a promotion, an error a fresh start clears), by words it shows. The crawler starts again from home when it shows, at most twice, then stops. After noting it, open the start page to go on.',
+        'Notes a page that gets in the way and goes away on its own (a maintenance notice, a promotion, an error a fresh start clears), by words it shows. When the page has its own control to get past it ("Not now", "Close"), give it in `press`, by its name on the page, with the page\'s kind: the crawler presses it and goes on. Without one, the crawler starts again from home when it shows, at most twice, then stops.',
       input: z.object({
         says: z.string().min(4).max(120),
         means: z.enum(['unavailable', 'app_error']),
+        press: z.string().min(1).max(60).optional(),
+        kind: z.enum(['promo', 'notice', 'session_warning']).optional(),
+        as: z.string().min(1).max(60).optional(),
       }),
-      async run(i: { says: string; means: 'unavailable' | 'app_error' }) {
+      async run(i: {
+        says: string;
+        means: 'unavailable' | 'app_error';
+        press?: string;
+        kind?: string;
+        as?: string;
+      }) {
         if (!latest?.ref || !shows(latest.frame, i.says))
           throw new ToolRefusal('the page does not show those words');
+        if (i.press) {
+          if (!latest.controls.some((c) => c.name === i.press))
+            throw new ToolRefusal(
+              `the page has no control named "${i.press}"; its named controls: ${latest.controls
+                .map((c) => c.name)
+                .filter(Boolean)
+                .slice(0, 12)
+                .join(', ')}`,
+            );
+          // The press is judged as the crawler's will be in service, on the page's kind.
+          const names = i.as ? nameFor(t.names ?? {}, i.as, i.press) : (t.names ?? {});
+          if (typeof names === 'string') throw new ToolRefusal(names);
+          const v = judge({ names }, task.goal, actionOf(i.kind ?? 'any', { press: i.press }));
+          if (!v.allowed)
+            throw new ToolRefusal(
+              `the guard refuses this press, as it would in service: ${v.rule}. Give the page's kind, and the guard's name for the press with \`as\``,
+            );
+          t.names = names;
+        }
         t.trouble = [
           ...t.trouble.filter((x) => x.says !== i.says),
-          { says: i.says, code: i.means, again: 2, frame: latest.ref },
+          {
+            says: i.says,
+            code: i.means,
+            again: 2,
+            frame: latest.ref,
+            ...(i.press ? { press: i.press, screen: i.kind ?? 'any' } : {}),
+          },
         ];
-        await trail.step({ name: 'note trouble', action: `${i.means}: ${i.says}` }, null);
-        return { text: `Noted, citing ${latest.ref}. Open the start page to go on.` };
+        await trail.step(
+          {
+            name: 'note trouble',
+            action: `${i.means}: ${i.says}${i.press ? `; past it: ${i.press}` : ''}`,
+          },
+          null,
+        );
+        return {
+          text: noted(
+            `Noted, citing ${latest.ref}.${i.press ? '' : ' Open the start page to go on.'}`,
+          ),
+        };
       },
     },
     note_answer: {
@@ -1068,7 +1125,7 @@ export function scout(deps: ScoutDeps, task: Task) {
           },
         ];
         await trail.step({ name: 'note answer', action: `${i.means}: ${i.says}` }, null);
-        return { text: `Noted, citing ${latest.ref}.` };
+        return { text: noted(`Noted, citing ${latest.ref}.`) };
       },
     },
     note_read: {
@@ -1095,6 +1152,8 @@ export function scout(deps: ScoutDeps, task: Task) {
         parts?: { placeholder: string; after?: string; is?: string }[];
       }) {
         if (!latest) throw new ToolRefusal('look at the page first');
+        if (!learning)
+          throw new ToolRefusal("this pass changes nothing in the route but the bank's answers");
         const need = {
           balance: ['name', 'last4', 'available', 'current'],
           review: ['from', 'to', 'amount', 'memo'],
@@ -1214,6 +1273,10 @@ export function scout(deps: ScoutDeps, task: Task) {
         "Says the goal is reached on the page now (the balance shows; the transfer's review; the account's activity). The Supervisor checks your route first: every page from the start with its kind, each with its own steps. For a transfer, `submit` is the control that would send it, by its id (c3, or i2 from your list_page) or its name: named, never pressed.",
       input: z.object({ submit: z.string().max(60).optional() }),
       async run(i: { submit?: string }) {
+        if (!learning)
+          throw new ToolRefusal(
+            'this pass changes nothing in the route: when the bank showed nothing unexpected, say so and stop',
+          );
         if (!latest?.ref || !row) throw new ToolRefusal(untitled);
         // Code follows the route from the site's first page: a route that doesn't know it can't sign in.
         if (task.goal === 'balance' && began && !rowOf(began.frame))

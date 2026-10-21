@@ -27,9 +27,17 @@ const cookies = (req: IncomingMessage) =>
 const money = (cents: number) =>
   `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
+/** Sessions that have been shown the promotion: once each, as a site shows it. */
+const promoted = new Set<string>();
+let sessions = 0;
+
 function route(req: IncomingMessage, res: ServerResponse) {
   const url = new URL(req.url ?? '/', 'http://site');
   const c = cookies(req);
+  // Hazards forced by the test, by name, in the header the banks read (unsigned here).
+  const forced = String(req.headers['x-hazards'] ?? '')
+    .split(';')[0]!
+    .split(',');
   const send = (html: string, headers: Record<string, string> = {}) => {
     res.writeHead(200, { 'content-type': 'text/html', ...headers });
     res.end(html);
@@ -40,7 +48,7 @@ function route(req: IncomingMessage, res: ServerResponse) {
   };
   if (url.pathname === '/') return go('/signon');
   if (url.pathname === '/signon' && req.method === 'POST')
-    return go('/home', { 'set-cookie': ['sid=1; Path=/', 'known=1; Path=/'] });
+    return go('/home', { 'set-cookie': [`sid=${++sessions}; Path=/`, 'known=1; Path=/'] });
   if (url.pathname === '/signon')
     return send(
       page(
@@ -56,6 +64,14 @@ function route(req: IncomingMessage, res: ServerResponse) {
       ),
     );
   if (!c.sid) return go('/signon');
+  // A promotion in place of the page asked for, under that page's own title, once a session.
+  if (forced.includes('promo') && !promoted.has(c.sid)) {
+    promoted.add(c.sid);
+    const title = { '/home': 'Branch Home', '/search': 'Member Search' }[url.pathname] ?? 'Branch';
+    return send(
+      page(title, `<p><b>Have a look at what is new</b></p><a href="${url.pathname}">Not now</a>`),
+    );
+  }
   if (url.pathname === '/home')
     return send(
       page(
@@ -67,9 +83,11 @@ function route(req: IncomingMessage, res: ServerResponse) {
     // The field's name changes on every page, as a legacy form's may: its value is the first one sent.
     const n = [...url.searchParams.values()][0];
     const found =
-      n === SITE.member
-        ? `<table border="1"><tr><td>${SITE.member}</td><td>${SITE.name}</td><td>Active</td><td><a href="/member?n=${SITE.member}">Open</a></td></tr></table>`
-        : '';
+      n && forced.includes('record-in-use')
+        ? '<p><b>This record is in use by another operator.</b></p>'
+        : n === SITE.member
+          ? `<table border="1"><tr><td>${SITE.member}</td><td>${SITE.name}</td><td>Active</td><td><a href="/member?n=${SITE.member}">Open</a></td></tr></table>`
+          : '';
     return send(
       page(
         'Member Search',

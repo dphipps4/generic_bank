@@ -6,7 +6,7 @@
 // included, the run's lessons go to memory. A table that reached every goal waits for the gate.
 import { randomBytes } from 'node:crypto';
 import type { Goal, Table } from '@gb/crawler';
-import type { FrameStore, Sql } from '@gb/runs';
+import { type FrameStore, hazardHeader, type Sql } from '@gb/runs';
 import { maskText, newPage, type Browser } from '@gb/runtime';
 import { type Agent, type Conversation, Ended, ThoughtTooLong, turn } from './agent.js';
 import {
@@ -38,6 +38,8 @@ export interface FactoryDeps {
   code(runId: string): Promise<string>;
   memory: Memory;
   log?: (line: string) => void;
+  /** Signs a forced hazard for the bank, for the hazard pass; without it, the pass is skipped. */
+  hazardKey?: string;
 }
 
 export interface RunInput {
@@ -72,9 +74,30 @@ export const GOALS: Record<Goal, (i: RunInput) => string> = {
     `Reach the activity of member ${i.member}'s account ${i.from}: the list of its recent transactions.`,
 };
 
+/**
+ * The hazard pass, after the goals: each hazard forced on its own, and the goal done again by the
+ * route, so the bank's own answer to it is noted in its own words. In service the crawler then
+ * returns the right result for it, or gets past the page, instead of stopping on an unknown page.
+ */
+export const HAZARD_PASS: [string, Goal][] = [
+  ['promo', 'balance'],
+  ['service-unavailable', 'balance'],
+  ['js-error-fatal', 'balance'],
+  ['js-error-widget', 'balance'],
+  ['record-in-use', 'balance'],
+  ['record-not-found', 'balance'],
+  ['permission-denial', 'balance'],
+  ['validation-error', 'transfer'],
+];
+/** Each hazard's own minutes: the route is known, so the goal is a short walk. */
+const HAZARD_MS = 4 * 60_000;
+
+export const HAZARD_GOAL = (goal: string) =>
+  `Do the ${goal} goal again, by the route. For this pass the bank has been told to misbehave once on the way. When a page shows the bank's message in place of what the route expects, note it with note_answer, in the bank's own words, with what it means. When a page gets in the way and would go away on its own (a promotion, a notice, an error page, a service that is down), note it with note_trouble, in its own words. Then stop. If you reach the goal's page and nothing unexpected showed, say so and stop. Nothing in this pass changes the route's steps.`;
+
 /** The Scout's instructions. */
 export const SCOUT = `You are the Scout. You work a bank's staff console in a browser, as a person at the desk would, until the goal is reached. Do not fail: failing is the last resort, after every way you can think of has been tried.
-Your product is a route: an ordered list of the screens from the bank's first screen to the goal's screen. Each screen is recognized by words it shows, whatever the layout, and holds the steps a person takes on it, so that code with no model can follow it. You own both the goal and the route.
+Your product is a route: an ordered list of the pages from the bank's first page to the goal's page. Each page is known by its own title, as the site gives it, and holds the steps a person takes on it, so that code with no model can follow it. You own both the goal and the route.
 Each tool shows you the page once it is ready: its picture, its controls (each with an id, such as c3, and a box), and its words. Look at the picture before you act. Act on one thing at a time, with a reason that says what you expect, and after the action, say what actually changed.
 Act on a control by its id. An id belongs to the look it came with; a new page has new ids. A label drawn as a picture is not in the words: then list_page what you see, and act with type_item, press_item or choose_item.
 Keep going until the goal is reached or the Supervisor ends you. A refusal or a surprise is not a reason to stop. It is evidence:
@@ -493,6 +516,88 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
       reached.push(goal);
     }
     if (reached.length === 3) outcome = 'every goal reached';
+    // The hazard pass: only for a route that reached every goal, inside the run's own time.
+    if (reached.length === 3 && table && deps.hazardKey && !page.isClosed()) {
+      for (const [hazard, goal] of HAZARD_PASS) {
+        const left = deadlineAt() - Date.now();
+        if (left < 2 * 60_000) {
+          log(`${runId}: no time for the rest of the hazard pass`);
+          break;
+        }
+        await page.setExtraHTTPHeaders(hazardHeader([hazard as never], deps.hazardKey));
+        const before = table.answers.length + table.trouble.length;
+        const ctrl = new AbortController();
+        const timer = setTimeout(
+          () => ctrl.abort(`out of time: the ${hazard} pass's minutes ran out`),
+          Math.min(HAZARD_MS, left - 60_000),
+        );
+        const s = scout(
+          {
+            page,
+            start: bank.url,
+            trail,
+            credentials: deps.credentials,
+            code: () => budget.person(() => deps.code(runId)),
+            judge: (j) => sup.judge(j),
+            table,
+            learn: false,
+          },
+          {
+            goal,
+            member: input.member,
+            from: input.from,
+            to: input.to,
+            amountCents: 100,
+            memo,
+          },
+        );
+        log(`${runId}: hazard pass, ${hazard}`);
+        await page.goto(bank.url).catch(() => undefined);
+        const first = await s.call('scout', 'browser_look', {}).catch(() => null);
+        sup.goalNow(HAZARD_GOAL(goal));
+        await turn(agent('scout'), {
+          system: SCOUT,
+          conversation: [],
+          say: [
+            HAZARD_GOAL(goal),
+            `The route, each page with its steps for each goal:\n${routeText(table)}`,
+            first ? `The page now:\n${first.text}` : 'Begin by looking at the page.',
+          ].join('\n\n'),
+          ...(first?.image ? { image: first.image } : {}),
+          tools: s.tools('scout'),
+          calls: 30,
+          maxTokens: 8000,
+          signal: ctrl.signal,
+          keep: 4,
+          onReply: async (r) => {
+            const said = [r.thinking, r.text].filter(Boolean).join('\n---\n');
+            if (said.trim())
+              await trail.step(
+                {
+                  name: 'scout thought',
+                  action: `hazard ${hazard}`,
+                  outcome: maskText(said, trail.known),
+                },
+                null,
+              );
+          },
+        }).catch((e: unknown) =>
+          trail.step({ name: 'hazard pass', action: hazard, outcome: String(e) }, null),
+        );
+        clearTimeout(timer);
+        table = s.table();
+        const after = table.answers.length + table.trouble.length;
+        await trail.step(
+          {
+            name: 'hazard pass',
+            action: hazard,
+            outcome: after > before ? 'noted' : 'nothing noted',
+          },
+          null,
+        );
+      }
+      await page.setExtraHTTPHeaders({}).catch(() => undefined);
+    }
   } catch (e) {
     diagnosis ??= (e as Error).message;
     // A crash still writes its lessons, before the error reaches the caller.

@@ -23,6 +23,9 @@ import {
 } from '@gb/runtime';
 import { type At, type Goal, readOf, type Step, type Table } from './table.js';
 
+/** The guard's screen for an action allowed on any page: a page in the way with no kind of its own. */
+const ANY_SCREEN = 'any';
+
 /**
  * Where a step learned by sight acts now: its anchor found in a fresh screenshot, plus its offset,
  * and the browser's own word that the right kind of control is there. Anything else is a target
@@ -345,7 +348,11 @@ export async function crawl(
       const n = again.get(trouble.says) ?? 0;
       if (o.submitted || n >= trouble.again) return stop(trouble.code, trouble.says, true);
       again.set(trouble.says, n + 1);
-      did = await home(`start again from home: "${trouble.says}"`);
+      // A page with its own way past (a promotion that comes once a session) is got past; starting
+      // again from home would only meet it again.
+      did = trouble.press
+        ? await step(s, task, trouble.screen ?? ANY_SCREEN, { press: trouble.press })
+        : await home(`start again from home: "${trouble.says}"`);
       continue;
     }
     if (!at) {

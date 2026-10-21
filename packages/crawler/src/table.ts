@@ -61,6 +61,12 @@ export interface Trouble {
   code: ResultCode;
   again: number;
   frame: string;
+  /**
+   * The page's own control that gets past it (a promotion's "Not now"), and the page's kind for the
+   * guard. With one, the crawler presses it and goes on; without, it starts again from home.
+   */
+  press?: string;
+  screen?: string;
 }
 
 /**

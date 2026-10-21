@@ -219,6 +219,7 @@ try {
           signingKey: cfg.MEMORY_SIGNING_KEY,
         }),
         log,
+        ...(cfg.HAZARD_HMAC_KEY ? { hazardKey: cfg.HAZARD_HMAC_KEY } : {}),
       },
       { bank, member, from, to, endsAt, ...(repair ? { repair } : {}) },
     );
