@@ -241,6 +241,21 @@ export function pointed(
 }
 
 /**
+ * A screen's never-words. Those it has already stay while its page still doesn't show them: naming
+ * a known screen again keeps what tells it apart (run repair-example-14d72a47: the returning
+ * sign-in, named again, lost the word that told it from the full sign-in, and a new browser's
+ * sign-in fit both). Then, up to three in all, the other screens' own words its page doesn't show,
+ * so a menu that repeats on every screen is never one of them.
+ */
+export function neverOf(old: Row | undefined, others: Row[], here: (w: string) => boolean) {
+  const kept = [...new Set((old?.never ?? []).filter((w) => !here(w)))];
+  const more = [...new Set(others.flatMap((r) => r.shows))].filter(
+    (w) => !here(w) && !kept.includes(w),
+  );
+  return [...kept, ...more.slice(0, Math.max(0, 3 - kept.length))];
+}
+
+/**
  * Earlier screens whose words all show on a new screen get one of the new screen's words that their
  * own page doesn't show, as a never-word; returns the screens and what changed, or refuses when an
  * earlier screen shows every word the new one is named by.
@@ -1061,15 +1076,13 @@ export function scout(deps: ScoutDeps, task: Task) {
           throw new ToolRefusal(
             `the page shows what you said it never does: ${wrong.join('; ')}. Leave never out: the tool adds it`,
           );
-        // Never-words: the other screens' own words that this screen does not show, so a menu that
-        // repeats on every screen is never one of them.
         const never =
           i.never ??
-          t.rows
-            .filter((r) => r.page !== i.name)
-            .flatMap((r) => r.shows)
-            .filter((w, k, all) => !shows(f, w) && all.indexOf(w) === k)
-            .slice(0, 3);
+          neverOf(
+            t.rows.find((r) => r.page === i.name),
+            t.rows.filter((r) => r.page !== i.name),
+            (w) => shows(f, w),
+          );
         // A name already given to a screen this page doesn't match is another screen's: naming this
         // one so would replace it, and its steps (a returning sign-in took the first sign-in's name,
         // and a new browser met a sign-in no row knew). A repair renames the broken table's screens.
