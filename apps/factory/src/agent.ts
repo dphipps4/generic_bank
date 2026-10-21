@@ -171,6 +171,25 @@ function withAnswer(schema: Record<string, unknown>) {
   });
 }
 
+/**
+ * A provider's error as a person reads it: its status and its own words. A 4xx is a refusal (402
+ * credits low, 403 the key's budget spent), never the agent's doing.
+ */
+export function providerError(provider: string, message: string): string {
+  const m = /^(\d{3}):?\s*([\s\S]*)$/.exec(message.trim());
+  if (!m) return `the ${provider} model failed: ${message}`;
+  let words = m[2]!;
+  try {
+    const j = JSON.parse(words) as { message?: unknown; error?: { message?: unknown } };
+    const said = j.message ?? j.error?.message;
+    if (typeof said === 'string') words = said;
+  } catch {
+    // Not JSON: the words are the provider's as they are.
+  }
+  const did = m[1]!.startsWith('4') ? 'refused' : 'failed';
+  return `the model provider (${provider}) ${did} the call: ${m[1]} ${words}`;
+}
+
 /** A provider's error that passes: tried again, in the same conversation. */
 export const TRANSIENT =
   /\b(5\d\d|429)\b|timed? ?out|timeout|overloaded|rate.?limit|ECONNRESET|socket hang up|temporarily/i;
@@ -272,7 +291,7 @@ export async function turn(a: Agent, i: TurnInput): Promise<TurnOutput> {
   const replies = added.filter((m): m is AssistantMessage => m.role === 'assistant');
   const last = replies.at(-1);
   if (!last || last.stopReason === 'error' || last.stopReason === 'aborted')
-    throw new Error(`the ${a.model.provider} model failed: ${last?.errorMessage ?? 'no answer'}`);
+    throw new Error(providerError(a.model.provider, last?.errorMessage ?? 'no answer'));
   // A model that spends its whole allowance thinking says nothing; that is a failure, not an answer.
   if (last.stopReason === 'length' && !last.content.some((b) => b.type !== 'thinking'))
     throw new ThoughtTooLong(

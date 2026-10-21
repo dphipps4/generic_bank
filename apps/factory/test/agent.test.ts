@@ -109,7 +109,14 @@ describe.each([DEFAULT_ROLES.scout.provider] as const)('a turn on %s', (provider
     replies = [{ fail: 400, message: 'the request is malformed' }, { text: 'Done.' }];
     await expect(
       turn(agent(), { system: 'You echo.', say: 'Go.', maxTokens: 1000 }),
-    ).rejects.toThrow(/model failed/);
+    ).rejects.toThrow(/model provider \(\w+\) refused the call: 400 the request is malformed/);
+    // A key whose budget is spent: the status and the provider's own words, read plainly.
+    replies = [{ fail: 403, message: 'Key limit exceeded (total limit)' }];
+    await expect(
+      turn(agent(), { system: 'You echo.', say: 'Go.', maxTokens: 1000 }),
+    ).rejects.toThrow(
+      /^the model provider \(\w+\) refused the call: 403 Key limit exceeded \(total limit\)$/,
+    );
   });
 
   it('runs nothing more of a reply once one of its calls is refused', async () => {
