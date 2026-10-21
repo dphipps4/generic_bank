@@ -7,6 +7,7 @@ export { type Box, maskAddress, maskBoxes, maskText, paint, spans } from './mask
 export {
   type Control,
   type Expected,
+  fieldsOf,
   type Frame,
   knows,
   nameIn,

@@ -7,10 +7,13 @@ const doc = (body: string, head = '') =>
   `<!doctype html><html><head><meta charset="utf-8">${head}</head><body style="font:14px Arial;margin:8px">${body}</body></html>`;
 
 export const PAGES: Record<string, string> = {
-  '/frames': `<!doctype html><html><frameset cols="200,*"><frame name="nav" src="/nav"><frame name="main" src="/main-a"></frameset></html>`,
-  '/nav': doc(`<a href="/main-b" target="main">Member Search</a>`),
-  '/main-a': doc(`<p>Welcome</p><a href="/main-a">Home</a>`),
-  '/main-b': doc(`<p>Search for a member</p><a href="/main-b">Again</a>`),
+  '/frames': `<!doctype html><html><head><title>Online Branch</title></head><frameset cols="200,*"><frame name="nav" src="/nav"><frame name="main" src="/main-a"></frameset></html>`,
+  '/nav': doc(`<a href="/main-b" target="main">Member Search</a>`, '<title>Navigation</title>'),
+  '/main-a': doc(`<p>Welcome</p><a href="/main-a">Home</a>`, '<title>Home</title>'),
+  '/main-b': doc(
+    `<p>Search for a member</p><a href="/main-b">Again</a>`,
+    '<title>Member Search</title>',
+  ),
 
   // A label in a cell of its own, the box beside it with no name, and a decoy box far below.
   '/label': doc(

@@ -19,6 +19,8 @@ export interface Control {
 export interface Frame {
   at: string;
   address: string;
+  /** The page's own name: the title of the frame that holds the page. */
+  title?: string;
   picture: Buffer;
   /** The rendered page: per frame, its visible accessibility tree. */
   tree: string;
@@ -143,6 +145,31 @@ const grow = (a: Box, b: Box): Box => {
   };
 };
 
+/**
+ * The page's own name: the title of the frame that holds it, the largest frame with a body of its
+ * own. A page with no frames is its own; a frameset's is the frame the page is drawn in.
+ */
+async function titleOf(page: Page): Promise<string> {
+  let best = { area: -1, title: '' };
+  for (const f of page.frames()) {
+    if (
+      !(await f
+        .locator('body')
+        .count()
+        .catch(() => 0))
+    )
+      continue;
+    let area = Infinity;
+    if (f !== page.mainFrame()) {
+      const box = await (await f.frameElement().catch(() => null))?.boundingBox().catch(() => null);
+      if (!box) continue;
+      area = box.width * box.height;
+    }
+    if (area > best.area) best = { area, title: (await f.title().catch(() => '')).trim() };
+  }
+  return best.title;
+}
+
 /** Waits until the page is ready, then keeps it: the masked picture, page and address. */
 export async function see(
   page: Page,
@@ -225,6 +252,7 @@ export async function see(
   return {
     at: new Date().toISOString(),
     address: maskAddress(page.url(), known),
+    title: maskText(await titleOf(page), known),
     picture,
     tree: maskText(parts.join('\n\n'), known),
     controls,
@@ -233,9 +261,19 @@ export async function see(
   };
 }
 
-/** A page the crawler expects, known by the words visible on it. */
+/**
+ * A page the crawler expects. A page learned by the factory is known by its own title, as the site
+ * gave it; a page written by hand, by the words visible on it.
+ */
 export interface Expected {
   name: string;
+  /** The page's own title. When it is given, the title alone decides, and the words are not used. */
+  title?: string;
+  /**
+   * The kinds of field the page held when it was seen, for telling apart pages that share a title
+   * (a sign-in for a new browser, and one for a browser the site knows). Used only then.
+   */
+  fields?: string[];
   /** Words the page shows as text. */
   shows: string[];
   never?: string[];
@@ -255,7 +293,23 @@ export class UnknownPage extends Error {
   }
 }
 
-/** Which expected page this is: exactly one must match, by its visible words, or it's unknown. */
+const FIELDS = new Set(['textbox', 'password', 'select', 'checkbox', 'radio']);
+
+/** The kinds of field a page holds, in order: what a person can fill in there. */
+export const fieldsOf = (f: Pick<Frame, 'controls'>) =>
+  f.controls
+    .map((c) => c.role)
+    .filter((r) => FIELDS.has(r))
+    .sort();
+
+const sameTitle = (a: string, b: string | undefined) =>
+  !!b?.trim() && a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/**
+ * Which expected page this is: exactly one must match, or it's unknown. A page with a title is
+ * known by it; pages that share a title, by the fields each was seen to hold. A page without one
+ * is known by its visible words.
+ */
 export function knows(frame: Frame, pages: Expected[]): string {
   const text = frame.tree.toLowerCase();
   const has = (w: string) => text.includes(w.toLowerCase());
@@ -265,12 +319,21 @@ export function knows(frame: Frame, pages: Expected[]): string {
       seen.set(crop, findCrop(frame.picture, Buffer.from(crop, 'base64')) !== null);
     return seen.get(crop)!;
   };
-  const hits = pages.filter(
-    (p) => p.shows.every(has) && !(p.never ?? []).some(has) && (p.looks ?? []).every(sees),
+  let hits = pages.filter((p) =>
+    p.title !== undefined
+      ? sameTitle(p.title, frame.title)
+      : p.shows.every(has) && !(p.never ?? []).some(has) && (p.looks ?? []).every(sees),
   );
+  if (hits.length > 1 && hits.every((p) => p.title !== undefined)) {
+    const form = fieldsOf(frame).join(',');
+    const byForm = hits.filter((p) => (p.fields ?? []).join(',') === form);
+    if (byForm.length === 1) hits = byForm;
+  }
   if (hits.length === 1) return hits[0]!.name;
   const closest = [...pages]
     .map((p) => {
+      if (p.title !== undefined)
+        return { name: p.name, share: sameTitle(p.title, frame.title) ? 1 : 0 };
       const marks = p.shows.length + (p.looks ?? []).length;
       const met = p.shows.filter(has).length + (p.looks ?? []).filter(sees).length;
       return { name: p.name, share: marks ? met / marks : 0 };

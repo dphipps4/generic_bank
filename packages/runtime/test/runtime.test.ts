@@ -60,6 +60,20 @@ describe('the runtime: see first, then click', () => {
     ).toBe('search');
   });
 
+  it("reads a page's own title from the frame it is drawn in, not the frameset's or the menu's", async () => {
+    const p = await open('/frames');
+    expect((await see(p, { limitMs: 10_000 })).title).toBe('Home');
+    await press(p, 'Member Search');
+    const next = await see(p, { limitMs: 10_000 });
+    expect(next.title).toBe('Member Search');
+    expect(
+      knows(next, [
+        { name: 'Home', title: 'Home', shows: [] },
+        { name: 'Member Search', title: 'Member Search', shows: [] },
+      ]),
+    ).toBe('Member Search');
+  });
+
   it('names an unknown page, with the closest it knows', async () => {
     const p = await open('/frames');
     const f = await see(p, { limitMs: 10_000 });
