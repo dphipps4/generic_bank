@@ -17,6 +17,7 @@ import {
   leaf,
   leaves,
   namesIn,
+  oneCode,
   pagesOf,
   readOf,
   seen,
@@ -517,6 +518,8 @@ export function scout(deps: ScoutDeps, task: Task) {
     // A secret's length is part of it: the field is said to be filled, nothing more.
     return secret ? '; the field is filled' : `; the field now holds ${v.length} characters`;
   };
+  /** A person's code, asked for once for each code the bank sends: until the next press. */
+  const codes = oneCode(() => deps.code());
   /** Whether a value is a secret: the sign-in and a person's code. */
   const secretValue = (v: string) => v === 'user_id' || v === 'password' || v === 'code';
   /** The task's value as typed; a person's code joins what is hidden whole. */
@@ -527,7 +530,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         : v === 'password'
           ? deps.credentials.password
           : v === 'code'
-            ? (await deps.code()).trim()
+            ? (await codes.code()).trim()
             : v === 'member'
               ? task.member
               : v === 'amount'
@@ -747,6 +750,7 @@ export function scout(deps: ScoutDeps, task: Task) {
           // what is around it too, and is found once.
           const wide = { x: c.box.x - 40, y: c.box.y - 12, w: c.box.w + 80, h: c.box.h + 24 };
           const at = await anchorOf(it, c.box).catch(() => anchorOf(it, wide));
+          codes.pressed();
           await clickAt(page, centre(c.box));
           visit.push({ press: c.name || 'Submit', at });
           return look(
@@ -754,6 +758,7 @@ export function scout(deps: ScoutDeps, task: Task) {
             i.why,
           );
         }
+        codes.pressed();
         await press(page, c.name, i.near ? { near: i.near } : {});
         // Near the task's own account, the step says so, and fits any member's account.
         const near =
@@ -919,6 +924,7 @@ export function scout(deps: ScoutDeps, task: Task) {
         allow({ press: it.label }, i.as);
         const at = await anchorOf(it, it.labelBox ?? it.box);
         const p = centre(it.box);
+        codes.pressed();
         await clickAt(page, p);
         visit.push({ press: it.label, at });
         return look(
