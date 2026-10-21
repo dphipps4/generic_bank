@@ -29,7 +29,9 @@ const TABLE = {
     },
     {
       page: 'home',
-      shows: ['Find a member'],
+      title: 'Branch Home',
+      fields: ['textbox'],
+      shows: [],
       do: { balance: [{ press: 'Find a member' }] },
       frame: 'f2',
     },
@@ -135,6 +137,9 @@ describe('the review card', () => {
     expect(rows[2]).toContain('a goal ends here');
     expect(rows.map(framesIn)).toEqual([[1], [2], [3]]);
     expect(rows[1]).toContain(`data-base="/runs/${RUN}/frames/"`);
+    // A page the factory learned is shown by its own title, and the fields that tell it apart.
+    expect(rows[1]).toContain('its title "Branch Home"');
+    expect(rows[1]).toContain('fields: textbox');
     expect(html).toContain('<dialog id="frames"');
     const pic = await app.inject({ url: `/runs/${RUN}/frames/3.png` });
     expect(pic.statusCode).toBe(200);
