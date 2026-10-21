@@ -204,8 +204,8 @@ factory-up: env image
 factory bank member from to: factory-up
     #!/usr/bin/env bash
     set -uo pipefail
-    # The hard stop: the agents' minutes, plus a person's three codes at three minutes each.
-    limit=$(( (${FACTORY_RUN_LIMIT_MINUTES:-30} + 9) * 60 ))
+    # The hard stop: the agents' minutes, plus a person's three codes at five minutes each.
+    limit=$(( (${FACTORY_RUN_LIMIT_MINUTES:-60} + 15) * 60 ))
     name="gb-factory-run-$$"
     echo "  the run's hard limit: $(( limit / 60 )) minutes"
     ( sleep "$limit"; docker stop -t 5 "$name" >/dev/null 2>&1 && echo "  ✗ stopped at the run's hard limit of $(( limit / 60 )) minutes" ) &
