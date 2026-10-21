@@ -40,15 +40,26 @@ describe('a screen named again', () => {
     expect(sameScreen(returning, again, [])).toBe(false);
   });
 
-  it('is told how, when a new name would take an earlier screen for it', () => {
-    const earlier: Row = { page: 'returning sign on', shows: ['Sign On'], do: {}, frame: 'f2' };
-    expect(() =>
-      neverRepairs(
-        [earlier],
-        () => true,
-        () => 'Passcode: Sign On',
-        ['Passcode:', 'Sign On'],
-      ),
-    ).toThrow(/name it "returning sign on" again by words both its pages show/);
+  const earlier: Row = { page: 'returning sign on', shows: ['Sign On'], do: {}, frame: 'f2' };
+  const named = (sameForm: () => boolean) => () =>
+    neverRepairs(
+      [earlier],
+      () => true,
+      () => 'Passcode: Sign On',
+      ['Passcode:', 'Sign On'],
+      sameForm,
+    );
+
+  it('is told how, when a new name would take an earlier screen of the same form for it', () => {
+    expect(named(() => true)).toThrow(
+      /name it "returning sign on" again by words both its pages show/,
+    );
+  });
+
+  it('is told it is another screen, never to take its name, when the form differs', () => {
+    expect(named(() => false)).toThrow(
+      /other fields and buttons than this page: it is another screen$/,
+    );
+    expect(named(() => false)).not.toThrow(/again/);
   });
 });
