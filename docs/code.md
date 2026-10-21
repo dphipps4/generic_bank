@@ -135,7 +135,7 @@ The route holds nine answers. Examples are "No member found with that number", w
 
 **What it does.** The factory learns a bank no one wrote a crawler for, and leaves behind a route in the same format as bank 1's.
 
-- `cli.ts` is the factory's one command. It refuses a bank that has a hand-written route. It repairs the bank if a repair case is open, and learns it otherwise. It then runs the gate, prints a report of cost, judgments, refusals and evidence, and writes the run's lessons last.
+- `cli.ts` is the factory's one command. It refuses a bank that has a hand-written route. It repairs the bank if a repair case is open, and learns it otherwise. It then runs the gate, prints a report of cost, judgments, refusals and evidence, and writes the run's lessons. While no route has passed and at least 10 minutes of the hour are left, it repairs again from the route that failed, from where the gate stopped.
 - `run.ts` holds `factoryRun`. It loads memory's knowledge pack, works the three goals in order (each from the site's start page, on its own clock), and returns the route when the balance goal at least was reached. The run has 60 minutes of the agents' own time (`FACTORY_RUN_LIMIT_MINUTES`), and `runBudget` moves its end out by every wait for a person. `GOALS` and `SCOUT` are its prompts.
 - `scout.ts` holds the Scout's tools. They act on the live page through the runtime, and they write the route as the Scout goes.
 - `supervisor.ts` holds the Supervisor. `judge` judges every action from a fresh packet, `diagnose` explains a goal not reached, and `goalClock` keeps the goal's time. `openFrameTool` reopens frames.

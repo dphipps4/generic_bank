@@ -48,6 +48,8 @@ export interface RunInput {
   to: string;
   /** For a repair: the table that broke, and what the Supervisor saw where it broke. */
   repair?: { table: Table; diagnosis: string };
+  /** When the agents' time ends, if before the run's own limit: a later pass gets what is left. */
+  endsAt?: number;
 }
 
 export interface RunOutput {
@@ -200,7 +202,10 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
   const scoutBase = baseText(scoutPack!);
   const runId = `${mode}-${input.bank}-${randomBytes(4).toString('hex')}`;
   const startedAt = new Date();
-  const budget = runBudget(startedAt.getTime(), RUN_MS - AFTER_GOALS_MS);
+  const budget = runBudget(
+    startedAt.getTime(),
+    Math.min(RUN_MS, (input.endsAt ?? Infinity) - startedAt.getTime()) - AFTER_GOALS_MS,
+  );
   const deadlineAt = budget.end;
   /** The current goal's clock, which the Supervisor keeps. */
   let clock: ReturnType<typeof goalClock> | null = null;

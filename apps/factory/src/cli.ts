@@ -86,7 +86,17 @@ for (const event of ['uncaughtException', 'unhandledRejection'] as const)
   });
 const browser = await launch();
 
-/** What a repair starts from: the table that broke, and where its run stopped. */
+/** Where a run stopped: its last frame and what it showed, for the repair to open. */
+async function whereItStopped(runId: string, said?: string) {
+  const frames = await framesOf(sql, store, runId);
+  const last = frames.at(-1);
+  return `Run ${runId}${said ? ` (${said})` : ''} stopped at its frame f${frames.length}${last ? `, which showed: ${last.texts.slice(0, 20).join(' · ')}` : ''}. open_frame with run ${runId} shows its frames.`;
+}
+
+/**
+ * What a repair starts from: the table of the bank's open repair case, where it last broke. A
+ * served version's table, or the table the gate failed in the replay the case names.
+ */
 async function repairOf(): Promise<{ table: Table; diagnosis: string } | undefined> {
   const c = await openRepairCase(sql, bank!, 'check-balance');
   if (!c?.runId) return undefined;
@@ -94,18 +104,22 @@ async function repairOf(): Promise<{ table: Table; diagnosis: string } | undefin
     ((await tableOf(sql, c.versionId)) as Table | null) ??
     (
       await sql.query<{ table: Table }>(
-        `SELECT "table" FROM "Recommendation" WHERE tenant = $1 AND status = 'broken' ORDER BY "createdAt" DESC LIMIT 1`,
-        [bank],
+        `SELECT "table" FROM "Recommendation"
+          WHERE tenant = $1 AND "check" @> jsonb_build_array(jsonb_build_object('runId', $2::text))
+          ORDER BY "createdAt" DESC LIMIT 1`,
+        [bank, c.runId],
       )
     ).rows[0]?.table;
   if (!table) return undefined;
-  const frames = await framesOf(sql, store, c.runId);
-  const last = frames.at(-1);
-  return {
-    table,
-    diagnosis: `Run ${c.runId} stopped at its frame f${frames.length}${last ? `, which showed: ${last.texts.slice(0, 20).join(' · ')}` : ''}. open_frame with run ${c.runId} shows its frames.`,
-  };
+  return { table, diagnosis: await whereItStopped(c.runId) };
 }
+
+/**
+ * The agents' hour, across every pass: a pass whose route fails the gate is repaired by the next,
+ * from that route and where the gate stopped, while enough of the hour is left for one.
+ */
+const RUN_LIMIT_MS = Number(process.env.FACTORY_RUN_LIMIT_MINUTES ?? 60) * 60_000;
+const PASS_MS = 10 * 60_000;
 
 /** A run's steps, in order. */
 async function stepsOf(runId: string) {
@@ -176,70 +190,92 @@ try {
   const url = (await sql.query<{ url: string }>('SELECT url FROM "Bank" WHERE id = $1', [bank]))
     .rows[0]?.url;
   if (!url) throw new Error(`no bank ${bank} in the registry`);
-  const repair = await repairOf();
-  log(repair ? `repairing ${bank}: ${repair.diagnosis}` : `learning ${bank}`);
-  const run = await factoryRun(
-    {
-      sql,
-      store,
-      browser,
-      factoryUrl: cfg.FACTORY_URL,
-      gatewayToken: cfg.FACTORY_GATEWAY_TOKEN,
-      roles: rolesOf(cfg),
-      credentials,
-      code,
-      memory: memoryClient({
-        url: cfg.MEMORY_URL,
-        token: cfg.MEMORY_TOKEN_FACTORY,
-        signingKey: cfg.MEMORY_SIGNING_KEY,
-      }),
-      log,
-    },
-    { bank, member, from, to, ...(repair ? { repair } : {}) },
-  );
-  await report(run.runId);
-  if (!run.table) {
-    log(`no goal was reached: ${run.diagnosis ?? ''}`);
-    process.exitCode = 1;
-  } else {
-    if (run.reached.length < 3)
-      log(
-        `learned ${run.reached.join(', ')}; not reached: ${run.diagnosis ?? ''}. The table serves what it covers.`,
-      );
-    const g = await gate(
+  const endsAt = Date.now() + RUN_LIMIT_MS;
+  let repair = await repairOf();
+  let passed = false;
+  for (let pass = 1; !passed; pass++) {
+    if (pass > 1) {
+      const left = endsAt - Date.now();
+      if (left < PASS_MS) {
+        log(`no time for another pass: ${Math.round(left / 60_000)} minutes of the hour are left`);
+        break;
+      }
+      log(`pass ${pass}: ${Math.round(left / 60_000)} minutes of the hour are left`);
+    }
+    log(repair ? `repairing ${bank}: ${repair.diagnosis}` : `learning ${bank}`);
+    const run = await factoryRun(
       {
         sql,
         store,
         browser,
+        factoryUrl: cfg.FACTORY_URL,
+        gatewayToken: cfg.FACTORY_GATEWAY_TOKEN,
+        roles: rolesOf(cfg),
         credentials,
         code,
-        ...(cfg.HAZARD_HMAC_KEY ? { hazardKey: cfg.HAZARD_HMAC_KEY } : {}),
+        memory: memoryClient({
+          url: cfg.MEMORY_URL,
+          token: cfg.MEMORY_TOKEN_FACTORY,
+          signingKey: cfg.MEMORY_SIGNING_KEY,
+        }),
+        log,
       },
-      {
-        factoryRunId: run.runId,
-        bank,
-        url,
-        table: run.table,
-        member,
-        from,
-        to,
-      },
+      { bank, member, from, to, endsAt, ...(repair ? { repair } : {}) },
     );
-    for (const r of g.runs)
-      log(
-        `gate ${r.hazard ?? (r.trusted ? 'trusted' : 'plain')}: ${r.ok ? 'passed' : 'failed'}: ${r.said}`,
+    await report(run.runId);
+    if (!run.table) {
+      log(`no goal was reached: ${run.diagnosis ?? ''}`);
+      // The next pass starts from the same table, or learns afresh; memory has this run's lessons.
+      if (repair) repair = { ...repair, diagnosis: `${run.diagnosis ?? ''} ${repair.diagnosis}` };
+    } else {
+      if (run.reached.length < 3)
+        log(
+          `learned ${run.reached.join(', ')}; not reached: ${run.diagnosis ?? ''}. The table serves what it covers.`,
+        );
+      const g = await gate(
+        {
+          sql,
+          store,
+          browser,
+          credentials,
+          code,
+          ...(cfg.HAZARD_HMAC_KEY ? { hazardKey: cfg.HAZARD_HMAC_KEY } : {}),
+        },
+        {
+          factoryRunId: run.runId,
+          bank,
+          url,
+          table: run.table,
+          member,
+          from,
+          to,
+        },
       );
-    log(
-      g.recommendationId
-        ? `Approve or reject it in the Console: http://localhost:${cfg.CONSOLE_PORT}/recommendations`
-        : 'Not recommended. A table that broke under the hazard has a repair case: run this again to repair it.',
-    );
-    if (!g.recommendationId) process.exitCode = 1;
+      for (const r of g.runs)
+        log(
+          `gate ${r.hazard ?? (r.trusted ? 'trusted' : 'plain')}: ${r.ok ? 'passed' : 'failed'}: ${r.said}`,
+        );
+      passed = !!g.recommendationId;
+      if (passed)
+        log(
+          `Approve or reject it in the Console: http://localhost:${cfg.CONSOLE_PORT}/recommendations`,
+        );
+      else {
+        const failed = g.runs.find((r) => !r.ok)!;
+        repair = { table: run.table, diagnosis: await whereItStopped(failed.runId, failed.said) };
+      }
+    }
+    // The lessons last, after everything a person waits on; the next pass reads them.
+    log("writing the run's lessons to memory…");
+    await run.finish();
+    await lessonsLine(run.runId);
   }
-  // The lessons last, after everything a person waits on.
-  log("writing the run's lessons to memory…");
-  await run.finish();
-  await lessonsLine(run.runId);
+  if (!passed) {
+    log(
+      'Not recommended: no pass of the hour passed the gate. Its repair case names where it last broke.',
+    );
+    process.exitCode = 1;
+  }
 } catch (e) {
   console.error(e);
   process.exitCode = 1;

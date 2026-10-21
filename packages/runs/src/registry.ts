@@ -30,7 +30,8 @@ export async function serving(
 /**
  * A driver fault in a run (an unknown screen, a targeting failure; never the bank's own error):
  * the version that ran it is demoted, if it still serves, and the bank and task's repair case
- * opens, or counts one more failure if it is open already. Returns whether the version was demoted.
+ * opens, or counts one more failure if it is open already. The case names the latest failure: a
+ * repair starts from where the table last broke. Returns whether the version was demoted.
  */
 export async function driverFault(
   sql: Sql,
@@ -67,7 +68,8 @@ export async function driverFault(
     `INSERT INTO "RepairCase" (id, tenant, task, "consecutiveFailures", "lastFailureAt", "runId", "versionId")
      VALUES ($1, $2, $3, 1, now(), $4, $5)
      ON CONFLICT (tenant, task) WHERE status = 'open'
-     DO UPDATE SET "consecutiveFailures" = "RepairCase"."consecutiveFailures" + 1, "lastFailureAt" = now()`,
+     DO UPDATE SET "consecutiveFailures" = "RepairCase"."consecutiveFailures" + 1, "lastFailureAt" = now(),
+                   "runId" = EXCLUDED."runId", "versionId" = EXCLUDED."versionId"`,
     [id('rc'), o.tenant, o.task, o.runId, o.versionId],
   );
   return !!d;
