@@ -142,6 +142,30 @@ export function accountsIn(words: string, read: string, member: string, asked: s
   return { all, matching: all.filter((g) => isAccount(g, asked)) };
 }
 
+/**
+ * A person's code, asked for once for each code the bank sends. Typed again before anything is
+ * pressed (a second field, a step taken twice), it is the code already given; a press may submit it
+ * or have the bank send another, so the next ask goes to the person. An ask that fails is not kept.
+ */
+export function oneCode(ask: () => Promise<string>) {
+  let given: Promise<string> | null = null;
+  return {
+    code: () => {
+      if (!given) {
+        const asked = ask();
+        given = asked;
+        asked.catch(() => {
+          if (given === asked) given = null;
+        });
+      }
+      return given;
+    },
+    pressed: () => {
+      given = null;
+    },
+  };
+}
+
 async function value(s: Session, task: Task, v: string): Promise<string> {
   switch (v) {
     case '$operator':
@@ -342,9 +366,12 @@ export async function crawl(
     // the sign-in and the search once, for the balance, and that way through serves every goal.
     const steps = row.do[goal] ?? row.do.any ?? row.do.balance;
     if (!steps?.length) return stop('stuck', `nothing to do on the ${at} page`);
+    // One code for this visit to the page: a route that types it twice asks for it once (a learned
+    // route held the code page's field twice, by its label and by its position, and asked twice).
+    const visit: Session = { ...s, code: oneCode(() => s.code()).code };
     try {
       for (const [i, st] of steps.entries()) {
-        did = await step(s, task, screenOf(t, at), st);
+        did = await step(visit, task, screenOf(t, at), st);
         // The last step's frame is the next look's.
         if (s.everyStep && i < steps.length - 1)
           await s.keep?.(
