@@ -2,6 +2,7 @@
 // and the steps a teller takes there, per task. The bank's answers and its trouble are words too.
 // Every entry cites the evidence frame it was read from. Writing a bank's table is onboarding it;
 // editing rows is repairing it.
+import { createHash } from 'node:crypto';
 import type { ResultCode } from '@gb/contracts';
 
 /** What a run is for: a balance, a transfer up to its review, or the transfer in the history. */
@@ -49,6 +50,8 @@ export interface Row {
 }
 
 export interface Answer {
+  /** The note's reliable id: a UUID of its steady words (`noteId`), the same in every run. */
+  id?: string;
   says: string;
   code: ResultCode;
   retryable?: boolean;
@@ -57,6 +60,8 @@ export interface Answer {
 
 /** Trouble: start again from home, at most `again` times, and only before Submit; then `code`. */
 export interface Trouble {
+  /** The note's reliable id: a UUID of its steady words (`noteId`), the same in every run. */
+  id?: string;
   says: string;
   code: ResultCode;
   again: number;
@@ -73,6 +78,40 @@ export interface Trouble {
  * A read as the pattern it matches against the page's visible words, one per line: the text as it
  * is, each `{placeholder}` the words on its line up to what follows it.
  */
+/** A word that holds a changing value: a digit (a reference, a time, a count) or a masked character. */
+const CHANGING = /\S*[\d█]\S*/g;
+
+/**
+ * A bank's words as a note keeps them: each word holding a changing value becomes {value}, so the
+ * note matches whatever the value is next time ("Reference ERR-512230" is kept as "Reference
+ * {value}"; run build-example-26ef3ef4 kept a reference number and could never match it again).
+ */
+export const steadyWords = (says: string) => says.trim().replace(CHANGING, '{value}');
+
+/** Whether a page's words hold a note's words, each {value} matching any one word there. */
+export function saysIn(text: string, says: string): boolean {
+  const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const src = says
+    .split(/(\{value\})/)
+    .map((p) => (p === '{value}' ? '\\S+' : escape(p)))
+    .join('');
+  return new RegExp(src, 'i').test(text);
+}
+
+/**
+ * A note's reliable id: a UUID (version 5 form) of its steady words, lower-cased, so the same
+ * answer gets the same id in every run, whatever its changing values were.
+ */
+export function noteId(says: string): string {
+  const h = createHash('sha1')
+    .update(`gb-note:${steadyWords(says).toLowerCase()}`)
+    .digest();
+  h[6] = (h[6]! & 0x0f) | 0x50;
+  h[8] = (h[8]! & 0x3f) | 0x80;
+  const x = h.subarray(0, 16).toString('hex');
+  return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20, 32)}`;
+}
+
 export function readOf(template: string, member = ''): RegExp {
   const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const src = template

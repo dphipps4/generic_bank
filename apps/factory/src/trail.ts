@@ -5,7 +5,8 @@ import { seen } from '@gb/crawler';
 import { addFrame, addStep, failIfOpen, type FrameStore, type Sql } from '@gb/runs';
 import { type Frame, maskText } from '@gb/runtime';
 
-const MAX_FRAMES = 60;
+/** The frames a run keeps: room for the goals, the hazard pass after them, and the evidence of each. */
+export const MAX_FRAMES = 150;
 
 export interface Trail {
   readonly runId: string;

@@ -64,6 +64,18 @@ function route(req: IncomingMessage, res: ServerResponse) {
       ),
     );
   if (!c.sid) return go('/signon');
+  // An error page in place of the page asked for, under its title, with a reference that changes
+  // on every load.
+  if (forced.includes('js-error-fatal')) {
+    const title = { '/home': 'Branch Home', '/search': 'Member Search' }[url.pathname] ?? 'Branch';
+    const ref = `ERR-${100_000 + Math.floor(Math.random() * 900_000)}`;
+    return send(
+      page(
+        title,
+        `<p><b>An unexpected error has occurred. Reference ${ref}</b></p><a href="/home">Home</a>`,
+      ),
+    );
+  }
   // A promotion in place of the page asked for, under that page's own title, once a session.
   if (forced.includes('promo') && !promoted.has(c.sid)) {
     promoted.add(c.sid);

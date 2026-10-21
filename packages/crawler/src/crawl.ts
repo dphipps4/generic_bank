@@ -21,7 +21,7 @@ import {
   UnknownPage,
   whatIsAt,
 } from '@gb/runtime';
-import { type At, type Goal, readOf, type Step, type Table } from './table.js';
+import { type At, type Goal, readOf, saysIn, type Step, type Table } from './table.js';
 
 /** The guard's screen for an action allowed on any page: a page in the way with no kind of its own. */
 const ANY_SCREEN = 'any';
@@ -332,8 +332,8 @@ export async function crawl(
       continue;
     }
     const text = f.tree.toLowerCase();
-    const answer = t.answers.find((a) => text.includes(a.says.toLowerCase()));
-    const trouble = t.trouble.find((x) => text.includes(x.says.toLowerCase()));
+    const answer = t.answers.find((a) => saysIn(text, a.says));
+    const trouble = t.trouble.find((x) => saysIn(text, x.says));
     let at: string | null = null;
     let unknown: UnknownPage | null = null;
     try {
@@ -345,9 +345,10 @@ export async function crawl(
     await s.keep?.({ did, page: at, screen: at && screenOf(t, at) }, f);
     if (answer) return stop(answer.code, answer.says, answer.retryable);
     if (trouble) {
-      const n = again.get(trouble.says) ?? 0;
+      const key = trouble.id ?? trouble.says;
+      const n = again.get(key) ?? 0;
       if (o.submitted || n >= trouble.again) return stop(trouble.code, trouble.says, true);
-      again.set(trouble.says, n + 1);
+      again.set(key, n + 1);
       // A page with its own way past (a promotion that comes once a session) is got past; starting
       // again from home would only meet it again.
       did = trouble.press
@@ -529,7 +530,7 @@ export async function submitTransfer(
       f,
     );
     const text = f.tree.toLowerCase();
-    const answer = t.answers.find((a) => text.includes(a.says.toLowerCase()));
+    const answer = t.answers.find((a) => saysIn(text, a.says));
     if (answer) return stop(answer.code, answer.says, answer.retryable);
     if (at && t.reads.confirmation) {
       s.guard?.({ screen: screenOf(t, at), verb: 'read', control: 'Page' });
