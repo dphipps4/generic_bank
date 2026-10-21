@@ -120,6 +120,8 @@ async function repairOf(): Promise<{ table: Table; diagnosis: string } | undefin
  */
 const RUN_LIMIT_MS = Number(process.env.FACTORY_RUN_LIMIT_MINUTES ?? 60) * 60_000;
 const PASS_MS = 10 * 60_000;
+/** Passes a run may make: one, until a person turns repair passes back on. */
+const PASSES = Math.max(1, Number(process.env.FACTORY_PASSES ?? 1));
 
 /** A run's steps, in order. */
 async function stepsOf(runId: string) {
@@ -193,7 +195,7 @@ try {
   const endsAt = Date.now() + RUN_LIMIT_MS;
   let repair = await repairOf();
   let passed = false;
-  for (let pass = 1; !passed; pass++) {
+  for (let pass = 1; !passed && pass <= PASSES; pass++) {
     if (pass > 1) {
       const left = endsAt - Date.now();
       if (left < PASS_MS) {
