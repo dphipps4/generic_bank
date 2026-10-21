@@ -1,6 +1,6 @@
-# How it meets the task and minimum scope
+# The hard parts
 
-This page goes through what the brief asks for and how the system does it. [Appendix A](brief.md) lists the same points with the code and the test behind each one.
+This page takes the hard parts of driving a legacy bank console one at a time, and says how the system handles each. [Appendix A](concepts.md) lists the same points with the code and the test behind each one.
 
 ## Two typed tasks, end to end
 
@@ -55,6 +55,6 @@ Every page a run sees becomes a step, saved with its masked picture and its visi
 
 A bank is a route, and each run is durable and stands on its own, so the design can grow. There's no scaling machinery here: one runner, on one laptop, handling two runs at a time.
 
-## The extension: reuse across tenants
+## Reuse across tenants
 
 Bank 2 runs the same vendor product as bank 1, configured and branded differently, with many labels drawn as pictures. Until it's learned, `GET /banks` marks it as a stub. The factory's two AI agents learn it on the live site. A Scout acts and writes the route as it goes, a Supervisor judges each action from a picture of the page, and the guard judges every step as it will in service. The result is plain data, a route of the same shape as bank 1's, replayed by the same code with no model. Before anyone sees it, code replays it live twice, once with a surprise dialog forced. Then a person approves it. [The factory](factory.md) explains how.

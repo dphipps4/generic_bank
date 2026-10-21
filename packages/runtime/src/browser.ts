@@ -1,5 +1,5 @@
 // The browser: Chrome, driven by Playwright, presenting as Chrome on a Mac. We have a bank's web UI
-// and nothing else, so we use the standard library a reviewer knows, and set the identity once per
+// and nothing else, so we use the standard library most readers know, and set the identity once per
 // page from outside it (DevTools), never by script inside it.
 import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';

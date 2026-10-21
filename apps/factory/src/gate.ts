@@ -3,8 +3,8 @@
 // route ends there; and, if it ends at both the review and the activity, a transfer up to its
 // review (never sent) and the activity the transfer's Submit is confirmed by. Then each again from
 // the browser the bank now trusts, as every run in service after the first meets it: a sign-in
-// that welcomes the operator back. Then once more with one hazard forced, the confirmation dialog
-// the brief names. A table that fails the first run is
+// that welcomes the operator back. Then once more with one hazard forced, the surprise
+// confirmation dialog. A table that fails the first run is
 // not recommended; one that breaks under the hazard is kept as broken and opens a repair case with
 // that run's frames, as a break in service would. A table that passes both waits in the Console
 // for a person's approval: nothing promotes it but that.

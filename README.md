@@ -4,8 +4,8 @@ Banks run a lot of back-office screens with no API at all. This gives an AI agen
 
 The target app is two local banks, both deliberately unfriendly: 2003-style consoles, server-rendered, framesets, nested tables, no test IDs. A crawler is two things: shared code that every bank uses, and a **route**, which is plain data listing one bank's screens, how to recognize each one, and the steps a teller takes there. No AI runs while a task runs; the code just replays the route.
 
-- **Bank 1's route was built ahead of time.** AI wrote it from a recorded walk through the bank's pages, and a person reviewed it. This is the system the brief asks for.
-- **Bank 2's route is built by a factory,** the one extension. Two AI agents learn the live site and produce the route, and a person approves it before it's used.
+- **Bank 1's route was built ahead of time.** AI wrote it from a recorded walk through the bank's pages, and a person reviewed it. This is the core system.
+- **Bank 2's route is built by a software factory.** Two AI agents learn the live site and produce the route, and a person approves it before it's used.
 
 ## Gotchas
 
@@ -67,9 +67,9 @@ Sometimes only a person can answer: a sign-in code, a transfer to approve, a pag
 
 The risky parts are the Submit press, the passwords typed at sign-in, and the pictures kept as evidence. [The architecture](docs/architecture.md) shows the data models and how each risky part is handled.
 
-## 2. How it meets the task and minimum scope
+## 2. How it handles the hard parts
 
-Both tasks run end to end through bank 1's web UI, each with typed inputs and one structured result ([`tests/runs`](tests/runs/execute.test.ts)). The bank's own answers, recovered trouble, hard failures and hand-offs to a person each reach the caller differently ([`outcomes.test.ts`](tests/outcomes/outcomes.test.ts)). When a run gets stuck, it stops and hands a person every masked page it saw ([`escalations.test.ts`](tests/escalation/escalations.test.ts)). Every action passes an allowlist first ([`packages/guardrails`](packages/guardrails/allowlists)), and nothing personal is kept unmasked ([`pii.test.ts`](tests/pii/pii.test.ts)). [How it meets the task](docs/scope.md) goes through the brief point by point, and [Appendix A](docs/brief.md) names the code behind each point.
+Both tasks run end to end through bank 1's web UI, each with typed inputs and one structured result ([`tests/runs`](tests/runs/execute.test.ts)). The bank's own answers, recovered trouble, hard failures and hand-offs to a person each reach the caller differently ([`outcomes.test.ts`](tests/outcomes/outcomes.test.ts)). When a run gets stuck, it stops and hands a person every masked page it saw ([`escalations.test.ts`](tests/escalation/escalations.test.ts)). Every action passes an allowlist first ([`packages/guardrails`](packages/guardrails/allowlists)), and nothing personal is kept unmasked ([`pii.test.ts`](tests/pii/pii.test.ts)). [The hard parts](docs/scope.md) goes through each one in turn, and [Appendix A](docs/concepts.md) names the code behind each.
 
 ## 3. From 80% to 100%
 
@@ -83,9 +83,9 @@ AI wrote nearly all of this code, and a person set the requirements, reviewed th
 - [Demo 2](docs/demo-2.md): bank 2, from a stub to a route the factory builds, and a repair.
 - [The architecture](docs/architecture.md): boundaries, data, and where the risky parts live.
 - [The factory](docs/factory.md): how the agents learn a bank and what they produce.
-- [How it meets the task](docs/scope.md): the task and the minimum scope, point by point.
+- [The hard parts](docs/scope.md): the two tasks, the kinds of outcome, escalation, safety and scale, one by one.
 - [From 80% to 100%](docs/80-to-100.md): what AI wrote, what we changed, threw away and left out, and what is still needed.
-- [Appendix A: the brief, point by point](docs/brief.md), with the code that meets each point.
+- [Appendix A: the concepts](docs/concepts.md), with the code behind each one.
 - [Appendix B: results](docs/results.md): every status and code a caller can get.
 - [Appendix C: technology](docs/techstack.md).
 - [Bank 1's evidence](docs/evidence/bank-1/README.md): the recorded walk its route was written from.

@@ -100,7 +100,7 @@ function verify(value: string, key: string): HazardName[] | null {
 }
 
 export function hazards(opts: HazardOptions) {
-  // gentle also fixes the seed, so a reviewer's first run is the same every time
+  // gentle also fixes the seed, so a first run is the same every time
   const seed = opts.profile === 'gentle' ? 20_031_014 : opts.seed;
   const scale =
     opts.runRatePct !== undefined ? scaleForRunRate(opts.runRatePct) : SCALE[opts.profile];
