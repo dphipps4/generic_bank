@@ -32,7 +32,7 @@ export function maskAddress(url: string, known: string[] = []): string {
   }
 }
 
-type Snapshot = {
+export type Snapshot = {
   strings: string[];
   documents: {
     scrollOffsetX?: number;
@@ -50,14 +50,29 @@ type Snapshot = {
   }[];
 };
 
-/** The boxes to paint, in screenshot coordinates, from one DevTools session's documents. */
-async function boxesFrom(cdp: CDPSession, known: string[], dx: number, dy: number): Promise<Box[]> {
+/** The boxes to paint, and the frames drawn that this session can't read, from its documents. */
+async function boxesFrom(cdp: CDPSession, known: string[], dx: number, dy: number) {
   const snap = (await cdp.send('DOMSnapshot.captureSnapshot', {
     computedStyles: ['font-size'],
   })) as unknown as Snapshot;
+  return snapshotBoxes(snap, known, dx, dy);
+}
+
+/**
+ * The boxes to paint, in screenshot coordinates, from one snapshot's documents; and `unread`, each
+ * frame drawn there whose document the snapshot doesn't hold (another process's, or none): what it
+ * shows is masked by its own session, or painted whole.
+ */
+export function snapshotBoxes(
+  snap: Snapshot,
+  known: string[],
+  dx: number,
+  dy: number,
+): { boxes: Box[]; unread: Box[] } {
   const str = (i: number) => (i >= 0 ? (snap.strings[i] ?? '') : '');
   const offsets = new Map<number, { x: number; y: number }>([[0, { x: dx, y: dy }]]);
   const out: Box[] = [];
+  const unread: Box[] = [];
   snap.documents.forEach((d, di) => {
     const off = offsets.get(di) ?? { x: dx, y: dy };
     const x0 = off.x - (d.scrollOffsetX ?? 0);
@@ -68,6 +83,13 @@ async function boxesFrom(cdp: CDPSession, known: string[], dx: number, dy: numbe
     owners?.index.forEach((node, k) => {
       const b = d.layout.bounds[layoutOf.get(node) ?? -1];
       if (b) offsets.set(owners.value[k]!, { x: x0 + b[0]!, y: y0 + b[1]! });
+    });
+    const read = new Set(owners?.index ?? []);
+    (d.nodes.nodeName ?? []).forEach((nm, i) => {
+      if (!['IFRAME', 'FRAME'].includes(str(nm)) || read.has(i)) return;
+      const b = d.layout.bounds[layoutOf.get(i) ?? -1];
+      if (b && b[2]! > 0 && b[3]! > 0)
+        unread.push({ x: x0 + b[0]!, y: y0 + b[1]!, w: b[2]!, h: b[3]! });
     });
     const size = (li: number | undefined) =>
       parseFloat(str(li === undefined ? -1 : (d.layout.styles[li]?.[0] ?? -1))) || 13;
@@ -113,7 +135,7 @@ async function boxesFrom(cdp: CDPSession, known: string[], dx: number, dy: numbe
       );
     });
   });
-  return out;
+  return { boxes: out, unread };
 }
 
 /**
@@ -178,12 +200,17 @@ function drawnInside(
   });
 }
 
-/** Every box to mask on the page as drawn now, frames from other origins included. */
+/**
+ * Every box to mask on the page as drawn now, frames from other origins included. A frame no
+ * session could read is painted whole: masking fails closed, never leaving a value it couldn't see.
+ */
 export async function maskBoxes(page: Page, known: string[] = []): Promise<Box[]> {
   const main = await page.context().newCDPSession(page);
-  const out = await boxesFrom(main, known, 0, 0);
+  const { boxes: out, unread } = await boxesFrom(main, known, 0, 0);
   await main.detach();
   // A frame from another origin runs in its own process, and is read through a session of its own.
+  // A frame of the same process has none: the session above read it already.
+  const read: Box[] = [];
   for (const f of page.frames()) {
     if (f === page.mainFrame()) continue;
     const own = await page
@@ -192,10 +219,16 @@ export async function maskBoxes(page: Page, known: string[] = []): Promise<Box[]
       .catch(() => null);
     if (!own) continue;
     const at = await (await f.frameElement()).boundingBox();
-    if (at) out.push(...(await boxesFrom(own, known, at.x, at.y)));
+    if (at) {
+      const its = await boxesFrom(own, known, at.x, at.y);
+      out.push(...its.boxes);
+      unread.push(...its.unread);
+      read.push({ x: at.x, y: at.y, w: at.width, h: at.height });
+    }
     await own.detach().catch(() => undefined);
   }
-  return out;
+  const same = (a: Box, b: Box) => Math.abs(a.x - b.x) <= 2 && Math.abs(a.y - b.y) <= 2;
+  return [...out, ...unread.filter((u) => !read.some((r) => same(r, u)))];
 }
 
 /**

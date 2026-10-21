@@ -90,13 +90,20 @@ export const PAGES: Record<string, string> = {
      <p id="member">Member 40017732 · J. Doe</p>
      <form><input type="image" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" width="60" height="20"></form>`,
   ),
+
+  // The money above, in a frame from another site: its own process, read through its own session.
+  '/other-frame': doc(
+    `<p>Statement</p><iframe id="other" src="{other}/mask" width="420" height="160"></iframe>`,
+  ),
 };
 
 export async function serve(): Promise<{ url: string; close: () => Promise<void> }> {
   const server: Server = createServer((req, res) => {
     const page = PAGES[(req.url ?? '/').split('?')[0]!];
     res.writeHead(page ? 200 : 404, { 'content-type': 'text/html; charset=utf-8' });
-    res.end(page ?? 'not found');
+    // localhost is another site than 127.0.0.1: a frame from it runs in a process of its own.
+    const { port } = server.address() as AddressInfo;
+    res.end(page?.replaceAll('{other}', `http://localhost:${port}`) ?? 'not found');
   });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
   const { port } = server.address() as AddressInfo;

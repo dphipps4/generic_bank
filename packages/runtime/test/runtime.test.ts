@@ -208,6 +208,41 @@ describe('the runtime: see first, then click', () => {
     expect(covered(await rect('member', '732'))).toBe(false);
   });
 
+  it('masks a frame from another site through its own session', async () => {
+    const p = await open('/other-frame');
+    await p.frameLocator('#other').getByText('Current balance').waitFor();
+    const frame = (await p.locator('#other').boundingBox())!;
+    const boxes = await maskBoxes(p, ['Alex Sample']);
+    const inside = boxes.filter(
+      (b) => b.x >= frame.x - 2 && b.y >= frame.y - 2 && b.x + b.w <= frame.x + frame.width + 2,
+    );
+    expect(inside.length).toBeGreaterThanOrEqual(3);
+    // Read, so only its hidden characters are painted, never the whole frame.
+    expect(inside.every((b) => b.w < frame.width / 2)).toBe(true);
+  });
+
+  it('paints a frame whole when no session can read it', async () => {
+    const p = await open('/other-frame');
+    await p.frameLocator('#other').getByText('Current balance').waitFor();
+    const frame = (await p.locator('#other').boundingBox())!;
+    const other = p.frames().find((f) => f !== p.mainFrame())!;
+    const ctx = p.context();
+    const open_ = ctx.newCDPSession.bind(ctx);
+    // The frame runs in another process: the page's own session can't see inside it.
+    await (await open_(other)).detach();
+    ctx.newCDPSession = (t) => (t === p ? open_(t) : Promise.reject(new Error('unreadable')));
+    const boxes = await maskBoxes(p, []);
+    expect(
+      boxes.some(
+        (b) =>
+          Math.abs(b.x - frame.x) <= 2 &&
+          Math.abs(b.y - frame.y) <= 2 &&
+          b.w >= frame.width - 2 &&
+          b.h >= frame.height - 2,
+      ),
+    ).toBe(true);
+  });
+
   it('names a control by its accessible name, as the runtime presses it', async () => {
     const p = await open('/mask');
     const f = await see(p, { limitMs: 10_000 });
