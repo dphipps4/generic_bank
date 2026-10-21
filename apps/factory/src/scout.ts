@@ -287,6 +287,8 @@ export function neverRepairs(
   here: (w: string) => boolean,
   pageOf: (r: Row) => string,
   names: string[],
+  /** Whether an earlier screen holds the same fields and buttons as this page: it may be the same. */
+  sameForm: (r: Row) => boolean = () => false,
 ): { rows: Row[]; repaired: string[] } {
   const repaired: string[] = [];
   const rows = earlier.map((r) => {
@@ -295,7 +297,11 @@ export function neverRepairs(
     const word = names.find((w) => !its.includes(w.toLowerCase()));
     if (!word)
       throw new ToolRefusal(
-        `"${r.page}" shows every word you named this screen by: name it by words "${r.page}" doesn't show. If it is that same screen met again, name it "${r.page}" again by words both its pages show as text`,
+        `"${r.page}" shows every word you named this screen by: name it by words "${r.page}" doesn't show.${
+          sameForm(r)
+            ? ` If it is that same screen met again, name it "${r.page}" again by words both its pages show as text`
+            : ` It holds other fields and buttons than this page: it is another screen`
+        }`,
       );
     repaired.push(`"${r.page}" now never shows "${word}"`);
     return { ...r, never: [...(r.never ?? []), word] };
@@ -1126,7 +1132,13 @@ export function scout(deps: ScoutDeps, task: Task) {
           !(was && sameScreen(was, { form: formOf(f.controls) }, i.shows))
         )
           throw new ToolRefusal(
-            `"${i.name}" already names another screen (${old.frame}), and this page doesn't show its words: ${old.shows.join('; ')}. Give this screen a name of its own; each screen keeps its own steps. If it is that same screen and those words change (a greeting), name it "${i.name}" again by words both its pages show as text`,
+            `"${i.name}" already names another screen (${old.frame}), and this page doesn't show its words: ${old.shows.join('; ')}. ${
+              // The way to name a screen again is offered only where the page could be that screen
+              // (run build-example-830a9104 was told it on another, and tried the other's name twice).
+              was?.form.join('\n') === formOf(f.controls).join('\n')
+                ? `Give this screen a name of its own; each screen keeps its own steps. If it is that same screen and those words change (a greeting), name it "${i.name}" again by words both its pages show as text`
+                : `This page holds other fields and buttons than ${old.frame}: it is another screen. Give it a name of its own; each screen keeps its own steps`
+            }`,
           );
         // The steps waiting to be filed were taken on the screen the Scout was on until now: filed
         // there before this one is named (run 25: a review taken for the form lost the form's steps).
@@ -1143,14 +1155,20 @@ export function scout(deps: ScoutDeps, task: Task) {
         // An earlier screen whose words all show here would be taken for this one: it gets a word of
         // this screen that its own page doesn't show, as a never-word.
         const pageOf = new Map<string, string>();
+        const formsOf = new Map<string, string>();
         for (const r of t.rows)
-          if (r.page !== i.name && r.shows.every((w) => shows(f, w)))
-            pageOf.set(r.page, ((await trail.shown(r.frame))?.texts ?? []).join('\n'));
+          if (r.page !== i.name && r.shows.every((w) => shows(f, w))) {
+            const s = await trail.shown(r.frame);
+            pageOf.set(r.page, (s?.texts ?? []).join('\n'));
+            formsOf.set(r.page, (s?.form ?? []).join('\n'));
+          }
+        const form = formOf(f.controls).join('\n');
         const { rows: earlier, repaired } = neverRepairs(
           t.rows.filter((r) => r.page !== i.name),
           (w) => shows(f, w),
           (r) => pageOf.get(r.page) ?? '',
           i.shows,
+          (r) => formsOf.get(r.page) === form,
         );
         const rows = [...earlier, next];
         try {
