@@ -16,7 +16,7 @@ import {
   type Page,
 } from '../../packages/runtime/src/index.js';
 import { pagesOf } from '../../packages/crawler/src/crawl.js';
-import { legacySite, SITE } from '../support/legacy-site.js';
+import { legacySite, redesign, SITE } from '../support/legacy-site.js';
 
 let site: Awaited<ReturnType<typeof legacySite>>;
 let browser: Browser;
@@ -335,5 +335,83 @@ describe('a site learned by its pages’ own titles', () => {
       'An unexpected error has occurred. Reference {value}',
     );
     expect((await ended(await under('js-error-fatal'), withError))?.code).toBe('app_error');
+  }, 300_000);
+
+  it('repairs a route a redesign broke: the renamed page joins under its new title', async () => {
+    // The route, learned before the redesign.
+    const known = await newPage(browser);
+    const { s, id, go } = await aScout(known, []);
+    await go('browser_open', { why: 'to start' });
+    await go('page_kind', { kind: 'sign_in' });
+    await go('browser_type', { id: id('textbox'), label: 'Operator ID', value: 'user_id', why });
+    await go('browser_type', { id: id('password'), label: 'Password', value: 'password', why });
+    await go('browser_press', { id: id('button', 'Sign In'), why });
+    await go('page_kind', { kind: 'home' });
+    await go('browser_press', { id: id('link', 'Member Search'), why });
+    await go('page_kind', { kind: 'member.search' });
+    await go('browser_type', { id: id('textbox'), label: 'Member number', value: 'member', why });
+    await go('browser_press', { id: id('button', 'Search'), why });
+    await go('note_read', { what: 'name', text: '$member\n{name}\nActive' });
+    await go('browser_press', { id: id('link', 'Open'), as: 'Matching member', why });
+    await go('page_kind', { kind: 'member.summary' });
+    await go('note_read', {
+      what: 'balance',
+      text: '{name} Account ending in {last4} Available balance: {available} Current balance: {current}',
+    });
+    await go('note_read', { what: 'name', text: 'Member $member · {name}' });
+    await go('goal_reached');
+    const before = s.table();
+    const balance = (t: Table) =>
+      newPage(browser).then((p) =>
+        checkBalance(crawlerSession(p, t), { member: SITE.member, account: SITE.account }).then(
+          (b) => b.availableCents,
+          (e: { ended?: { code: string } }) => e.ended?.code ?? String(e),
+        ),
+      );
+    expect(await balance(before)).toBe(SITE.availableCents);
+
+    redesign(true);
+    try {
+      // The deterministic crawler breaks on the redesigned site: its route doesn't know the page.
+      expect(await balance(before)).not.toBe(SITE.availableCents);
+
+      // The repair: the Scout starts from the broken route and walks the site again. The renamed
+      // page joins the route under its own new title; the pages that didn't move keep theirs.
+      const fix = await aScout(await newPage(browser), [], before);
+      await fix.go('browser_open', { why: 'the goal again, from the broken route' });
+      await fix.go('browser_type', {
+        id: fix.id('textbox'),
+        label: 'Operator ID',
+        value: 'user_id',
+        why,
+      });
+      await fix.go('browser_type', {
+        id: fix.id('password'),
+        label: 'Password',
+        value: 'password',
+        why,
+      });
+      await fix.go('browser_press', { id: fix.id('button', 'Sign In'), why });
+      await fix.go('browser_press', { id: fix.id('link', 'Look Up'), as: 'Member Search', why });
+      await fix.go('page_kind', { kind: 'member.search' });
+      await fix.go('browser_type', {
+        id: fix.id('textbox'),
+        label: 'Member ID',
+        value: 'member',
+        why,
+      });
+      await fix.go('browser_press', { id: fix.id('button', 'Search'), why });
+      await fix.go('browser_press', { id: fix.id('link', 'Open'), as: 'Matching member', why });
+      await fix.go('goal_reached');
+      const after = fix.s.table();
+      expect(after.rows.map((r) => r.page)).toContain('Look Up a Member');
+      expect(after.rows.find((r) => r.page === 'Branch Home')!.do.balance).toEqual([
+        { press: 'Look Up' },
+      ]);
+      // The repaired route serves the redesigned site.
+      expect(await balance(after)).toBe(SITE.availableCents);
+    } finally {
+      redesign(false);
+    }
   }, 300_000);
 });

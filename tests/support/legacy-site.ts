@@ -27,6 +27,18 @@ const cookies = (req: IncomingMessage) =>
 const money = (cents: number) =>
   `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
+/**
+ * The site's redesign, as a vendor's would: the search page gets a new title, its menu link a new
+ * name, and its field a new label. A crawler learned before it breaks; a repair learns it again.
+ */
+let redesigned = false;
+export const redesign = (on: boolean) => {
+  redesigned = on;
+};
+const SEARCH = () => (redesigned ? 'Look Up a Member' : 'Member Search');
+const SEARCH_LINK = () => (redesigned ? 'Look Up' : 'Member Search');
+const MEMBER_LABEL = () => (redesigned ? 'Member ID:' : 'Member number:');
+
 /** Sessions that have been shown the promotion: once each, as a site shows it. */
 const promoted = new Set<string>();
 let sessions = 0;
@@ -67,7 +79,7 @@ function route(req: IncomingMessage, res: ServerResponse) {
   // An error page in place of the page asked for, under its title, with a reference that changes
   // on every load.
   if (forced.includes('js-error-fatal')) {
-    const title = { '/home': 'Branch Home', '/search': 'Member Search' }[url.pathname] ?? 'Branch';
+    const title = { '/home': 'Branch Home', '/search': SEARCH() }[url.pathname] ?? 'Branch';
     const ref = `ERR-${100_000 + Math.floor(Math.random() * 900_000)}`;
     return send(
       page(
@@ -79,7 +91,7 @@ function route(req: IncomingMessage, res: ServerResponse) {
   // A promotion in place of the page asked for, under that page's own title, once a session.
   if (forced.includes('promo') && !promoted.has(c.sid)) {
     promoted.add(c.sid);
-    const title = { '/home': 'Branch Home', '/search': 'Member Search' }[url.pathname] ?? 'Branch';
+    const title = { '/home': 'Branch Home', '/search': SEARCH() }[url.pathname] ?? 'Branch';
     return send(
       page(title, `<p><b>Have a look at what is new</b></p><a href="${url.pathname}">Not now</a>`),
     );
@@ -88,7 +100,7 @@ function route(req: IncomingMessage, res: ServerResponse) {
     return send(
       page(
         'Branch Home',
-        `<p>Pick a task.</p><a href="/search">Member Search</a> <a href="/">Sign Out</a>`,
+        `<p>Pick a task.</p><a href="/search">${SEARCH_LINK()}</a> <a href="/">Sign Out</a>`,
       ),
     );
   if (url.pathname === '/search') {
@@ -102,8 +114,8 @@ function route(req: IncomingMessage, res: ServerResponse) {
           : '';
     return send(
       page(
-        'Member Search',
-        `<form method="get" action="/search"><table><tr><td>Member number:</td><td><input name="q${Date.now() % 83}"></td></tr></table>
+        SEARCH(),
+        `<form method="get" action="/search"><table><tr><td>${MEMBER_LABEL()}</td><td><input name="q${Date.now() % 83}"></td></tr></table>
          <button type="submit">Search</button></form>${found}`,
       ),
     );
@@ -114,7 +126,7 @@ function route(req: IncomingMessage, res: ServerResponse) {
         'Member Summary',
         `<p>Member ${SITE.member} · ${SITE.name}</p>
          <p>${SITE.account} Account ending in ${SITE.last4} Available balance: ${money(SITE.availableCents)} Current balance: ${money(SITE.currentCents)}</p>
-         <a href="/search">Member Search</a> <a href="/">Sign Out</a>`,
+         <a href="/search">${SEARCH_LINK()}</a> <a href="/">Sign Out</a>`,
       ),
     );
   res.writeHead(404);
