@@ -199,7 +199,7 @@ bank: env image
 factory-up: env image
     @{{compose}} --profile factory up -d --wait {{factory}}
 
-# The factory learns a bank (or repairs it), then the gate, in FACTORY_RUN_LIMIT_MINUTES of the agents' own time (30): just factory example 40017732 1234 5678
+# The factory learns a bank (or repairs it), then the gate, in FACTORY_RUN_LIMIT_MINUTES of the agents' own time (60): just factory example 40017732 1234 5678
 [group('Factory')]
 factory bank member from to: factory-up
     #!/usr/bin/env bash
