@@ -1,10 +1,10 @@
 # The prompts that build Generic Bank
 
-These thirteen prompts, given in order to a fresh Claude Code that has only the brief, rebuild the system as it stands. They are condensed from the several hundred prompts that actually built it, with the lessons that cost the most written in as rules.
+These thirteen prompts, given in order to a fresh Claude Code in an empty repository, rebuild the system as it stands. They are condensed from the several hundred prompts that actually built it, with the lessons that cost the most written in as rules.
 
-Prompts 1 to 7 build what the brief asks for: two banks, a runtime that sees first and then clicks, bank 1's crawler, the Task API, and safety. Bank 1's crawler is built ahead of time from recorded evidence, not by the factory.
+Prompts 1 to 7 build the core system: two banks, a runtime that sees first and then clicks, bank 1's crawler, the Task API, and safety. Bank 1's crawler is built ahead of time from recorded evidence, not by the factory.
 
-Prompts 8 to 13 build the factory, the one extension. Two AI agents learn a bank no one wrote a crawler for. What they leave behind is a route: plain data listing the bank's screens, how to recognize each one, and a teller's steps there. Ordinary code then replays that route with no model, the same code that runs bank 1. A gate tests the route, and a person approves it before it serves.
+Prompts 8 to 13 build the software factory. Two AI agents learn a bank no one wrote a crawler for. What they leave behind is a route: plain data listing the bank's screens, how to recognize each one, and a teller's steps there. Ordinary code then replays that route with no model, the same code that runs bank 1. A gate tests the route, and a person approves it before it serves.
 
 The factory prompts never mention bank 2's screens, labels or flows. Bank 2 is the exam.
 
@@ -12,24 +12,24 @@ The factory prompts never mention bank 2's screens, labels or flows. Bank 2 is t
 
 ## 1. How we work
 
-> Build from the brief. It asks for a small, coherent, honest system that survives runtime errors and carries over to other tenants. If neither the brief nor I ask for something, don't build it.
+> Build a small, coherent, honest system that survives runtime errors and carries over to other tenants. If I don't ask for something, don't build it.
 >
 > - **Plan first.** Write one plan, and write code only after I approve it. While I give feedback, take notes and listen. Collect everything into one plan when I say I'm done.
 > - **Pull requests:** one worktree per branch, and never edit the main checkout. Keep pull requests small, squash them, then delete the branch and the worktree.
-> - **Tests:** only what proves something the brief needs. A pull request runs typecheck, lint, gitleaks and the unit tests of the packages it touches. A change to docs alone runs nothing. Master runs the rest in parallel. Browser proofs run once from a temporary file. They are never committed, and their result goes in the pull request.
+> - **Tests:** only what proves something the system needs. A pull request runs typecheck, lint, gitleaks and the unit tests of the packages it touches. A change to docs alone runs nothing. Master runs the rest in parallel. Browser proofs run once from a temporary file. They are never committed, and their result goes in the pull request.
 > - **Scientist by default:** ground truth first. Every claim is reproduced or shown with its frame and its JSON. A fix addresses a class of failure, never the one instance. Every live run has a written hypothesis. A failed run gets an SRE-style postmortem: blow by blow, evidence for every claim, root causes, action items. Never run, fix and run again to find defects.
 > - **Live runs have a hard limit.** Kill a run from outside the moment it passes its limit, poll it every 30 seconds, and report after the kill. Ask before anything that costs real money or hours. Give a status at least every two minutes.
 > - **Say what's true.** Hand-written work says so. Never present scripted output as a model's. No test fake or crawler ever reads a bank's source.
 
 ## 2. The plan, the stack and setup
 
-> Write one plan of at most ten pages, with the detail in appendices. Use one confident voice with no history; the reviewer wrote the brief. Cover the problem, one architecture diagram, the task contract, how the UI is seen and driven, the error taxonomy, escalation and safety, and what Part 2 would add. Write "a person approves". Use American spelling. Never put PR numbers in a doc. The README, the brief appendix, the code walkthrough and the page of agent prompts may point to code; every other doc links only docs. Write whole, plain sentences, and cut points rather than squeezing words. Run /humanize on every new doc.
+> Write one plan of at most ten pages, with the detail in appendices. Use one confident voice with no history. Cover the problem, one architecture diagram, the task contract, how the UI is seen and driven, the error taxonomy, escalation and safety, and what Part 2 would add. Write "a person approves". Use American spelling. Never put PR numbers in a doc. The README, the concepts appendix, the code walkthrough and the page of agent prompts may point to code; every other doc links only docs. Write whole, plain sentences, and cut points rather than squeezing words. Run /humanize on every new doc.
 >
 > - **Stack:** TypeScript on Node with ESM and npm workspaces. Fastify, zod, Prisma on Postgres, DBOS for durable runs, AdminJS for the Console, and Playwright driving Chrome. The agents run on pi, and each role's provider, model and effort are config. The default is OpenRouter; OpenAI also works. Never route around a provider's block on a model.
 > - **Compose:** one docker-compose that fits in Docker's 5.25 GB on an 8 GB Mac. Pictures go on a shared volume.
 > - **The Mac needs only Docker and `just`.** Every other tool runs in a Debian tools image.
 > - **Secrets:** SOPS and age only. `just setup` generates every secret, and `just secret-set` sets one from outside without showing it. No Vault and no 1Password.
-> - **Recipes:** the few a reviewer runs, listed first in the README: `setup`, `up`, `show` (it opens every tab), `reset` (empty data, images kept) and `down`. Developer recipes, `factory` and `redesign` among them, are listed at the bottom.
+> - **Recipes:** the few a newcomer runs, listed first in the README: `setup`, `up`, `show` (it opens every tab), `reset` (empty data, images kept) and `down`. Developer recipes, `factory` and `redesign` among them, are listed at the bottom.
 
 ## 3. The target: two banks on one product
 
@@ -37,7 +37,7 @@ The factory prompts never mention bank 2's screens, labels or flows. Bank 2 is t
 >
 > - **Sign-in:** a staff ID of at least eight characters, a password, then a code sent to a simulated phone and email inbox. The inbox labels itself in large type and has a Copy code button on each line. A code lasts 7 minutes, and once it's entered, the browser is remembered for 30 days. Each person has one name everywhere.
 > - **Pages:** member search, the member summary with account tiles, an activity list, and a transfer form that stops on a review page. A supervisor's code approves anything over a limit.
-> - **Runtime trouble from the brief:** slow pages (250 ms to 1.8 s), script errors, 503s, record not found, a closed member, insufficient funds, permission denied, session timeout, a surprise confirmation dialog, and a record in use. 3% of runs meet an ambient hazard (HAZARD_RUN_RATE_PCT), never on a transfer page. Signed URL arguments force any single hazard, and the hazard lab shows each one's arguments with a copy button.
+> - **Runtime trouble:** slow pages (250 ms to 1.8 s), script errors, 503s, record not found, a closed member, insufficient funds, permission denied, session timeout, a surprise confirmation dialog, and a record in use. 3% of runs meet an ambient hazard (HAZARD_RUN_RATE_PCT), never on a transfer page. Signed URL arguments force any single hazard, and the hazard lab shows each one's arguments with a copy button.
 > - **Two tenants from config.** Bank 1 is Generic Bank. Bank 2 uses its own words, a second origin, labels and key controls drawn as pictures, and screens marked by pictures. It turns away anything not shaped like Chrome on a Mac. A switch (BANK_REDESIGN) renames and moves things the way a vendor upgrade would.
 > - **Ground truth:** an admin port gives tests the ledger. No crawler or agent ever sees it.
 
@@ -80,7 +80,7 @@ The factory prompts never mention bank 2's screens, labels or flows. Bank 2 is t
 
 ## 7. The README, ACCESS and the demo
 
-> - **README:** two pages below the build steps. Answer the brief's questions plainly: how the system fits together, how the task and the minimum scope are met, and 80 to 100 honestly. Say it in whole sentences. We use AI to write deterministic code for a website, and a factory of agents writes that code for a site no one has seen.
+> - **README:** two pages below the build steps. Answer three questions plainly: how the system fits together, how it handles the hard parts, and 80 to 100 honestly. Say it in whole sentences. We use AI to write deterministic code for a website, and a factory of agents writes that code for a site no one has seen.
 > - **ACCESS.md:** written by `just up`. It lists every URL and login, each bank by name, one value per line, and a curl for each endpoint. `just show` opens it styled, with the Console, the inbox, Swagger UI and the banks.
 > - **Demo scripts, one per bank:** steps a person follows one at a time, each with a small picture of what they should see. Include three bank 1 hazards its crawler survives.
 > - **The walkthrough:** the code part by part, in reading order. Give each part what it does and the decision behind it, with the alternative not chosen, and tie it to the prompt that built it.

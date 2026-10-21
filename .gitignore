@@ -197,7 +197,7 @@ plan/ASSESSMENT.md
 .idea/
 *.swp
 
-# Inputs to the plan (the brief and earlier drafts) are not published
+# Inputs to the plan and earlier drafts are not published
 plan/*.pdf
 
 # Working notes and the generated project graph stay local
