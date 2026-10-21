@@ -120,8 +120,8 @@ async function repairOf(): Promise<{ table: Table; diagnosis: string } | undefin
  */
 const RUN_LIMIT_MS = Number(process.env.FACTORY_RUN_LIMIT_MINUTES ?? 60) * 60_000;
 const PASS_MS = 10 * 60_000;
-/** Passes a run may make: one, until a person turns repair passes back on. */
-const PASSES = Math.max(1, Number(process.env.FACTORY_PASSES ?? 1));
+/** Passes a run may make, inside its hour: each one after the first repairs the route the last failed. */
+const PASSES = Math.max(1, Number(process.env.FACTORY_PASSES ?? 3));
 
 /** A run's steps, in order. */
 async function stepsOf(runId: string) {
@@ -195,6 +195,8 @@ try {
   const endsAt = Date.now() + RUN_LIMIT_MS;
   let repair = await repairOf();
   let passed = false;
+  // The hazard pass is done once a run: a later pass repairs a route that holds its notes already.
+  let hazardsDone = false;
   for (let pass = 1; !passed && pass <= PASSES; pass++) {
     if (pass > 1) {
       const left = endsAt - Date.now();
@@ -223,8 +225,9 @@ try {
         log,
         ...(cfg.HAZARD_HMAC_KEY ? { hazardKey: cfg.HAZARD_HMAC_KEY } : {}),
       },
-      { bank, member, from, to, endsAt, ...(repair ? { repair } : {}) },
+      { bank, member, from, to, endsAt, hazards: !hazardsDone, ...(repair ? { repair } : {}) },
     );
+    hazardsDone ||= run.hazardsDone;
     await report(run.runId);
     if (!run.table) {
       log(`no goal was reached: ${run.diagnosis ?? ''}`);

@@ -52,6 +52,8 @@ export interface RunInput {
   repair?: { table: Table; diagnosis: string };
   /** When the agents' time ends, if before the run's own limit: a later pass gets what is left. */
   endsAt?: number;
+  /** False when an earlier pass of the same run did the hazard pass: its notes are in the route. */
+  hazards?: boolean;
 }
 
 export interface RunOutput {
@@ -62,6 +64,8 @@ export interface RunOutput {
   diagnosis: string | null;
   /** Writes the run's lessons and closes its record: call it once the report and the gate are done. */
   finish(): Promise<void>;
+  /** Whether this pass did the hazard pass. */
+  hazardsDone: boolean;
 }
 
 /** Each goal, as the Scout and the Supervisor are told it. */
@@ -273,6 +277,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
   let table: Table | undefined = input.repair?.table;
   let diagnosis: string | null = null;
   let outcome = 'crashed';
+  let hazardsDone = false;
   /** The lessons, and the run's record: after the report and the gate, never inside the clock. */
   let finished = false;
   const finish = async () => {
@@ -520,7 +525,14 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
     }
     if (reached.length === 3) outcome = 'every goal reached';
     // The hazard pass: only for a route that reached every goal, inside the run's own time.
-    if (reached.length === 3 && table && deps.hazardKey && !page.isClosed()) {
+    if (
+      reached.length === 3 &&
+      table &&
+      deps.hazardKey &&
+      input.hazards !== false &&
+      !page.isClosed()
+    ) {
+      hazardsDone = true;
       for (const [hazard, goal] of HAZARD_PASS) {
         const left = deadlineAt() - Date.now();
         if (left < 2 * 60_000) {
@@ -622,5 +634,6 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
     reached,
     diagnosis,
     finish,
+    hazardsDone,
   };
 }
