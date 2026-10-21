@@ -47,6 +47,14 @@ const statusOf = async (id: string) =>
       [id],
     )
   ).rows[0]?.status;
+/** Each replay's task run, as the Console shows it: none is left running. */
+const replaysOf = async (id: string) =>
+  (
+    await db.query<{ id: string; status: string; settled: boolean }>(
+      `SELECT id, status, "settledAt" IS NOT NULL AS settled FROM "TaskRun" WHERE id LIKE $1 ORDER BY "startedAt"`,
+      [`${id}-%`],
+    )
+  ).rows.map((r) => [r.id.slice(id.length + 1), r.status, r.settled]);
 const input = {
   bank: 'generic',
   member: MEMBERS.demo,
@@ -64,6 +72,7 @@ describe('the gate', () => {
     expect(g.runs).toHaveLength(1);
     expect(g.runs[0]!.said).toMatch(/unknown_screen/);
     expect(await statusOf(id)).toBe('failed');
+    expect(await replaysOf(id)).toEqual([['check', 'failed', true]]);
   }, 240_000);
 
   it('recommends a table that passes the plain run and the forced dialog', async () => {
@@ -81,6 +90,11 @@ describe('the gate', () => {
       );
     expect(g.recommendationId).not.toBeNull();
     expect(await statusOf(id)).toBe('open');
+    expect(await replaysOf(id)).toEqual([
+      ['check', 'succeeded', true],
+      ['trusted', 'succeeded', true],
+      ['confirm-dialog', 'succeeded', true],
+    ]);
   }, 240_000);
 
   it('fails a route whose returning sign-in serves the transfer and the activity alone, from a trusted browser', async () => {

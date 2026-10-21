@@ -2,7 +2,7 @@
 // masked frame for every page reached, at most 60. It is kept under a task run with the factory
 // run's own id, so the Console's run page and its Frames button show it.
 import { seen } from '@gb/crawler';
-import { addFrame, addStep, type FrameStore, type Sql } from '@gb/runs';
+import { addFrame, addStep, failIfOpen, type FrameStore, type Sql } from '@gb/runs';
 import { type Frame, maskText } from '@gb/runtime';
 
 const MAX_FRAMES = 60;
@@ -30,6 +30,8 @@ export interface Trail {
   remask(): Promise<number>;
   /** What a stored frame of this run shows, masked: its page and its words; null for any other. */
   shown(ref: string): Promise<Shown | null>;
+  /** Ends the trail's run, so the Console never shows it running after it ended. */
+  settle(ok: boolean): Promise<void>;
 }
 
 /** A frame's page and the words on it: its controls' names and its visible text. */
@@ -106,6 +108,16 @@ export async function openTrail(o: {
       }
     },
     has,
+    async settle(ok) {
+      if (!ok) {
+        await failIfOpen(sql, runId);
+        return;
+      }
+      await sql.query(
+        `UPDATE "TaskRun" SET status = 'succeeded', "settledAt" = now() WHERE id = $1 AND "settledAt" IS NULL`,
+        [runId],
+      );
+    },
     async remask() {
       const rows = await sql.query<{ seq: number; action: string | null; outcome: string | null }>(
         `SELECT seq, action, outcome FROM "Step" WHERE "runId" = $1`,

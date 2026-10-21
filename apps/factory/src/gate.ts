@@ -114,6 +114,7 @@ async function checkRun(
   const covers = covered(o.table);
   const task = { member: o.member, from: o.from, to: o.to, amountCents: 100, memo: 'GBX GATE' };
   const checked: string[] = [];
+  let ok = false;
   try {
     if (covers.balance) {
       const b = await checkBalance(session, { ...task, account: o.from });
@@ -149,6 +150,7 @@ async function checkRun(
       checked.push(`the activity opened (${lines.length} lines)`);
     }
     if (cookies.save) await page.context().storageState({ path: cookies.save });
+    ok = true;
     return {
       runId: o.runId,
       hazard,
@@ -165,6 +167,7 @@ async function checkRun(
         .context()
         .close()
         .catch(() => undefined);
+    await trail.settle(ok).catch(() => undefined);
   }
 }
 

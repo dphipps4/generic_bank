@@ -281,6 +281,7 @@ export async function factoryRun(deps: FactoryDeps, input: RunInput): Promise<Ru
         WHERE id = $1`,
       [runId, reached.length === 3 ? 'succeeded' : 'failed'],
     );
+    await trail.settle(reached.length === 3);
   };
   try {
     // The Scout's tools exactly as the Scout is given them, for the Supervisor to know what the

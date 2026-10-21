@@ -18,6 +18,7 @@ import { memoryClient } from './memory.js';
 import { ROLE_SETTINGS, rolesOf } from './models.js';
 import { personCode } from './person.js';
 import { factoryRun } from './run.js';
+import { dbNow, failOpenFactoryRuns } from './settle.js';
 import { framesOf } from './trail.js';
 
 const cfg = loadConfig(
@@ -66,6 +67,23 @@ const credentials = { operatorId: cfg.BANK_OPERATOR_ID, password: cfg.BANK_SERVI
 const code = (runId: string) =>
   personCode({ sql, runId, bank, answerKey: cfg.ANSWER_SEAL_KEY, deadlineMs: 5 * 60_000 })();
 const log = (line: string) => console.log(line);
+
+// No run ends showing as running. A run older than the recipe's hard stop has no process left:
+// it ends as failed before this one starts. What this process starts from now on is its own, and
+// whatever it leaves open ends as failed, however it stops: an error, a signal, a crash.
+const HARD_STOP_MS = (Number(process.env.FACTORY_RUN_LIMIT_MINUTES ?? 60) + 15) * 60_000;
+const swept = await failOpenFactoryRuns(sql, bank, { olderThanMs: HARD_STOP_MS });
+if (swept) log(`ended ${swept} earlier runs that a stopped process had left running`);
+const since = await dbNow(sql);
+const leaveNothingOpen = () => failOpenFactoryRuns(sql, bank, { since }).catch(() => 0);
+const stop = (code: number) => () => void leaveNothingOpen().finally(() => process.exit(code));
+process.once('SIGTERM', stop(143));
+process.once('SIGINT', stop(130));
+for (const event of ['uncaughtException', 'unhandledRejection'] as const)
+  process.once(event, (e) => {
+    console.error(e);
+    stop(1)();
+  });
 const browser = await launch();
 
 /** What a repair starts from: the table that broke, and where its run stopped. */
@@ -222,7 +240,11 @@ try {
   log("writing the run's lessons to memory…");
   await run.finish();
   await lessonsLine(run.runId);
+} catch (e) {
+  console.error(e);
+  process.exitCode = 1;
 } finally {
+  await leaveNothingOpen();
   await browser.close();
 }
 process.exit();
