@@ -1,0 +1,101 @@
+# Generic Bank on Replit. The Run button builds what changed, prepares Replit's database and the
+# secrets, then starts every service the compose stack runs, each as a Node process. See
+# infra/replit/README.md.
+modules = ["nodejs-24"]
+
+[nix]
+channel = "stable-25_05"
+packages = ["sops", "age", "jq"]
+
+[env]
+GB_IN_TOOLS = "1"
+SOPS_AGE_KEY_FILE = "$REPL_HOME/.run/age/keys.txt"
+
+[workflows]
+runButton = "Generic Bank"
+
+[[workflows.workflow]]
+name = "Generic Bank"
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash infra/replit/setup.sh"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Services"
+
+[[workflows.workflow]]
+name = "Services"
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "infra/replit/service.sh memory node apps/memory/dist/main.js"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "infra/replit/service.sh api node apps/api/dist/main.js"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "infra/replit/service.sh console node apps/console/dist/main.js"
+waitForPort = 8080
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "infra/replit/service.sh runner node apps/runner/dist/main.js"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "infra/replit/service.sh bank TENANT=generic PORT=8081 ADMIN_PORT=9081 MALLOC_ARENA_MAX=2 node apps/bank/dist/main.js"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "infra/replit/service.sh bank TENANT=example PORT=8082 ADMIN_PORT=9082 MALLOC_ARENA_MAX=2 HAZARD_RUN_RATE_PCT=0 node apps/bank/dist/main.js"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "infra/replit/service.sh bank-inbox PORT=8089 BANKS=generic,example node apps/bank/dist/inbox-main.js"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "infra/replit/service.sh factory node apps/factory/dist/main.js"
+
+# What a person opens, on the workspace's preview address: the Console, the API's Swagger UI, both
+# banks and the inbox. The rest have only a local port, which keeps them inside the workspace.
+[[ports]]
+localPort = 8080
+externalPort = 80
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
+
+[[ports]]
+localPort = 8082
+externalPort = 3000
+
+[[ports]]
+localPort = 8089
+externalPort = 3001
+
+[[ports]]
+localPort = 8100
+
+[[ports]]
+localPort = 8200
+
+[[ports]]
+localPort = 8470
+
+[[ports]]
+localPort = 9081
+
+[[ports]]
+localPort = 9082

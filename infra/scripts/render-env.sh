@@ -10,9 +10,10 @@ mkdir -p .run/env && chmod 700 .run .run/env
 all="$( { decrypt local; decrypt factory; } | jq -Rnc '
   [inputs | select(test("^[^#][^=]*=")) | capture("^(?<key>[^=]+)=(?<value>.*)$")] | from_entries')"
 
-# Derived values (database URLs built from passwords).
-derived="$(jq -c --argjson all "$all" '.derived | with_entries(.value |= (
-  reduce ($all|to_entries[]) as $e (.; gsub("\\$\\{" + $e.key + "\\}"; $e.value))))' infra/secrets/scope.json)"
+# Derived values (database URLs built from passwords). One already in the environment wins: on
+# Replit the database is Replit's own, not one of ours (infra/replit/setup.sh).
+derived="$(jq -c --argjson all "$all" '.derived | with_entries(.value = ($ENV[.key] // (.value |
+  reduce ($all|to_entries[]) as $e (.; gsub("\\$\\{" + $e.key + "\\}"; $e.value)))))' infra/secrets/scope.json)"
 merged="$(jq -c -n --argjson a "$all" --argjson d "$derived" '$a + $d')"
 
 for svc in $(jq -r '.services | keys[]' infra/secrets/scope.json); do
