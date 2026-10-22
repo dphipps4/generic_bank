@@ -41,7 +41,7 @@ fi
 infra/scripts/render-env.sh
 
 # The schemas, then the banks at the addresses Chrome reaches them by here.
-infra/replit/service.sh migrate npx prisma migrate deploy --schema packages/db/prisma/schema.prisma
-infra/replit/service.sh memory-migrate npx prisma migrate deploy --schema apps/memory/prisma/schema.prisma
+infra/replit/service.sh migrate node_modules/.bin/prisma migrate deploy --schema packages/db/prisma/schema.prisma
+infra/replit/service.sh memory-migrate node_modules/.bin/prisma migrate deploy --schema apps/memory/prisma/schema.prisma
 psql "$CONTROL_DATABASE_URL" -qc "update \"Bank\" set url = regexp_replace(url, '^http://(bank-[a-z]+):', 'http://\1.localhost:') where url !~ '\.localhost:'"
 echo "==> Ready"
