@@ -34,11 +34,17 @@ psql "$base/memory" -qc 'create extension if not exists vector'
 export CONTROL_DATABASE_URL="$base/control" MEMORY_DATABASE_URL="$base/memory" BANK_DATABASE_URL_BASE="$base"
 
 # The secrets: generated here, kept in SOPS files encrypted to this workspace's own age key. The
-# OpenRouter key is the one a person enters, as a Replit Secret.
+# OpenRouter key is the one a person enters, as a Replit Secret. Nix's sops has no --value-stdin,
+# so the file is decrypted inside .run, given the key, and encrypted again, as secrets-init.sh does.
 infra/scripts/secrets-init.sh
 if [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
-  printf '%s' "$OPENROUTER_API_KEY" | jq -Rs . |
-    sops set --value-stdin config/factory.secrets.enc.env '["OPENROUTER_API_KEY"]'
+  f=config/factory.secrets.enc.env plain=.run/secrets.factory.plain
+  trap 'rm -f "$plain"' EXIT
+  ( umask 077
+    { sops decrypt --input-type dotenv --output-type dotenv "$f" | grep -v '^OPENROUTER_API_KEY='
+      echo "OPENROUTER_API_KEY=$OPENROUTER_API_KEY"; } > "$plain"
+    sops encrypt --input-type dotenv --output-type dotenv --filename-override "$f" "$plain" > "$f.new" )
+  mv "$f.new" "$f" && rm -f "$plain"
 fi
 infra/scripts/render-env.sh
 
