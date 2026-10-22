@@ -8,7 +8,8 @@ mkdir -p .run/data/evidence .run/data/sessions .run/models && chmod 700 .run
 
 # The build, as the Node image makes it: no GPU libraries, only Linux's ONNX binaries, and the
 # build's tools pruned after it, which keeps the app inside Replit's storage limit.
-stamp="$(find apps packages package.json package-lock.json tsconfig*.json -type f -not -path '*/node_modules/*' -not -path '*/dist/*' -not -name '*.tsbuildinfo' -print0 | LC_ALL=C sort -z | xargs -0 sha1sum | sha1sum | cut -c1-16)"
+src=(apps packages package.json package-lock.json tsconfig.json tsconfig.base.json)
+stamp="$( { git rev-parse "${src[@]/#/HEAD:}"; git diff HEAD -- "${src[@]}"; } | sha1sum | cut -c1-16)"
 if [[ "$(cat .run/build.stamp 2>/dev/null)" != "$stamp" ]]; then
   echo "==> Installing and building: a few minutes the first time"
   ONNXRUNTIME_NODE_INSTALL=skip npm ci --no-audit --no-fund --loglevel=error
@@ -16,6 +17,7 @@ if [[ "$(cat .run/build.stamp 2>/dev/null)" != "$stamp" ]]; then
   npx prisma generate --schema packages/db/prisma/schema.prisma
   npx tsc -b
   npm prune --omit=dev --no-audit --no-fund --loglevel=error
+  git checkout -q -- package-lock.json # prune rewrites it; the stamp reads the committed one
   npx prisma generate --schema packages/db/prisma/schema.prisma
   echo "$stamp" > .run/build.stamp
 fi
