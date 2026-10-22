@@ -63,6 +63,11 @@ args = "infra/replit/service.sh bank-inbox PORT=8089 BANKS=generic,example node 
 task = "shell.exec"
 args = "infra/replit/service.sh factory node apps/factory/dist/main.js"
 
+# ACCESS.md, as just up writes it, once both banks answer.
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash -c 'until curl -sf localhost:8081/healthz && curl -sf localhost:8082/healthz; do sleep 2; done >/dev/null; infra/replit/access.sh'"
+
 # What a person opens, on the workspace's preview address: the Console, the API's Swagger UI, both
 # banks and the inbox. The rest have only a local port, which keeps them inside the workspace.
 [[ports]]
