@@ -26,7 +26,7 @@ I=http://localhost:${BANK_INBOX_PORT:-8089}
 # On Replit: the workspace's preview address, at the external ports .replit gives each page.
 if [[ -n "${REPLIT_DEV_DOMAIN:-}" ]]; then
   w=https://$REPLIT_DEV_DOMAIN
-  A=$w:8000 C=$w B1=$w:3002/corelink/ B2=$w:3000/ I=$w:3001
+  A=$w:8000 C=$w:3003 B1=$w:3002/corelink/ B2=$w:3000/ I=$w:3001
   factory="infra/replit/factory.sh${factory#just factory}"
 fi
 
