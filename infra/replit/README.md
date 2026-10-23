@@ -19,6 +19,10 @@ From there the demos go just as [Demo 1](../../docs/demo-1.md) and [Demo 2](../.
 - **The browser.** Replit's own Chromium, through `CHROME_PATH`. The banks keep their names, as `bank-generic.localhost` and `bank-example.localhost`; Chrome sends any `.localhost` name to this machine.
 - **Node.** Replit's Node 24. The project asks for 26, but it builds and runs fine on 24.
 
+## Slack
+
+Link Slack to the app and the notifier posts to `#generic-bank` whenever something needs a person, a run fails, or a route waits for review. Each message links to the Console page where you act on it. Linking takes your Slack connection in Replit (Integrations) and attaching it to this app; the simplest way is asking Replit's Agent to attach it and change nothing else. The messages come from the Slack account you linked, and only the notifier ever sees that link. Without Slack linked, the notifier stops at start and everything else runs as before.
+
 ## What the free plan won't do
 
 - **Storage.** 2 GiB per app. The build throws its own tools away afterward, like the Node image does, which leaves about 1.1 GB.

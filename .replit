@@ -63,6 +63,12 @@ args = "infra/replit/service.sh bank-inbox PORT=8089 BANKS=generic,example node 
 task = "shell.exec"
 args = "infra/replit/service.sh factory node apps/factory/dist/main.js"
 
+# Slack: what needs a person, and what failed, with a link to the Console. Only the notifier sees
+# Replit's link to the Slack connection.
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "infra/replit/service.sh notifier +REPLIT_CONNECTORS_HOSTNAME +REPL_IDENTITY CONSOLE_URL=https://$REPLIT_DEV_DOMAIN BANK_INBOX_URL=https://$REPLIT_DEV_DOMAIN:3001 node apps/notifier/dist/main.js"
+
 # ACCESS.md, as just up writes it, once both banks answer.
 [[workflows.workflow.tasks]]
 task = "shell.exec"

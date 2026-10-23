@@ -1,0 +1,18 @@
+{
+  "name": "@gb/notifier",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@gb/config": "*",
+    "@gb/db": "*",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@gb/runs": "*"
+  }
+}

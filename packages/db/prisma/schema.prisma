@@ -397,3 +397,14 @@ model Bank {
   position       Int      @default(0)
   createdAt      DateTime @default(now())
 }
+
+/// What the notifier told Slack about, once each: a person's task, a failed run, a route to review.
+model SlackNotice {
+  /// The id of what the notice is about: a HumanTask, TaskRun, FactoryRun or Recommendation.
+  ref      String   @id
+  kind     String
+  channel  String
+  /// Slack's id for the message, which is also its thread's.
+  ts       String
+  postedAt DateTime @default(now())
+}
