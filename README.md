@@ -42,7 +42,7 @@ Bank 2's crawler is built from the terminal, not the Console, with `just factory
 | `just reset` | Empties the data and keeps the images and memory's models; asks first |
 | `just down` | Stops everything, or only some groups, as in `just down console bank`; data is kept |
 
-The other recipes are listed [at the end](#other-recipes).
+The other recipes are listed [at the end](#other-recipes). To run it all on Replit's free plan instead, with no Docker, see [Generic Bank on Replit](infra/replit/README.md).
 
 ---
 
