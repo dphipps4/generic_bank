@@ -6,7 +6,7 @@ The whole stack runs in a single Replit app too, on the free plan, with no Docke
 
 1. Make a Replit app from this repository with Replit's Import, from GitHub.
 2. Bank 2's factory needs an OpenRouter key. Add it as a Replit Secret named `OPENROUTER_API_KEY` (Tools, then Secrets). Bank 1 doesn't need it.
-3. Press **Run**. The first Run installs and builds; later Runs skip that. Once the banks are up, `ACCESS.md` in the file tree has every address and login.
+3. Press **Run**. The first Run installs and builds; later Runs skip that. Once the banks are up, the Run's Console tab prints every address and the Console's sign-in. The rest is in `ACCESS.md`; Replit's file tree hides it, since git ignores it, so `cat ACCESS.md` in the Shell shows it.
 
 From there the demos go just as [Demo 1](../../docs/demo-1.md) and [Demo 2](../../docs/demo-2.md) say, at the addresses in `ACCESS.md`. Bank 2's crawler gets built from the Shell while Run is going: `infra/replit/factory.sh example <member> <from> <to>`. `ACCESS.md` has the line filled in, ready to copy.
 
