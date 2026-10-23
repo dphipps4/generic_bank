@@ -41,7 +41,12 @@ args = "infra/replit/service.sh api node apps/api/dist/main.js"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "infra/replit/service.sh console node apps/console/dist/main.js"
-waitForPort = 8080
+
+# Replit's `just show`: ACCESS.html in the Preview pane. It needs no secrets, so it gets none.
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "env -i PATH=$PATH node infra/replit/show.mjs"
+waitForPort = 8090
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -67,18 +72,23 @@ args = "infra/replit/service.sh factory node apps/factory/dist/main.js"
 # Replit's link to the Slack connection.
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "infra/replit/service.sh notifier +REPLIT_CONNECTORS_HOSTNAME +REPL_IDENTITY CONSOLE_URL=https://$REPLIT_DEV_DOMAIN BANK_INBOX_URL=https://$REPLIT_DEV_DOMAIN:3001 node apps/notifier/dist/main.js"
+args = "infra/replit/service.sh notifier +REPLIT_CONNECTORS_HOSTNAME +REPL_IDENTITY CONSOLE_URL=https://$REPLIT_DEV_DOMAIN:3003 BANK_INBOX_URL=https://$REPLIT_DEV_DOMAIN:3001 node apps/notifier/dist/main.js"
 
 # ACCESS.md, as just up writes it, once both banks answer.
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "bash -c 'until curl -sf localhost:8081/healthz && curl -sf localhost:8082/healthz; do sleep 2; done >/dev/null; infra/replit/access.sh'"
 
-# What a person opens, on the workspace's preview address: the Console, the API's Swagger UI, both
-# banks and the inbox. The rest have only a local port, which keeps them inside the workspace.
+# What a person opens, on the workspace's preview address: the start page (in Preview), the Console,
+# the API's Swagger UI, both banks and the inbox. The rest have only a local port, which keeps them
+# inside the workspace.
+[[ports]]
+localPort = 8090
+externalPort = 80
+
 [[ports]]
 localPort = 8080
-externalPort = 80
+externalPort = 3003
 
 [[ports]]
 localPort = 8000

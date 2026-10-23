@@ -23,6 +23,5 @@ sed -n '/^## Open these/,/^## Logins/p' ACCESS.md | grep '^| [A-Z]' | grep -v '^
 echo
 grep '^| Console admin' ACCESS.md | tr -d '`' |
   awk -F' *[|] *' '{ print "Console sign-in, in its own browser tab: " $3 " / " $4 }'
-echo "Replit's Preview pane shows the Console but cannot sign in to it: Replit wants an X-Requested-With"
-echo "header on a form sent from inside its frame. Open the Console's address in a tab of its own."
+echo "All of it, with the logins, is in Replit's Preview pane: https://$REPLIT_DEV_DOMAIN"
 echo "Every other login and the members: cat ACCESS.md, in the Shell."
