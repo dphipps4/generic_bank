@@ -17,6 +17,9 @@
       "path": "apps/memory"
     },
     {
+      "path": "apps/notifier"
+    },
+    {
       "path": "apps/runner"
     },
     {
