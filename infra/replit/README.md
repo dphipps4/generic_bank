@@ -12,7 +12,7 @@ From there the demos go just as [Demo 1](../../docs/demo-1.md) and [Demo 2](../.
 
 ## What's different here
 
-- **Addresses.** It all sits on the workspace's preview address. The Console is the address itself; Swagger UI is at `:8000/docs`, bank 1 at `:3002/corelink/`, bank 2 at `:3000`, the inbox at `:3001`. Only you can open them, and only signed in to Replit. The runner, the factory, memory and the banks' admin APIs get no outside port at all.
+- **Addresses.** It all sits on the workspace's preview address. The Console is the address itself; Swagger UI is at `:8000/docs`, bank 1 at `:3002/corelink/`, bank 2 at `:3000`, the inbox at `:3001`. Only you can open them, and only signed in to Replit. Open the Console in a browser tab of its own: Replit's Preview pane shows it, but a sign-in from inside the pane is refused, because Replit wants an `X-Requested-With` header on a form sent from its frame. The runner, the factory, memory and the banks' admin APIs get no outside port at all.
 - **Services.** [`.replit`](../../.replit) runs [`setup.sh`](setup.sh), then starts each service through [`service.sh`](service.sh). Replit gives every Secret to every process. That's why `service.sh` starts each service in a clean environment with only its own secrets, the way compose does, so the OpenRouter key reaches the factory and nothing else.
 - **Secrets.** The first Run makes them, in SOPS files encrypted to the workspace's own age key in `.run/age/`. Nothing secret gets committed.
 - **The database.** Replit's Postgres 16 with pgvector, instead of our two Postgres containers. [`render-env.sh`](../scripts/render-env.sh) lets its address win over the compose names.
