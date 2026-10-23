@@ -21,7 +21,7 @@ From there the demos go just as [Demo 1](../../docs/demo-1.md) and [Demo 2](../.
 
 ## Slack
 
-Link Slack to the app and the notifier posts to `#generic-bank` whenever something needs a person, a run fails, or a route waits for review. Each message links to the Console page where you act on it. Linking takes your Slack connection in Replit (Integrations) and attaching it to this app; the simplest way is asking Replit's Agent to attach it and change nothing else. The messages come from the Slack account you linked, and only the notifier ever sees that link. Without Slack linked, the notifier stops at start and everything else runs as before.
+Link Slack to the app and the notifier posts to `#generic-bank` whenever something needs a person, a run fails, or a route waits for review. Each message links to the Console page where you act on it. After every Run, the channel also gets the addresses, without the logins, and a link to the start page. Linking takes your Slack connection in Replit (Integrations) and attaching it to this app; the simplest way is asking Replit's Agent to attach it and change nothing else. The messages come from the Slack account you linked, and only the notifier ever sees that link. Without Slack linked, the notifier stops at start and everything else runs as before.
 
 ## What the free plan won't do
 
